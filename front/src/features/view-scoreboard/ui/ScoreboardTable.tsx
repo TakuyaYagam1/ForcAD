@@ -1,17 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
-import {
-    STATUS_COLOR_BY_CODE,
-} from "@/shared/config/statuses";
-import {
-    Table,
-    TableHeader,
-    TableRow,
-    TableHead,
-    TableBody,
-    TableCell,
-} from "@/components/ui/table";
+import {useEffect, useRef, useState} from "react";
+import {createPortal} from "react-dom";
+import {cn} from "@/lib/utils";
+import {STATUS_COLOR_BY_CODE,} from "@/shared/config/statuses";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 
 export interface ScoreboardTeam {
     id: number;
@@ -19,6 +10,7 @@ export interface ScoreboardTeam {
     score: number;
     highlighted?: boolean;
     logo_path?: string;
+    ip: string;
 }
 
 export interface ScoreboardTask {
@@ -58,7 +50,7 @@ function getCellColor(status?: number): string | undefined {
 /**
  * Небольшой самодельный popover с кружком "i".
  */
-function InfoPopover({ message }: { message?: string }) {
+function InfoPopover({message}: { message?: string }) {
     const [open, setOpen] = useState(false);
     const [coords, setCoords] = useState<{ top: number; left: number } | null>(
         null
@@ -184,19 +176,22 @@ export function ScoreboardTable({
 
     if (!hasData) {
         return (
-            <div className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400 backdrop-blur">
+            <div
+                className="rounded-2xl border border-dashed border-slate-800/80 bg-slate-950/60 px-4 py-6 text-center text-sm text-slate-400 backdrop-blur">
                 Ожидаем данные табло…
             </div>
         );
     }
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/80 shadow-xl shadow-indigo-900/40 backdrop-blur">
+        <div
+            className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/80 shadow-xl shadow-indigo-900/40 backdrop-blur">
             <div className="max-h-[70vh] overflow-auto">
                 <Table className="min-w-full border-collapse text-sm text-slate-100">
                     <TableHeader className="sticky top-0 z-10 bg-slate-950/90 backdrop-blur">
                         <TableRow className="border-b border-slate-800/80">
-                            <TableHead className="w-48 border-r border-slate-800/80 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+                            <TableHead
+                                className="w-48 border-r border-slate-800/80 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
                                 Team
                             </TableHead>
 
@@ -239,9 +234,10 @@ export function ScoreboardTable({
                                     onClick={onTeamClick ? () => onTeamClick(team.id) : undefined}
                                 >
                                     <div className="flex items-center gap-2">
-                    <span className="w-5 text-xs text-slate-500">
-                      #{index + 1}
-                    </span>
+    <span className="w-5 text-xs text-slate-500">
+      #{index + 1}
+    </span>
+
                                         {team.logo_path && (
                                             <img
                                                 src={team.logo_path}
@@ -250,9 +246,14 @@ export function ScoreboardTable({
                                             />
                                         )}
 
-                                        <span className="truncate font-medium text-slate-100">
-                      {team.name}
-                    </span>
+                                        <div className="flex min-w-0 flex-col">
+      <span className="truncate font-medium text-slate-100">
+        {team.name}
+      </span>
+                                            <span className="truncate text-[11px] text-slate-100">
+        {team.ip}
+      </span>
+                                        </div>
                                     </div>
                                 </TableCell>
 
@@ -291,13 +292,13 @@ export function ScoreboardTable({
                                                 {/* кружок i в правом верхнем углу */}
                                                 {tt?.message && (
                                                     <div className="absolute right-1 top-1">
-                                                        <InfoPopover message={tt.message} />
+                                                        <InfoPopover message={tt.message}/>
                                                     </div>
                                                 )}
 
                                                 <div className="flex items-center justify-between gap-1">
                           <span className="font-mono text-[11px] text-slate-50">
-                            {tt?.score ?? 0}
+                            {tt ? tt.score.toFixed(2) : "0.00"}
                           </span>
 
                                                 </div>
@@ -319,8 +320,9 @@ export function ScoreboardTable({
                                 })}
 
                                 {/* Total score */}
-                                <TableCell className="whitespace-nowrap px-3 py-2 text-right align-middle text-sm font-semibold text-slate-50">
-                                    {team.score}
+                                <TableCell
+                                    className="whitespace-nowrap px-3 py-2 text-right align-middle text-sm font-semibold text-slate-50">
+                                    {team.score.toFixed(2)}
                                 </TableCell>
                             </TableRow>
                         ))}
