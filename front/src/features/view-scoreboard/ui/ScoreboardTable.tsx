@@ -17,6 +17,7 @@ export interface ScoreboardTeam {
   name: string;
   score: number;
   highlighted?: boolean;
+  logo_path?: string;
 }
 
 export interface ScoreboardTask {
@@ -108,17 +109,25 @@ export function ScoreboardTable({
                 )}
               >
                 {/* Team name + place */}
-                <TableCell
-                  className={cn(
-                    "whitespace-nowrap border-r border-slate-800/60 px-3 py-2 text-left text-sm",
-                    onTeamClick && "cursor-pointer hover:text-slate-50"
-                  )}
-                  onClick={onTeamClick ? () => onTeamClick(team.id) : undefined}
-                >
+                  <TableCell
+                      className={cn(
+                          "whitespace-nowrap border-r border-slate-800/60 px-3 py-2 text-left text-sm",
+                          onTeamClick && "cursor-pointer hover:text-slate-50"
+                      )}
+                      onClick={onTeamClick ? () => onTeamClick(team.id) : undefined}
+                  >
                   <div className="flex items-center gap-2">
                     <span className="w-5 text-xs text-slate-500">
                       #{index + 1}
                     </span>
+                      {team.logo_path && (
+                          <img
+                              src={team.logo_path}
+                              alt={team.name}
+                              className="h-10 w-10 flex-shrink-0 rounded-sm object-contain"
+                          />
+                      )}
+
                     <span className="truncate font-medium text-slate-100">
                       {team.name}
                     </span>
