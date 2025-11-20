@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
     STATUS_COLOR_BY_CODE,
@@ -59,64 +60,115 @@ function getCellColor(status?: number): string | undefined {
  */
 function InfoPopover({ message }: { message?: string }) {
     const [open, setOpen] = useState(false);
-    const [placement, setPlacement] = useState<"top" | "bottom">("top");
-    const wrapperRef = useRef<HTMLDivElement | null>(null);
+    const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+        null
+    );
+    const [placeBelow, setPlaceBelow] = useState(false);
+    const btnRef = useRef<HTMLButtonElement | null>(null);
+    const closeTimeout = useRef<number | null>(null);
+
+    // создаём контейнер для портала
+    const [container] = useState<HTMLElement | null>(() => {
+        if (typeof document === "undefined") return null;
+        const el = document.createElement("div");
+        return el;
+    });
+
+    useEffect(() => {
+        if (!container) return;
+        document.body.appendChild(container);
+        return () => {
+            document.body.removeChild(container);
+        };
+    }, [container]);
+
+    useEffect(() => {
+        return () => {
+            if (closeTimeout.current != null) {
+                window.clearTimeout(closeTimeout.current);
+            }
+        };
+    }, []);
 
     if (!message) return null;
 
-    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
-        e.stopPropagation();
-
-        if (wrapperRef.current) {
-            const rect = wrapperRef.current.getBoundingClientRect();
-            const spaceAbove = rect.top;
-            const spaceBelow = window.innerHeight - rect.bottom;
-
-            // Если снизу мало места, а сверху больше — показываем над кнопкой.
-            // Иначе — под кнопкой.
-            if (spaceBelow < 120 && spaceAbove > spaceBelow) {
-                setPlacement("top");
-            } else {
-                setPlacement("bottom");
-            }
+    const cancelClose = () => {
+        if (closeTimeout.current != null) {
+            window.clearTimeout(closeTimeout.current);
+            closeTimeout.current = null;
         }
+    };
+
+    const scheduleClose = () => {
+        if (closeTimeout.current != null) {
+            window.clearTimeout(closeTimeout.current);
+        }
+        closeTimeout.current = window.setTimeout(() => {
+            setOpen(false);
+        }, 120); // небольшая задержка, чтобы не мигало при переходе на поповер
+    };
+
+    const openPopover = () => {
+        if (!btnRef.current) return;
+        const rect = btnRef.current.getBoundingClientRect();
+
+        // координаты правого верхнего угла кнопки
+        setCoords({
+            top: rect.top,
+            left: rect.right,
+        });
+
+        // если кнопка близко к верхнему краю — рисуем поповер снизу,
+        // иначе сверху (чтобы не уезжал за видимую область)
+        const shouldPlaceBelow = rect.top < 80;
+        setPlaceBelow(shouldPlaceBelow);
 
         setOpen(true);
     };
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-        e.stopPropagation();
-        setOpen(false);
-    };
+    const popoverNode =
+        open && coords && container
+            ? createPortal(
+                <div
+                    onMouseEnter={cancelClose}
+                    onMouseLeave={scheduleClose}
+                    style={{
+                        position: "fixed",
+                        top: placeBelow ? coords.top : coords.top,
+                        left: coords.left,
+                        transform: placeBelow
+                            ? "translate(-100%, 0.25rem)" // под кнопкой
+                            : "translate(-100%, -100%) translateY(-0.25rem)", // над кнопкой
+                        zIndex: 9999,
+                    }}
+                    className="max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg"
+                >
+                    {message}
+                </div>,
+                container
+            )
+            : null;
 
     return (
-        <div
-            ref={wrapperRef}
-            className="relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-        >
+        <>
             <button
+                ref={btnRef}
                 type="button"
                 className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300/70 bg-slate-900/80 text-[9px] font-semibold text-slate-100 hover:bg-slate-800/90"
+                onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    cancelClose();
+                    openPopover();
+                }}
+                onMouseLeave={(e) => {
+                    e.stopPropagation();
+                    scheduleClose();
+                }}
             >
                 i
             </button>
-
-            {open && (
-                <div
-                    className={cn(
-                        "absolute right-0 z-20 max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg",
-                        placement === "top"
-                            ? "bottom-full mb-1"
-                            : "top-full mt-1"
-                    )}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {message}
-                </div>
-            )}
-        </div>
+            {popoverNode}
+        </>
     );
 }
 
