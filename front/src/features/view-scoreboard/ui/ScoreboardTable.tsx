@@ -66,9 +66,13 @@ function InfoPopover({ message }: { message?: string }) {
         <div className="relative">
             <button
                 type="button"
-                onClick={(e) => {
+                onMouseEnter={(e) => {
                     e.stopPropagation();
                     setOpen((prev) => !prev);
+                }}
+                onMouseLeave={(e) => {
+                    e.stopPropagation();
+                    setOpen((prev) => !prev)
                 }}
                 className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300/70 bg-slate-900/80 text-[9px] font-semibold text-slate-100 hover:bg-slate-800/90"
             >
