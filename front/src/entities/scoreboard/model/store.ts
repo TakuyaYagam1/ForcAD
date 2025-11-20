@@ -75,8 +75,8 @@ function mapRawTeamTask(raw: RawTeamTask): TeamTask {
         teamId: raw.team_id,
         taskId: raw.task_id,
         status: raw.status,
-        stolen: Boolean(raw.stolen),
-        lost: Boolean(raw.lost),
+        stolen: raw.stolen,
+        lost: raw.lost,
         sla,
         score: raw.score,
         message:

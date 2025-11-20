@@ -5,8 +5,8 @@ export interface TeamTask {
   teamId: number;
   taskId: number;
   status: number;
-  stolen: boolean;
-  lost: boolean;
+  stolen: number;
+  lost: number;
   sla: number;
   score: number;
   message: string;
