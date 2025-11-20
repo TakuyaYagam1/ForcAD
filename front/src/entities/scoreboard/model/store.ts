@@ -4,7 +4,6 @@ import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
 import type { TeamTask } from "@/entities/team-task/model/types";
 
-// сортировка тасков по id (как и было)
 const sortTasks = (tasks: Task[]) =>
     [...tasks].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
@@ -96,12 +95,26 @@ function recalcTeamScores(teams: Team[], teamTasks: TeamTask[]): Team[] {
     }
 
     return teams
-        .map((team) => ({
-            ...team,
-            score:
-                team.id != null ? sums.get(team.id) ?? 0 : 0,
-        }))
-        .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+        .map((team) => {
+            const score =
+                team.id != null ? sums.get(team.id) ?? 0 : 0;
+            return {
+                ...team,
+                score,
+            };
+        })
+        .sort((a, b) => {
+            const sa = a.score ?? 0;
+            const sb = b.score ?? 0;
+
+            if (sb !== sa) {
+                // по очкам — по убыванию
+                return sb - sa;
+            }
+
+            // при равных очках — по id (по возрастанию)
+            return (a.id ?? 0) - (b.id ?? 0);
+        });
 }
 
 export const useScoreboardStore = create<ScoreboardState>()(
