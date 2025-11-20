@@ -70,26 +70,24 @@ export const useAdminAuthStore = create<AuthState>()(
     },
 
     async checkSession() {
-      try {
-        // подстрой под реальный эндпоинт, если есть:
-        // const { data } = await http.get<AdminUser>("/admin/me/");
-        // set({ isAuthenticated: true, isAuthChecked: true, user: data, error: null });
+      set({ isAuthChecked: false, error: null });
 
-        // если такого эндпоинта нет, можно просто считать, что кука = сессия,
-        // и оставить isAuthenticated=false по умолчанию, а checkSession сделать no-op.
+      try {
+        // как во Vue: GET /admin/login/ (с baseURL = /api)
+        const { data } = await api.get("/admin/login/");
         set({
-          isAuthenticated: false,
+          isAuthenticated: true,
           isAuthChecked: true,
-          user: null,
+          user: data ?? null,
           error: null,
         });
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        console.error("admin checkSession error", e);
         set({
           isAuthenticated: false,
           isAuthChecked: true,
           user: null,
-          error: null,
+          error: null, // не показываем ошибку на каждом рефреше
         });
       }
     },

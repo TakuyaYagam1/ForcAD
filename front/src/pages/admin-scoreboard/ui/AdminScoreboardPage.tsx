@@ -26,26 +26,52 @@ export function AdminScoreboardPage() {
     navigate(`/admin/teamtask_log/team/${teamId}/task/${taskId}`);
   };
 
+  const handleCreateTeam = () => {
+    navigate("/admin/team/create");
+  };
+
+  const handleCreateTask = () => {
+    navigate("/admin/task/create");
+  };
+
   return (
     <AppShell>
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold text-slate-100">
             Admin scoreboard
           </h1>
           <p className="text-xs text-slate-400">
-            Клик по названию команды → редактирование команды. Клик по таску в
-            шапке → редактирование таска.
+            Клик по команде/таску — редактирование. Клик по ячейке — лог чекера.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-slate-700 text-slate-300"
-          onClick={handleLogout}
-        >
-          Logout
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-slate-700 text-slate-300"
+            onClick={handleCreateTeam}
+          >
+            Create team
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-slate-700 text-slate-300"
+            onClick={handleCreateTask}
+          >
+            Create task
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-slate-700 text-slate-300"
+            onClick={handleLogout}
+          >
+            Logout
+          </Button>
+        </div>
       </div>
 
       <ScoreboardWidget

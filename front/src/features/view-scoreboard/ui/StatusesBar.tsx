@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 
 interface StatusesBarProps {
   round?: number;
@@ -41,6 +42,28 @@ export function StatusesBar({ round, roundStart }: StatusesBarProps) {
     return () => window.clearInterval(id);
   }, [roundStart]);
 
+  const roundTime = useScoreboardStore((s) => s.roundTime);
+  const [progress, setProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!roundStart || !roundTime) {
+      setProgress(null);
+      return;
+    }
+
+    const update = () => {
+      const now = Date.now() / 1000;
+      const elapsed = now - roundStart;
+      let p = elapsed / roundTime;
+      p = Math.max(0, Math.min(p, 1));
+      setProgress(Math.floor(p * 100));
+    };
+
+    update();
+    const id = window.setInterval(update, 1000);
+    return () => window.clearInterval(id);
+  }, [roundStart, roundTime]);
+
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/80 px-4 py-3 shadow-lg shadow-indigo-900/40 backdrop-blur">
       {/* Верхняя строка: информация о раунде */}
@@ -60,9 +83,18 @@ export function StatusesBar({ round, roundStart }: StatusesBarProps) {
           )}
         </div>
 
-        <div className="text-xs text-slate-400">
-          Тут будут статусы раунда / игры.
-        </div>
+        {progress !== null && (
+          <div className="flex items-center gap-2 text-xs text-slate-300">
+            <span>Round progress</span>
+            <div className="h-1 w-32 overflow-hidden rounded-full bg-slate-800">
+              <div
+                className="h-full bg-emerald-400"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="font-mono text-slate-200">{progress}%</span>
+          </div>
+        )}
       </div>
 
       {/* Легенда статусов */}

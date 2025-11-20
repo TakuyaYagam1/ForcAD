@@ -6,6 +6,8 @@ import {
   type ScoreboardTask,
   type ScoreboardTeamTask,
 } from "@/features/view-scoreboard/ui/ScoreboardTable";
+import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
+import { useEffect } from "react";
 
 interface ScoreboardWidgetProps {
   onTeamClick?: (teamId: number) => void;
@@ -24,6 +26,29 @@ export function ScoreboardWidget({
   const round = useScoreboardStore((s) => s.round);
   const roundStart = useScoreboardStore((s) => s.roundStart);
   const error = useScoreboardStore((s) => s.error);
+
+  const roundTime = useScoreboardStore((s) => s.roundTime);
+  const setRoundTime = useScoreboardStore((s) => s.setRoundTime);
+
+  useEffect(() => {
+    if (roundTime !== null) return;
+
+    let cancelled = false;
+
+    fetchScoreboardConfig()
+      .then((data) => {
+        if (!cancelled) {
+          setRoundTime(data.round_time);
+        }
+      })
+      .catch((err) => {
+        console.error("fetchScoreboardConfig error", err);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roundTime, setRoundTime]);
 
   return (
     <div className="space-y-4">

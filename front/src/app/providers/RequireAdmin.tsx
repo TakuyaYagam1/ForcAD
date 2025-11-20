@@ -1,7 +1,5 @@
-// src/app/providers/RequireAdmin.tsx
-import type { ReactNode } from "react";
-import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { type ReactNode, useEffect } from "react";
 import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
 
 interface Props {
@@ -21,16 +19,17 @@ export function RequireAdmin({ children }: Props) {
   }, [isAuthChecked, checkSession]);
 
   if (!isAuthChecked) {
-    // можно сделать красивый skeleton
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-sm text-slate-400">
-        Checking admin session…
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+        Проверяем админ-сессию…
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace state={{ from: location }} />;
+    return (
+      <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
+    );
   }
 
   return <>{children}</>;

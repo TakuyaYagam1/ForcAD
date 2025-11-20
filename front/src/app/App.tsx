@@ -44,6 +44,15 @@ export default function App() {
       />
 
       <Route
+        path="/admin/teamtask_log/team/:teamId/task/:taskId"
+        element={
+          <RequireAdmin>
+            <AdminTeamTaskLogPage />
+          </RequireAdmin>
+        }
+      />
+
+      <Route
         path="/admin/team/create"
         element={
           <RequireAdmin>
@@ -51,6 +60,16 @@ export default function App() {
           </RequireAdmin>
         }
       />
+
+      <Route
+        path="/admin/task/create"
+        element={
+          <RequireAdmin>
+            <TaskAdminPage mode="create" />
+          </RequireAdmin>
+        }
+      />
+
       <Route
         path="/admin/team/:teamId"
         element={
@@ -61,10 +80,10 @@ export default function App() {
       />
 
       <Route
-        path="/admin/teamtask_log/team/:teamId/task/:taskId"
+        path="/admin/task/:taskId"
         element={
           <RequireAdmin>
-            <AdminTeamTaskLogPage />
+            <TaskAdminPage mode="edit" />
           </RequireAdmin>
         }
       />

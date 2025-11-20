@@ -15,7 +15,7 @@ export function TeamScoreboardPage() {
           Некорректный идентификатор команды: {rawTeamId}
         </div>
       ) : (
-        <TeamScoreboardWidget teamId={teamId} />
+        <TeamScoreboardWidget />
       )}
     </AppShell>
   );

@@ -34,6 +34,7 @@ interface ScoreboardState {
 
   // экшены
   setError(error: string | null): void;
+  setRoundTime: (roundTime: number | null) => void;
 
   handleInitScoreboardMessage(payload: InitScoreboardPayload): void;
   handleUpdateScoreboardMessage(payload: GameStatePayload): void;
@@ -49,6 +50,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     tasks: null,
     teamTasks: null,
     error: null,
+    setRoundTime: (roundTime: number | null) => set({ roundTime }),
 
     setError: (error) => set({ error }),
 
