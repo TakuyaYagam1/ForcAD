@@ -63,7 +63,7 @@ export function AppShell({ children }: AppShellProps) {
             {/* Иконка-«чип» слева */}
             <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/50 bg-indigo-500/10 shadow-[0_0_30px_rgba(79,70,229,0.45)]">
               <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-indigo-200">
-                FS
+                AD
               </span>
             </div>
 
@@ -73,7 +73,7 @@ export function AppShell({ children }: AppShellProps) {
                 FinalSibCTF2025
               </span>
               <span className="text-[11px] text-slate-400">
-                final round control panel
+                Attack Defence platform
               </span>
             </div>
           </div>
