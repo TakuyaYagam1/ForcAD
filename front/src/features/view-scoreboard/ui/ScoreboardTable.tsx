@@ -63,24 +63,27 @@ function InfoPopover({ message }: { message?: string }) {
     if (!message) return null;
 
     return (
-        <div className="relative">
+        <div
+            className="relative"
+            onMouseEnter={(e) => {
+                e.stopPropagation();
+                setOpen(true);
+            }}
+            onMouseLeave={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+            }}
+        >
             <button
                 type="button"
-                onMouseEnter={(e) => {
-                    e.stopPropagation();
-                    setOpen((prev) => !prev);
-                }}
-                onMouseLeave={(e) => {
-                    e.stopPropagation();
-                    setOpen((prev) => !prev)
-                }}
                 className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300/70 bg-slate-900/80 text-[9px] font-semibold text-slate-100 hover:bg-slate-800/90"
             >
                 i
             </button>
+
             {open && (
                 <div
-                    className="absolute right-0 z-20 mt-1 max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg"
+                    className="absolute bottom-full right-0 mb-1 z-20 max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {message}
