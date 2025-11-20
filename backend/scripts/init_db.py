@@ -29,7 +29,7 @@ def init_teams(config, curs):
 
     for team_conf in config:
         team_token = models.Team.generate_token()
-        team = models.Team(id=None, **team_conf, token=team_token)
+        team = models.Team(id=None, **team_conf, token=team_token, logo_path=None)
         team.insert(curs)
         teams.append(team)
 

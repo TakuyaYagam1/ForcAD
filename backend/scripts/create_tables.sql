@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS Teams
     token       VARCHAR(16)  NOT NULL DEFAULT '',
     highlighted BOOLEAN               DEFAULT FALSE,
     active      BOOLEAN               DEFAULT TRUE,
-    logo_path   VARCHAR(255),
+    logo_path   VARCHAR(255) DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS Tasks
