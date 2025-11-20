@@ -7,6 +7,7 @@ COPY docker_config/nginx/proxy_params /etc/nginx/proxy_params
 COPY docker_config/nginx/proxy_params_ws /etc/nginx/proxy_params_ws
 
 COPY front/dist /var/www/front
+COPY teams_logo /var/www/front
 
 ARG DNS_RESOLVER
 ENV DNS_RESOLVER ${DNS_RESOLVER}

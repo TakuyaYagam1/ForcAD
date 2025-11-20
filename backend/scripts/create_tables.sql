@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS Teams
     ip          VARCHAR(32)  NOT NULL,
     token       VARCHAR(16)  NOT NULL DEFAULT '',
     highlighted BOOLEAN               DEFAULT FALSE,
-    active      BOOLEAN               DEFAULT TRUE
+    active      BOOLEAN               DEFAULT TRUE,
+    logo_path   VARCHAR(255),
 );
 
 CREATE TABLE IF NOT EXISTS Tasks

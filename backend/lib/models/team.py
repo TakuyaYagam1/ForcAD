@@ -13,6 +13,7 @@ class Team(BaseModel):
     token: str
     highlighted: bool
     active: bool
+    logo_path: str
 
     table_name = 'Teams'
 
@@ -28,6 +29,7 @@ class Team(BaseModel):
         'token',
         'highlighted',
         'active',
+        'logo_path',
     )
 
     @staticmethod
