@@ -46,23 +46,31 @@ export function StatusesBar({ round, roundStart }: StatusesBarProps) {
   const [progress, setProgress] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!roundStart || !roundTime) {
+    if (!roundStart || !roundTime || !round || round < 1) {
       setProgress(null);
       return;
     }
 
+    // roundStart приходит в секундах
+    const rs = roundStart;
+
     const update = () => {
-      const now = Date.now() / 1000;
-      const elapsed = now - roundStart;
-      let p = elapsed / roundTime;
+      const nowSec = Date.now() / 1000;
+      const elapsed = nowSec - rs;
+
+      // как в старом Vue: (now - roundStart - roundTime) / roundTime
+      let p = (elapsed - roundTime) / roundTime;
+
+      // добавляем нижний clamp, чтобы не было < 0
       p = Math.max(0, Math.min(p, 1));
+
       setProgress(Math.floor(p * 100));
     };
 
     update();
     const id = window.setInterval(update, 1000);
     return () => window.clearInterval(id);
-  }, [roundStart, roundTime]);
+  }, [round, roundStart, roundTime]);
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/80 px-4 py-3 shadow-lg shadow-indigo-900/40 backdrop-blur">
