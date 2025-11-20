@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
     STATUS_COLOR_BY_CODE,
@@ -59,20 +59,42 @@ function getCellColor(status?: number): string | undefined {
  */
 function InfoPopover({ message }: { message?: string }) {
     const [open, setOpen] = useState(false);
+    const [placement, setPlacement] = useState<"top" | "bottom">("top");
+    const wrapperRef = useRef<HTMLDivElement | null>(null);
 
     if (!message) return null;
 
+    const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+
+        if (wrapperRef.current) {
+            const rect = wrapperRef.current.getBoundingClientRect();
+            const spaceAbove = rect.top;
+            const spaceBelow = window.innerHeight - rect.bottom;
+
+            // Если снизу мало места, а сверху больше — показываем над кнопкой.
+            // Иначе — под кнопкой.
+            if (spaceBelow < 120 && spaceAbove > spaceBelow) {
+                setPlacement("top");
+            } else {
+                setPlacement("bottom");
+            }
+        }
+
+        setOpen(true);
+    };
+
+    const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+        setOpen(false);
+    };
+
     return (
         <div
+            ref={wrapperRef}
             className="relative"
-            onMouseEnter={(e) => {
-                e.stopPropagation();
-                setOpen(true);
-            }}
-            onMouseLeave={(e) => {
-                e.stopPropagation();
-                setOpen(false);
-            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
         >
             <button
                 type="button"
@@ -83,7 +105,12 @@ function InfoPopover({ message }: { message?: string }) {
 
             {open && (
                 <div
-                    className="absolute bottom-full right-0 mb-1 z-20 max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg"
+                    className={cn(
+                        "absolute right-0 z-20 max-w-xs rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-100 shadow-lg",
+                        placement === "top"
+                            ? "bottom-full mb-1"
+                            : "top-full mt-1"
+                    )}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {message}
