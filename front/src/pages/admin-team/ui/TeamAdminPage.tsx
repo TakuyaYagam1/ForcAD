@@ -56,6 +56,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             name: "",
             ip: "",
             token: "",
+            logo_path: "",
             highlighted: false,
             active: true,
           };
@@ -181,6 +182,15 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
                   id="token"
                   value={team.token}
                   onChange={(e) => handleChange("token", e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="logo_path">Logo path</Label>
+                <Input
+                    id="logo_path"
+                    value={team.logo_path}
+                    onChange={(e) => handleChange("logo_path", e.target.value)}
                 />
               </div>
 

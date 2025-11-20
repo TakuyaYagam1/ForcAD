@@ -5,6 +5,7 @@ export interface Team {
   name: string;
   ip: string;
   token: string;
+  logo_path: string;
   highlighted: boolean;
   active: boolean;
   score?: number;
