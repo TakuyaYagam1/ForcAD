@@ -58,6 +58,46 @@ That's all! Now you should be able to access the scoreboard at `http://127.0.0.1
 
 > Before each new game run `./control.py reset` to delete old database and temporary files (and docker networks)
 
+### Reset and cleanup
+
+These commands delete game data. Back up a game you need to retain before running them.
+
+| Command | Result | Next step |
+| --- | --- | --- |
+| `./control.py reset` | Stops game services, clears game tables and Redis, removes containers and Compose volumes. Keeps the PostgreSQL cluster and its credentials. | `./control.py start` |
+| `./control.py reset --full` | Removes the local PostgreSQL cluster as well, including its old credentials. Keeps `config.yml`, generated environment files and checkers. | `./control.py start` |
+| `./control.py clean` | Performs a full local reset, then removes generated environment files and `docker-compose-base.yml`. Keeps `config.yml` and checkers. | `./control.py setup`, then `./control.py start` |
+
+Add `--fast` if the deployment uses the fast Compose images. Cleanup preserves Docker images and build cache.
+After updating this fork, run `./control.py build` (or `./control.py build --fast`) to apply changes to the
+database reset script inside the initializer image.
+Configured team tokens remain in `config.yml` and are reused on initialization. Teams without configured tokens
+receive new random tokens.
+
+When changing the database credentials for a new game:
+
+```bash
+./control.py reset --full
+# Edit admin credentials and game settings in config.yml.
+./control.py setup
+./control.py start
+```
+
+Full cleanup also works when `setup` has already changed the password and the old database rejects connections:
+it does not log in to PostgreSQL. It uses the cached PostgreSQL image to remove the container-owned data, so no
+manual `sudo rm` is needed. Full cleanup requires a local Unix-socket Docker daemon supporting
+`bind-recursive=disabled` and the standard `docker_volumes/postgres/data` bind mount.
+External storages and custom PostgreSQL mounts are supported by ordinary `reset`, but not by `reset --full` or
+`clean`. Those commands refuse unsupported storage layouts before stopping services.
+
+Cleanup refuses symlinked storage paths and nonempty data directories without a regular `PG_VERSION` file.
+It leaves unrelated files in `docker_volumes` and empty parent directories in place. Repeating `clean` after a
+successful cleanup is safe. If generated configuration is missing while game data or containers remain, run
+`setup` to restore it before cleanup.
+
+Failures return a nonzero exit status and do not print a success message. If ordinary `reset` fails, the game
+services remain stopped for diagnosis. Storage connection retries and SQL execution have time limits.
+
 ## Configuration and usage
 
 ### Receiving flags
