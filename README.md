@@ -62,7 +62,8 @@ That's all! Now you should be able to access the scoreboard at `http://127.0.0.1
 
 ### Receiving flags
 
-Teams are identified by tokens (unique and randomly generated on startup). Look for them in the logs of `initializer`
+Teams are identified by tokens. Set `teams[].token` to reuse a token after a full reset, or omit it to generate a
+random token each time the database is initialized. Look for them in the logs of `initializer`
 container or print using the following command after the system started: `./control.py print_tokens`. Token is private
 information, so send them to each team correspondingly.
 
@@ -125,6 +126,27 @@ teams:
 ```
 
 Highlighted teams will be marked on the scoreboard with a rainbow border.
+
+Each team can optionally specify a fixed token:
+
+```yaml
+teams:
+  - ip: 10.70.0.2
+    name: Team1
+    token: "0123456789abcdef"  # Example only; use your own random token.
+  - ip: 10.70.1.2
+    name: Team2
+```
+
+Tokens must be unique strings of exactly 16 lowercase hexadecimal characters (`0-9`, `a-f`).
+Quote tokens in YAML, especially values containing only digits. `control.py setup` preserves configured tokens.
+After `control.py reset` and the next start, Team1 receives its configured token and Team2 receives a new random
+token. An omitted token or `token: null` uses the original random generation; generated tokens are not saved to
+the YAML. Empty strings and invalid or duplicate tokens are rejected.
+
+These settings apply when initializing a fresh database. Editing the YAML and restarting an already initialized
+game does not change its stored tokens. Keep the configuration and its backups private, and distribute only each
+team's own token. After installing this change, rebuild the initializer image before starting the new game.
 
 * **tasks** contains configuration of checkers and task-related parameters. More detailed explanation is
   in [checkers](#checkers) section. Example:

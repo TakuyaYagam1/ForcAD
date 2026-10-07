@@ -29,6 +29,8 @@ tasks:
 teams:
   - ip: 192.168.1.2
     name: "Team 1"
+    # Optional: keep this token after reset. Use your own random 16-character hex string.
+    # token: "0123456789abcdef"
 
   - ip: 192.168.1.3
     name: "Team 2 (highlighted)"

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AdminConfig(BaseModel):
@@ -69,16 +69,32 @@ class Task(BaseModel):
 
 
 class Team(BaseModel):
+    model_config = ConfigDict(hide_input_in_errors=True)
+
     ip: str
     name: str
     highlighted: bool = False
+    token: Optional[str] = Field(
+        default=None, strict=True, min_length=16, max_length=16,
+        pattern=r'^[0-9a-f]{16}$', repr=False,
+    )
 
 
 class BasicConfig(BaseModel):
+    model_config = ConfigDict(hide_input_in_errors=True)
+
     admin: Optional[AdminConfig] = None
     game: GameConfig
     tasks: List[Task]
     teams: List[Team]
+
+    @field_validator('teams')
+    @classmethod
+    def unique_team_tokens(cls, teams: List[Team]) -> List[Team]:
+        tokens = [team.token for team in teams if team.token is not None]
+        if len(tokens) != len(set(tokens)):
+            raise ValueError('Configured team tokens must be unique')
+        return teams
 
 
 class Config(BasicConfig):
