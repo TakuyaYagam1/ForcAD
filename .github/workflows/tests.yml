@@ -1,12 +1,16 @@
 name: tests
 on:
   push:
+    branches:
+      - main
+      - master
     paths-ignore:
       - "README.md"
       - ".gitignore"
       - "static/**"
   pull_request:
     branches:
+      - main
       - master
     paths-ignore:
       - "README.md"
