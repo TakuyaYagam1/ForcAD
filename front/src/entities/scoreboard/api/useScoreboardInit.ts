@@ -6,6 +6,6 @@ export function useScoreboardInit() {
   return useQuery({
     queryKey: ["scoreboardInit"],
     queryFn: fetchScoreboardInit,
-    refetchInterval: 5_000, // например, автообновление раз в 5 секунд
+    refetchInterval: 5_000, // Refresh every 5 seconds.
   });
 }

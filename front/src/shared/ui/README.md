@@ -1,2 +1,2 @@
-Здесь лежат обёртки/композиции над shadcn/ui и react-bits,
-а также переиспользуемые UI-компоненты (layout, feedback, typography и т.п.).
+This directory contains wrappers and compositions built on shadcn/ui and react-bits,
+along with reusable UI components for layout, feedback, typography, and similar needs.

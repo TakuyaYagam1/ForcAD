@@ -1,4 +1,5 @@
 import { finiteNumber } from "@/shared/lib/numbers";
+import { getSlaPercent } from "@/shared/lib/sla";
 import { api } from "@/shared/lib/axios";
 
 export interface TeamTaskStateRaw {
@@ -25,6 +26,8 @@ export interface TeamTaskState {
   stolen: number;
   lost: number;
   score: number;
+  checks: number;
+  checksPassed: number;
   sla: number;
   message: string;
   timestampSecs: number;
@@ -41,12 +44,12 @@ export async function fetchTeamStates(
   const mapped: TeamTaskState[] = data.map((x) => {
     const tsSecs = Number(x.timestamp.slice(0, x.timestamp.indexOf("-")));
     const tsNum = Number(x.timestamp.slice(x.timestamp.indexOf("-") + 1));
-    const checks = Math.max(0, finiteNumber(x.checks));
-    const sla =
-      checks > 0
-        ? (100 * Math.min(checks, Math.max(0, finiteNumber(x.checks_passed)))) /
-          checks
-        : 0;
+    const checks = Math.max(0, Math.trunc(finiteNumber(x.checks)));
+    const checksPassed = Math.min(
+      checks,
+      Math.max(0, Math.trunc(finiteNumber(x.checks_passed))),
+    );
+    const sla = getSlaPercent(checks, checksPassed) ?? 0;
 
     const msg =
       x.message === "" && finiteNumber(x.status) === 101 ? "OK" : x.message;
@@ -60,6 +63,8 @@ export async function fetchTeamStates(
       stolen: finiteNumber(x.stolen),
       lost: finiteNumber(x.lost),
       score: finiteNumber(x.score),
+      checks,
+      checksPassed,
       sla,
       message: msg,
       timestampSecs: tsSecs,
@@ -67,7 +72,7 @@ export async function fetchTeamStates(
     };
   });
 
-  // как во Vue: сортировка по timestamp (новые сначала)
+  // Sort by timestamp, newest first.
   mapped.sort((a, b) => {
     if (a.timestampSecs === b.timestampSecs) {
       return b.timestampNum - a.timestampNum;

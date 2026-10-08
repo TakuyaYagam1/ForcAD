@@ -17,6 +17,7 @@ export function StatusesBar({
   const displayRound = runtimeRound ?? round;
   const timerStart = currentRoundStart ?? roundStart;
   const phase = useScoreboardStore((state) => state.phase);
+  const roundWaiting = useScoreboardStore((state) => state.roundWaiting);
   const pausedAt = useScoreboardStore((state) => state.pausedAt);
   const pausedSeconds = useScoreboardStore((state) => state.pausedSeconds);
   const [now, setNow] = useState(() => Date.now());
@@ -80,7 +81,22 @@ export function StatusesBar({
         <BrandIcon name="timer" plain />
         <div>
           <strong>{time}</strong>
-          <small>{phase === "unknown" ? "Статус недоступен" : phase === "paused" ? "Пауза" : "С начала раунда"}</small>
+          <small
+            className={
+              phase === "running" && roundWaiting
+                ? "round-waiting-label"
+                : undefined
+            }
+            aria-live="polite"
+          >
+            {phase === "paused"
+              ? "Пауза"
+              : phase === "running" && roundWaiting
+                ? "Ожидание результатов проверок"
+                : phase === "unknown"
+                  ? "Статус недоступен"
+                  : "С начала раунда"}
+          </small>
         </div>
       </div>
     </section>

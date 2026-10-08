@@ -5,9 +5,9 @@ import {cn} from "@/lib/utils";
 interface CosmicBackgroundProps {
     children: ReactNode;
     className?: string;
-    /** Плотность звёзд (из Galaxy) */
+    /** Star density (from Galaxy) */
     density?: number;
-    /** Скорость анимации звёзд (из Galaxy) */
+    /** Star animation speed (from Galaxy) */
     starSpeed?: number;
 }
 

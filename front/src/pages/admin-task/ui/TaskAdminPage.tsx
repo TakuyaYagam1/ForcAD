@@ -1,5 +1,5 @@
 // src/pages/admin-task/ui/TaskAdminPage.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { AppShell } from "@/shared/ui/layout/AppShell";
@@ -47,7 +47,9 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
   const taskId = !isCreate && taskIdParam ? Number(taskIdParam) : null;
 
   const routeKey = useRef(location.key);
-  routeKey.current = location.key;
+  useLayoutEffect(() => {
+    routeKey.current = location.key;
+  }, [location.key]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const canSave =
     loadedKey === location.key && !!task && (isCreate || task.id === taskId);
@@ -269,7 +271,6 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
                   <Input
                     disabled={saving}
                     id="checker_type"
-                    required
                     maxLength={32}
                     value={task.checker_type}
                     onChange={(e) =>

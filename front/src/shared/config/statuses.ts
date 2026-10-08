@@ -6,8 +6,8 @@ export interface ScoreboardStatusMeta {
   code: ScoreboardStatusCode;
   label: string;
   description?: string;
-  color: string; // hex для фона ячейки
-  badgeClassName?: string; // tailwind-классы для бейджа
+  color: string; // Hex color for the cell background
+  badgeClassName?: string; // Tailwind classes for the badge
 }
 
 export const SCOREBOARD_STATUSES: ScoreboardStatusMeta[] = [

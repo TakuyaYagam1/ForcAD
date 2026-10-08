@@ -24,16 +24,15 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["*"],
-      "@app/*": ["app/*"],
-      "@shared/*": ["shared/*"],
-      "@entities/*": ["entities/*"],
-      "@features/*": ["features/*"],
-      "@widgets/*": ["widgets/*"],
-      "@pages/*": ["pages/*"],
-      "@components/*": ["components/*"]
+      "@/*": ["./src/*"],
+      "@app/*": ["./src/app/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@entities/*": ["./src/entities/*"],
+      "@features/*": ["./src/features/*"],
+      "@widgets/*": ["./src/widgets/*"],
+      "@pages/*": ["./src/pages/*"],
+      "@components/*": ["./src/components/*"]
     }
   },
   "include": ["src", "src-del/main.tsx"]

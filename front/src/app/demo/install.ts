@@ -194,7 +194,7 @@ function readBody(config: InternalAxiosRequestConfig): Record<string, unknown> {
         return parsed as Record<string, unknown>;
       }
     } catch {
-      fail(config, 400, "Некорректные данные демозапроса");
+      fail(config, 400, "Invalid demo request data");
     }
   }
   if (data && typeof data === "object" && !Array.isArray(data)) {
@@ -241,7 +241,7 @@ function demoLogs(teamId: number, taskId: number): TeamTaskLogEntry[] {
       task_id: taskId,
       ts: Number(item.timestamp.split("-")[0]),
       public_message: item.message || "OK",
-      private_message: "Демонстрационная запись: проверка завершена",
+      private_message: "Demo entry: check completed",
       command: `python demo/checker.py check ${teams.find((team) => team.id === teamId)?.ip ?? "10.10.14.8"}`,
     }));
 }
@@ -297,28 +297,28 @@ const demoAdapter: AxiosAdapter = async (config) => {
       history.filter((item) => item.team_id === Number(teamHistory[1])),
     );
   if (path === "/admin/login") {
-    if (method !== "POST") fail(config, 405, "Для входа используется POST");
+    if (method !== "POST") fail(config, 405, "Sign-in requires POST");
     if (method === "POST") {
       if (body.username !== "demo" || body.password !== "demo")
-        fail(config, 403, "Используй демологин demo и пароль demo");
+        fail(config, 403, "Use demo as both the username and password");
       rememberSession(true);
     }
-    if (!loggedIn) fail(config, 403, "Демосессия не открыта");
+    if (!loggedIn) fail(config, 403, "No active demo session");
     return makeResponse(config, { username: "demo" });
   }
   if (path === "/admin/status") {
     if (method !== "GET")
-      fail(config, 405, "Для проверки сессии используется GET");
-    if (!loggedIn) fail(config, 403, "Демосессия не открыта");
+      fail(config, 405, "Session checks require GET");
+    if (!loggedIn) fail(config, 403, "No active demo session");
     return makeResponse(config, { username: "demo", status: "ok" });
   }
   if (path === "/admin/logout") {
-    if (method !== "POST") fail(config, 405, "Для выхода используется POST");
+    if (method !== "POST") fail(config, 405, "Sign-out requires POST");
     rememberSession(false);
     return makeResponse(config, { status: "ok" });
   }
   if (path.startsWith("/admin/") && !loggedIn)
-    fail(config, 403, "Демосессия не открыта");
+    fail(config, 403, "No active demo session");
 
   const entity = path.match(/^\/admin\/(teams|tasks)(?:\/(\d+))?$/);
   if (entity) {
@@ -328,18 +328,18 @@ const demoAdapter: AxiosAdapter = async (config) => {
     const existing = collection.find((item) => item.id === id);
     if (method === "GET") {
       if (id === null) return makeResponse(config, collection);
-      if (!existing) fail(config, 404, "Запись не найдена");
+      if (!existing) fail(config, 404, "Record not found");
       return makeResponse(config, existing);
     }
     if (method === "DELETE") {
-      if (!existing) fail(config, 404, "Запись не найдена");
+      if (!existing) fail(config, 404, "Record not found");
       existing.active = false;
       addMissingCells();
       publishState();
       return makeResponse(config, { status: "ok" });
     }
     if (method === "POST" || method === "PUT") {
-      if (method === "PUT" && !existing) fail(config, 404, "Запись не найдена");
+      if (method === "PUT" && !existing) fail(config, 404, "Record not found");
       const nextId =
         existing?.id ??
         Math.max(0, ...collection.map((item) => item.id ?? 0)) + 1;
@@ -363,7 +363,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
               team.id !== nextId && team.token === (saved as Team).token,
           )
         )
-          fail(config, 409, "Токен уже используется другой командой");
+          fail(config, 409, "Token is already used by another team");
         saved.name = saved.name.trim();
         saved.ip = saved.ip.trim();
         teams = [...teams.filter((item) => item.id !== nextId), saved];
@@ -383,7 +383,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
       publishState();
       return makeResponse(config, saved, method === "POST" ? 201 : 200);
     }
-    fail(config, 405, "Действие не поддерживается в деморежиме");
+    fail(config, 405, "Action is not supported in demo mode");
   }
   if (path === "/admin/teamtasks") {
     const params = config.params as
@@ -393,7 +393,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
       demoLogs(Number(params?.team_id), Number(params?.task_id)),
     );
   }
-  fail(config, 404, "Этот запрос не предусмотрен в деморежиме");
+  fail(config, 404, "Request is not supported in demo mode");
 };
 
 export function installDemoData() {

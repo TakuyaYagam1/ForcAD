@@ -7,6 +7,8 @@ export interface TeamTask {
   status: number;
   stolen: number;
   lost: number;
+  checks: number;
+  checksPassed: number;
   sla: number;
   score: number;
   message: string;

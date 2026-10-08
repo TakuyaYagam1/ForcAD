@@ -4,6 +4,7 @@ import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
 import type { TeamTask } from "@/entities/team-task/model/types";
 import { finiteNumber } from "@/shared/lib/numbers";
+import { getSlaPercent } from "@/shared/lib/sla";
 export interface RawTeamTask {
   task_id: number;
   team_id: number;
@@ -22,6 +23,7 @@ export interface GameStatePayload {
 }
 export interface GameRuntimeStatus {
   phase: "waiting" | "running" | "paused" | "unknown";
+  round_waiting?: boolean;
   paused_at: number | null;
   paused_seconds: number;
   round_time?: number;
@@ -46,6 +48,7 @@ interface ScoreboardState {
   error: string | null;
   connected: boolean;
   phase: GameRuntimeStatus["phase"];
+  roundWaiting: boolean;
   pausedAt: number | null;
   pausedSeconds: number;
   runtimeRound: number | null;
@@ -59,8 +62,11 @@ interface ScoreboardState {
   handleUpdateScoreboardMessage(payload: GameStatePayload): void;
 }
 function mapRawTeamTask(raw: RawTeamTask, index: number): TeamTask {
-  const checks = Math.max(0, finiteNumber(raw.checks));
-  const passed = Math.min(checks, Math.max(0, finiteNumber(raw.checks_passed)));
+  const checks = Math.max(0, Math.trunc(finiteNumber(raw.checks)));
+  const passed = Math.min(
+    checks,
+    Math.max(0, Math.trunc(finiteNumber(raw.checks_passed))),
+  );
   const status = finiteNumber(raw.status, -1);
   return {
     id: index,
@@ -69,7 +75,9 @@ function mapRawTeamTask(raw: RawTeamTask, index: number): TeamTask {
     status,
     stolen: finiteNumber(raw.stolen),
     lost: finiteNumber(raw.lost),
-    sla: checks > 0 ? (100 * passed) / checks : 0,
+    checks,
+    checksPassed: passed,
+    sla: getSlaPercent(checks, passed) ?? 0,
     score: finiteNumber(raw.score),
     message: raw.message ? String(raw.message) : status === 101 ? "OK" : "",
   };
@@ -108,6 +116,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     error: null,
     connected: false,
     phase: "unknown",
+    roundWaiting: false,
     pausedAt: null,
     pausedSeconds: 0,
     runtimeRound: null,
@@ -118,6 +127,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     invalidateRuntime: () =>
       set({
         phase: "unknown",
+        roundWaiting: false,
         pausedAt: null,
         pausedSeconds: 0,
         runtimeRound: null,
@@ -126,6 +136,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     setRuntime: (runtime) =>
       set({
         phase: runtime.phase,
+        roundWaiting: runtime.round_waiting === true,
         pausedAt: runtime.paused_at,
         pausedSeconds: finiteNumber(runtime.paused_seconds),
         runtimeRound:

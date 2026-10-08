@@ -12,11 +12,9 @@ export function validateTeam(
     return "Укажите корректный IPv4 или IPv6 адрес.";
   if (
     !creating &&
-    (!team.token ||
-      team.token.length > 16 ||
-      !/^[A-Za-z0-9_-]+$/.test(team.token))
+    !/^[0-9a-f]{16}$/.test(team.token)
   )
-    return "Токен: от 1 до 16 латинских букв, цифр, символов _ или -.";
+    return "Токен: ровно 16 символов 0-9 и a-f в нижнем регистре.";
   if ((team.logo_path ?? "").length > 255)
     return "Ссылка на логотип: максимум 255 символов.";
   return null;
