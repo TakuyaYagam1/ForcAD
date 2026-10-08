@@ -82,7 +82,7 @@ jobs:
           python tests/wait_for_start.py
           ./control.py rd ps
           python -m unittest discover -v -s tests -p 'test*.py'
-          python -m unittest discover -v -s tests -p 'regressions_*.py'
+          PYTHONPATH=backend python -m unittest discover -v -s tests -p 'regressions_*.py'
 
       - name: Show logs
         if: ${{ failure() }}
