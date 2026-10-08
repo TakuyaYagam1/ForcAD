@@ -93,6 +93,7 @@ jobs:
             --env SEMGREP_SEND_METRICS=off \
             --env SEMGREP_ENABLE_VERSION_CHECK=0 \
             --env EIO_BACKEND=posix \
+            --entrypoint semgrep \
             semgrep/semgrep:1.178.0@sha256:fbba1f23d2ef94630c828e8692758f8bc6353a8089841a396a5c041451966ffb \
             scan --strict --error --disable-nosem --metrics off \
             --config /work/security/semgrep/rules.yml \
