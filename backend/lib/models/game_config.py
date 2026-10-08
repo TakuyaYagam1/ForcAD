@@ -1,6 +1,6 @@
 import datetime
 import math
-from typing import Optional, Dict, Any
+from typing import Any
 
 from dateutil.parser import parse
 
@@ -10,7 +10,7 @@ from .base import BaseModel
 class GameConfig(BaseModel):
     """Model representing game config"""
 
-    id: Optional[int]
+    id: int | None
     flag_lifetime: int
     game_hardness: float
     inflation: bool
@@ -21,12 +21,12 @@ class GameConfig(BaseModel):
     timezone: str
     start_time: datetime.datetime
 
-    real_round: Optional[int]
-    game_running: Optional[bool]
+    real_round: int | None
+    game_running: bool | None
 
     table_name = 'GameConfig'
 
-    __slots__ = (
+    __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'id',
         'flag_lifetime',
         'game_hardness',
@@ -50,7 +50,7 @@ class GameConfig(BaseModel):
     def __str__(self) -> str:
         return str(self.to_dict())
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         data = super().to_dict()
         data['start_time'] = str(data['start_time'])
         return data

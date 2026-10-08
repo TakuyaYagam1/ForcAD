@@ -4,7 +4,7 @@ from lib import models, storage
 from lib.helpers import exceptions
 from lib.helpers.exceptions import FlagExceptionEnum
 from lib.models.types import TaskStatus
-from lib.storage import utils, game
+from lib.storage import game, utils
 from lib.storage.keys import CacheKeys
 
 
@@ -34,7 +34,7 @@ def handle_attack(
     result = models.AttackResult(attacker_id=attacker_id)
 
     try:
-        if current_round == -1:
+        if current_round == -1 or game.is_game_paused():
             raise FlagExceptionEnum.GAME_NOT_AVAILABLE
 
         flag = storage.flags.get_flag_by_str(
@@ -78,6 +78,17 @@ def handle_attack(
 
         try:
             with utils.db_cursor() as (conn, curs):
+                # Serialize the accounting boundary with round snapshots.
+                # Concurrent submissions still share this lock with each other.
+                curs.execute(
+                    'SELECT real_round FROM GameConfig WHERE id=1 FOR SHARE',
+                )
+                accounting_round, = curs.fetchone()
+                if accounting_round - flag.round > game_config.flag_lifetime:
+                    result.submit_ok = False
+                    result.message = str(FlagExceptionEnum.FLAG_TOO_OLD)
+                    conn.commit()
+                    return result
                 curs.callproc(
                     "recalculate_rating",
                     (

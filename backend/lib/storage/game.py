@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 from kombu.utils import json as kjson
 from redis import WatchError
@@ -141,7 +140,7 @@ def construct_latest_game_state(current_round: int) -> models.GameState:
     return state
 
 
-def get_cached_game_state() -> Optional[models.GameState]:
+def get_cached_game_state() -> models.GameState | None:
     with storage.utils.redis_pipeline(transaction=False) as pipe:
         (state,) = pipe.get(CacheKeys.game_state()).execute()
 
@@ -211,7 +210,7 @@ def construct_scoreboard(refresh_state: bool = False) -> dict:
     return data
 
 
-def construct_ctftime_scoreboard() -> Optional[list]:
+def construct_ctftime_scoreboard() -> list | None:
     game_state = get_cached_game_state()
 
     if not game_state:
@@ -270,19 +269,34 @@ def update_attack_data(current_round: int) -> None:
         pipe.execute()
 
 
-def update_game_state(for_round: int) -> models.GameState:
-    game_state = storage.game.construct_game_state_from_db(for_round)
+def update_game_state(
+    for_round: int, game_state: models.GameState | None = None,
+) -> models.GameState:
+    if game_state is None:
+        game_state = storage.game.construct_game_state_from_db(for_round)
+    marker = f'scoreboard:round_snapshot:{for_round}'
     with utils.redis_pipeline(transaction=True) as pipe:
-        pipe.set(storage.keys.CacheKeys.game_state(), game_state.to_json())
-        if for_round > 0:
-            for cell in game_state.team_tasks:
-                pipe.xadd(
-                    CacheKeys.teamtasks_history(cell['team_id'], cell['task_id']),
-                    {**cell, 'round': for_round},
-                    maxlen=50,
-                    approximate=False,
-                )
-        pipe.execute()
+        while True:
+            try:
+                pipe.watch(marker)
+                recorded = pipe.exists(marker)
+                pipe.multi()
+                pipe.set(CacheKeys.game_state(), game_state.to_json())
+                if for_round > 0 and not recorded:
+                    for cell in game_state.team_tasks:
+                        pipe.xadd(
+                            CacheKeys.teamtasks_history(
+                                cell['team_id'], cell['task_id'],
+                            ),
+                            {**cell, 'round': for_round},
+                            maxlen=50,
+                            approximate=False,
+                        )
+                    pipe.set(marker, 1)
+                pipe.execute()
+                break
+            except WatchError:
+                continue
 
     utils.SIOManager.write_only().emit(
         event='update_scoreboard',
@@ -355,4 +369,5 @@ def get_runtime_status() -> dict:
         'paused_at': float(paused_at) if paused_at else None,
         'paused_seconds': float(paused_seconds or 0),
         'round_time': get_current_game_config().round_time,
+        'round_waiting': bool(utils.RedisStorage.get().exists('game:round_waiting')),
     }

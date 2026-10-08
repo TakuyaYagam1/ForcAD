@@ -1,6 +1,10 @@
 from . import (
-    cache, checkers, commands,
-    events, exceptions, jobs,
+    cache,
+    checkers,
+    commands,
+    events,
+    exceptions,
+    jobs,
     singleton,
 )
 

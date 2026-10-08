@@ -1,8 +1,9 @@
-from flask import request, jsonify
+from flask import jsonify, request
 from psycopg2 import IntegrityError
 
 from lib import models, storage
 from lib.helpers import events
+
 from .api_base import ApiSet
 from .utils import make_err_response
 from .validation import validate_data
@@ -34,8 +35,8 @@ class TaskApi(ApiSet):
             return make_err_response(str(exc))
         except IntegrityError:
             return make_err_response(
-                'Данные нарушают ограничения базы. '
-                'Проверьте значения и уникальность токена.',
+                'Data violates database constraints. '
+                'Check the service settings.',
                 status=409,
             )
         events.refresh_scoreboard_after_commit()
@@ -54,8 +55,8 @@ class TaskApi(ApiSet):
             return make_err_response(str(exc))
         except IntegrityError:
             return make_err_response(
-                'Данные нарушают ограничения базы. '
-                'Проверьте значения и уникальность токена.',
+                'Data violates database constraints. '
+                'Check the service settings.',
                 status=409,
             )
         events.refresh_scoreboard_after_commit()

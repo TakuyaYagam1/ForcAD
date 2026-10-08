@@ -1,9 +1,7 @@
-from typing import List, Optional
-
 from lib import models, storage
 from lib.helpers.cache import cache_helper
-from lib.models import TaskStatus, Action
-from lib.storage import caching
+from lib.models import Action, TaskStatus
+from lib.storage import caching, dispatch
 from lib.storage.keys import CacheKeys
 
 _SELECT_TEAMTASKS_QUERY = "SELECT * from TeamTasks"
@@ -49,14 +47,14 @@ SET status = %(status)s,
     private_message = %(private_message)s,
     command = %(command)s,
     checks_passed = checks_passed + %(passed)s,
-    checks = checks + 1
+    checks = checks + %(checks)s
 WHERE
 team_id = %(team_id)s AND task_id = %(task_id)s
 RETURNING *
 '''
 
 
-def get_tasks() -> List[models.Task]:
+def get_tasks() -> list[models.Task]:
     """Get list of tasks registered in database."""
     key = CacheKeys.tasks()
     with storage.utils.redis_pipeline(transaction=True) as pipe:
@@ -73,7 +71,7 @@ def get_tasks() -> List[models.Task]:
     return tasks
 
 
-def get_all_tasks() -> List[models.Task]:
+def get_all_tasks() -> list[models.Task]:
     """Get list of all tasks, including inactive."""
     with storage.utils.db_cursor(dict_cursor=True) as (_, curs):
         curs.execute(models.Task.get_select_all_query())
@@ -88,7 +86,10 @@ def update_task_status(
         team_id: int,
         current_round: int,
         checker_verdict: models.CheckerVerdict,
-) -> None:
+        job_id: str | None = None,
+        *,
+        expired_only: bool = False,
+) -> bool:
     """
     Update task status in database.
 
@@ -96,6 +97,7 @@ def update_task_status(
     :param team_id:
     :param current_round:
     :param checker_verdict: instance of CheckerActionResult
+    :param expired_only: close an expired job without charging its SLA
     """
     add = 0
     public = checker_verdict.public_message
@@ -113,9 +115,18 @@ def update_task_status(
         'private_message': checker_verdict.private_message,
         'command': checker_verdict.command,
         'passed': add,
+        'checks': 1,
     }
+    if expired_only:
+        if checker_verdict.status != TaskStatus.CHECK_FAILED:
+            raise ValueError('Expired jobs require a CHECK_FAILED verdict')
+        params['passed'] = 0
+        params['checks'] = 0
 
     with storage.utils.db_cursor(dict_cursor=True) as (conn, curs):
+        if not dispatch.claim_result(curs, job_id, expired_only=expired_only):
+            conn.commit()
+            return False
         curs.execute(_INSERT_TEAMTASKS_TO_LOG_QUERY, params)
         curs.execute(_UPDATE_TEAMTASKS_QUERY, params)
         data = curs.fetchone()
@@ -129,9 +140,10 @@ def update_task_status(
             maxlen=50,
             approximate=False,
         ).execute()
+    return True
 
 
-def get_last_teamtasks() -> List[dict]:
+def get_last_teamtasks() -> list[dict]:
     """Fetch team tasks, last for each team for each task."""
     teams = storage.teams.get_teams()
     tasks = storage.tasks.get_tasks()
@@ -142,7 +154,7 @@ def get_last_teamtasks() -> List[dict]:
                 pipe.xrevrange(CacheKeys.teamtasks(team.id, task.id), count=1)
         data = pipe.execute()
 
-    data = sum(data, [])
+    data = [entry for records in data for entry in records]
 
     results = []
     for timestamp, record in data:
@@ -154,7 +166,7 @@ def get_last_teamtasks() -> List[dict]:
     return results
 
 
-def get_teamtasks_from_db() -> List[dict]:
+def get_teamtasks_from_db() -> list[dict]:
     """
     Fetch current team tasks from database.
 
@@ -167,7 +179,7 @@ def get_teamtasks_from_db() -> List[dict]:
     return data
 
 
-def get_teamtasks_for_team(team_id: int) -> List[dict]:
+def get_teamtasks_for_team(team_id: int) -> list[dict]:
     """Fetch teamtasks for team for all tasks."""
 
     tasks = storage.tasks.get_tasks()
@@ -193,7 +205,7 @@ def get_teamtasks_for_team(team_id: int) -> List[dict]:
     return results
 
 
-def get_latest_teamtask(team_id: int, task_id: int) -> Optional[dict]:
+def get_latest_teamtask(team_id: int, task_id: int) -> dict | None:
     """Fetch the latest teamtask from redis stream."""
 
     with storage.utils.redis_pipeline(transaction=False) as pipe:
@@ -207,7 +219,7 @@ def get_latest_teamtask(team_id: int, task_id: int) -> Optional[dict]:
     return results[0] if results else None
 
 
-def filter_teamtasks_for_participants(teamtasks: List[dict]) -> List[dict]:
+def filter_teamtasks_for_participants(teamtasks: list[dict]) -> list[dict]:
     """
     Filter sensitive data from teamtasks.
 
@@ -226,7 +238,7 @@ def filter_teamtasks_for_participants(teamtasks: List[dict]) -> List[dict]:
     return result
 
 
-def process_teamtasks(teamtasks: List[dict]) -> List[dict]:
+def process_teamtasks(teamtasks: list[dict]) -> list[dict]:
     """
     Force correct types on teamtasks list.
 
@@ -291,7 +303,7 @@ def delete_task(task_id: int) -> None:
     storage.caching.flush_tasks_cache()
 
 
-def get_admin_teamtask_history(team_id: int, task_id: int) -> List[dict]:
+def get_admin_teamtask_history(team_id: int, task_id: int) -> list[dict]:
     """Get teamtasks from log table by team & task ids pair."""
     with storage.utils.db_cursor(dict_cursor=True) as (_, curs):
         curs.execute(

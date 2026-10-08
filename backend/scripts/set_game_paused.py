@@ -1,4 +1,5 @@
 import argparse
+
 from lib.storage.game import set_game_paused
 
 if __name__ == '__main__':

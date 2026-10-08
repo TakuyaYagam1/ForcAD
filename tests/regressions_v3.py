@@ -3,7 +3,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
-from regressions_fixes import RegressionTests, TEAM, TASK, CFG
+import regressions_fixes as fixes
+from regressions_fixes import TEAM, TASK, CFG
 from lib import models, storage
 from lib.helpers import events
 from services.ticker.models import Schedule, TickerState
@@ -11,8 +12,8 @@ from services.ticker.__main__ import sync_blitz_schedules, main
 
 
 class V3RegressionTests(unittest.TestCase):
-    setUp = RegressionTests.setUp
-    login = RegressionTests.login
+    setUp = fixes.RegressionTests.setUp
+    login = fixes.RegressionTests.login
 
     def test_real_broker_publisher_surfaces_failure_after_retry(self):
         manager = storage.utils.ReliableKombuManager('amqp://guest:guest@localhost//', write_only=True)
@@ -103,10 +104,12 @@ class V3RegressionTests(unittest.TestCase):
         ])
         with patch('services.ticker.__main__.sync_blitz_schedules'), \
                 patch.object(events, 'retry_scoreboard_refresh'), \
+                patch('services.ticker.__main__.recover_expired_jobs') as recover, \
                 patch('services.ticker.__main__.time.sleep', side_effect=InterruptedError):
             with self.assertRaises(InterruptedError):
                 main(state)
         callback.assert_not_called()
+        recover.assert_called_once_with()
 
     def test_blitz_schedules_add_update_disable_and_reactivate(self):
         cfg = models.GameConfig(**{**CFG, 'mode': 'blitz'})
@@ -183,7 +186,7 @@ class V3RegressionTests(unittest.TestCase):
 
 if __name__ == '__main__':
     suite = unittest.TestSuite([
-        unittest.defaultTestLoader.loadTestsFromTestCase(RegressionTests),
+        unittest.defaultTestLoader.loadTestsFromTestCase(fixes.RegressionTests),
         unittest.defaultTestLoader.loadTestsFromTestCase(V3RegressionTests),
     ])
     result = unittest.TextTestRunner(verbosity=2).run(suite)

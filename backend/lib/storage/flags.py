@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Optional, List, Dict, DefaultDict, Union
 
 from lib import models
 from lib.helpers.cache import cache_helper
@@ -48,15 +47,24 @@ def try_add_stolen_flag(flag: models.Flag, attacker: int, current_round: int) ->
     return bool(is_new)
 
 
-def add_flag(flag: models.Flag) -> models.Flag:
+def add_flag(flag: models.Flag, job_id: str | None = None) -> models.Flag | None:
     """
     Inserts a newly generated flag into the database and cache.
 
     :param flag: Flag model instance to be inserted
-    :returns: flag with set "id" field
+    :returns: flag with set "id" field, or None if its checker job has closed
     """
 
     with utils.db_cursor() as (conn, curs):
+        if job_id is not None:
+            # Serialize with recovery so a late PUT cannot add a retired flag.
+            curs.execute(
+                'SELECT id FROM CheckerJobs '
+                'WHERE id=%s AND finished_at IS NULL FOR UPDATE', (job_id,),
+            )
+            if curs.fetchone() is None:
+                conn.commit()
+                return None
         flag.insert(curs)
         conn.commit()
 
@@ -73,9 +81,9 @@ def add_flag(flag: models.Flag) -> models.Flag:
 
 def get_flag_by_field(
     name: str,
-    value: Union[str, int],
+    value: str | int,
     current_round: int,
-) -> Optional[models.Flag]:
+) -> models.Flag | None:
     """
     Get flag by generic field.
 
@@ -98,14 +106,36 @@ def get_flag_by_field(
         (flag_json,) = pipe.get(CacheKeys.flag_by_field(name, value)).execute()
 
     if not flag_json:
-        return None
+        queries = {
+            'str': 'SELECT * FROM Flags WHERE flag = %s AND round >= %s',
+            'id': 'SELECT * FROM Flags WHERE id = %s AND round >= %s',
+        }
+        if name not in queries:
+            raise ValueError('Unsupported flag lookup field')
+        config = game.get_current_game_config()
+        # Redis is disposable. Pauses and eviction must not invalidate flags
+        # which are still alive according to the authoritative round counter.
+        with utils.db_cursor(dict_cursor=True) as (_, curs):
+            curs.execute(
+                queries[name], (value, current_round - config.flag_lifetime),
+            )
+            data = curs.fetchone()
+        if data is None:
+            return None
+        flag = models.Flag.from_dict(data)
+        expires = config.flag_lifetime * config.round_time * 2
+        with utils.redis_pipeline(transaction=True) as pipe:
+            pipe.set(CacheKeys.flag_by_id(flag.id), flag.to_json(), ex=expires)
+            pipe.set(CacheKeys.flag_by_str(flag.flag), flag.to_json(), ex=expires)
+            pipe.execute()
+        return flag
 
     flag = models.Flag.from_json(flag_json)
 
     return flag
 
 
-def get_flag_by_str(flag_str: str, current_round: int) -> Optional[models.Flag]:
+def get_flag_by_str(flag_str: str, current_round: int) -> models.Flag | None:
     """
     Get flag by its string value.
 
@@ -120,7 +150,7 @@ def get_flag_by_str(flag_str: str, current_round: int) -> Optional[models.Flag]:
     )
 
 
-def get_flag_by_id(flag_id: int, current_round: int) -> Optional[models.Flag]:
+def get_flag_by_id(flag_id: int, current_round: int) -> models.Flag | None:
     """
     Get flag by its id value.
 
@@ -137,7 +167,7 @@ def get_flag_by_id(flag_id: int, current_round: int) -> Optional[models.Flag]:
 
 def get_random_round_flag(
     team_id: int, task_id: int, from_round: int, current_round: int
-) -> Optional[models.Flag]:
+) -> models.Flag | None:
     """
     Get random flag for team generated for specified round and task.
 
@@ -165,8 +195,8 @@ def get_random_round_flag(
 
 def get_attack_data(
     current_round: int,
-    tasks: List[models.Task],
-) -> Dict[str, DefaultDict[int, List[str]]]:
+    tasks: list[models.Task],
+) -> dict[str, defaultdict[int, list[str]]]:
     """
     Get unexpired flags for round.
 
@@ -185,7 +215,7 @@ def get_attack_data(
     else:
         flags = []
 
-    data: Dict[str, DefaultDict[int, List[str]]] = {
+    data: dict[str, defaultdict[int, list[str]]] = {
         task_names[task_id]: defaultdict(list) for task_id in task_ids
     }
     for flag in flags:

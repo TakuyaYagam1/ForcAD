@@ -1,12 +1,9 @@
-from typing import List, Optional
-
-from lib import models
-from lib import storage
+from lib import models, storage
 from lib.helpers.cache import cache_helper
 from lib.storage.keys import CacheKeys
 
 
-def get_teams() -> List[models.Team]:
+def get_teams() -> list[models.Team]:
     """Get list of active teams."""
     key = CacheKeys.teams()
     with storage.utils.redis_pipeline(transaction=True) as pipe:
@@ -23,7 +20,7 @@ def get_teams() -> List[models.Team]:
     return teams
 
 
-def get_all_teams() -> List[models.Team]:
+def get_all_teams() -> list[models.Team]:
     """Get list of all teams, including inactive."""
     with storage.utils.db_cursor(dict_cursor=True) as (_, curs):
         curs.execute(models.Team.get_select_all_query())
@@ -33,7 +30,7 @@ def get_all_teams() -> List[models.Team]:
     return teams
 
 
-def get_team_id_by_token(token: str) -> Optional[int]:
+def get_team_id_by_token(token: str) -> int | None:
     """
     Get team by token.
 

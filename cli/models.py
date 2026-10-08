@@ -74,6 +74,7 @@ class Team(BaseModel):
     ip: str
     name: str
     highlighted: bool = False
+    logo_path: Optional[str] = None
     token: Optional[str] = Field(
         default=None, strict=True, min_length=16, max_length=16,
         pattern=r'^[0-9a-f]{16}$', repr=False,

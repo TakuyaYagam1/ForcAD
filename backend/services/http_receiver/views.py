@@ -1,12 +1,14 @@
 import logging
 
-from flask import Blueprint
-from flask import jsonify, make_response, request
+from flask import Blueprint, jsonify, make_response, request
 
 from lib import storage
-from lib.flags import SubmitMonitor, Judge
+from lib.flags import Judge, SubmitMonitor
 
-from metrics import flag_submissions, flag_points_gained, flag_points_lost
+if __package__:
+    from .metrics import flag_points_gained, flag_points_lost, flag_submissions
+else:
+    from metrics import flag_points_gained, flag_points_lost, flag_submissions
 
 logger = logging.getLogger('http_receiver.views')
 
@@ -33,6 +35,9 @@ def get_teams():
     if current_round == -1:
         return make_error('Game not started.')
 
+    if storage.game.is_game_paused():
+        return make_error('Game is paused. Please retry after resume.', status=503)
+
     data = request.get_json(force=True)
     if data is None:
         logger.debug('[%s] sent invalid json', request.remote_addr)
@@ -42,6 +47,10 @@ def get_teams():
         return make_error(
             'Invalid request format. '
             'Must provide a list with no more than 100 flags.'
+        )
+    if any(not isinstance(flag, str) or len(flag) > 32 for flag in data):
+        return make_error(
+            'Invalid request format. Flags must be strings of at most 32 characters.'
         )
 
     attack_results = judge.process_many(team_id, flags=data)
@@ -67,9 +76,9 @@ def get_teams():
         flag_points_lost.labels(**common_metric_kwargs).inc(-ar.victim_delta)
 
         logger.debug(
-            '[%s] processed flag %s, %s: %s',
+            '[%s] processed flag with length %d, %s: %s',
             request.remote_addr,
-            flag,
+            len(flag),
             'ok' if ar.submit_ok else 'bad',
             ar.message,
         )

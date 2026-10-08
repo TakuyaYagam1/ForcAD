@@ -5,8 +5,14 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
 from lib import storage
+from lib.helpers.http_limits import (
+    install_request_limits,
+    install_socketio_websocket_limits,
+    socketio_options,
+)
 
 app = Flask('forcad_events')
+install_request_limits(app)
 CORS(
     app,
     supports_credentials=True,
@@ -16,11 +22,13 @@ CORS(
 sio_manager = storage.utils.SIOManager.read_write()
 sio = SocketIO(
     app=app,
-    async_mode='eventlet',
+    async_mode='threading',
     client_manager=sio_manager,
     path='socket.io',
     cors_allowed_origins='*',
+    **socketio_options(),
 )
+install_socketio_websocket_limits(sio)
 
 
 @sio.on('connect', namespace='/game_events')

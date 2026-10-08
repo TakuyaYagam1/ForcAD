@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-from lib import storage
-
-from scripts import print_tokens
-from scripts import reset_db, init_db
+from scripts import init_db, reset_db
 
 
 def run():
@@ -13,11 +10,7 @@ def run():
     print('Initializing the database')
     init_db.run()
 
-    r = storage.utils.RedisStorage.get()
-    r.flushall()
-
-    print('New team tokens:')
-    print_tokens.run()
+    print('Team tokens are available with ./control.py print_tokens')
 
 
 if __name__ == '__main__':

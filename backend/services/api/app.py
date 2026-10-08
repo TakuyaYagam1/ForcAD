@@ -1,11 +1,18 @@
 import logging
+
 from flask import Flask
 from flask_cors import CORS
 from prometheus_flask_exporter import PrometheusMetrics
 
-from views import client_bp
+from lib.helpers.http_limits import install_request_limits
+
+if __package__:
+    from .views import client_bp
+else:
+    from views import client_bp
 
 app = Flask('forcad_api')
+install_request_limits(app)
 CORS(
     app,
     supports_credentials=True,

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from lib.storage import utils
 
@@ -13,7 +12,7 @@ UPDATE SET last_run = EXCLUDED.last_run
 '''
 
 
-def get_last_run(schedule_id: str) -> Optional[datetime]:
+def get_last_run(schedule_id: str) -> datetime | None:
     with utils.db_cursor() as (_, curs):
         curs.execute(
             SELECT_LAST_RUN,

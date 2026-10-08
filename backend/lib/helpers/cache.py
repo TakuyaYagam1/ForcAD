@@ -1,10 +1,11 @@
 import time
-from typing import Callable, Optional, Iterable, Any, Dict
+from collections.abc import Callable, Iterable
+from typing import Any
 
 import redis
 
-ArgsType = Optional[Iterable[Any]]
-KwargsType = Optional[Dict[str, Any]]
+ArgsType = Iterable[Any] | None
+KwargsType = dict[str, Any] | None
 
 
 def cache_helper(

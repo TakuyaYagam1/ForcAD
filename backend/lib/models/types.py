@@ -33,6 +33,7 @@ class Action(enum.Enum):
         return self.value
 
 
-class GameMode(str, enum.Enum):
+# StrEnum changes str() and formatting used by existing callers.
+class GameMode(str, enum.Enum):  # noqa: UP042
     CLASSIC = 'classic'
     BLITZ = 'blitz'

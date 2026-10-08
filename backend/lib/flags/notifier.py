@@ -1,7 +1,5 @@
 from logging import Logger
-
-import eventlet
-from eventlet.queue import LightQueue, Empty, Full
+from queue import Empty, Full, Queue
 
 from lib import storage
 from lib.models import AttackResult
@@ -10,7 +8,7 @@ from lib.models import AttackResult
 class Notifier:
     def __init__(self, logger: Logger):
         self._logger = logger
-        self._q = LightQueue(maxsize=1000)
+        self._q = Queue(maxsize=1000)
 
         # ensure no one is writing to the same broker connection concurrently
         self._sio = storage.utils.SIOManager.create(write_only=True)
@@ -36,6 +34,11 @@ class Notifier:
             try:
                 ar = self._q.get(block=True, timeout=3)
             except Empty:
-                eventlet.sleep(0.5)
+                continue
             else:
-                self._process(ar)
+                try:
+                    self._process(ar)
+                except Exception:
+                    self._logger.exception('Could not publish flag notification')
+                finally:
+                    self._q.task_done()

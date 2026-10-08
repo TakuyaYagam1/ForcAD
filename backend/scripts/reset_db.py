@@ -39,7 +39,7 @@ def run():
         socket_connect_timeout=5, socket_timeout=5,
     )
     try:
-        wait_for_storage(cache.flushall)
+        wait_for_storage(cache.flushdb)
     finally:
         cache.close()
 

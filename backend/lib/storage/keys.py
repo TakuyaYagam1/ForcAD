@@ -1,6 +1,3 @@
-from typing import Union
-
-
 class CacheKeys:
     @staticmethod
     def round_start(r: int) -> str:
@@ -39,7 +36,7 @@ class CacheKeys:
         return 'flags:cached'
 
     @staticmethod
-    def flag_by_field(field: str, value: Union[str, int]):
+    def flag_by_field(field: str, value: str | int):
         return f'flag:{field}:{value}'
 
     @classmethod

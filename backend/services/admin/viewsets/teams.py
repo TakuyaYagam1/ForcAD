@@ -1,8 +1,9 @@
-from flask import request, jsonify
+from flask import jsonify, request
 from psycopg2 import IntegrityError
 
 from lib import models, storage
 from lib.helpers import events
+
 from .api_base import ApiSet
 from .utils import make_err_response
 from .validation import validate_data
@@ -36,8 +37,8 @@ class TeamApi(ApiSet):
             return make_err_response(str(exc))
         except IntegrityError:
             return make_err_response(
-                'Данные нарушают ограничения базы. '
-                'Проверьте значения и уникальность токена.',
+                'Data violates database constraints. '
+                'Check the values and make sure the team token is unique.',
                 status=409,
             )
         events.refresh_scoreboard_after_commit()
@@ -56,15 +57,15 @@ class TeamApi(ApiSet):
                 for other in storage.teams.get_all_teams()
             ):
                 return make_err_response(
-                    'Токен уже используется другой командой', status=409
+                    'Token is already used by another team', status=409
                 )
             updated = storage.teams.update_team(item)
         except (TypeError, KeyError, ValueError) as exc:
             return make_err_response(str(exc))
         except IntegrityError:
             return make_err_response(
-                'Данные нарушают ограничения базы. '
-                'Проверьте значения и уникальность токена.',
+                'Data violates database constraints. '
+                'Check the values and make sure the team token is unique.',
                 status=409,
             )
         events.refresh_scoreboard_after_commit()

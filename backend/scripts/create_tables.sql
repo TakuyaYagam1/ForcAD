@@ -18,10 +18,13 @@ CREATE TABLE IF NOT EXISTS Teams
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL DEFAULT '',
     ip          VARCHAR(45)  NOT NULL,
-    token       VARCHAR(16)  NOT NULL DEFAULT '',
+    token       VARCHAR(16)  NOT NULL,
     highlighted BOOLEAN               DEFAULT FALSE,
     active      BOOLEAN               DEFAULT TRUE,
-    logo_path   VARCHAR(255) DEFAULT ''
+    logo_path   VARCHAR(255) DEFAULT '',
+    CONSTRAINT teams_token_format_check
+        CHECK (token ~ '^[0-9a-f]{16}$'),
+    CONSTRAINT teams_token_unique UNIQUE (token)
 );
 
 CREATE TABLE IF NOT EXISTS Tasks

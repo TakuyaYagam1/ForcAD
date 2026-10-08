@@ -1,5 +1,4 @@
-from flask import Blueprint
-from flask import jsonify, make_response
+from flask import Blueprint, jsonify, make_response
 
 from lib import storage
 

@@ -1,6 +1,7 @@
-from flask import request, jsonify
+from flask import jsonify, request
 
 from lib import storage
+
 from .api_base import ApiSet
 from .utils import make_err_response
 
