@@ -77,6 +77,19 @@ class RuntimeTests(TestCase):
         self.assertFalse(receiver.queue.durable)
         self.assertTrue(app.amqp.queues['celery'].durable)
 
+    def test_socketio_subscriber_queues_are_exclusive_for_rabbitmq(self):
+        with patch.object(
+            storage.utils.config, 'get_broker_url',
+            return_value='memory://',
+        ):
+            manager = storage.utils.SIOManager.create(write_only=False)
+        self.addCleanup(manager.publisher_connection.release)
+        queue = manager._queue()
+        self.assertTrue(queue.exclusive)
+        self.assertTrue(queue.auto_delete)
+        self.assertFalse(queue.durable)
+        self.assertEqual(queue.exchange.name, 'forcad-front')
+
     def test_active_flag_is_loaded_from_database_after_cache_miss(self):
         flag = models.Flag(
             id=7, team_id=2, task_id=1, round=3, flag='S' * 31 + '=',
