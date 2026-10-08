@@ -4,6 +4,7 @@ on:
     branches:
       - main
       - master
+      - fsp-prod
     paths-ignore:
       - "README.md"
       - ".gitignore"
@@ -12,10 +13,21 @@ on:
     branches:
       - main
       - master
+      - fsp-prod
     paths-ignore:
       - "README.md"
       - ".gitignore"
       - "static/**"
+  workflow_dispatch:
+    inputs:
+      run_docker_cleanup:
+        description: Run the isolated Docker cleanup integration test
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
   tests:
@@ -34,22 +46,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.11"
           cache: "pip"
           cache-dependency-path: |
             cli/requirements.txt
             tests/requirements.txt
+            tests/requirements-fixes.txt
             backend/requirements.txt
 
       - name: Install requirements
         run: |
-          pip install -r cli/requirements.txt
           pip install -r tests/requirements.txt
-          pip install -r backend/requirements.txt
+          pip install -r tests/requirements-fixes.txt
 
       - name: Setup tests
         run: python tests/setup_forcad.py
@@ -69,7 +81,8 @@ jobs:
           docker compose logs -f initializer
           python tests/wait_for_start.py
           ./control.py rd ps
-          python -m unittest discover -v -s tests
+          python -m unittest discover -v -s tests -p 'test*.py'
+          python -m unittest discover -v -s tests -p 'regressions_*.py'
 
       - name: Show logs
         if: ${{ failure() }}
@@ -79,35 +92,35 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install flake8
+      - name: Install lint dependencies
+        run: |
+          python -m pip install flake8
+          python -m pip install -r security/requirements-lint.txt
 
       - name: Run linters
-        uses: wearerequired/lint-action@v2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          flake8: true
+        run: make lint-backend lint-sql
 
   frontend_linter:
     runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
         with:
           version: "10.11.0"
           run_install: false
 
       - name: Set up Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
           cache: "pnpm"
@@ -117,6 +130,38 @@ jobs:
         working-directory: front
         run: pnpm install --frozen-lockfile
 
+      - name: Smoke test the Vite development server
+        working-directory: front
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          log="$RUNNER_TEMP/forcad-vite.log"
+          pnpm run dev --host 127.0.0.1 --port 5173 --strictPort >"$log" 2>&1 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:5173/ -o /dev/null; then
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat "$log"
+              exit 1
+            fi
+            sleep 1
+          done
+          cat "$log"
+          echo "Vite did not become ready on port 5173." >&2
+          exit 1
+
+      - name: Run frontend tests
+        working-directory: front
+        run: pnpm run test
+
       - name: Run linters
         working-directory: front
         run: pnpm run lint
@@ -124,3 +169,119 @@ jobs:
       - name: Check the frontend compiles
         working-directory: front
         run: pnpm run build
+
+  nginx_image:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build nginx image and check every mapped team logo URL
+        run: scripts/test_nginx_image.sh
+
+  dispatch_integration:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            tests/requirements.txt
+            tests/requirements-fixes.txt
+            backend/requirements.txt
+            cli/requirements.txt
+
+      - name: Install test requirements
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m pip install -r tests/requirements-fixes.txt
+
+      - name: Prepare isolated PostgreSQL socket directory
+        run: install -d -m 0777 "$RUNNER_TEMP/forcad-postgres"
+
+      - name: Start isolated PostgreSQL 17.11 with Unix socket only
+        run: |
+          docker run --detach --rm \
+            --name forcad-test-dispatch-postgres \
+            --network none \
+            --mount "type=bind,src=$RUNNER_TEMP/forcad-postgres,dst=/var/run/postgresql" \
+            --env POSTGRES_DB=postgres \
+            --env POSTGRES_HOST_AUTH_METHOD=trust \
+            --health-cmd 'pg_isready -h /var/run/postgresql -U postgres -d postgres' \
+            --health-interval 2s \
+            --health-timeout 3s \
+            --health-retries 30 \
+            postgres:17.11-alpine \
+            -c listen_addresses= \
+            -c unix_socket_directories=/var/run/postgresql
+
+      - name: Wait for PostgreSQL initialization
+        run: |
+          for attempt in $(seq 1 40); do
+            state="$(docker inspect --format '{{.State.Health.Status}}' forcad-test-dispatch-postgres)"
+            if [ "$state" = healthy ]; then
+              exit 0
+            fi
+            if [ "$state" = unhealthy ]; then
+              docker logs forcad-test-dispatch-postgres
+              exit 1
+            fi
+            sleep 2
+          done
+          docker logs forcad-test-dispatch-postgres
+          echo "PostgreSQL did not become healthy in time." >&2
+          exit 1
+
+      - name: Create the disposable test database
+        run: docker exec forcad-test-dispatch-postgres createdb -h /var/run/postgresql -U postgres forcad_test_dispatch
+
+      - name: Run dispatch integration tests over the Unix socket
+        env:
+          FORCAD_POSTGRES_TESTS: "1"
+          FORCAD_TEST_DSN: host=${{ runner.temp }}/forcad-postgres dbname=forcad_test_dispatch user=postgres
+        run: python -m unittest discover -v -s tests -p 'test_dispatch_integration.py'
+
+      - name: Stop isolated PostgreSQL
+        if: ${{ always() }}
+        run: docker rm --force forcad-test-dispatch-postgres || true
+
+  docker_cleanup:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_docker_cleanup }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.11"
+
+      - name: Check fixture images
+        run: |
+          if rg -n 'postgres:13\.4-alpine|redis:6\.2\.5-alpine|rabbitmq:3\.9\.7-management-alpine' tests/test_cleanup_integration.py; then
+            echo "Update the isolated cleanup fixture to supported image tags before running it." >&2
+            exit 1
+          fi
+
+      - name: Install requirements
+        run: |
+          python -m pip install -r tests/requirements.txt
+          python -m pip install -r tests/requirements-fixes.txt
+
+      - name: Run isolated Docker cleanup test
+        env:
+          FORCAD_DOCKER_TESTS: "1"
+        run: python -m unittest discover -v -s tests -p 'test_cleanup_integration.py'

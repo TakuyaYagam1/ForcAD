@@ -1,0 +1,23 @@
+title = "ForcAD secret scanning"
+
+[extend]
+useDefault = true
+
+# These public, deterministic values are examples and unit-test fixtures.
+# Owner: project maintainers. Review if the fixture or token format changes.
+# Matching a path alone never suppresses another credential in that file.
+[[allowlists]]
+description = "Public example team token and matching test fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^(config\.yml\.example|README\.md|tests/test_team_tokens\.py|tests/test_cleanup_integration\.py|front/tests/admin-validation\.test\.ts)$''']
+regexes = ['''^0123456789abcdef$''']
+
+[[allowlists]]
+description = "Deterministic offline regression fixture token"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^tests/regressions_fixes\.py$''']
+regexes = ['''^abcdef0123456789$''']

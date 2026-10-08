@@ -5,64 +5,151 @@ on:
     tags:
       - "*"
 
+permissions:
+  contents: read
+
 jobs:
   release:
     runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      GH_TOKEN: ${{ github.token }}
 
-      - name: Get the version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate release tag
+        id: version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]; then
+            echo "Release tag has unsupported characters." >&2
+            exit 1
+          fi
+          printf 'value=%s\n' "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$RELEASE_TAG" > .version
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
         with:
           platforms: amd64,arm64
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
         with:
           install: true
           platforms: linux/amd64,linux/arm64
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Prepare image name
+        id: image
+        shell: bash
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          owner="${REPOSITORY_OWNER,,}"
+          printf 'repository=ghcr.io/%s/forcad_base\n' "$owner" >> "$GITHUB_OUTPUT"
+          printf 'image=ghcr.io/%s/forcad_base:%s\n' "$owner" "$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ github.token }}
 
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v5
+      - name: Build and publish base image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        env:
+          FORCAD_BASE_IMAGE: ${{ steps.image.outputs.image }}
         with:
           context: .
           file: docker_config/base_images/backend.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ github.repository_owner }}/forcad_base:latest
-            ghcr.io/${{ github.repository_owner }}/forcad_base:${{ steps.get_version.outputs.VERSION }}
+            ${{ steps.image.outputs.repository }}:latest
+            ${{ steps.image.outputs.image }}
+          provenance: mode=max
+          sbom: true
 
-      - name: Set up Node 16
-        uses: actions/setup-node@v3
+      - name: Set up pnpm
+        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
         with:
-          node-version: "16"
+          version: 10.11.0
+          run_install: false
 
-      - name: Build frontend
+      - name: Set up Node 22
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: front/pnpm-lock.yaml
+
+      - name: Install and verify frontend
         working-directory: front
-        run: yarn install && yarn build
-
-      - name: Setup release
         run: |
-          echo ${{ steps.get_version.outputs.VERSION }} > .version
-          ./scripts/prepare_release.sh
+          pnpm install --frozen-lockfile
+          pnpm run lint
+          pnpm run test
+          pnpm run build
 
-      - name: Upload release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ForcAD_${{ steps.get_version.outputs.VERSION }}.zip
+      - name: Create source release archive
+        run: ./scripts/prepare_release.sh
+
+      - name: Prepare private SBOM workspace
+        run: install -d -m 0700 "$RUNNER_TEMP/release-reports" "$RUNNER_TEMP/release-cache"
+
+      - name: Generate CycloneDX SBOM for release sources
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          release_dir="$GITHUB_WORKSPACE/ForcAD_${RELEASE_VERSION}"
+          sbom_name="ForcAD_${RELEASE_VERSION}.cdx.json"
+          docker run --rm --platform linux/amd64 \
+            --mount "type=bind,src=$release_dir,dst=/work,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/release-reports,dst=/reports" \
+            --mount "type=bind,src=$RUNNER_TEMP/release-cache,dst=/cache" \
+            --workdir /work \
+            --env HOME=/tmp \
+            ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
+            fs --cache-dir /cache --scanners vuln --format cyclonedx \
+            --output "/reports/$sbom_name" /work
+          install -m 0644 "$RUNNER_TEMP/release-reports/$sbom_name" "$GITHUB_WORKSPACE/$sbom_name"
+
+      - name: Attest release archive provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ github.workspace }}/ForcAD_${{ steps.version.outputs.value }}.zip
+
+      - name: Attest release SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ github.workspace }}/ForcAD_${{ steps.version.outputs.value }}.zip
+          sbom-path: ${{ github.workspace }}/ForcAD_${{ steps.version.outputs.value }}.cdx.json
+
+      - name: Publish release assets
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          archive="ForcAD_${RELEASE_VERSION}.zip"
+          sbom="ForcAD_${RELEASE_VERSION}.cdx.json"
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_VERSION" "$archive" "$sbom" --clobber
+          else
+            gh release create "$RELEASE_VERSION" "$archive" "$sbom" \
+              --title "ForcAD $RELEASE_VERSION" --generate-notes
+          fi

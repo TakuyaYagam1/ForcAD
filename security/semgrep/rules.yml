@@ -1,0 +1,97 @@
+rules:
+  - id: forcad-python-dynamic-execution
+    languages: [python]
+    message: Avoid eval and exec on application data; parse structured input instead.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+
+  - id: forcad-python-unsafe-yaml-loader
+    languages: [python]
+    message: Use yaml.safe_load or an explicit SafeLoader or CSafeLoader.
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: yaml.load(...)
+          - pattern: yaml.load_all(...)
+      - pattern-not: yaml.load(..., Loader=yaml.SafeLoader, ...)
+      - pattern-not: yaml.load(..., Loader=yaml.CSafeLoader, ...)
+      - pattern-not: yaml.load_all(..., Loader=yaml.SafeLoader, ...)
+      - pattern-not: yaml.load_all(..., Loader=yaml.CSafeLoader, ...)
+      - pattern-not: yaml.load(..., Loader=SafeLoader, ...)
+      - pattern-not: yaml.load_all(..., Loader=SafeLoader, ...)
+      - pattern-not: yaml.load(..., Loader=CSafeLoader, ...)
+      - pattern-not: yaml.load_all(..., Loader=CSafeLoader, ...)
+      - pattern-not: yaml.load(..., yaml.SafeLoader, ...)
+      - pattern-not: yaml.load(..., yaml.CSafeLoader, ...)
+      - pattern-not: yaml.load_all(..., yaml.SafeLoader, ...)
+      - pattern-not: yaml.load_all(..., yaml.CSafeLoader, ...)
+      - pattern-not: yaml.load(..., CSafeLoader, ...)
+      - pattern-not: yaml.load_all(..., CSafeLoader, ...)
+
+  - id: forcad-python-subprocess-shell
+    languages: [python]
+    message: Pass an argument list to subprocess without shell=True.
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.$CALL(..., shell=True, ...)
+          - pattern: $CALL(..., shell=True, ...)
+      - metavariable-regex:
+          metavariable: $CALL
+          regex: ^(run|Popen|call|check_call|check_output)$
+
+  - id: forcad-python-disabled-tls
+    languages: [python]
+    message: Keep TLS certificate verification enabled in requests and httpx.
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: requests.$CALL(..., verify=False, ...)
+          - pattern: httpx.$CALL(..., verify=False, ...)
+      - metavariable-regex:
+          metavariable: $CALL
+          regex: ^(request|get|post|put|patch|delete|head|options|stream|Client|AsyncClient)$
+
+  - id: forcad-python-pickle-load
+    languages: [python]
+    message: Avoid pickle deserialization for data that may cross a trust boundary.
+    severity: ERROR
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+
+  - id: forcad-js-dynamic-code
+    languages: [javascript, typescript]
+    message: Avoid eval and Function constructors; parse data with explicit formats.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+      - pattern: Function(...)
+
+  - id: forcad-js-document-write
+    languages: [javascript, typescript]
+    message: Avoid document.write and document.writeln; use normal DOM rendering.
+    severity: ERROR
+    pattern-either:
+      - pattern: document.write(...)
+      - pattern: document.writeln(...)
+
+  - id: forcad-js-inner-html
+    languages: [javascript, typescript]
+    message: Review direct innerHTML writes; use textContent or framework rendering.
+    severity: WARNING
+    pattern-either:
+      - pattern: $TARGET.innerHTML = $VALUE
+      - pattern: $TARGET.innerHTML += $VALUE
+
+  - id: forcad-js-disabled-tls
+    languages: [javascript, typescript]
+    message: Do not disable Node.js TLS certificate verification.
+    severity: ERROR
+    pattern-either:
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+      - pattern: "{..., rejectUnauthorized: false, ...}"

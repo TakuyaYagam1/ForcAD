@@ -1,0 +1,100 @@
+name: security
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - fsp-prod
+  pull_request:
+    branches:
+      - main
+      - master
+      - fsp-prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scans:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout full history
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare private reports and cache
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: install -d -m 0700 "$RUNNER_TEMP/forcad-security/reports" "$RUNNER_TEMP/forcad-security/trivy-cache"
+
+      - name: Scan dependencies and Dockerfiles with Trivy
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          set +e
+          docker run --rm --platform linux/amd64 \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/work,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/forcad-security/reports,dst=/reports" \
+            --mount "type=bind,src=$RUNNER_TEMP/forcad-security/trivy-cache,dst=/cache" \
+            --workdir /work \
+            --env HOME=/tmp \
+            ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
+            fs --no-progress --config security/trivy/filesystem.yml \
+            --cache-dir /cache --output /reports/trivy-filesystem.json .
+          scan_status=$?
+          set -e
+          if [ -s "$RUNNER_TEMP/forcad-security/reports/trivy-filesystem.json" ]; then
+            docker run --rm --platform linux/amd64 \
+              --user "$(id -u):$(id -g)" \
+              --mount "type=bind,src=$RUNNER_TEMP/forcad-security/reports,dst=/reports,readonly" \
+              --env HOME=/tmp \
+              ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
+              convert --format table --table-mode summary --scanners vuln,misconfig \
+              /reports/trivy-filesystem.json || scan_status=1
+          else
+            echo "Trivy did not create a report." >&2
+            scan_status=1
+          fi
+          exit "$scan_status"
+
+      - name: Scan current files and full history with Gitleaks
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        env:
+          FORCAD_GITLEAKS_ROOT: ${{ github.workspace }}
+          FORCAD_GITLEAKS_REPORTS: ${{ runner.temp }}/forcad-security/reports
+          FORCAD_GITLEAKS_CACHE: ${{ runner.temp }}/forcad-security/gitleaks-cache
+        run: |
+          install -d -m 0700 "$FORCAD_GITLEAKS_CACHE"
+          python3 security/scan_inputs.py \
+            --root "$FORCAD_GITLEAKS_ROOT" \
+            --scanner "$FORCAD_GITLEAKS_ROOT/scripts/gitleaks_container.sh" \
+            --config "$FORCAD_GITLEAKS_ROOT/security/gitleaks/gitleaks.toml" \
+            --reports "$FORCAD_GITLEAKS_REPORTS" \
+            --cache "$FORCAD_GITLEAKS_CACHE"
+
+      - name: Run local Semgrep rules
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        env:
+          SEMGREP_SEND_METRICS: off
+          SEMGREP_ENABLE_VERSION_CHECK: "0"
+          HOME: ${{ runner.temp }}
+        run: |
+          docker run --rm --platform linux/amd64 \
+            --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/work,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/forcad-security/reports,dst=/reports" \
+            --workdir /work \
+            --env HOME=/tmp \
+            --env SEMGREP_SEND_METRICS=off \
+            --env SEMGREP_ENABLE_VERSION_CHECK=0 \
+            --env EIO_BACKEND=posix \
+            semgrep/semgrep:1.178.0@sha256:fbba1f23d2ef94630c828e8692758f8bc6353a8089841a396a5c041451966ffb \
+            scan --strict --error --disable-nosem --metrics off \
+            --config /work/security/semgrep/rules.yml \
+            --json-output /reports/semgrep.json \
+            /work/backend /work/cli /work/front/src
