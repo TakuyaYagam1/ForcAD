@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import re
 from pathlib import Path
 
 import pytz
@@ -25,10 +26,25 @@ def init_schema(curs):
 
 
 def init_teams(config, curs):
+    # The initializer reads YAML directly, without the CLI validation step.
+    configured_tokens = set()
+    for team_conf in config:
+        token = team_conf.get('token')
+        if token is None:
+            continue
+        if not isinstance(token, str) or not re.fullmatch(r'[0-9a-f]{16}', token):
+            raise ValueError('Team token must be 16 lowercase hexadecimal characters')
+        if token in configured_tokens:
+            raise ValueError('Configured team tokens must be unique')
+        configured_tokens.add(token)
+
     teams = []
 
     for team_conf in config:
-        team_token = models.Team.generate_token()
+        team_conf = dict(team_conf)
+        team_token = team_conf.pop('token', None)
+        if team_token is None:
+            team_token = models.Team.generate_token()
         team = models.Team(id=None, **team_conf, token=team_token, logo_path=None)
         team.insert(curs)
         teams.append(team)

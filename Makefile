@@ -11,7 +11,6 @@ lint: lint-backend lint-frontend
 
 .PHONY: clean
 clean:
-	./control.py reset || :
 	./control.py clean
 
 .PHONY: test

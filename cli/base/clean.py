@@ -1,22 +1,13 @@
 import click
 
-from cli import constants, utils
+from cli import cleanup, utils
+from cli.options import with_fast_option
 
 
-@click.command(help='Clean up after running')
-def clean():
-    environment = [
-        constants.ADMIN_ENV_PATH,
-        constants.POSTGRES_ENV_PATH,
-        constants.RABBITMQ_ENV_PATH,
-        constants.REDIS_ENV_PATH,
-    ]
-    for file in environment:
-        utils.remove_file(file)
-
-    base_compose_path = constants.BASE_DIR / constants.BASE_COMPOSE_FILE
-    utils.remove_file(base_compose_path)
-
-    utils.remove_dir(constants.DOCKER_VOLUMES_DIR)
-
+@click.command(help='Delete local game data and generated files; keep config/checkers')
+@with_fast_option
+def clean(fast):
+    cleanup.generated_config_files()
+    cleanup.reset_game(full=True, fast=fast)
+    cleanup.remove_generated_config()
     utils.print_success('Cleanup successful!')
