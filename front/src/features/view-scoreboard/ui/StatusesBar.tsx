@@ -33,7 +33,7 @@ export function StatusesBar({
   const effectiveNow = phase === "paused" && pausedAt ? pausedAt * 1000 : now;
   // Prefer the real current-round timestamp; legacy snapshots describe the completed round.
   const elapsed =
-    phase === "unknown" || phase === "waiting" ||
+    phase === "unknown" || phase === "waiting" || phase === "finished" ||
     startMs === null || roundTime === null || !displayRound
       ? null
       : Math.max(
@@ -89,7 +89,9 @@ export function StatusesBar({
             }
             aria-live="polite"
           >
-            {phase === "paused"
+            {phase === "finished"
+              ? "Игра завершилась"
+              : phase === "paused"
               ? "Пауза"
               : phase === "running" && roundWaiting
                 ? "Ожидание результатов проверок"

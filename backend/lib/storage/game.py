@@ -12,7 +12,11 @@ _CURRENT_REAL_ROUND_QUERY = 'SELECT real_round FROM GameConfig WHERE id=1'
 
 _UPDATE_REAL_ROUND_QUERY = 'UPDATE GameConfig SET real_round = %(round)s WHERE id=1'
 
-_SET_GAME_RUNNING_QUERY = 'UPDATE GameConfig SET game_running = %(value)s WHERE id=1'
+_SET_GAME_RUNNING_QUERY = (
+    'UPDATE GameConfig SET game_running = %(value)s WHERE id=1 '
+    'AND game_running IS DISTINCT FROM %(value)s '
+    'AND (NOT %(value)s OR real_round=0)'
+)
 
 _GET_GAME_RUNNING_QUERY = 'SELECT game_running FROM GameConfig WHERE id=1'
 
@@ -61,11 +65,13 @@ def update_real_round_in_db(new_round: int) -> None:
         conn.commit()
 
 
-def set_game_running(new_value: bool) -> None:
-    """Update game_running value in db."""
+def set_game_running(new_value: bool) -> bool:
+    """Start only a new game; a finished game must never restart."""
     with utils.db_cursor() as (conn, curs):
         curs.execute(_SET_GAME_RUNNING_QUERY, {'value': new_value})
+        changed = curs.rowcount == 1
         conn.commit()
+        return changed
 
 
 def get_game_running() -> bool:
@@ -357,11 +363,82 @@ def is_game_paused() -> bool:
     return bool(utils.RedisStorage.get().exists(PAUSED_AT))
 
 
+def get_lifecycle() -> tuple[int, bool]:
+    with utils.db_cursor() as (_, curs):
+        curs.execute('SELECT real_round, game_running FROM GameConfig WHERE id=1')
+        row = curs.fetchone()
+    if row is None:
+        raise ValueError('Game is not initialized')
+    return row
+
+
+def is_game_finished() -> bool:
+    real_round, running = get_lifecycle()
+    return real_round > 0 and not running
+
+
+def has_pending_checks() -> bool:
+    with utils.db_cursor() as (_, curs):
+        curs.execute(
+            'SELECT EXISTS (SELECT 1 FROM CheckerJobs WHERE finished_at IS NULL)',
+        )
+        return curs.fetchone()[0]
+
+
+def change_game_state(action: str) -> None:
+    """Serialize organizer controls with round creation and flag accounting."""
+    if action not in {'pause', 'resume', 'finish'}:
+        raise ValueError('Unknown game action')
+    with utils.db_cursor() as (conn, curs):
+        curs.execute(
+            'SELECT real_round, game_running FROM GameConfig WHERE id=1 FOR UPDATE',
+        )
+        row = curs.fetchone()
+        if row is None:
+            raise ValueError('Game is not initialized')
+        real_round, running = row
+        if real_round > 0 and not running:
+            if action == 'finish':
+                conn.commit()
+                return
+            raise ValueError('Game has already finished')
+        if action == 'finish':
+            if real_round < 1:
+                raise ValueError('Game has not started')
+            curs.execute('UPDATE GameConfig SET game_running=FALSE WHERE id=1')
+            # Unpublished jobs cannot drain after the scheduler has stopped.
+            # A late delivery is fenced by the existing finished_at check.
+            # A renewed lease means a worker already started before mark_sent.
+            curs.execute(
+                'UPDATE CheckerJobs SET finished_at=clock_timestamp() '
+                'WHERE sent_at IS NULL AND deadline_at IS NULL '
+                'AND finished_at IS NULL',
+            )
+        set_game_paused(action != 'resume')
+        conn.commit()
+
+
+def finalize_finished_game() -> None:
+    """Publish the last round once all already sent checks have settled."""
+    if not is_game_finished():
+        return
+    redis = utils.RedisStorage.get()
+    if redis.exists('game:final_snapshot') or has_pending_checks():
+        return
+    update_game_state(get_real_round_from_db())
+    redis.set('game:final_snapshot', 1)
+
+
 def get_runtime_status() -> dict:
     with utils.redis_pipeline(transaction=False) as pipe:
         paused_at, paused_seconds = pipe.get(PAUSED_AT).get(PAUSED_SECONDS).execute()
-    real_round = max(0, get_real_round())
-    phase = 'paused' if paused_at else ('running' if real_round >= 1 else 'waiting')
+    real_round, running = get_lifecycle()
+    finished = real_round > 0 and not running
+    phase = (
+        'finished' if finished else
+        'paused' if paused_at else
+        'running' if real_round >= 1 else 'waiting'
+    )
     return {
         'phase': phase,
         'round': real_round,
@@ -370,4 +447,5 @@ def get_runtime_status() -> dict:
         'paused_seconds': float(paused_seconds or 0),
         'round_time': get_current_game_config().round_time,
         'round_waiting': bool(utils.RedisStorage.get().exists('game:round_waiting')),
+        'results_pending': finished and has_pending_checks(),
     }

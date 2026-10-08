@@ -35,6 +35,9 @@ def get_teams():
     if current_round == -1:
         return make_error('Game not started.')
 
+    if storage.game.is_game_finished():
+        return make_error('Game has finished.', status=410)
+
     if storage.game.is_game_paused():
         return make_error('Game is paused. Please retry after resume.', status=503)
 

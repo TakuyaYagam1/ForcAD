@@ -40,6 +40,9 @@ class RequestLimitTests(TestCase):
         )
 
     def setUp(self):
+        finished = patch.object(storage.game, 'is_game_finished', return_value=False)
+        finished.start()
+        self.addCleanup(finished.stop)
         self.app = Flask('request-limits-test')
         self.json_limit = 128
         self.flag_limit = 64
@@ -92,6 +95,15 @@ class RequestLimitTests(TestCase):
                     },
                 )
                 self.assertEqual(response.status_code, expected)
+
+    def test_finished_game_rejects_submissions_before_judging(self):
+        with patch.object(storage.teams, 'get_team_id_by_token', return_value=1), \
+                patch.object(storage.game, 'get_real_round', return_value=14), \
+                patch.object(storage.game, 'is_game_finished', return_value=True), \
+                patch.object(receiver_views, 'judge') as judge:
+            response = self.receiver_module.app.test_client().put('/flags/', json=['x' * 32])
+        self.assertEqual(response.status_code, 410)
+        judge.process_many.assert_not_called()
 
     def test_json_limit_accepts_boundary_and_rejects_next_byte(self):
         body = b'null' + b' ' * (self.json_limit - len(b'null'))

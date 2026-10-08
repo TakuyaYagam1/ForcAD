@@ -6,7 +6,7 @@ from datetime import datetime
 
 from psycopg2.extras import Json
 
-from lib import models
+from lib import models, storage
 from lib.storage import utils
 
 # Allow queueing and callback delivery beyond an individual checker's timeout.
@@ -20,8 +20,15 @@ def prepare(schedule_id, teams, tasks, *, advances_round=False, puts_only=False)
     accounting transaction even if the broker's acknowledgement was lost.
     """
     with utils.db_cursor(dict_cursor=True) as (conn, curs):
-        curs.execute('SELECT real_round FROM GameConfig WHERE id=1 FOR UPDATE')
-        current_round = curs.fetchone()['real_round']
+        curs.execute(
+            'SELECT real_round, game_running FROM GameConfig WHERE id=1 FOR UPDATE',
+        )
+        game = curs.fetchone()
+        current_round = game['real_round']
+        finished = current_round > 0 and not game['game_running']
+        if finished or storage.game.is_game_paused():
+            conn.commit()
+            return None
         curs.execute(
             'SELECT * FROM DispatchRuns WHERE schedule_id=%s AND NOT completed',
             (schedule_id,),

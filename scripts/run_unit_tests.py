@@ -9,6 +9,7 @@ OFFLINE_PATTERNS = (
     'test_auth_security.py',
     'test_checker_limits.py',
     'test_cleanup.py',
+    'test_game_control.py',
     'test_request_limits.py',
     'test_runtime.py',
     'test_team_tokens.py',

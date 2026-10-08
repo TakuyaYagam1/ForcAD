@@ -5,6 +5,7 @@ import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import SideRays from "@/components/SideRays";
 import { usePageEntrance } from "@/shared/lib/usePageEntrance";
+import { gameStatusLabel } from "@/shared/lib/gameStatus";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -17,6 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const error = useScoreboardStore((state) => state.error);
   const connected = useScoreboardStore((state) => state.connected);
   const phase = useScoreboardStore((state) => state.phase);
+  const resultsPending = useScoreboardStore((state) => state.resultsPending);
 
   const [motion, setMotion] = useState(() => {
     try {
@@ -98,13 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {error || (!connected && teams)
                 ? "Нет соединения"
                 : teams
-                  ? round > 0
-                    ? phase === "paused"
-                      ? "Игра на паузе"
-                      : phase === "running"
-                        ? "Игра идёт"
-                        : "Статус игры недоступен"
-                    : "Ожидание старта"
+                  ? gameStatusLabel(phase)
                   : "Подключение"}
             </span>
           </div>
@@ -117,8 +113,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="mx-auto my-3 max-w-screen-xl rounded border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm text-amber-100"
             role="status"
           >
-            Игра на паузе: новые флаги не принимаются и проверки не запускаются.
+            Игра приостановлена: новые флаги не принимаются и проверки не запускаются.
             Уже запущенные проверки могут завершиться и обновить результаты.
+          </div>
+        )}
+        {phase === "finished" && (
+          <div className="notice mx-auto my-3 max-w-screen-xl" role="status">
+            Игра завершилась. Прием флагов закрыт.
+            {resultsPending
+              ? " Ожидаем результаты последних проверок перед публикацией итогов."
+              : " Новые раунды и проверки не запускаются."}
           </div>
         )}
         {children}

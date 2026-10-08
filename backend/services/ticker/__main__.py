@@ -102,6 +102,7 @@ def main(state: TickerState):
         if time.monotonic() >= next_maintenance:
             try:
                 recover_expired_jobs()
+                storage.game.finalize_finished_game()
             except Exception:
                 logger.exception(
                     'Checker recovery failed; retrying on next maintenance',
@@ -109,7 +110,7 @@ def main(state: TickerState):
             sync_blitz_schedules(state)
             events.retry_scoreboard_refresh()
             next_maintenance = time.monotonic() + 5
-        if storage.game.is_game_paused():
+        if storage.game.is_game_paused() or storage.game.is_game_finished():
             time.sleep(0.1)
             continue
         now = datetime.fromtimestamp(
@@ -117,7 +118,7 @@ def main(state: TickerState):
         )
         due_schedules = state.get_due_schedules(now)
         for schedule in due_schedules:
-            if storage.game.is_game_paused():
+            if storage.game.is_game_paused() or storage.game.is_game_finished():
                 break
             logger.info('Executing schedule %s', schedule.schedule_id)
             state.scheduled_at = now

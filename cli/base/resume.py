@@ -17,4 +17,3 @@ def resume():
             'resume',
         ]
     )
-    run_docker(['start', 'ticker', 'http-receiver'])
