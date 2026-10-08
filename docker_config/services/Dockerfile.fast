@@ -1,11 +1,22 @@
-ARG version=latest
+ARG BASE_IMAGE=forcad_base:local
 
-FROM ghcr.io/pomo-mondreganto/forcad_base:${version}
+FROM ${BASE_IMAGE}
+
+USER root
+
+RUN apt-mark manual libpq5 \
+    && apt-get purge -y --auto-remove gcc libc6-dev libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python3.11/ensurepip
 
 COPY backend /app
 
 COPY ./docker_config/services/functions.sh /functions.sh
 COPY ./docker_config/services/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+USER forcad:forcad
 
 CMD ["/entrypoint.sh"]

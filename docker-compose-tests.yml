@@ -1,5 +1,3 @@
-version: '2.4'
-
 x-celery-test: &celery-test
   build:
     context: .
@@ -62,5 +60,5 @@ services:
     build:
       context: ./tests/service
     ports:
-      - "10000:10000"
+      - "127.0.0.1:10000:10000"
     restart: "no"

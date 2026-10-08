@@ -1,13 +1,41 @@
 limit_conn_zone $binary_remote_addr zone=http_ip_conn:16m;
 limit_req_zone $http_x_team_token zone=token_limit:64m rate=2r/s;
+limit_req_zone $binary_remote_addr zone=api_ip_limit:10m rate=30r/s;
+limit_req_log_level info;
+limit_req_status 429;
+
+map $http_content_encoding $reject_api_content_encoding {
+    default 1;
+    "" 0;
+    "~*^identity$" 0;
+}
 
 resolver ${DNS_RESOLVER} valid=10s ipv6=off;
 resolver_timeout 5s;
 
+client_body_temp_path /tmp/nginx/client_temp;
+proxy_temp_path /tmp/nginx/proxy_temp;
+fastcgi_temp_path /tmp/nginx/fastcgi_temp;
+uwsgi_temp_path /tmp/nginx/uwsgi_temp;
+scgi_temp_path /tmp/nginx/scgi_temp;
+
+client_max_body_size 64k;
+client_body_timeout 10s;
+client_header_timeout 10s;
+client_header_buffer_size 1k;
+large_client_header_buffers 2 8k;
+send_timeout 30s;
+keepalive_timeout 15s;
+server_tokens off;
+
 server {
-    listen 80;
+    listen 8080;
 
     server_name default;
+
+    include /tmp/forcad-trusted-proxies.conf;
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
 
     location /flower {
         set $backend flower:5000;
@@ -19,12 +47,14 @@ server {
         set $backend client-api:5000;
         proxy_pass http://$backend;
         include proxy_params;
+        include /etc/nginx/api_limits.conf;
     }
 
     location /api/admin {
         set $backend admin-api:5000;
         proxy_pass http://$backend;
         include proxy_params;
+        include /etc/nginx/api_limits.conf;
     }
 
     location /flags {
@@ -33,32 +63,39 @@ server {
         include proxy_params;
 
         client_max_body_size 10K;
+        include /etc/nginx/api_limits.conf;
 
         limit_conn http_ip_conn 10;
         limit_conn_log_level info;
         limit_conn_status 429;
 
         limit_req zone=token_limit;
-        limit_req_log_level info;
-        limit_req_status 429;
     }
 
     location /api/http-receiver {
         set $backend http-receiver:5000;
         proxy_pass http://$backend;
         include proxy_params_ws;
+        include /etc/nginx/api_limits.conf;
     }
 
     location /api/events {
         set $backend events:5000;
         proxy_pass http://$backend;
         include proxy_params_ws;
+        include /etc/nginx/api_limits.conf;
     }
 
     location /socket.io {
         set $backend events:5000;
         proxy_pass http://$backend;
         include proxy_params_ws;
+        include /etc/nginx/api_limits.conf;
+    }
+
+    location ^~ /team-logos/ {
+        alias /var/www/front/team-logos/;
+        autoindex off;
     }
 
     location / {

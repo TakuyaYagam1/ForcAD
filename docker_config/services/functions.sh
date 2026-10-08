@@ -6,8 +6,9 @@ start_web() {
   gunicorn "app:app" \
     --bind "0.0.0.0:${PORT:-5000}" \
     --log-level "${LOG_LEVEL:-INFO}" \
-    --worker-class eventlet \
-    --worker-connections 1024
+    --worker-class gthread \
+    --workers 1 \
+    --threads "${FORCAD_HTTP_THREADS:-100}"
 }
 
 start_api() {

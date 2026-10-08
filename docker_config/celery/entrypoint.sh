@@ -11,7 +11,8 @@ case ${SERVICE} in
   echo "[*] Starting celery worker"
   celery -A tasks.app \
     worker \
-    -E -l info
+    -E -l info \
+    --autoscale "${FORCAD_WORKER_AUTOSCALE:-32,16}"
   ;;
 "flower")
   set +e

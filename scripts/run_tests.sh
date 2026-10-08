@@ -14,5 +14,4 @@ docker compose ps
 docker compose logs -f initializer
 python tests/wait_for_start.py
 ./control.py rd ps
-env | sort
 python -m unittest discover -v -s tests
