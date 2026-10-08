@@ -1,37 +1,34 @@
-import { type ReactNode, useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { getLiveEventsSocket } from "@/shared/lib/socket";
-import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
-
-interface Props {
-  children: ReactNode;
-}
-
-export function LiveEventsProvider({ children }: Props) {
-  const pushNotification = useLiveScoreboardStore((s) => s.pushNotification);
-  const setError = useLiveScoreboardStore((s) => s.setError);
-
+import {
+  useLiveScoreboardStore,
+  type FlagNotificationPayload,
+} from "@/entities/live-scoreboard/model/store";
+export function LiveEventsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const socket = getLiveEventsSocket();
-
-    const handleFlagStolen = (payload: any) => {
-      const data = payload?.data ?? payload;
-      if (!data) return;
-      pushNotification(data);
+    const onReady = () => useLiveScoreboardStore.getState().setError(null);
+    const onError = () =>
+      useLiveScoreboardStore
+        .getState()
+        .setError("Соединение с лентой событий потеряно");
+    const onEvent = (
+      payload: FlagNotificationPayload | { data: FlagNotificationPayload },
+    ) => {
+      const data = "data" in payload ? payload.data : payload;
+      useLiveScoreboardStore.getState().pushNotification(data);
     };
-
-    const handleConnectError = (err: any) => {
-      console.error("live_events connect_error", err);
-      setError("Live scoreboard connection error");
-    };
-
-    socket.on("flag_stolen", handleFlagStolen);
-    socket.on("connect_error", handleConnectError);
-
+    socket.on("connect", onReady);
+    socket.on("disconnect", onError);
+    socket.on("connect_error", onError);
+    socket.on("flag_stolen", onEvent);
+    if (socket.connected) onReady();
     return () => {
-      socket.off("flag_stolen", handleFlagStolen);
-      socket.off("connect_error", handleConnectError);
+      socket.off("connect", onReady);
+      socket.off("disconnect", onError);
+      socket.off("connect_error", onError);
+      socket.off("flag_stolen", onEvent);
     };
-  }, [pushNotification, setError]);
-
+  }, []);
   return <>{children}</>;
 }

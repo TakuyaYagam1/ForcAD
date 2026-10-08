@@ -9,5 +9,5 @@ export interface Team {
   highlighted: boolean;
   active: boolean;
   score?: number;
-  taskStats?: any;
+  taskStats?: unknown;
 }

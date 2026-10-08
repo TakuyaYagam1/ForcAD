@@ -6,7 +6,7 @@ export function TeamScoreboardPage() {
   const { teamId: rawTeamId } = useParams();
   const teamId = Number(rawTeamId);
 
-  const isInvalid = Number.isNaN(teamId);
+  const isInvalid = !Number.isInteger(teamId) || teamId <= 0;
 
   return (
     <AppShell>

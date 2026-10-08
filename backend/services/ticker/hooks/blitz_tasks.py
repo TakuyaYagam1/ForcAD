@@ -54,6 +54,6 @@ def blitz_check_gets_runner_factory(task_id: int) -> Callable:
         args_list = utils.get_round_processor_args(current_round, task_id=task_id)
 
         for args in args_list:
-            submit_puts_jobs(state.celery_app, *args)
+            submit_check_gets_jobs(state.celery_app, *args)
 
     return run_blitz_check_gets_round

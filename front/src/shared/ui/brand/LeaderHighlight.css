@@ -1,0 +1,165 @@
+/* Карточка лидера: золотой градиент и частицы снизу вверх. */
+.teams-page .team-card--medallion[data-rank="1"] {
+  --leader-fade: clamp(32px, 18%, 84px);
+  --leader-mask-angle: 180deg;
+  --leader-gradient: linear-gradient(
+    0deg,
+    rgb(170 133 69 / 24%),
+    rgb(255 197 115 / 8%) 44%,
+    transparent 88%
+  );
+  --leader-particles:
+    radial-gradient(
+      circle at 24% 24px,
+      #ffe6af 0 1px,
+      #ffc57355 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 70% 96px, #ffc573bb 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 40% 168px,
+      #fff0cb 0 1px,
+      #ffc57333 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 82% 244px, #ffc573aa 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 18% 312px,
+      #ffe0a5 0 1px,
+      #ffc57333 2px,
+      transparent 4px
+    ),
+    radial-gradient(circle at 54% 52px, #ffc57399 0 1px, transparent 3px),
+    radial-gradient(circle at 14% 190px, #ffedc4cc 0 1px, transparent 4px),
+    radial-gradient(circle at 66% 326px, #ffd99aaa 0 1px, transparent 3px);
+  --leader-particle-size:
+    100% 360px, 100% 360px, 100% 360px, 100% 360px, 100% 360px, 100% 440px,
+    100% 440px, 100% 440px;
+  --leader-particle-repeat: repeat-y;
+  --leader-particle-end:
+    0 -360px, 0 -360px, 0 -360px, 0 -360px, 0 -360px, 0 -440px, 0 -440px,
+    0 -440px;
+
+  isolation: isolate;
+}
+
+/* Профиль: эффект включается только у команды с текущим первым местом. */
+.team-hero:has(.team-current-rank .rank-number--1) {
+  --leader-fade: clamp(48px, 12%, 180px);
+  --leader-mask-angle: 90deg;
+  --leader-gradient: linear-gradient(
+    90deg,
+    rgb(170 133 69 / 24%),
+    rgb(255 197 115 / 8%) 36%,
+    transparent 100%
+  );
+  --leader-particles:
+    radial-gradient(
+      circle at 24px 24%,
+      #ffe6af 0 1px,
+      #ffc57355 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 96px 70%, #ffc573bb 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 168px 40%,
+      #fff0cb 0 1px,
+      #ffc57333 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 244px 82%, #ffc573aa 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 312px 18%,
+      #ffe0a5 0 1px,
+      #ffc57333 2px,
+      transparent 4px
+    ),
+    radial-gradient(circle at 52px 54%, #ffc57399 0 1px, transparent 3px),
+    radial-gradient(circle at 190px 14%, #ffedc4cc 0 1px, transparent 4px),
+    radial-gradient(circle at 326px 66%, #ffd99aaa 0 1px, transparent 3px);
+  --leader-particle-size:
+    360px 100%, 360px 100%, 360px 100%, 360px 100%, 360px 100%, 440px 100%,
+    440px 100%, 440px 100%;
+  --leader-particle-repeat: repeat-x;
+  --leader-particle-end:
+    360px 0, 360px 0, 360px 0, 360px 0, 360px 0, 440px 0, 440px 0, 440px 0;
+}
+
+.teams-page .team-card--medallion[data-rank="1"]::before,
+.teams-page .team-card--medallion[data-rank="1"]::after,
+.team-hero:has(.team-current-rank .rank-number--1)::before,
+.team-hero:has(.team-current-rank .rank-number--1)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* На странице команды оба слоя занимают только левую половину шапки. */
+.team-hero:has(.team-current-rank .rank-number--1)::before,
+.team-hero:has(.team-current-rank .rank-number--1)::after {
+  right: 50%;
+}
+
+.teams-page .team-card--medallion[data-rank="1"]::before,
+.team-hero:has(.team-current-rank .rank-number--1)::before {
+  z-index: 0;
+  background: var(--leader-gradient);
+}
+
+.teams-page .team-card--medallion[data-rank="1"]::after,
+.team-hero:has(.team-current-rank .rank-number--1)::after {
+  z-index: 1;
+  opacity: 0.72;
+  mix-blend-mode: screen;
+  background-image: var(--leader-particles);
+  background-size: var(--leader-particle-size);
+  background-repeat: var(--leader-particle-repeat);
+  -webkit-mask-image: linear-gradient(
+    var(--leader-mask-angle),
+    transparent,
+    #000 var(--leader-fade),
+    #000 calc(100% - var(--leader-fade)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    var(--leader-mask-angle),
+    transparent,
+    #000 var(--leader-fade),
+    #000 calc(100% - var(--leader-fade)),
+    transparent
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: leader-highlight-particles 8s linear infinite;
+}
+
+/* Текст, логотип и лавры остаются поверх обоих декоративных слоёв. */
+.teams-page .team-card--medallion[data-rank="1"] > * {
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes leader-highlight-particles {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: var(--leader-particle-end);
+  }
+}
+
+html[data-motion="off"] .teams-page .team-card--medallion[data-rank="1"]::after,
+html[data-motion="off"]
+  .team-hero:has(.team-current-rank .rank-number--1)::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teams-page .team-card--medallion[data-rank="1"]::after,
+  .team-hero:has(.team-current-rank .rank-number--1)::after {
+    display: none;
+  }
+}

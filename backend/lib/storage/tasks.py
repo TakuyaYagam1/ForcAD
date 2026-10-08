@@ -175,14 +175,20 @@ def get_teamtasks_for_team(team_id: int) -> List[dict]:
     with storage.utils.redis_pipeline(transaction=False) as pipe:
         for task in tasks:
             pipe.xrevrange(CacheKeys.teamtasks(team_id, task.id))
+            pipe.xrevrange(CacheKeys.teamtasks_history(team_id, task.id))
         data = pipe.execute()
 
-    data = sum(data, [])
-
     results = []
-    for timestamp, record in data:
-        record['timestamp'] = timestamp
-        results.append(record)
+    for index in range(0, len(data), 2):
+        checks, completed = data[index:index + 2]
+        # Completed-round snapshots include flag changes after the last check.
+        # Keep old checker history for rounds predating this upgrade.
+        completed_rounds = {record['round'] for _, record in completed}
+        entries = completed + [
+            entry for entry in checks if entry[1]['round'] not in completed_rounds
+        ]
+        for timestamp, record in entries:
+            results.append({**record, 'timestamp': timestamp})
 
     return results
 
@@ -211,10 +217,10 @@ def filter_teamtasks_for_participants(teamtasks: List[dict]) -> List[dict]:
     result = []
 
     for obj in teamtasks:
-        obj['message'] = obj['public_message']
-        obj.pop('private_message')
-        obj.pop('public_message')
-        obj.pop('command')
+        obj = dict(obj)
+        obj['message'] = obj.pop('public_message', obj.get('message', ''))
+        obj.pop('private_message', None)
+        obj.pop('command', None)
         result.append(obj)
 
     return result

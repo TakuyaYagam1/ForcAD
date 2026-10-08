@@ -4,9 +4,7 @@ import { LiveScoreboardWidget } from "@/widgets/live-scoreboard/ui/LiveScoreboar
 export function LiveScoreboardPage() {
   return (
     <AppShell>
-      <div className="flex flex-col items-center gap-4">
-        <LiveScoreboardWidget />
-      </div>
+      <LiveScoreboardWidget />
     </AppShell>
   );
 }

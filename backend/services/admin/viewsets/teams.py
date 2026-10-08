@@ -1,9 +1,11 @@
 from flask import request, jsonify
+from psycopg2 import IntegrityError
 
 from lib import models, storage
 from lib.helpers import events
 from .api_base import ApiSet
 from .utils import make_err_response
+from .validation import validate_data
 
 
 class TeamApi(ApiSet):
@@ -11,48 +13,67 @@ class TeamApi(ApiSet):
 
     @staticmethod
     def retrieve(team_id):
-        teams = storage.teams.get_all_teams()
-        try:
-            team = next(filter(lambda x: x.id == team_id, teams))
-        except StopIteration:
+        item = next(
+            (item for item in storage.teams.get_all_teams() if item.id == team_id), None
+        )
+        if item is None:
             return make_err_response('No such team', status=404)
-
-        return jsonify(team.to_dict())
+        return jsonify(item.to_dict())
 
     @staticmethod
     def list():
-        teams = storage.teams.get_all_teams()
-        dumped = [team.to_dict() for team in teams]
-        return jsonify(dumped)
+        return jsonify([item.to_dict() for item in storage.teams.get_all_teams()])
 
     @staticmethod
     def create():
         try:
-            data = request.json
-            data['token'] = models.Team.generate_token()
-            team = models.Team.from_dict(data)
-        except TypeError as e:
-            return make_err_response(f'Invalid team data: {e}')
-
-        created = storage.teams.create_team(team)
-        events.init_scoreboard()
+            data = request.get_json(silent=True)
+            if isinstance(data, dict):
+                data = {**data, 'token': models.Team.generate_token()}
+            item = models.Team.from_dict(validate_data(data, models.Team))
+            created = storage.teams.create_team(item)
+        except (TypeError, KeyError, ValueError) as exc:
+            return make_err_response(str(exc))
+        except IntegrityError:
+            return make_err_response(
+                'Данные нарушают ограничения базы. '
+                'Проверьте значения и уникальность токена.',
+                status=409,
+            )
+        events.refresh_scoreboard_after_commit()
         return jsonify(created.to_dict()), 201
 
     @staticmethod
     def update(team_id):
+        if not any(item.id == team_id for item in storage.teams.get_all_teams()):
+            return make_err_response('No such team', status=404)
         try:
-            data = request.json
+            data = validate_data(request.get_json(silent=True), models.Team)
             data['id'] = team_id
-            team = models.Team.from_dict(request.json)
-        except TypeError as e:
-            return make_err_response(f'Invalid team data: {e}')
-
-        updated = storage.teams.update_team(team)
-        events.init_scoreboard()
+            item = models.Team.from_dict(data)
+            if any(
+                other.id != team_id and other.token == item.token
+                for other in storage.teams.get_all_teams()
+            ):
+                return make_err_response(
+                    'Токен уже используется другой командой', status=409
+                )
+            updated = storage.teams.update_team(item)
+        except (TypeError, KeyError, ValueError) as exc:
+            return make_err_response(str(exc))
+        except IntegrityError:
+            return make_err_response(
+                'Данные нарушают ограничения базы. '
+                'Проверьте значения и уникальность токена.',
+                status=409,
+            )
+        events.refresh_scoreboard_after_commit()
         return jsonify(updated.to_dict())
 
     @staticmethod
     def destroy(team_id):
+        if not any(item.id == team_id for item in storage.teams.get_all_teams()):
+            return make_err_response('No such team', status=404)
         storage.teams.delete_team(team_id)
-        events.init_scoreboard()
+        events.refresh_scoreboard_after_commit()
         return jsonify('ok')

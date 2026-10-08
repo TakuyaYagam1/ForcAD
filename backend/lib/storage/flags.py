@@ -34,7 +34,7 @@ def try_add_stolen_flag(flag: models.Flag, attacker: int, current_round: int) ->
     stolen_key = CacheKeys.team_stolen_flags(attacker)
     with utils.redis_pipeline(transaction=True) as pipe:
         # optimization of redis request count
-        cached_stolen = pipe.exists(stolen_key).execute()
+        (cached_stolen,) = pipe.exists(stolen_key).execute()
 
         if not cached_stolen:
             cache_helper(
@@ -44,7 +44,7 @@ def try_add_stolen_flag(flag: models.Flag, attacker: int, current_round: int) ->
                 cache_args=(attacker, current_round, pipe),
             )
 
-        is_new, = pipe.sadd(stolen_key, flag.id).execute()
+        (is_new,) = pipe.sadd(stolen_key, flag.id).execute()
     return bool(is_new)
 
 
@@ -72,9 +72,9 @@ def add_flag(flag: models.Flag) -> models.Flag:
 
 
 def get_flag_by_field(
-        name: str,
-        value: Union[str, int],
-        current_round: int,
+    name: str,
+    value: Union[str, int],
+    current_round: int,
 ) -> Optional[models.Flag]:
     """
     Get flag by generic field.
@@ -86,7 +86,7 @@ def get_flag_by_field(
     """
     cached_key = CacheKeys.flags_cached()
     with utils.redis_pipeline(transaction=True) as pipe:
-        cached, = pipe.exists(cached_key).execute()
+        (cached,) = pipe.exists(cached_key).execute()
         if not cached:
             cache_helper(
                 pipeline=pipe,
@@ -95,7 +95,7 @@ def get_flag_by_field(
                 cache_args=(current_round, pipe),
             )
 
-        flag_json, = pipe.get(CacheKeys.flag_by_field(name, value)).execute()
+        (flag_json,) = pipe.get(CacheKeys.flag_by_field(name, value)).execute()
 
     if not flag_json:
         return None
@@ -114,7 +114,9 @@ def get_flag_by_str(flag_str: str, current_round: int) -> Optional[models.Flag]:
     :returns: Flag model instance or None
     """
     return get_flag_by_field(
-        name='str', value=flag_str, current_round=current_round,
+        name='str',
+        value=flag_str,
+        current_round=current_round,
     )
 
 
@@ -127,15 +129,15 @@ def get_flag_by_id(flag_id: int, current_round: int) -> Optional[models.Flag]:
     :return: Flag model instance or None
     """
     return get_flag_by_field(
-        name='id', value=flag_id, current_round=current_round,
+        name='id',
+        value=flag_id,
+        current_round=current_round,
     )
 
 
 def get_random_round_flag(
-        team_id: int,
-        task_id: int,
-        from_round: int,
-        current_round: int) -> Optional[models.Flag]:
+    team_id: int, task_id: int, from_round: int, current_round: int
+) -> Optional[models.Flag]:
     """
     Get random flag for team generated for specified round and task.
 
@@ -152,7 +154,7 @@ def get_random_round_flag(
                 'round': from_round,
                 'team_id': team_id,
                 'task_id': task_id,
-            }
+            },
         )
         result = curs.fetchone()
 
@@ -162,8 +164,8 @@ def get_random_round_flag(
 
 
 def get_attack_data(
-        current_round: int,
-        tasks: List[models.Task],
+    current_round: int,
+    tasks: List[models.Task],
 ) -> Dict[str, DefaultDict[int, List[str]]]:
     """
     Get unexpired flags for round.

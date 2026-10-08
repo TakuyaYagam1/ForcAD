@@ -1,0 +1,59 @@
+@media (min-width: 901px) {
+  .brand-app:has(> .site-main > .scoreboard-page:not(.scoreboard-page--admin)) {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - var(--scoreboard-shell-offset, 0px));
+    min-height: calc(100dvh - var(--scoreboard-shell-offset, 0px));
+  }
+
+  .site-main:has(> .scoreboard-page:not(.scoreboard-page--admin)) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    min-width: 0;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin) > * {
+    flex-shrink: 0;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin) .scoreboard-reveal {
+    min-height: 0;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin)
+    .scoreboard-reveal
+    .table-scroll {
+    height: auto;
+    max-height: var(--scoreboard-table-max-height, none);
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin)
+    .scoreboard-reveal
+    > .empty-state {
+    min-height: 0;
+    max-height: var(--scoreboard-table-max-height, none);
+    justify-content: safe center;
+    overflow-y: auto;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin)
+    .scoreboard-reveal
+    > .empty-state
+    > * {
+    flex-shrink: 0;
+  }
+
+  .scoreboard-page:not(.scoreboard-page--admin) > .recent-events {
+    margin: auto 0 0;
+    padding-top: 16px;
+  }
+}

@@ -1,66 +1,77 @@
+import { useState } from "react";
+import { Search, WifiOff } from "lucide-react";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { TournamentHero } from "@/shared/ui/brand/TournamentHero";
+import { EventItem } from "@/shared/ui/brand/RecentEvents";
 
 export function LiveScoreboardFrame() {
-  const events = useLiveScoreboardStore((s) => s.events);
-  const error = useLiveScoreboardStore((s) => s.error);
-
+  const events = useLiveScoreboardStore((state) => state.events);
+  const error = useLiveScoreboardStore((state) => state.error);
+  const [filter, setFilter] = useState("");
+  const query = filter.trim().toLocaleLowerCase("ru-RU");
+  const filtered = events.filter((event) =>
+    `${event.attackerName} ${event.victimName} ${event.taskName}`
+      .toLocaleLowerCase("ru-RU")
+      .includes(query),
+  );
   return (
-    <Card className="w-full max-w-3xl border-slate-800 bg-slate-950/80 backdrop-blur shadow-xl shadow-fuchsia-900/40">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-        <div className="text-xs uppercase tracking-[0.3em] text-slate-400">
-          Live feed
+    <div className="w-full">
+      <TournamentHero
+        compact
+        title="События"
+        subtitle="Каждый захват флага меняет расстановку сил."
+      >
+        <div className="hero-metadata">
+          <span>
+            <BrandIcon name="flag" />
+            Захваты флагов
+          </span>
+          <span>Последние события соревнования</span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-slate-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-          streaming
-        </div>
-      </div>
-
+      </TournamentHero>
       {error && (
-        <div className="border-b border-red-500/40 bg-red-500/10 px-4 py-2 text-xs text-red-200">
-          {error}
+        <div className="notice" role="status">
+          <WifiOff size={16} />
+          Ожидаем восстановления соединения с лентой событий.
         </div>
       )}
-
-      <ScrollArea className="h-[60vh] px-4 py-3">
-        {events.length === 0 ? (
-          <div className="text-xs text-slate-500">
-            Пока нет краж флагов в этой сессии.
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {events.map((ev) => (
-              <li
-                key={ev.id}
-                className="rounded-lg border border-slate-800/70 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 shadow-sm shadow-fuchsia-900/40"
-              >
-                <div className="flex flex-wrap gap-1 leading-relaxed">
-                  <span className="font-semibold text-fuchsia-300">
-                    {ev.attackerName}
-                  </span>
-                  <span className="text-slate-400">stole a flag from</span>
-                  <span className="font-semibold text-sky-300">
-                    {ev.victimName}
-                  </span>
-                  <span className="text-slate-400">on</span>
-                  <span className="font-semibold text-emerald-300">
-                    {ev.taskName}
-                  </span>
-                  <span className="text-slate-400">and gained</span>
-                  <span className="font-mono text-amber-300">
-                    {ev.delta} pts
-                  </span>
-                </div>
-                <div className="mt-1 text-[10px] text-slate-500">
-                  {new Date(ev.ts).toLocaleTimeString()}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ScrollArea>
-    </Card>
+      <div className="events-toolbar">
+        <label className="search-field">
+          <Search size={17} />
+          <input
+            type="search"
+            aria-label="Найти событие по команде или сервису"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="Команда или сервис…"
+          />
+        </label>
+        <p className="events-caption">
+          Событий в этой сессии: {events.length} · новые сверху
+        </p>
+      </div>
+      {filtered.length ? (
+        <ul className="events-list">
+          {filtered.map((event) => (
+            <EventItem key={event.id} event={event} />
+          ))}
+        </ul>
+      ) : (
+        <div className="empty-state mt-5">
+          <BrandIcon name="flag" />
+          <h2>{query ? "События не найдены" : "Пока тихо"}</h2>
+          <p>
+            {query
+              ? "Попробуй другое название команды или сервиса."
+              : "Здесь появятся захваты флагов: атакующая команда, соперник, сервис и полученные очки."}
+          </p>
+        </div>
+      )}
+      <p className="table-hint">
+        Лента хранит до 100 последних событий, полученных во время открытой
+        сессии.
+      </p>
+    </div>
   );
 }

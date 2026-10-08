@@ -30,6 +30,8 @@ interface LiveScoreboardState {
   clear: () => void;
 }
 
+let nextEventId = Date.now();
+
 export const useLiveScoreboardStore = create<LiveScoreboardState>()(
   devtools((set, get) => ({
     events: [],
@@ -52,7 +54,7 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
       const now = Date.now();
 
       const next: LiveEvent = {
-        id: now + events.length,
+        id: ++nextEventId,
         ts: now,
         attackerId: attacker_id,
         victimId: victim_id,
@@ -64,7 +66,26 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
       };
 
       const newEvents = [next, ...events].slice(0, 100);
-      set({ events: newEvents });
+      set({ events: newEvents, error: null });
     },
-  }))
+  })),
 );
+
+// Resolve names again when the scoreboard arrives after the event stream.
+useScoreboardStore.subscribe((state, previous) => {
+  if (state.teams === previous.teams && state.tasks === previous.tasks) return;
+  useLiveScoreboardStore.setState((current) => ({
+    events: current.events.map((event) => ({
+      ...event,
+      attackerName:
+        state.teams?.find((team) => team.id === event.attackerId)?.name ??
+        event.attackerName,
+      victimName:
+        state.teams?.find((team) => team.id === event.victimId)?.name ??
+        event.victimName,
+      taskName:
+        state.tasks?.find((task) => task.id === event.taskId)?.name ??
+        event.taskName,
+    })),
+  }));
+});

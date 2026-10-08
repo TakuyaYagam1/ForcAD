@@ -59,5 +59,9 @@ class CacheKeys:
         return f'teamtasks:{team_id}:{task_id}'
 
     @staticmethod
+    def teamtasks_history(team_id: int, task_id: int) -> str:
+        return f'teamtasks_history:{team_id}:{task_id}'
+
+    @staticmethod
     def session(session_key: str) -> str:
         return f'session:{session_key}'

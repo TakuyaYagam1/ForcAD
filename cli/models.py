@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AdminConfig(BaseModel):
@@ -45,7 +45,7 @@ class GameConfig(BaseModel):
 
     timezone: str = 'UTC'
     default_score: float = 2500
-    game_hardness: float = 10
+    game_hardness: float = Field(default=10, gt=1, allow_inf_nan=False)
     mode: str = 'classic'
     get_period: Optional[int] = None
     inflation: bool = True

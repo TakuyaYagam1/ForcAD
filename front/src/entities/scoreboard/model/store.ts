@@ -3,188 +3,179 @@ import { devtools } from "zustand/middleware";
 import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
 import type { TeamTask } from "@/entities/team-task/model/types";
-
-const sortTasks = (tasks: Task[]) =>
-    [...tasks].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-
-/**
- * Сырые данные team_task, которые приходят от бэка
- * (и в init_scoreboard, и в update_scoreboard).
- */
+import { finiteNumber } from "@/shared/lib/numbers";
 export interface RawTeamTask {
-    task_id: number;
-    team_id: number;
-    status: number;
-    stolen: number;
-    lost: number;
-    score: number;
-    checks: number;
-    checks_passed: number;
-    message: string;
+  task_id: number;
+  team_id: number;
+  status: number;
+  stolen: number;
+  lost: number;
+  score: number;
+  checks: number;
+  checks_passed: number;
+  message: string;
 }
-
-/**
- * Состояние игры, как его шлёт бэк.
- */
 export interface GameStatePayload {
-    round: number;
-    round_start: number | null;
-    team_tasks: RawTeamTask[];
+  round: number;
+  round_start: number | null;
+  team_tasks: RawTeamTask[];
 }
-
-/**
- * init_scoreboard payload из сокета.
- */
+export interface GameRuntimeStatus {
+  phase: "waiting" | "running" | "paused" | "unknown";
+  paused_at: number | null;
+  paused_seconds: number;
+  round_time?: number;
+  round?: number;
+  round_start?: number | null;
+}
 export interface InitScoreboardPayload {
-    state: GameStatePayload;
-    teams: Team[];
-    tasks: Task[];
+  state: GameStatePayload | null;
+  teams: Team[];
+  tasks: Task[];
+  config?: { round_time?: number };
+  runtime?: GameRuntimeStatus;
 }
-
 interface ScoreboardState {
-    round: number;
-    roundStart: number | null;
-    roundTime: number | null; // если будешь потом использовать
-    roundProgress: number | null; // как в Vue
-    teams: Team[] | null;
-    tasks: Task[] | null;
-    teamTasks: TeamTask[] | null;
-    error: string | null;
-
-    // экшены
-    setError(error: string | null): void;
-    setRoundTime: (roundTime: number | null) => void;
-
-    handleInitScoreboardMessage(payload: InitScoreboardPayload): void;
-    handleUpdateScoreboardMessage(payload: GameStatePayload): void;
+  round: number;
+  roundStart: number | null;
+  roundTime: number | null;
+  roundProgress: number | null;
+  teams: Team[] | null;
+  tasks: Task[] | null;
+  teamTasks: TeamTask[] | null;
+  error: string | null;
+  connected: boolean;
+  phase: GameRuntimeStatus["phase"];
+  pausedAt: number | null;
+  pausedSeconds: number;
+  runtimeRound: number | null;
+  currentRoundStart: number | null;
+  setError(error: string | null): void;
+  setConnected(connected: boolean): void;
+  setRoundTime(roundTime: number | null): void;
+  setRuntime(runtime: GameRuntimeStatus): void;
+  invalidateRuntime(): void;
+  handleInitScoreboardMessage(payload: InitScoreboardPayload): void;
+  handleUpdateScoreboardMessage(payload: GameStatePayload): void;
 }
-
-/**
- * Нормализация сырых данных team_task от бэка в наш TeamTask.
- * Здесь же считаем SLA, приводим stolen/lost к boolean и чиним message.
- */
-function mapRawTeamTask(raw: RawTeamTask): TeamTask {
-    const sla =
-        raw.checks > 0
-            ? (100.0 * (raw.checks_passed ?? 0)) / raw.checks
-            : 0;
-
-    return {
-        // просто детерминированный id на основе team_id и task_id
-        id: raw.team_id * 1000 + raw.task_id,
-        teamId: raw.team_id,
-        taskId: raw.task_id,
-        status: raw.status,
-        stolen: raw.stolen,
-        lost: raw.lost,
-        sla,
-        score: raw.score,
-        message:
-            raw.message === "" && raw.status === 101 ? "OK" : raw.message,
-    };
+function mapRawTeamTask(raw: RawTeamTask, index: number): TeamTask {
+  const checks = Math.max(0, finiteNumber(raw.checks));
+  const passed = Math.min(checks, Math.max(0, finiteNumber(raw.checks_passed)));
+  const status = finiteNumber(raw.status, -1);
+  return {
+    id: index,
+    teamId: finiteNumber(raw.team_id),
+    taskId: finiteNumber(raw.task_id),
+    status,
+    stolen: finiteNumber(raw.stolen),
+    lost: finiteNumber(raw.lost),
+    sla: checks > 0 ? (100 * passed) / checks : 0,
+    score: finiteNumber(raw.score),
+    message: raw.message ? String(raw.message) : status === 101 ? "OK" : "",
+  };
 }
-
-/**
- * Пересчёт суммарного score для каждой команды по всем её таскам.
- */
-function recalcTeamScores(teams: Team[], teamTasks: TeamTask[]): Team[] {
-    const sums = new Map<number, number>();
-
-    for (const tt of teamTasks) {
-        sums.set(tt.teamId, (sums.get(tt.teamId) ?? 0) + tt.score);
-    }
-
-    return teams
-        .map((team) => {
-            const score =
-                team.id != null ? sums.get(team.id) ?? 0 : 0;
-            return {
-                ...team,
-                score,
-            };
-        })
-        .sort((a, b) => {
-            const sa = a.score ?? 0;
-            const sb = b.score ?? 0;
-
-            if (sb !== sa) {
-                // по очкам — по убыванию
-                return sb - sa;
-            }
-
-            // при равных очках — по id (по возрастанию)
-            return (a.id ?? 0) - (b.id ?? 0);
-        });
+function activeCells(
+  raw: RawTeamTask[],
+  teams: Team[],
+  tasks: Task[],
+): TeamTask[] {
+  const teamIds = new Set(teams.map((t) => t.id));
+  const taskIds = new Set(tasks.map((t) => t.id));
+  return raw
+    .map(mapRawTeamTask)
+    .filter((tt) => teamIds.has(tt.teamId) && taskIds.has(tt.taskId));
 }
-
+function recalcTeamScores(teams: Team[], cells: TeamTask[]): Team[] {
+  const totals = new Map<number, number>();
+  for (const cell of cells)
+    totals.set(
+      cell.teamId,
+      (totals.get(cell.teamId) ?? 0) + (cell.score * cell.sla) / 100,
+    );
+  return teams
+    .map((team) => ({ ...team, score: totals.get(team.id ?? -1) ?? 0 }))
+    .sort((a, b) => b.score - a.score || (a.id ?? 0) - (b.id ?? 0));
+}
 export const useScoreboardStore = create<ScoreboardState>()(
-    devtools((set, get) => ({
-        round: 0,
-        roundStart: null,
-        roundTime: null,
-        roundProgress: null,
-        teams: null,
-        tasks: null,
-        teamTasks: null,
+  devtools((set, get) => ({
+    round: 0,
+    roundStart: null,
+    roundTime: null,
+    roundProgress: null,
+    teams: null,
+    tasks: null,
+    teamTasks: null,
+    error: null,
+    connected: false,
+    phase: "unknown",
+    pausedAt: null,
+    pausedSeconds: 0,
+    runtimeRound: null,
+    currentRoundStart: null,
+    setError: (error) => set({ error }),
+    setConnected: (connected) => set({ connected }),
+    setRoundTime: (roundTime) => set({ roundTime }),
+    invalidateRuntime: () =>
+      set({
+        phase: "unknown",
+        pausedAt: null,
+        pausedSeconds: 0,
+        runtimeRound: null,
+        currentRoundStart: null,
+      }),
+    setRuntime: (runtime) =>
+      set({
+        phase: runtime.phase,
+        pausedAt: runtime.paused_at,
+        pausedSeconds: finiteNumber(runtime.paused_seconds),
+        runtimeRound:
+          runtime.round == null ? null : finiteNumber(runtime.round),
+        currentRoundStart: runtime.round_start
+          ? finiteNumber(runtime.round_start)
+          : null,
+        ...(runtime.round_time && runtime.round_time > 0
+          ? { roundTime: runtime.round_time }
+          : {}),
+      }),
+    handleInitScoreboardMessage: ({ state, teams, tasks, config, runtime }) => {
+      const activeTeams = teams.filter((t) => t.active !== false);
+      const activeTasks = tasks
+        .filter((t) => t.active !== false)
+        .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
+      const cells = activeCells(
+        state?.team_tasks ?? [],
+        activeTeams,
+        activeTasks,
+      );
+      set({
+        teams: recalcTeamScores(activeTeams, cells),
+        tasks: activeTasks,
+        teamTasks: cells,
+        round: finiteNumber(state?.round),
+        roundStart: state?.round_start ?? null,
+        error:
+          state === null
+            ? "Состояние игры пока недоступно. Ожидаем обновления сервера."
+            : null,
+        ...(config?.round_time && config.round_time > 0
+          ? { roundTime: config.round_time }
+          : {}),
+      });
+      if (runtime) get().setRuntime(runtime);
+    },
+    handleUpdateScoreboardMessage: (payload) => {
+      const { teams, tasks } = get();
+      const cells =
+        teams && tasks
+          ? activeCells(payload.team_tasks ?? [], teams, tasks)
+          : (payload.team_tasks ?? []).map(mapRawTeamTask);
+      set({
+        round: finiteNumber(payload.round),
+        roundStart: payload.round_start ?? null,
+        teamTasks: cells,
+        ...(teams ? { teams: recalcTeamScores(teams, cells) } : {}),
         error: null,
-
-        setRoundTime: (roundTime: number | null) => set({ roundTime }),
-
-        setError: (error) => set({ error }),
-
-        /**
-         * Полная инициализация табло.
-         * Приходит state + списки команд и тасков.
-         */
-        handleInitScoreboardMessage: ({ state, teams, tasks }) => {
-            const sortedTasks = sortTasks(tasks);
-
-            // нормализуем team_tasks
-            const teamTasks = state.team_tasks.map(mapRawTeamTask);
-
-            // пересчитываем score по командам
-            const mappedTeams = recalcTeamScores(teams, teamTasks);
-
-            set({
-                tasks: sortedTasks,
-                teamTasks,
-                round: state.round,
-                roundStart: state.round_start,
-                teams: mappedTeams,
-                error: null,
-            });
-        },
-
-        /**
-         * Частичное обновление табло (каждый раунд).
-         */
-        handleUpdateScoreboardMessage: (payload) => {
-            const { round, round_start, team_tasks } = payload;
-
-            // нормализуем team_tasks
-            const teamTasks = team_tasks.map(mapRawTeamTask);
-
-            const { tasks, teams } = get();
-
-            // если по какой-то причине init ещё не был — просто сохраняем, не трогая teams/tasks
-            if (!tasks || !teams) {
-                set({
-                    round,
-                    roundStart: round_start,
-                    teamTasks,
-                });
-                return;
-            }
-
-            const mappedTeams = recalcTeamScores(teams, teamTasks);
-
-            set({
-                round,
-                roundStart: round_start,
-                teamTasks,
-                teams: mappedTeams,
-                error: null,
-            });
-        },
-    }))
+      });
+    },
+  })),
 );

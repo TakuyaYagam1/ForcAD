@@ -21,10 +21,10 @@ def noop(data: Any) -> Any:
 
 @shared_task(name=JobNames.put_action)
 def put_action(
-        _prev_verdict: Optional[models.CheckerVerdict],
-        team: models.Team,
-        task: models.Task,
-        current_round: int,
+    _prev_verdict: Optional[models.CheckerVerdict],
+    team: models.Team,
+    task: models.Task,
+    current_round: int,
 ) -> models.CheckerVerdict:
     """
     Run "put" checker action.
@@ -37,6 +37,15 @@ def put_action(
 
     If "check" action fails, put is not run.
     """
+
+    if _prev_verdict is not None and _prev_verdict.status != TaskStatus.UP:
+        return models.CheckerVerdict(
+            action=Action.PUT,
+            status=_prev_verdict.status,
+            command='',
+            public_message='Skipped PUT, previous action failed',
+            private_message=f'Previous returned {_prev_verdict}',
+        )
 
     logger.info(
         'Running PUT for team %s task %s, round %s',
@@ -73,10 +82,10 @@ def put_action(
 
 @shared_task(name=JobNames.get_action)
 def get_action(
-        prev_verdict: models.CheckerVerdict,
-        team: models.Team,
-        task: models.Task,
-        current_round: int,
+    prev_verdict: models.CheckerVerdict,
+    team: models.Team,
+    task: models.Task,
+    current_round: int,
 ) -> models.CheckerVerdict:
     """
     Run "get" checker action.
@@ -151,7 +160,7 @@ def get_action(
 
 @shared_task(name=JobNames.check_action)
 def check_action(
-        team: models.Team, task: models.Task, current_round: int
+    team: models.Team, task: models.Task, current_round: int
 ) -> models.CheckerVerdict:
     """
     Run "check" checker action.

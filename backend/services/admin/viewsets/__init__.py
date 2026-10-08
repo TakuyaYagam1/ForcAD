@@ -1,6 +1,6 @@
 """Simple "viewsets" implementation for models' REST API."""
 
-from .authentication import login, status
+from .authentication import login, status, logout
 from .tasks import TaskApi
 from .teams import TeamApi
 from .teamtasks import TeamTaskApi
@@ -12,3 +12,5 @@ TeamTaskApi(admin_bp, auth=True)
 
 admin_bp.add_url_rule('/login/', 'login', login, methods=['POST'])
 admin_bp.add_url_rule('/status/', 'status', status, methods=['GET'])
+
+admin_bp.add_url_rule('/logout/', 'logout', logout, methods=['POST'])
