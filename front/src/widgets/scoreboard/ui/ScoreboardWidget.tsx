@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Search, RefreshCw, WifiOff } from "lucide-react";
+import { Search, WifiOff } from "lucide-react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
 import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
@@ -14,7 +14,6 @@ import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { TournamentHero } from "@/shared/ui/brand/TournamentHero";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
-import { DEMO_MODE } from "@/app/demo/mode";
 import { useScoreboardEntrance } from "../model/useScoreboardEntrance";
 import { useScoreboardViewport } from "../model/useScoreboardViewport";
 import "./ScoreboardWidget.css";
@@ -128,10 +127,6 @@ export function ScoreboardWidget({
           ))}
         </div>
 
-        <span className="toolbar-note">
-          <RefreshCw size={12} />
-          {DEMO_MODE ? "Демонстрационные данные" : "Обновляется автоматически"}
-        </span>
       </div>
 
       <div ref={tableRef} className="scoreboard-reveal">
