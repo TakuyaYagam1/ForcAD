@@ -17,7 +17,7 @@ def get_teams() -> List[models.Team]:
             cache_args=(pipe,),
         )
 
-        teams, = pipe.smembers(key).execute()
+        (teams,) = pipe.smembers(key).execute()
         teams = list(models.Team.from_json(team) for team in teams)
 
     return teams
@@ -40,15 +40,15 @@ def get_team_id_by_token(token: str) -> Optional[int]:
     :param token: token string
     :return: team id
     """
-    with storage.utils.redis_pipeline(transaction=False) as pipe:
-        team_id, = pipe.get(CacheKeys.team_by_token(token)).execute()
-
-    try:
-        team_id = int(team_id)
-    except (ValueError, TypeError):
-        return None
-    else:
-        return team_id
+    # The DB is authoritative: changing a token or disabling a team takes effect
+    # immediately, even if Redis contains old credential mappings.
+    with storage.utils.db_cursor() as (_, curs):
+        curs.execute(
+            'SELECT id FROM Teams WHERE token=%(token)s AND active=TRUE',
+            {'token': token},
+        )
+        row = curs.fetchone()
+    return int(row[0]) if row else None
 
 
 def create_team(team: models.Team) -> models.Team:

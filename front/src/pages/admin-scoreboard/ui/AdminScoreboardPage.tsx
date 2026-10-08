@@ -1,84 +1,75 @@
+import { AdminEntityLists } from "@/features/manage-entities/ui/AdminEntityLists";
 import { AppShell } from "@/shared/ui/layout/AppShell";
 import { ScoreboardWidget } from "@/widgets/scoreboard/ui/ScoreboardWidget";
 import { Button } from "@/components/ui/button";
 import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
 import { useNavigate } from "react-router-dom";
+import { Plus, LogOut } from "lucide-react";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 
 export function AdminScoreboardPage() {
   const navigate = useNavigate();
-  const logout = useAdminAuthStore((s) => s.logout);
-
+  const logout = useAdminAuthStore((state) => state.logout);
+  const error = useAdminAuthStore((state) => state.error);
   const handleLogout = async () => {
-    await logout();
-    navigate("/admin/login", { replace: true });
+    try {
+      await logout();
+      navigate("/admin/login", { replace: true });
+    } catch {
+      /* Store displays the server error; keep the authenticated session. */
+    }
   };
-
-  const handleTeamClick = (teamId: number) => {
-    navigate(`/admin/team/${teamId}`);
-  };
-
-  const handleTaskClick = (taskId: number) => {
-    navigate(`/admin/task/${taskId}`);
-  };
-
-  // onCellClick можно потом использовать для более продвинутых действий
-  const handleCellClick = (teamId: number, taskId: number) => {
-    navigate(`/admin/teamtask_log/team/${teamId}/task/${taskId}`);
-  };
-
-  const handleCreateTeam = () => {
-    navigate("/admin/team/create");
-  };
-
-  const handleCreateTask = () => {
-    navigate("/admin/task/create");
-  };
-
   return (
     <AppShell>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-base font-semibold text-slate-100">
-            Admin scoreboard
-          </h1>
-          <p className="text-xs text-slate-400">
-            Клик по команде/таску — редактирование. Клик по ячейке — лог чекера.
-          </p>
+      <div className="admin-page">
+        <div className="admin-heading">
+          <div>
+            <p className="eyebrow">Панель организатора</p>
+            <h1>Управление соревнованием</h1>
+            <p>
+              Выбери команду или сервис для редактирования, ячейку — для
+              просмотра лога.
+            </p>
+          </div>
+          <div className="admin-actions">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/team/create")}
+            >
+              <Plus />
+              Команда
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/task/create")}
+            >
+              <Plus />
+              Сервис
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut />
+              Выйти
+            </Button>
+            <BrandIcon name="check" />
+          </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-slate-700 text-slate-300"
-            onClick={handleCreateTeam}
-          >
-            Create team
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-slate-700 text-slate-300"
-            onClick={handleCreateTask}
-          >
-            Create task
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-slate-700 text-slate-300"
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </div>
+        {error && (
+          <div className="notice" role="alert">
+            {error}
+          </div>
+        )}
+        <AdminEntityLists />
+        <ScoreboardWidget
+          admin
+          onTeamClick={(teamId) => navigate(`/admin/team/${teamId}`)}
+          onTaskClick={(taskId) => navigate(`/admin/task/${taskId}`)}
+          onCellClick={(teamId, taskId) =>
+            navigate(`/admin/teamtask_log/team/${teamId}/task/${taskId}`)
+          }
+        />
       </div>
-
-      <ScoreboardWidget
-        onTeamClick={handleTeamClick}
-        onTaskClick={handleTaskClick}
-        onCellClick={handleCellClick}
-      />
     </AppShell>
   );
 }

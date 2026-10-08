@@ -1,0 +1,77 @@
+.rank-number.rank-badge.rank-number--medal {
+  --rank-color: #ffc573;
+  --rank-highlight: #fff0cb;
+  --rank-metal: #ffc573;
+  --rank-shadow: #aa6b30;
+  --rank-vein: #855323;
+  --rank-glow: rgb(255 197 115 / 22%);
+
+  width: 55px;
+  height: 40px;
+  flex-shrink: 0;
+  overflow: visible;
+  color: var(--rank-color);
+  line-height: 1;
+  text-shadow: 0 0 14px var(--rank-glow);
+}
+
+.rank-number.rank-badge.rank-number--2 {
+  --rank-color: #d0d6d4;
+  --rank-highlight: #f2efe4;
+  --rank-metal: #c8cecf;
+  --rank-shadow: #7f9196;
+  --rank-vein: #697c81;
+  --rank-glow: rgb(202 211 211 / 16%);
+}
+
+.rank-number.rank-badge.rank-number--3 {
+  --rank-color: #d5a078;
+  --rank-highlight: #f1c79e;
+  --rank-metal: #c58c61;
+  --rank-shadow: #825137;
+  --rank-vein: #704a34;
+  --rank-glow: rgb(213 160 120 / 18%);
+}
+
+.rank-number.rank-badge .rank-laurel {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: 1;
+}
+
+.rank-number.rank-badge .rank-badge__value {
+  position: relative;
+  z-index: 1;
+}
+
+.team-current-rank .rank-number.rank-badge.rank-number--medal {
+  width: 125px;
+  height: 90px;
+}
+
+@media (min-width: 901px) {
+  .scoreboard-table .rank-number.rank-badge.rank-number--medal {
+    width: 68px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 900px) {
+  .team-current-rank .rank-number.rank-badge.rank-number--medal {
+    width: 88px;
+    height: 64px;
+  }
+}
+
+@media (max-width: 600px) {
+  .scoreboard-table .rank-number.rank-badge.rank-number--medal {
+    width: 36px;
+    height: 30px;
+  }
+
+  .team-current-rank .rank-number.rank-badge.rank-number--medal {
+    width: 64px;
+    height: 48px;
+  }
+}

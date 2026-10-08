@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { ScoreboardPage } from "@/pages/scoreboard/ui/ScoreboardPage";
 import { LiveScoreboardPage } from "@/pages/live-scoreboard/ui/LiveScoreboardPage";
 import { TeamScoreboardPage } from "@/pages/team-scoreboard/ui/TeamScoreboardPage";
+import { TeamsPage } from "@/pages/teams/ui/TeamsPage";
 
 import { AdminLoginPage } from "@/pages/admin-login/ui/AdminLoginPage";
 import { AdminScoreboardPage } from "@/pages/admin-scoreboard/ui/AdminScoreboardPage";
@@ -19,6 +20,7 @@ export default function App() {
       {/* Публичные страницы */}
       <Route path="/" element={<ScoreboardPage />} />
       <Route path="/live" element={<LiveScoreboardPage />} />
+      <Route path="/teams" element={<TeamsPage />} />
       <Route path="/team/:teamId" element={<TeamScoreboardPage />} />
 
       {/* Логин админа */}

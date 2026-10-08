@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+import pickle
 
 import kombu
 import redis
@@ -51,6 +52,37 @@ class SIOManager(Singleton[socketio.KombuManager]):
     def read_write(cls) -> socketio.KombuManager:
         return cls.get(write_only=False)
 
+    @staticmethod
+    def reliable_write_only() -> socketio.KombuManager:
+        return ReliableSIOManager.get()
+
+
+class ReliableKombuManager(socketio.KombuManager):
+    """Surface exhausted publish failures instead of silently losing a refresh.
+
+    Socket.IO's standard KombuManager logs and swallows these failures. This
+    manager is used only for recoverable scoreboard initialization broadcasts.
+    """
+    def _publish(self, data):
+        payload = pickle.dumps(data)
+        for attempt in range(2):
+            try:
+                self._producer_publish(self.publisher_connection)(payload)
+                return
+            except (OSError, kombu.exceptions.KombuError):
+                if attempt:
+                    raise
+
+
+class ReliableSIOManager(Singleton[socketio.KombuManager]):
+    @staticmethod
+    def create() -> socketio.KombuManager:
+        return ReliableKombuManager(
+            url=config.get_broker_url(),
+            write_only=True,
+            channel='forcad-front',
+        )
+
 
 class BrokerConnection(Singleton[kombu.Connection]):
 
@@ -69,6 +101,9 @@ def db_cursor(dict_cursor: bool = False):  # type: ignore
         curs = conn.cursor()
     try:
         yield conn, curs
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         curs.close()
         db_pool.putconn(conn)

@@ -1,0 +1,150 @@
+.table-frame {
+  position: relative;
+}
+
+.table-frame.has-leader::before {
+  --particles-fade: clamp(48px, 12%, 180px);
+
+  content: "";
+  position: absolute;
+  top: var(--leader-top, 0px);
+  left: 0;
+  right: 0;
+  height: var(--leader-height, 0px);
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.22;
+  width: 50%;
+
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 var(--particles-fade),
+    #000 calc(100% - var(--particles-fade)),
+    transparent 100%
+  );
+
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 var(--particles-fade),
+    #000 calc(100% - var(--particles-fade)),
+    transparent 100%
+  );
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+
+  background-image:
+    radial-gradient(
+      circle at 24px 24%,
+      #ffe6af 0 1px,
+      #ffc57355 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 96px 70%, #ffc573bb 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 168px 40%,
+      #fff0cb 0 1px,
+      #ffc57333 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 244px 82%, #ffc573aa 0 1px, transparent 3px),
+    radial-gradient(
+      circle at 312px 18%,
+      #ffe0a5 0 1px,
+      #ffc57333 2px,
+      transparent 4px
+    ),
+    radial-gradient(circle at 52px 54%, #ffc57399 0 1px, transparent 3px),
+    radial-gradient(circle at 190px 14%, #ffedc4cc 0 1px, transparent 4px),
+    radial-gradient(circle at 326px 66%, #ffd99aaa 0 1px, transparent 3px);
+
+  background-size:
+    360px 100%,
+    360px 100%,
+    360px 100%,
+    360px 100%,
+    360px 100%,
+    440px 100%,
+    440px 100%,
+    440px 100%;
+
+  background-repeat: repeat-x;
+  animation: scoreboard-leader-particles 8s linear infinite;
+}
+
+@keyframes scoreboard-leader-particles {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position:
+      360px 0,
+      360px 0,
+      360px 0,
+      360px 0,
+      360px 0,
+      440px 0,
+      440px 0,
+      440px 0;
+  }
+}
+
+html[data-motion="off"] .table-frame.has-leader::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-frame.has-leader::before {
+    display: none;
+  }
+}
+
+.scoreboard-table .scoreboard-row::after {
+  inset: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  filter: none;
+
+  background: linear-gradient(
+    114deg,
+    transparent 0%,
+    rgb(219 187 130 / 4%) 22%,
+    rgb(219 187 130 / 20%) 40%,
+    rgb(255 234 193 / 52%) 48%,
+    rgb(255 247 222 / 80%) 50%,
+    rgb(255 234 193 / 52%) 52%,
+    rgb(219 187 130 / 16%) 65%,
+    transparent 100%
+  );
+
+  background-repeat: no-repeat;
+  background-size: clamp(56px, 9%, 92px) 100%;
+  background-position: -150px 0;
+}
+
+.scoreboard-table .scoreboard-row.is-sweeping::after {
+  animation: scoreboard-rank-glint 700ms linear var(--glint-delay, 0ms) both;
+}
+
+@keyframes scoreboard-rank-glint {
+  0% {
+    background-position: -150px 0;
+    opacity: 0;
+  }
+
+  8%,
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    background-position: calc(100% + 150px) 0;
+    opacity: 0;
+  }
+}

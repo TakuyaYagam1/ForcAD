@@ -4,6 +4,7 @@ import time
 from datetime import timedelta, datetime, timezone
 
 from lib import storage, models
+from lib.helpers import events
 from services.tasks import get_celery_app
 from . import hooks
 from .models import TickerState, Schedule
@@ -57,26 +58,56 @@ def bootstrap_schedules(state: TickerState):
         rounds_schedule.load_last_run()
         state.register_schedule(rounds_schedule)
 
-        tasks = storage.tasks.get_tasks()
-        for task in tasks:
-            interval = timedelta(seconds=task.get_period)
-            check_gets_schedule = Schedule(
-                f'blitz_check_gets_task_{task.id}',
-                start=game_config.start_time,
-                func=hooks.blitz_check_gets_runner_factory(task.id),
-                interval=interval,
-            )
-            check_gets_schedule.load_last_run()
-            state.register_schedule(check_gets_schedule)
+        sync_blitz_schedules(state)
 
     else:
         logger.critical('Game mode %s unsupported', game_config.mode)
         sys.exit(1)
 
 
+def sync_blitz_schedules(state: TickerState):
+    game_config = storage.game.get_current_game_config()
+    if game_config.mode != models.GameMode.BLITZ:
+        return
+    prefix = 'blitz_check_gets_task_'
+    active = {
+        f'{prefix}{task.id}': task for task in storage.tasks.get_tasks()
+    }
+    state.schedules[:] = [
+        schedule for schedule in state.schedules
+        if not schedule.schedule_id.startswith(prefix)
+        or schedule.schedule_id in active
+    ]
+    existing = {schedule.schedule_id: schedule for schedule in state.schedules}
+    for schedule_id, task in active.items():
+        interval = timedelta(seconds=task.get_period)
+        if schedule_id in existing:
+            existing[schedule_id].interval = interval
+        else:
+            schedule = Schedule(
+                schedule_id,
+                start=game_config.start_time,
+                func=hooks.blitz_check_gets_runner_factory(task.id),
+                interval=interval,
+            )
+            schedule.load_last_run()
+            state.register_schedule(schedule)
+
+
 def main(state: TickerState):
+    next_maintenance = 0
     while True:
-        now = datetime.now(timezone.utc)
+        wall_now = time.time()
+        if time.monotonic() >= next_maintenance:
+            sync_blitz_schedules(state)
+            events.retry_scoreboard_refresh()
+            next_maintenance = time.monotonic() + 5
+        if storage.game.is_game_paused():
+            time.sleep(0.1)
+            continue
+        now = datetime.fromtimestamp(
+            storage.game.get_scheduler_time(wall_now), timezone.utc,
+        )
         due_schedules = state.get_due_schedules(now)
         for schedule in due_schedules:
             logger.info('Executing schedule %s', schedule.schedule_id)

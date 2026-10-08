@@ -1,4 +1,5 @@
 import datetime
+import math
 from typing import Optional, Dict, Any
 
 from dateutil.parser import parse
@@ -41,6 +42,8 @@ class GameConfig(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        if not math.isfinite(self.game_hardness) or self.game_hardness <= 1:
+            raise ValueError("game_hardness must be finite and greater than 1")
         if isinstance(self.start_time, str):
             self.start_time = parse(self.start_time)
 

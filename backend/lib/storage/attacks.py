@@ -1,3 +1,5 @@
+from psycopg2.errors import UniqueViolation
+
 from lib import models, storage
 from lib.helpers import exceptions
 from lib.helpers.exceptions import FlagExceptionEnum
@@ -9,12 +11,12 @@ from lib.storage.keys import CacheKeys
 def get_attack_data() -> str:
     """Get public flag ids for tasks that provide them, as json string."""
     with utils.redis_pipeline(transaction=False) as pipe:
-        attack_data, = pipe.get(CacheKeys.attack_data()).execute()
+        (attack_data,) = pipe.get(CacheKeys.attack_data()).execute()
     return attack_data or 'null'
 
 
 def handle_attack(
-        attacker_id: int, flag_str: str, current_round: int
+    attacker_id: int, flag_str: str, current_round: int
 ) -> models.AttackResult:
     """
     Main routine for attack validation & state change.
@@ -74,18 +76,28 @@ def handle_attack(
     else:
         result.submit_ok = True
 
-        with utils.db_cursor() as (conn, curs):
-            curs.callproc(
-                "recalculate_rating",
-                (
-                    attacker_id,
-                    flag.team_id,
-                    flag.task_id,
-                    flag.id,
-                ),
-            )
-            attacker_delta, victim_delta = curs.fetchone()
-            conn.commit()
+        try:
+            with utils.db_cursor() as (conn, curs):
+                curs.callproc(
+                    "recalculate_rating",
+                    (
+                        attacker_id,
+                        flag.team_id,
+                        flag.task_id,
+                        flag.id,
+                    ),
+                )
+                attacker_delta, victim_delta = curs.fetchone()
+                conn.commit()
+        except UniqueViolation:
+            result.submit_ok = False
+            result.message = str(FlagExceptionEnum.FLAG_ALREADY_STOLEN)
+            return result
+        except Exception:
+            # Release the tentative Redis reservation after a failed DB transaction.
+            with utils.redis_pipeline(transaction=False) as pipe:
+                pipe.srem(CacheKeys.team_stolen_flags(attacker_id), flag.id).execute()
+            raise
 
         result.attacker_delta = attacker_delta
         result.victim_delta = victim_delta

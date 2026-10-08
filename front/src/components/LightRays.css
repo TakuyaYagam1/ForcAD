@@ -1,0 +1,65 @@
+div.brand-app::before {
+  z-index: -2;
+}
+
+.brand-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  mask-image: radial-gradient(
+    ellipse at 100% 100%,
+    #000 12%,
+    #000 35%,
+    rgb(0 0 0 / 65%) 58%,
+    rgb(0 0 0 / 16%) 80%,
+    transparent 100%
+  );
+}
+
+.light-rays-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.74;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    ellipse at 100% 100%,
+    rgb(255 189 99 / 28%),
+    rgb(255 209 137 / 9%) 32%,
+    transparent 72%
+  );
+}
+
+.light-rays-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .light-rays-container {
+    opacity: 0.6;
+  }
+}
+
+@media (max-width: 600px) {
+  .brand-background {
+    mask-image: radial-gradient(
+      ellipse at 100% 100%,
+      #000 10%,
+      rgb(0 0 0 / 70%) 55%,
+      transparent 100%
+    );
+  }
+
+  .light-rays-container {
+    opacity: 0.5;
+  }
+}

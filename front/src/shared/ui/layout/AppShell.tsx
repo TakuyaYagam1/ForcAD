@@ -1,62 +1,144 @@
-import type {ReactNode} from "react";
-import {Link} from "react-router-dom";
-import {Separator} from "@/components/ui/separator";
-import {CosmicBackground} from "@/shared/ui/backgrounds/CosmicBackground";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { MoveUpRight, Sparkles } from "lucide-react";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import SideRays from "@/components/SideRays";
+import { usePageEntrance } from "@/shared/lib/usePageEntrance";
 
-interface AppShellProps {
-    children: ReactNode;
-}
+export function AppShell({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const mainRef = usePageEntrance(location.pathname, location.key);
 
-export function AppShell({children}: AppShellProps) {
-    return (
-        <CosmicBackground>
-            <header className="border-b border-slate-800/60 bg-slate-950/70 backdrop-blur">
-                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-                    {/* Лого + надпись FinalSibCTF2025 */}
-                    <Link
-                        to="/"
-                        className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-                    >
-                        <div className="flex items-center gap-3">
-                            {/* Иконка-«чип» слева */}
-                            <div
-                                className="flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/50 bg-indigo-500/10 shadow-[0_0_30px_rgba(79,70,229,0.45)]">
-              <span className="text-[11px] font-semibold tracking-[0.18em] uppercase text-indigo-200">
-                AD
-              </span>
-                            </div>
+  const round = useScoreboardStore(
+    (state) => state.runtimeRound ?? state.round,
+  );
+  const teams = useScoreboardStore((state) => state.teams);
+  const error = useScoreboardStore((state) => state.error);
+  const connected = useScoreboardStore((state) => state.connected);
+  const phase = useScoreboardStore((state) => state.phase);
 
-                            {/* Текстовая часть логотипа */}
-                            <div className="flex flex-col leading-tight">
-              <span
-                  className="bg-gradient-to-r from-sky-300 via-indigo-300 to-fuchsia-300 bg-clip-text text-[11px] font-semibold uppercase tracking-[0.45em] text-transparent">
-                FinalSibCTF2025
-              </span>
-                                <span className="text-[11px] text-slate-400">
-                Attack Defence platform
-              </span>
-                            </div>
-                        </div>
-                    </Link>
+  const [motion, setMotion] = useState(() => {
+    try {
+      return localStorage.getItem("cf-motion") !== "off";
+    } catch {
+      return true;
+    }
+  });
 
-                    {/* Индикатор live справа — можно оставить как был */}
-                    <Link
-                        to="/live"
-                        className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-100 transition-colors"
-                    >
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"/>
-                            live
-                        </div>
-                    </Link>
-                </div>
+  useEffect(() => {
+    document.documentElement.dataset.motion = motion ? "on" : "off";
 
-                <Separator className="border-slate-800/60"/>
-            </header>
+    try {
+      localStorage.setItem("cf-motion", motion ? "on" : "off");
+    } catch {
+      /* Storage may be unavailable in private browsers. */
+    }
+  }, [motion]);
 
-            <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-6xl flex-col px-4 py-6">
-                {children}
-            </main>
-        </CosmicBackground>
-    );
+  return (
+    <div className="brand-app">
+      <div className="brand-background" aria-hidden="true">
+        <SideRays
+          enabled={motion}
+          origin="bottom-right"
+          rayColor1="#ffbd63"
+          rayColor2="#fff1c9"
+          speed={2.5}
+          intensity={3}
+          spread={2.2}
+          tilt={-10}
+          saturation={1.05}
+          blend={0.4}
+          falloff={1.35}
+          opacity={0.35}
+        />
+      </div>
+
+      <a href="#main-content" className="skip-link">
+        К содержимому
+      </a>
+
+      <header className="site-header">
+        <div className="header-inner">
+          <Link
+            to="/"
+            className="brand-lockup"
+            aria-label="Кубок Федерации 2026 — рейтинг"
+          >
+            <img src="/brand/mark.webp" alt="" />
+            <span>
+              Кубок Федерации <b>2026</b>
+            </span>
+          </Link>
+
+          <nav className="main-nav" aria-label="Основная навигация">
+            <NavLink to="/" end>
+              <BrandIcon name="podium" plain />
+              Рейтинг
+            </NavLink>
+            <NavLink to="/live">
+              <BrandIcon name="flag" plain />
+              События
+            </NavLink>
+            <NavLink to="/teams">
+              <BrandIcon name="team" plain />
+              Команды
+            </NavLink>
+          </nav>
+
+          <div className="header-status">
+            {teams && !error && round > 0 && (
+              <span className="header-round">Раунд {round}</span>
+            )}
+            <span
+              className={`connection-dot ${error || (!connected && teams) ? "connection-dot--error" : teams ? "connection-dot--ready" : ""}`}
+            />
+            <span>
+              {error || (!connected && teams)
+                ? "Нет соединения"
+                : teams
+                  ? round > 0
+                    ? phase === "paused"
+                      ? "Игра на паузе"
+                      : phase === "running"
+                        ? "Игра идёт"
+                        : "Статус игры недоступен"
+                    : "Ожидание старта"
+                  : "Подключение"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main ref={mainRef} id="main-content" className="site-main">
+        {children}
+      </main>
+
+      <footer className="site-footer">
+        <div>
+          <img src="/brand/mark.webp" alt="" />
+          <span>
+            Кубок Федерации 2026<span className="footer-divider">/</span>
+            Attack–Defense
+          </span>
+        </div>
+
+        <div className="footer-actions">
+          <button
+            type="button"
+            onClick={() => setMotion(!motion)}
+            aria-pressed={motion}
+            title="Включить или отключить декоративные анимации"
+          >
+            <Sparkles size={14} />
+            Анимации {motion ? "вкл." : "выкл."}
+          </button>
+          <Link to="/admin">
+            Администрирование <MoveUpRight size={13} />
+          </Link>
+        </div>
+      </footer>
+    </div>
+  );
 }

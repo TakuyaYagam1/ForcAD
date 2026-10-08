@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS GameConfig
     game_running       BOOLEAN     DEFAULT FALSE,
     real_round         INTEGER     DEFAULT 0,
     flag_lifetime      INTEGER CHECK ( flag_lifetime > 0 ),
-    game_hardness      FLOAT CHECK ( game_hardness >= 1 ),
+    game_hardness      FLOAT CHECK ( game_hardness > 1 AND game_hardness < 'Infinity'::float8 ),
     inflation          BOOLEAN,
     volga_attacks_mode BOOLEAN,
     round_time         INTEGER CHECK ( round_time > 0 ),
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS Teams
 (
     id          SERIAL PRIMARY KEY,
     name        VARCHAR(255) NOT NULL DEFAULT '',
-    ip          VARCHAR(32)  NOT NULL,
+    ip          VARCHAR(45)  NOT NULL,
     token       VARCHAR(16)  NOT NULL DEFAULT '',
     highlighted BOOLEAN               DEFAULT FALSE,
     active      BOOLEAN               DEFAULT TRUE,

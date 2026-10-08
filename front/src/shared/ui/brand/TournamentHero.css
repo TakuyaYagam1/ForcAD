@@ -1,0 +1,20 @@
+@import "./LeaderHighlight.css";
+
+.team-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.team-hero > .back-link {
+  position: relative;
+  z-index: 2;
+}
+
+.team-hero .team-header {
+  position: static;
+}
+
+.team-header > .hero-art {
+  z-index: 0;
+}

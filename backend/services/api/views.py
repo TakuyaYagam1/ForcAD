@@ -51,3 +51,8 @@ def get_ctftime_scoreboard():
 @client_bp.route('/health/')
 def health_check():
     return jsonify({'status': 'ok'})
+
+
+@client_bp.route('/status/')
+def runtime_status():
+    return jsonify(storage.game.get_runtime_status())

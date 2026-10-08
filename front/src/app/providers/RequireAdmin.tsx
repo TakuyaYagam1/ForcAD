@@ -8,6 +8,7 @@ interface Props {
 
 export function RequireAdmin({ children }: Props) {
   const location = useLocation();
+  const error = useAdminAuthStore((s) => s.error);
   const isAuthenticated = useAdminAuthStore((s) => s.isAuthenticated);
   const isAuthChecked = useAdminAuthStore((s) => s.isAuthChecked);
   const checkSession = useAdminAuthStore((s) => s.checkSession);
@@ -25,6 +26,16 @@ export function RequireAdmin({ children }: Props) {
       </div>
     );
   }
+
+  if (!isAuthenticated && error)
+    return (
+      <div className="notice" role="alert">
+        {error}
+        <button type="button" onClick={() => void checkSession()}>
+          Повторить
+        </button>
+      </div>
+    );
 
   if (!isAuthenticated) {
     return (

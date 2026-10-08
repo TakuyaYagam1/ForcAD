@@ -1,226 +1,342 @@
-import { useMemo } from "react";
-import { useParams } from "react-router-dom";
+import { groupHistoryByRound } from "@/entities/team-scoreboard/model/history";
+import { useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { fetchTeamStates } from "@/entities/team-scoreboard/api";
-import {
-    STATUS_COLOR_BY_CODE,
-    STATUS_META_BY_CODE,
-} from "@/shared/config/statuses";
+import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { GearMechanism } from "@/shared/ui/brand/GearMechanism";
+import { ClockworkDial } from "@/shared/ui/brand/ClockworkDial";
+import { RankBadge } from "@/shared/ui/brand/RankBadge";
+import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
+import { formatScore } from "@/shared/lib/formatScore";
+import { StatCard } from "@/shared/ui/brand/StatCard";
+import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
+import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
+import { HeroArt } from "@/shared/ui/brand/TournamentHero";
+import type { Task } from "@/entities/task/model/types";
+
+const EMPTY_TASKS: Task[] = [];
 
 export function TeamScoreboardView() {
-    const { teamId: rawTeamId } = useParams();
-    const teamId = Number(rawTeamId);
-    const invalidTeamId = Number.isNaN(teamId);
+  const [expandedHistory, setExpandedHistory] = useState(false);
+  const { teamId: rawTeamId } = useParams();
+  const teamId = Number(rawTeamId);
+  const invalid = !Number.isInteger(teamId) || teamId <= 0;
 
-    const teams = useScoreboardStore((s) => s.teams) ?? [];
-    const tasks = useScoreboardStore((s) => s.tasks) ?? [];
+  const teams = useScoreboardStore((state) => state.teams);
+  const tasks = useScoreboardStore((state) => state.tasks) ?? EMPTY_TASKS;
+  const current = useScoreboardStore((state) => state.teamTasks) ?? [];
 
-    // команда (если id валидный)
-    const team =
-        !invalidTeamId && teams.length > 0
-            ? teams.find((t) => t.id === teamId) ?? null
-            : null;
+  const team = teams?.find((item) => item.id === teamId);
+  const values = current.filter((item) => item.teamId === teamId);
+  const place = teams?.findIndex((item) => item.id === teamId);
 
-    // история состояний по команде
-    const historyQuery = useQuery({
-        queryKey: ["team-history", teamId],
-        queryFn: () => fetchTeamStates(teamId),
-        enabled: !invalidTeamId,
-    });
+  const sla = values.length
+    ? values.reduce((sum, value) => sum + value.sla, 0) / values.length
+    : 0;
 
-    // собираем "срезы" по раундам (как было)
-    const { rows, rowCount } = useMemo(() => {
-        const states = historyQuery.data ?? [];
-        if (!states.length) {
-            return { rows: [], rowCount: 0 };
-        }
+  const stolen = values.reduce((sum, value) => sum + value.stolen, 0);
+  const lost = values.reduce((sum, value) => sum + value.lost, 0);
 
-        // сгруппировать по taskId (как this.by_task в Vue)
-        const byTask: Record<number, typeof states> = {};
-        for (const st of states) {
-            const key = st.taskId;
-            if (!byTask[key]) byTask[key] = [];
-            byTask[key].push(st);
-        }
+  const historyQuery = useQuery({
+    queryKey: ["team-history", teamId],
+    queryFn: () => fetchTeamStates(teamId),
+    enabled: !invalid,
+    refetchInterval: 10000,
+  });
 
-        const taskIds = Object.keys(byTask)
-            .map(Number)
-            .sort((a, b) => a - b);
-        const columns = taskIds.map((id) => byTask[id]);
-        const minLen = Math.min(...columns.map((c) => c.length));
-        const result: {
-            tasks: typeof states;
-            score: number;
-        }[] = [];
+  const history = useMemo(
+    () =>
+      groupHistoryByRound(
+        historyQuery.data ?? [],
+        (tasks ?? []).map((task) => task.id!).filter(Number.isFinite),
+      ),
+    [historyQuery.data, tasks],
+  );
 
-        for (let i = 0; i < minLen; i += 1) {
-            const slice = columns.map((c) => c[i]);
-            const totalScore = slice.reduce(
-                (acc, { score, sla }) => acc + (score * sla) / 100.0,
-                0
-            );
-            result.push({ tasks: slice, score: totalScore });
-        }
-
-        return { rows: result, rowCount: minLen };
-    }, [historyQuery.data]);
-
-    // место команды — сортировка по score (чем больше, тем выше)
-    const place = useMemo(() => {
-        if (!team) return null;
-        if (!teams.length) return null;
-
-        const sorted = [...teams].sort(
-            (a, b) => (b.score ?? 0) - (a.score ?? 0)
-        );
-        const idx = sorted.findIndex((t) => t.id === team.id);
-        return idx === -1 ? null : idx + 1;
-    }, [teams, team]);
-
-    // --- Дальше только условный рендер, хуки выше, порядок фиксированный ---
-
-    if (invalidTeamId) {
-        return (
-            <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                Некорректный идентификатор команды: {rawTeamId}
-            </div>
-        );
-    }
-
-    if (!team) {
-        return (
-            <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-                Команда с id {teamId} пока не найдена в табло (возможно, табло ещё не
-                инициализировано).
-            </div>
-        );
-    }
-
+  if (invalid) {
     return (
-        <div className="space-y-4">
-            {/* шапка команды */}
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/80 px-4 py-4 shadow-lg shadow-indigo-900/40 backdrop-blur">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                    <div className="space-y-1">
-                        <div className="text-[11px] uppercase tracking-[0.35em] text-slate-500">
-                            Team
-                        </div>
-                        <div className="text-2xl font-semibold text-slate-50">
-                            {team.name}
-                        </div>
-                        {/* IP под названием команды */}
-                        <div className="text-sm text-slate-100">{team.ip}</div>
-
-                        <div className="flex flex-wrap gap-3 text-xs text-slate-400">
-                            {place && (
-                                <span>
-                  place:{" "}
-                                    <span className="font-mono text-slate-100">#{place}</span>
-                </span>
-                            )}
-                            <span>
-                score:{" "}
-                                <span className="font-mono text-emerald-300">
-                  {(team.score ?? 0).toFixed(2)}
-                </span>
-              </span>
-                            <span>
-                snapshots:{" "}
-                                <span className="font-mono text-slate-100">{rowCount}</span>
-              </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* таблица состояний по раундам */}
-            <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/80 shadow-xl shadow-indigo-900/40 backdrop-blur">
-                <div className="max-h-[70vh] overflow-auto">
-                    <table className="min-w-full border-collapse text-sm text-slate-100">
-                        <thead className="sticky top-0 z-10 bg-slate-950/90 backdrop-blur">
-                        <tr className="border-b border-slate-800/80">
-                            <th className="px-3 py-2 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
-                                Snapshot
-                            </th>
-                            <th className="px-3 py-2 text-right text-xs uppercase tracking-[0.18em] text-slate-400">
-                                Total score
-                            </th>
-                            {tasks.map((t) => (
-                                <th
-                                    key={t.id}
-                                    className="px-3 py-2 text-center text-xs uppercase tracking-[0.18em] text-slate-400"
-                                >
-                                    {t.name}
-                                </th>
-                            ))}
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {rows.map((row, rowIdx) => (
-                            <tr
-                                key={rowIdx}
-                                className="border-b border-slate-800/60 hover:bg-slate-900/80"
-                            >
-                                <td className="px-3 py-2 text-xs text-slate-400">
-                                    #{rowIdx + 1}
-                                </td>
-                                <td className="px-3 py-2 text-right text-sm">
-                    <span className="font-mono text-emerald-300">
-                      {row.score.toFixed(2)}
-                    </span>
-                                </td>
-                                {row.tasks.map((tt, colIdx) => {
-                                    const meta = STATUS_META_BY_CODE[tt.status];
-                                    const bg = STATUS_COLOR_BY_CODE[tt.status];
-                                    return (
-                                        <td
-                                            key={colIdx}
-                                            className="px-3 py-2 text-xs align-top"
-                                            style={{ backgroundColor: bg }}
-                                        >
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center justify-between gap-1">
-                            <span className="font-mono text-slate-50">
-                              {tt.score.toFixed(2)}
-                            </span>
-                                                    {meta && (
-                                                        <span className="rounded-full bg-slate-900/60 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-slate-100">
-                                {meta.label}
-                              </span>
-                                                    )}
-                                                </div>
-                                                <div className="text-[10px] text-slate-100">
-                                                    SLA: {tt.sla.toFixed(2)}%
-                                                </div>
-                                                <div className="text-[10px] text-slate-100">
-                                                    Flags: +{tt.stolen}/-{tt.lost}
-                                                </div>
-                                                <div className="text-[10px] text-slate-200">
-                                                    {tt.message}
-                                                </div>
-                                            </div>
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-
-                        {!rows.length && (
-                            <tr>
-                                <td
-                                    colSpan={2 + tasks.length}
-                                    className="px-3 py-4 text-center text-xs text-slate-400"
-                                >
-                                    История для этой команды пока недоступна.
-                                </td>
-                            </tr>
-                        )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+      <div className="notice">
+        <AlertCircle size={16} />
+        Некорректный идентификатор команды.
+      </div>
     );
+  }
+
+  if (!team) {
+    return (
+      <div className="empty-state mt-8">
+        <BrandIcon name="team" />
+
+        <h2>
+          {teams === null ? "Ожидаем данные команды" : "Команда не найдена"}
+        </h2>
+
+        <p>
+          {teams === null
+            ? "Профиль появится после подключения к серверу."
+            : "Проверь ссылку или выбери команду в рейтинге."}
+        </p>
+
+        <Link to="/" className="text-link mt-4">
+          <ArrowLeft size={14} />К рейтингу
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="team-page">
+      <div className="team-hero">
+        <Link to="/" className="back-link">
+          <ArrowLeft size={18} />К рейтингу
+        </Link>
+
+        <section className="team-header">
+          <div className="team-header-identity">
+            <TeamAvatar name={team.name} src={team.logo_path} size="large" />
+
+            <div>
+              <h1>{team.name}</h1>
+
+              <div className="team-header-meta">
+                <span>{team.ip}</span>
+                {!team.active && <span>Неактивна</span>}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="team-current-rank"
+            aria-label={`Место в рейтинге: ${(place ?? -1) + 1}`}
+          >
+            {place !== undefined && place >= 0 ? (
+              <RankBadge rank={place + 1} />
+            ) : (
+              "—"
+            )}
+
+            <span>Место</span>
+          </div>
+
+          <HeroArt />
+        </section>
+      </div>
+
+      <div className="stats-grid">
+        <StatCard
+          icon="podium"
+          label="Место"
+          value={place !== undefined && place >= 0 ? place + 1 : "—"}
+        />
+
+        <StatCard
+          icon="cup"
+          label="Очки"
+          value={<ScoreValue value={team.score ?? 0} />}
+        />
+
+        <StatCard
+          icon="shield"
+          label="Доступность"
+          value={
+            <>
+              {formatScore(sla)}% <small>SLA</small>
+            </>
+          }
+        />
+
+        <StatCard
+          icon="flag"
+          label="Захвачено"
+          value={stolen}
+          detail={
+            <>
+              Потеряно <b>{lost}</b>
+            </>
+          }
+        />
+      </div>
+
+      <div className="team-content-grid">
+        <div className="team-content-main">
+          <section className="team-panel services-panel">
+            <div className="section-heading">
+              <h2>Состояние сервисов</h2>
+            </div>
+
+            <div className="services-grid">
+              {(tasks ?? []).map((task, index) => {
+                const value = values.find((item) => item.taskId === task.id);
+
+                return (
+                  <div className="service-card" key={task.id}>
+                    <BrandIcon
+                      name={
+                        index % 4 === 2
+                          ? "check"
+                          : index % 4 === 3
+                            ? "team"
+                            : "terminal"
+                      }
+                    />
+
+                    <div className="service-card-copy">
+                      <div className="service-card-header">
+                        <span>{task.name}</span>
+                      </div>
+
+                      <ServiceCell name={task.name} value={value} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="team-panel history-panel">
+            <div className="section-heading">
+              <h2>История раундов</h2>
+
+              {history.length > 5 && (
+                <button
+                  type="button"
+                  className="history-expand text-link"
+                  aria-expanded={expandedHistory}
+                  onClick={() => setExpandedHistory(!expandedHistory)}
+                >
+                  {expandedHistory
+                    ? "Свернуть историю"
+                    : `Показать всю историю (${history.length})`}
+                </button>
+              )}
+            </div>
+
+            {historyQuery.isError && (
+              <div className="notice" role="alert">
+                <AlertCircle size={15} />
+                Не удалось загрузить историю.
+                <button
+                  type="button"
+                  className="text-link"
+                  onClick={() => void historyQuery.refetch()}
+                >
+                  Повторить
+                </button>
+              </div>
+            )}
+
+            <div className="table-frame">
+              <div
+                className="table-scroll"
+                role="region"
+                aria-label="История раундов команды"
+                tabIndex={0}
+              >
+                <table className="scoreboard-table history-table">
+                  <caption className="sr-only">
+                    История результатов команды по раундам
+                  </caption>
+
+                  <thead>
+                    <tr>
+                      <th scope="col">Раунд</th>
+
+                      <th
+                        scope="col"
+                        className="total-column"
+                        title="Исторические очки с учётом SLA"
+                      >
+                        Очки
+                      </th>
+
+                      {tasks.map((task) => (
+                        <th scope="col" key={task.id}>
+                          {task.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {(expandedHistory ? history : history.slice(0, 5)).map(
+                      (row, index) => {
+                        const roundLabel = row.incomplete
+                          ? `${row.round} · неполные данные`
+                          : String(row.round);
+
+                        return (
+                          <tr
+                            key={row.round}
+                            className={index === 0 ? "history-current" : ""}
+                          >
+                            <td className="history-round">{roundLabel}</td>
+
+                            <td
+                              className="total-column"
+                              title={
+                                row.incomplete
+                                  ? "Частичный итог: есть данные не всех сервисов"
+                                  : "Очки с учётом SLA"
+                              }
+                            >
+                              {formatScore(row.score)}
+                            </td>
+
+                            {tasks.map((task) => (
+                              <td key={task.id} className="history-value-cell">
+                                <ServiceCell
+                                  name={`${task.name} · раунд ${roundLabel}`}
+                                  value={row.tasks.find(
+                                    (value) => value.taskId === task.id,
+                                  )}
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      },
+                    )}
+
+                    {!history.length && (
+                      <tr>
+                        <td
+                          colSpan={2 + tasks.length}
+                          className="quiet-empty text-center"
+                        >
+                          {historyQuery.isPending
+                            ? "Загружаем историю…"
+                            : "История раундов пока недоступна."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <p className="sr-only">
+              Суммарные очки в истории рассчитаны с учётом SLA.
+            </p>
+          </section>
+        </div>
+
+        <aside className="team-content-aside" aria-label="События команды">
+          <RecentEvents teamId={teamId} />
+
+          <div className="team-emblem" aria-hidden="true">
+            <ClockworkDial />
+            <img src="/brand/mechanism.webp" alt="" />
+            <BrandIcon name="shield" />
+            <GearMechanism />
+            <i className="sparkle sparkle--one" />
+            <i className="sparkle sparkle--two" />
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
 }

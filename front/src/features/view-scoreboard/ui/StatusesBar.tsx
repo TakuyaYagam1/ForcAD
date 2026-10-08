@@ -1,146 +1,88 @@
-import {useEffect, useState} from "react";
-import {Badge} from "@/components/ui/badge";
-import {cn} from "@/lib/utils";
-import {SCOREBOARD_STATUSES} from "@/shared/config/statuses";
-import {useScoreboardStore} from "@/entities/scoreboard/model/store";
+import { useEffect, useState } from "react";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 
-interface StatusesBarProps {
-    round?: number;
-    roundStart?: number | null; // unix timestamp (sec) или ms — см. ниже
-}
-
-function formatElapsed(
-    roundStart: number | null,
-    roundTime?: number | null
-): string | null {
-    if (!roundStart) return null;
-
-    // если бэк шлёт секунды — умножаем на 1000
-    const startMs =
-        roundStart < 10_000_000_000 ? roundStart * 1000 : roundStart;
-
-    let diff = Date.now() - startMs;
-
-    // компенсируем "сдвиг" на длительность раунда:
-    // при приходе update_scoreboard elapsed должен быть 00:00, а не 02:00
-    if (roundTime && roundTime > 0) {
-        diff -= roundTime * 1000;
-    }
-
-    if (diff < 0) {
-        diff = 0;
-    }
-
-    const mins = Math.floor(diff / 60_000);
-    const secs = Math.floor((diff % 60_000) / 1000);
-    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
-}
-
-export function StatusesBar({round, roundStart}: StatusesBarProps) {
-    const roundTime = useScoreboardStore((s) => s.roundTime);
-
-    const [elapsed, setElapsed] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!roundStart) {
-            setElapsed(null);
-            return;
-        }
-
-        const update = () => {
-            setElapsed(formatElapsed(roundStart, roundTime));
-        };
-
-        update();
-        const id = window.setInterval(update, 1000);
-
-        return () => window.clearInterval(id);
-    }, [roundStart, roundTime]);
-
-    const [progress, setProgress] = useState<number | null>(null);
-
-    useEffect(() => {
-        if (!roundStart || !roundTime || !round || round < 1) {
-            setProgress(null);
-            return;
-        }
-
-        // roundStart приходит в секундах
-        const rs = roundStart;
-
-        const update = () => {
-            const nowSec = Date.now() / 1000;
-            const elapsedSec = nowSec - rs;
-
-            // как в старом Vue: (now - roundStart - roundTime) / roundTime
-            let p = (elapsedSec - roundTime) / roundTime;
-
-            // clamp [0, 1]
-            p = Math.max(0, Math.min(p, 1));
-
-            setProgress(Math.floor(p * 100));
-        };
-
-        update();
-        const id = window.setInterval(update, 1000);
-        return () => window.clearInterval(id);
-    }, [round, roundStart, roundTime]);
-
-    return (
-        <div
-            className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/80 px-4 py-3 shadow-lg shadow-indigo-900/40 backdrop-blur">
-            {/* Верхняя строка: информация о раунде */}
-            <div className="flex flex-col justify-between gap-2 text-sm text-slate-300 md:flex-row md:items-center">
-                <div className="flex flex-wrap items-baseline gap-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            Round
-          </span>
-                    <span className="text-lg font-semibold text-slate-100">
-            {round ?? "—"}
-          </span>
-                    {elapsed && (
-                        <span className="text-xs text-slate-400">
-              elapsed:{" "}
-                            <span className="font-mono text-slate-200">{elapsed}</span>
-            </span>
-                    )}
-                </div>
-
-                {progress !== null && (
-                    <div className="flex items-center gap-2 text-xs text-slate-300">
-                        <span>Round progress</span>
-                        <div className="h-1 w-32 overflow-hidden rounded-full bg-slate-800">
-                            <div
-                                className="h-full bg-emerald-400"
-                                style={{width: `${progress}%`}}
-                            />
-                        </div>
-                        <span className="font-mono text-slate-200">{progress}%</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Легенда статусов */}
-            <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Status legend
+export function StatusesBar({
+  round,
+  roundStart,
+}: {
+  round?: number;
+  roundStart?: number | null;
+}) {
+  const roundTime = useScoreboardStore((state) => state.roundTime);
+  const runtimeRound = useScoreboardStore((state) => state.runtimeRound);
+  const currentRoundStart = useScoreboardStore(
+    (state) => state.currentRoundStart,
+  );
+  const displayRound = runtimeRound ?? round;
+  const timerStart = currentRoundStart ?? roundStart;
+  const phase = useScoreboardStore((state) => state.phase);
+  const pausedAt = useScoreboardStore((state) => state.pausedAt);
+  const pausedSeconds = useScoreboardStore((state) => state.pausedSeconds);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const startMs = timerStart
+    ? timerStart < 10_000_000_000
+      ? timerStart * 1000
+      : timerStart
+    : null;
+  const effectiveNow = phase === "paused" && pausedAt ? pausedAt * 1000 : now;
+  // Prefer the real current-round timestamp; legacy snapshots describe the completed round.
+  const elapsed =
+    phase === "unknown" || phase === "waiting" ||
+    startMs === null || roundTime === null || !displayRound
+      ? null
+      : Math.max(
+          0,
+          Math.floor(
+            (effectiveNow - startMs) / 1000 -
+              (currentRoundStart ? 0 : (roundTime ?? 0)) -
+              pausedSeconds,
+          ),
+        );
+  const progress =
+    elapsed === null || !roundTime || !displayRound
+      ? 0
+      : Math.min(100, (elapsed / roundTime) * 100);
+  const time =
+    elapsed === null
+      ? "—:—"
+      : `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+  return (
+    <section className="round-line" aria-label="Текущий раунд">
+      <span className="round-label">Линия раундов</span>
+      <div
+        className="round-track"
+        role="progressbar"
+        aria-label="Время текущего раунда"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.floor(progress)}
+      >
+        <span
+          className="round-track-progress"
+          style={{ width: `${progress}%` }}
+        />
+        {Array.from({ length: 18 }, (_, index) => (
+          <i key={index} className="round-tick" />
+        ))}
+        <span
+          className="round-head"
+          style={{ left: `calc(${progress}% - 7px)` }}
+        >
+          <b className="round-current">Раунд {displayRound || "—"}</b>
         </span>
-
-                <div className="flex flex-wrap gap-1.5">
-                    {SCOREBOARD_STATUSES.map((s) => (
-                        <Badge
-                            key={s.code}
-                            variant="outline"
-                            className={cn(
-                                "border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide",
-                                s.badgeClassName
-                            )}
-                        >
-                            {s.label}
-                        </Badge>
-                    ))}
-                </div>
-            </div>
+      </div>
+      <div className="round-timer">
+        <BrandIcon name="timer" plain />
+        <div>
+          <strong>{time}</strong>
+          <small>{phase === "unknown" ? "Статус недоступен" : phase === "paused" ? "Пауза" : "С начала раунда"}</small>
         </div>
-    );
+      </div>
+    </section>
+  );
 }

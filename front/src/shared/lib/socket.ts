@@ -8,7 +8,7 @@ export function getGameEventsSocket(): Socket {
   if (!gameEventsSocket) {
     gameEventsSocket = io(`${SERVER_URL}/game_events`, {
       forceNew: true,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
     });
   }
   return gameEventsSocket;
@@ -18,7 +18,7 @@ export function getLiveEventsSocket(): Socket {
   if (!liveEventsSocket) {
     liveEventsSocket = io(`${SERVER_URL}/live_events`, {
       forceNew: true,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
     });
   }
   return liveEventsSocket;
