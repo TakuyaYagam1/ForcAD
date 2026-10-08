@@ -63,6 +63,9 @@ class SIOManager(Singleton[socketio.KombuManager]):
             url=broker_url,
             write_only=write_only,
             channel='forcad-front',
+            # Socket.IO subscriptions are private to this connection.
+            # RabbitMQ 4.3 rejects non-exclusive transient queues.
+            queue_options={'exclusive': True, 'auto_delete': True},
         )
 
     @classmethod
