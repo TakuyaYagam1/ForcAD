@@ -1,20 +1,25 @@
-version: '2.4'
-
 x-celery-fast: &celery-fast
   build:
     context: .
     dockerfile: ./docker_config/celery/Dockerfile.fast
     args:
-      version: ${FORCAD_VERSION:-latest}
+      BASE_IMAGE: "${FORCAD_BASE_IMAGE:-forcad_base:local}"
 
 x-service-fast: &service-fast
   build:
     context: .
     dockerfile: ./docker_config/services/Dockerfile.fast
     args:
-      version: ${FORCAD_VERSION:-latest}
+      BASE_IMAGE: "${FORCAD_BASE_IMAGE:-forcad_base:local}"
 
 services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker_config/nginx/Dockerfile
+      args:
+        DNS_RESOLVER: 127.0.0.11
+
   celery:
     <<: *celery-fast
 
@@ -26,7 +31,14 @@ services:
       context: .
       dockerfile: ./docker_config/initializer/Dockerfile.fast
       args:
-        version: ${FORCAD_VERSION:-latest}
+        BASE_IMAGE: "${FORCAD_BASE_IMAGE:-forcad_base:local}"
+
+  config-loader:
+    build:
+      context: .
+      dockerfile: ./docker_config/initializer/Dockerfile.fast
+      args:
+        BASE_IMAGE: "${FORCAD_BASE_IMAGE:-forcad_base:local}"
 
   ticker:
     <<: *service-fast
