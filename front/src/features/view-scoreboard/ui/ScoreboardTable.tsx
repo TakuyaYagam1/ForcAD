@@ -27,6 +27,8 @@ export interface ScoreboardTeamTask {
   taskId: number;
   status: number;
   score: number;
+  checks: number;
+  checksPassed: number;
   sla: number;
   stolen: number;
   lost: number;

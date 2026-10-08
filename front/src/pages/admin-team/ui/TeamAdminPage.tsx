@@ -1,5 +1,5 @@
 // src/pages/admin-team/ui/TeamAdminPage.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import { AppShell } from "@/shared/ui/layout/AppShell";
@@ -48,7 +48,9 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
   const teamId = !isCreate && teamIdParam ? Number(teamIdParam) : null;
 
   const routeKey = useRef(location.key);
-  routeKey.current = location.key;
+  useLayoutEffect(() => {
+    routeKey.current = location.key;
+  }, [location.key]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const canSave =
     loadedKey === location.key && !!team && (isCreate || team.id === teamId);
@@ -65,7 +67,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
 
       try {
         if (isCreate) {
-          // дефолты как во Vue Team.vue
+          // Default values match the Vue Team.vue form.
           const empty: Team = {
             id: null,
             name: "",

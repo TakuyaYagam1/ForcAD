@@ -12,21 +12,21 @@ import { RequireAdmin } from "./providers/RequireAdmin";
 import { TeamAdminPage } from "@/pages/admin-team/ui/TeamAdminPage";
 import { TaskAdminPage } from "@/pages/admin-task/ui/TaskAdminPage";
 import { AdminTeamTaskLogPage } from "@/pages/admin-team-task-log/ui/AdminTeamTaskLogPage";
-// позже добавим TeamAdminPage, TaskAdminPage, AdminTeamTaskLogPage
+// Team, service, and checker log administration pages
 
 export default function App() {
   return (
     <Routes>
-      {/* Публичные страницы */}
+      {/* Public pages */}
       <Route path="/" element={<ScoreboardPage />} />
       <Route path="/live" element={<LiveScoreboardPage />} />
       <Route path="/teams" element={<TeamsPage />} />
       <Route path="/team/:teamId" element={<TeamScoreboardPage />} />
 
-      {/* Логин админа */}
+      {/* Admin sign-in */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
 
-      {/* Админка под guard'ом */}
+      {/* Protected admin routes */}
       <Route
         path="/admin/scoreboard"
         element={
@@ -90,12 +90,20 @@ export default function App() {
         }
       />
 
-      {/* можно позже добавить: TeamAdminPage, TaskAdminPage, AdminTeamTaskLogPage под RequireAdmin */}
+      {/* Admin pages require an authenticated session. */}
 
-      {/* редиректы */}
+      {/* Redirects */}
       <Route
         path="/admin"
         element={<Navigate to="/admin/scoreboard" replace />}
+      />
+      <Route
+        path="/admin/create_task"
+        element={<Navigate to="/admin/task/create" replace />}
+      />
+      <Route
+        path="/admin/create_team"
+        element={<Navigate to="/admin/team/create" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

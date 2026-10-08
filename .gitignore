@@ -1,8 +1,25 @@
 .DS_Store
 .idea
 .vscode
+
+.agents/
+.codex/
+.claude/
+.aws/
+AGENTS.md
+CLAUDE.md
+
 __pycache__
+*.py[cod]
 .venv
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
 
 docker_volumes
 
@@ -16,7 +33,11 @@ checkers/*
 /docker-compose-base.yml
 
 node_modules/
-.mypy_cache
+/front/dist/
+.pnpm-store/
+.eslintcache
+*.tsbuildinfo
+.cache/
 
 /.version
 /release

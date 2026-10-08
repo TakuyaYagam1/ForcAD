@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { GameEventsProvider } from "./providers/GameEventsProvider";
 import App from "./App";
+import "./styles/tailwind.css";
 import "./styles/index.scss";
 import "./styles/fidelity.scss";
 import { LiveEventsProvider } from "./providers/LiveEventsProvider";

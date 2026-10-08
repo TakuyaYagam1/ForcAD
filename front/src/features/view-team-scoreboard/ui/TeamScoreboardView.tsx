@@ -12,6 +12,7 @@ import { ClockworkDial } from "@/shared/ui/brand/ClockworkDial";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { formatScore } from "@/shared/lib/formatScore";
+import { getCombinedSlaPercent } from "@/shared/lib/sla";
 import { StatCard } from "@/shared/ui/brand/StatCard";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
@@ -34,9 +35,7 @@ export function TeamScoreboardView() {
   const values = current.filter((item) => item.teamId === teamId);
   const place = teams?.findIndex((item) => item.id === teamId);
 
-  const sla = values.length
-    ? values.reduce((sum, value) => sum + value.sla, 0) / values.length
-    : 0;
+  const sla = getCombinedSlaPercent(values);
 
   const stolen = values.reduce((sum, value) => sum + value.stolen, 0);
   const lost = values.reduce((sum, value) => sum + value.lost, 0);
@@ -143,9 +142,7 @@ export function TeamScoreboardView() {
           icon="shield"
           label="Доступность"
           value={
-            <>
-              {formatScore(sla)}% <small>SLA</small>
-            </>
+            sla === null ? "—" : <>{formatScore(sla)}% <small>SLA</small></>
           }
         />
 

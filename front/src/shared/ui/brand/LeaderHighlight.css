@@ -1,4 +1,4 @@
-/* Карточка лидера: золотой градиент и частицы снизу вверх. */
+/* Leader card: a gold gradient with particles moving upward. */
 .teams-page .team-card--medallion[data-rank="1"] {
   --leader-fade: clamp(32px, 18%, 84px);
   --leader-mask-angle: 180deg;
@@ -43,7 +43,7 @@
   isolation: isolate;
 }
 
-/* Профиль: эффект включается только у команды с текущим первым местом. */
+/* The profile effect applies only to the team currently in first place. */
 .team-hero:has(.team-current-rank .rank-number--1) {
   --leader-fade: clamp(48px, 12%, 180px);
   --leader-mask-angle: 90deg;
@@ -96,7 +96,7 @@
   pointer-events: none;
 }
 
-/* На странице команды оба слоя занимают только левую половину шапки. */
+/* Both layers cover only the left half of the team page header. */
 .team-hero:has(.team-current-rank .rank-number--1)::before,
 .team-hero:has(.team-current-rank .rank-number--1)::after {
   right: 50%;
@@ -135,7 +135,7 @@
   animation: leader-highlight-particles 8s linear infinite;
 }
 
-/* Текст, логотип и лавры остаются поверх обоих декоративных слоёв. */
+/* Text, the logo, and laurels stay above both decorative layers. */
 .teams-page .team-card--medallion[data-rank="1"] > * {
   position: relative;
   z-index: 2;

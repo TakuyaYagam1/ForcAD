@@ -2,30 +2,18 @@ import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
 import type { TeamTaskStateRaw } from "@/entities/team-scoreboard/api";
 import type { RawTeamTask } from "@/entities/scoreboard/model/store";
+import { demoTeams } from "./teamLogos.ts";
 
 export const DEMO_ROUND_TIME = 120;
 export const DEMO_INITIAL_ROUND = 128;
 
-const teamExamples = [
-  ["Red Team", "red-team.jpg"],
-  ["Orion", "orion.jpg"],
-  ["Alt+F4", "alt-f4.png"],
-  ["RedRaven", "red-raven.jpg"],
-  ["IRKSEC", "irksec.png"],
-  ["V7 Peace", "v7-peace.jpg"],
-  ["Tuxedo", "tuxedo.png"],
-  ["Команда без логотипа", ""],
-];
-
 export function createDemoTeams(): Team[] {
-  return teamExamples.map(([name, logo], index) => ({
+  return demoTeams.map(({ name, logo }, index) => ({
     id: index + 1,
     name,
     ip: `10.10.${14 + index}.8`,
     token: `demo-team-${index + 1}`,
-    logo_path: logo
-      ? new URL(`/demo/logos/${logo}`, window.location.origin).href
-      : "",
+    logo_path: `/team-logos/${logo}`,
     highlighted: index === 3,
     active: true,
   }));
@@ -55,12 +43,12 @@ export function createDemoTeamTasks(
   const examples = [101, 101, 101, 101, 102, 104, 103, 110];
   return teams.flatMap((team, index) =>
     tasks.map((task, column) => {
-      const status = column === 1 ? examples[index] : 101;
+      const status = column === 1 ? examples[index % examples.length] : 101;
       return {
         team_id: team.id!,
         task_id: task.id!,
-        score: 4800 - index * 350 - column * 90,
-        stolen: 16 - index + column,
+        score: Math.max(0, 4800 - index * 350 - column * 90),
+        stolen: Math.max(0, 16 - index + column),
         lost: index + column,
         checks: 100,
         checks_passed: 100 - index - column,

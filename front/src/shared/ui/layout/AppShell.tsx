@@ -112,6 +112,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main ref={mainRef} id="main-content" className="site-main">
+        {phase === "paused" && (
+          <div
+            className="mx-auto my-3 max-w-screen-xl rounded border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm text-amber-100"
+            role="status"
+          >
+            Игра на паузе: новые флаги не принимаются и проверки не запускаются.
+            Уже запущенные проверки могут завершиться и обновить результаты.
+          </div>
+        )}
         {children}
       </main>
 

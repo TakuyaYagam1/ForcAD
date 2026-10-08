@@ -14,6 +14,7 @@ import { BrandIcon } from "./BrandIcon";
 interface ServiceValue {
   status: number;
   score: number;
+  checks: number;
   sla: number;
   stolen: number;
   lost: number;
@@ -30,6 +31,7 @@ export function ServiceCell({
 }) {
   const [open, setOpen] = useState(false);
   const meta = value ? STATUS_META_BY_CODE[value.status] : undefined;
+  const sla = value && value.checks > 0 ? `${formatScore(value.sla)}%` : "—";
   const trigger = (
     <button
       type="button"
@@ -48,7 +50,7 @@ export function ServiceCell({
         <span>{value ? formatScore(value.score) : "—"}</span>
       </span>
       <span className="service-meta">
-        <span>SLA {value ? formatScore(value.sla) : "—"}%</span>
+        <span>SLA {sla}</span>
         <span className="flag-count">
           <b>+{value?.stolen ?? 0}</b>
           <em>−{value?.lost ?? 0}</em>
@@ -75,7 +77,7 @@ export function ServiceCell({
           </div>
           <div>
             <span>SLA</span>
-            <strong>{(value?.sla ?? 0).toFixed(2)}%</strong>
+            <strong>{sla}</strong>
           </div>
           <div>
             <span>Захвачено флагов</span>
