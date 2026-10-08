@@ -58,11 +58,52 @@ That's all! Now you should be able to access the scoreboard at `http://127.0.0.1
 
 > Before each new game run `./control.py reset` to delete old database and temporary files (and docker networks)
 
+### Reset and cleanup
+
+These commands delete game data. Back up a game you need to retain before running them.
+
+| Command | Result | Next step |
+| --- | --- | --- |
+| `./control.py reset` | Stops game services, clears game tables and Redis, removes containers and Compose volumes. Keeps the PostgreSQL cluster and its credentials. | `./control.py start` |
+| `./control.py reset --full` | Removes the local PostgreSQL cluster as well, including its old credentials. Keeps `config.yml`, generated environment files and checkers. | `./control.py start` |
+| `./control.py clean` | Performs a full local reset, then removes generated environment files and `docker-compose-base.yml`. Keeps `config.yml` and checkers. | `./control.py setup`, then `./control.py start` |
+
+Add `--fast` if the deployment uses the fast Compose images. Cleanup preserves Docker images and build cache.
+After updating this fork, run `./control.py build` (or `./control.py build --fast`) to apply changes to the
+database reset script inside the initializer image.
+Configured team tokens remain in `config.yml` and are reused on initialization. Teams without configured tokens
+receive new random tokens.
+
+When changing the database credentials for a new game:
+
+```bash
+./control.py reset --full
+# Edit admin credentials and game settings in config.yml.
+./control.py setup
+./control.py start
+```
+
+Full cleanup also works when `setup` has already changed the password and the old database rejects connections:
+it does not log in to PostgreSQL. It uses the cached PostgreSQL image to remove the container-owned data, so no
+manual `sudo rm` is needed. Full cleanup requires a local Unix-socket Docker daemon supporting
+`bind-recursive=disabled` and the standard `docker_volumes/postgres/data` bind mount.
+External storages and custom PostgreSQL mounts are supported by ordinary `reset`, but not by `reset --full` or
+`clean`. Those commands refuse unsupported storage layouts before stopping services.
+
+Cleanup refuses symlinked storage paths and nonempty data directories without a regular `PG_VERSION` file.
+It leaves unrelated files in `docker_volumes` and empty parent directories in place. Repeating `clean` after a
+successful cleanup is safe. If generated configuration is missing while game data or containers remain, run
+`setup` to restore it before cleanup.
+
+Failures return a nonzero exit status and do not print a success message. If ordinary `reset` fails, the game
+services remain stopped for diagnosis. Storage connection retries and SQL execution have time limits.
+
 ## Configuration and usage
 
 ### Receiving flags
 
-Teams are identified by tokens (unique and randomly generated on startup). Look for them in the logs of `initializer`
+Teams are identified by tokens. Set `teams[].token` to reuse a token after a full reset, or omit it to generate a
+random token each time the database is initialized. Look for them in the logs of `initializer`
 container or print using the following command after the system started: `./control.py print_tokens`. Token is private
 information, so send them to each team correspondingly.
 
@@ -125,6 +166,27 @@ teams:
 ```
 
 Highlighted teams will be marked on the scoreboard with a rainbow border.
+
+Each team can optionally specify a fixed token:
+
+```yaml
+teams:
+  - ip: 10.70.0.2
+    name: Team1
+    token: "0123456789abcdef"  # Example only; use your own random token.
+  - ip: 10.70.1.2
+    name: Team2
+```
+
+Tokens must be unique strings of exactly 16 lowercase hexadecimal characters (`0-9`, `a-f`).
+Quote tokens in YAML, especially values containing only digits. `control.py setup` preserves configured tokens.
+After `control.py reset` and the next start, Team1 receives its configured token and Team2 receives a new random
+token. An omitted token or `token: null` uses the original random generation; generated tokens are not saved to
+the YAML. Empty strings and invalid or duplicate tokens are rejected.
+
+These settings apply when initializing a fresh database. Editing the YAML and restarting an already initialized
+game does not change its stored tokens. Keep the configuration and its backups private, and distribute only each
+team's own token. After installing this change, rebuild the initializer image before starting the new game.
 
 * **tasks** contains configuration of checkers and task-related parameters. More detailed explanation is
   in [checkers](#checkers) section. Example:
