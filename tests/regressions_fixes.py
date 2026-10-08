@@ -200,7 +200,7 @@ class RegressionTests(unittest.TestCase):
     def test_duplicate_db_submit_returns_result_and_rolls_back(self):
         flag = SimpleNamespace(team_id=2, task_id=3, round=10, id=42)
         cursor = MagicMock()
-        cursor.fetchone.return_value = (10,)
+        cursor.fetchone.return_value = (10, True)
         cursor.callproc.side_effect = UniqueViolation('duplicate flag')
         conn = MagicMock()
         conn.cursor.return_value = cursor
@@ -273,7 +273,7 @@ class RegressionTests(unittest.TestCase):
 
     def test_pause_resume_idempotent_and_reported_over_http(self):
         self.redis.set(storage.keys.CacheKeys.current_round(), 3)
-        with patch.object(
+        with patch.object(storage.game, 'get_lifecycle', return_value=(3, True)), patch.object(
             storage.game,
             'get_current_game_config',
             return_value=SimpleNamespace(round_time=60),
@@ -293,6 +293,9 @@ class RegressionTests(unittest.TestCase):
             self.assertEqual(data['paused_seconds'], 20)
 
     def test_crud_refresh_keeps_completed_cells_adds_new_cells(self):
+        lifecycle = patch.object(storage.game, 'get_lifecycle', return_value=(3, True))
+        lifecycle.start()
+        self.addCleanup(lifecycle.stop)
         old = models.GameState(
             round=2, round_start=100, team_tasks=[dict(team_id=1, task_id=1, score=100)]
         )

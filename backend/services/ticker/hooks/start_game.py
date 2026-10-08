@@ -6,12 +6,10 @@ logger = logging.getLogger(__name__)
 
 
 def set_started_if_not() -> bool:
-    already_started = storage.game.get_game_running()
-    if already_started:
+    if not storage.game.set_game_running(True):
         return False
 
     storage.game.set_round_start(r=0)
-    storage.game.set_game_running(True)
     return True
 
 

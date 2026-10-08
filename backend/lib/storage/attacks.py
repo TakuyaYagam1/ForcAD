@@ -81,9 +81,19 @@ def handle_attack(
                 # Serialize the accounting boundary with round snapshots.
                 # Concurrent submissions still share this lock with each other.
                 curs.execute(
-                    'SELECT real_round FROM GameConfig WHERE id=1 FOR SHARE',
+                    'SELECT real_round, game_running FROM GameConfig '
+                    'WHERE id=1 FOR SHARE',
                 )
-                accounting_round, = curs.fetchone()
+                accounting_round, running = curs.fetchone()
+                if not running or game.is_game_paused():
+                    result.submit_ok = False
+                    result.message = str(FlagExceptionEnum.GAME_NOT_AVAILABLE)
+                    conn.commit()
+                    with utils.redis_pipeline(transaction=False) as pipe:
+                        pipe.srem(
+                            CacheKeys.team_stolen_flags(attacker_id), flag.id,
+                        ).execute()
+                    return result
                 if accounting_round - flag.round > game_config.flag_lifetime:
                     result.submit_ok = False
                     result.message = str(FlagExceptionEnum.FLAG_TOO_OLD)

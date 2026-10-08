@@ -63,8 +63,8 @@ class DispatchIntegrationTests(TestCase):
                     cursor.execute((SCRIPTS / name).read_text())
                 cursor.execute(
                     'INSERT INTO GameConfig '
-                    '(id,real_round,game_hardness,flag_lifetime,round_time,inflation) '
-                    'VALUES (1,0,10,5,60,TRUE)',
+                    '(id,real_round,game_hardness,flag_lifetime,round_time,inflation,game_running) '
+                    'VALUES (1,0,10,5,60,TRUE,TRUE)',
                 )
                 for item in (team(1), team(2)):
                     cursor.execute(
@@ -94,6 +94,112 @@ class DispatchIntegrationTests(TestCase):
         return dispatch.prepare(
             'classic_rounds', [team(1), team(2)], [task()], advances_round=True,
         )
+
+    def test_controls_pause_without_advancing_and_resume_idempotently(self):
+        self.plan_round()
+        storage.game.change_game_state('pause')
+        paused_at = self.fake_redis.get(storage.game.PAUSED_AT)
+        storage.game.change_game_state('pause')
+        self.assertEqual(self.fake_redis.get(storage.game.PAUSED_AT), paused_at)
+        self.assertIsNone(self.plan_round())
+        self.assertEqual(storage.game.get_real_round_from_db(), 1)
+        storage.game.change_game_state('resume')
+        storage.game.change_game_state('resume')
+        self.assertFalse(storage.game.is_game_paused())
+        self.assertEqual(self.plan_round()['round'], 1)
+
+    def test_finish_drains_sent_jobs_cancels_unpublished_and_cannot_restart(self):
+        run = self.plan_round()
+        sent, unpublished = dispatch.pending_jobs(run['id'])
+        dispatch.mark_sent(sent['id'])
+        storage.game.change_game_state('finish')
+        storage.game.change_game_state('finish')
+        self.assertTrue(storage.game.is_game_finished())
+        self.assertTrue(storage.game.has_pending_checks())
+        self.assertFalse(dispatch.touch_job(unpublished['id']))
+        self.assertEqual(dispatch.pending_jobs(run['id']), [])
+        self.assertTrue(dispatch.touch_job(sent['id']))
+        self.fake_redis.flushdb()
+        self.assertTrue(storage.game.is_game_finished())
+        self.assertFalse(storage.game.set_game_running(True))
+        self.assertIsNone(self.plan_round())
+        for action in ('pause', 'resume'):
+            with self.assertRaisesRegex(ValueError, 'already finished'):
+                storage.game.change_game_state(action)
+        storage.tasks.update_task_status(
+            1, sent['payload']['team']['id'], 1, verdict(), sent['id'],
+        )
+        self.assertFalse(storage.game.has_pending_checks())
+        with patch.object(storage.utils.SIOManager, 'write_only') as publisher:
+            storage.game.finalize_finished_game()
+        self.assertEqual(publisher.return_value.emit.call_count, 1)
+        final = storage.game.get_cached_game_state()
+        self.assertEqual(final.round, 1)
+        self.assertEqual(sum(cell['checks'] for cell in final.team_tasks), 1)
+
+    def test_finished_game_rejects_accounting_even_when_pause_cache_is_lost(self):
+        self.plan_round()
+        storage.game.change_game_state('finish')
+        self.fake_redis.flushdb()
+        flag = SimpleNamespace(team_id=2, task_id=1, round=1, id=42)
+        with patch.object(storage.flags, 'get_flag_by_str', return_value=flag), \
+                patch.object(storage.flags, 'try_add_stolen_flag', return_value=True), \
+                patch.object(storage.game, 'get_current_game_config', return_value=SimpleNamespace(
+                    flag_lifetime=5, volga_attacks_mode=False,
+                )):
+            result = storage.attacks.handle_attack(1, 'test-flag', 1)
+        self.assertFalse(result.submit_ok)
+        with storage.utils.db_cursor() as (_, cursor):
+            cursor.execute('SELECT score FROM TeamTasks ORDER BY team_id')
+            self.assertEqual(cursor.fetchall(), [(2500,), (2500,)])
+
+    def test_game_cannot_finish_before_first_round(self):
+        with self.assertRaisesRegex(ValueError, 'not started'):
+            storage.game.change_game_state('finish')
+        self.assertFalse(storage.game.is_game_finished())
+
+    def test_finish_preserves_worker_started_before_publication_ack(self):
+        run = self.plan_round()
+        job = dispatch.pending_jobs(run['id'])[0]
+        self.assertTrue(dispatch.touch_job(job['id']))
+        storage.game.change_game_state('finish')
+        self.assertTrue(storage.game.has_pending_checks())
+        self.assertTrue(storage.tasks.update_task_status(
+            1, job['payload']['team']['id'], 1, verdict(), job['id'],
+        ))
+        self.assertFalse(storage.game.has_pending_checks())
+
+    def test_pause_during_flag_validation_releases_reservation_without_scoring(self):
+        self.plan_round()
+        flag = SimpleNamespace(team_id=2, task_id=1, round=1, id=42)
+        key = CacheKeys.team_stolen_flags(1)
+
+        def reserve_then_pause(**kwargs):
+            self.fake_redis.sadd(key, flag.id)
+            storage.game.change_game_state('pause')
+            return True
+
+        with patch.object(storage.flags, 'get_flag_by_str', return_value=flag), \
+                patch.object(storage.flags, 'try_add_stolen_flag', side_effect=reserve_then_pause), \
+                patch.object(storage.game, 'get_current_game_config', return_value=SimpleNamespace(
+                    flag_lifetime=5, volga_attacks_mode=False,
+                )):
+            result = storage.attacks.handle_attack(1, 'test-flag', 1)
+        self.assertFalse(result.submit_ok)
+        self.assertFalse(self.fake_redis.sismember(key, flag.id))
+        with storage.utils.db_cursor() as (_, cursor):
+            cursor.execute('SELECT score FROM TeamTasks ORDER BY team_id')
+            self.assertEqual(cursor.fetchall(), [(2500,), (2500,)])
+
+    def test_only_a_new_game_can_be_started(self):
+        with storage.utils.db_cursor() as (connection, cursor):
+            cursor.execute('UPDATE GameConfig SET game_running=FALSE WHERE id=1')
+            connection.commit()
+        self.assertTrue(storage.game.set_game_running(True))
+        self.assertFalse(storage.game.set_game_running(True))
+        self.plan_round()
+        storage.game.change_game_state('finish')
+        self.assertFalse(storage.game.set_game_running(True))
 
     def test_partial_publication_resumes_same_round_and_job_ids(self):
         planned = self.plan_round()

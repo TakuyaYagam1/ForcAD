@@ -5,6 +5,7 @@ import type { Task } from "@/entities/task/model/types";
 import type { TeamTask } from "@/entities/team-task/model/types";
 import { finiteNumber } from "@/shared/lib/numbers";
 import { getSlaPercent } from "@/shared/lib/sla";
+import type { GamePhase } from "@/shared/lib/gameStatus";
 export interface RawTeamTask {
   task_id: number;
   team_id: number;
@@ -22,7 +23,8 @@ export interface GameStatePayload {
   team_tasks: RawTeamTask[];
 }
 export interface GameRuntimeStatus {
-  phase: "waiting" | "running" | "paused" | "unknown";
+  phase: GamePhase;
+  results_pending?: boolean;
   round_waiting?: boolean;
   paused_at: number | null;
   paused_seconds: number;
@@ -49,6 +51,7 @@ interface ScoreboardState {
   connected: boolean;
   phase: GameRuntimeStatus["phase"];
   roundWaiting: boolean;
+  resultsPending: boolean;
   pausedAt: number | null;
   pausedSeconds: number;
   runtimeRound: number | null;
@@ -117,6 +120,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     connected: false,
     phase: "unknown",
     roundWaiting: false,
+    resultsPending: false,
     pausedAt: null,
     pausedSeconds: 0,
     runtimeRound: null,
@@ -128,6 +132,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
       set({
         phase: "unknown",
         roundWaiting: false,
+        resultsPending: false,
         pausedAt: null,
         pausedSeconds: 0,
         runtimeRound: null,
@@ -137,6 +142,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
       set({
         phase: runtime.phase,
         roundWaiting: runtime.round_waiting === true,
+        resultsPending: runtime.results_pending === true,
         pausedAt: runtime.paused_at,
         pausedSeconds: finiteNumber(runtime.paused_seconds),
         runtimeRound:

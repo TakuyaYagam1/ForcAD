@@ -6,6 +6,7 @@ import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
 import { useNavigate } from "react-router-dom";
 import { Plus, LogOut } from "lucide-react";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { GameControls } from "@/features/manage-game/ui/GameControls";
 
 export function AdminScoreboardPage() {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ export function AdminScoreboardPage() {
             {error}
           </div>
         )}
+        <GameControls />
         <AdminEntityLists />
         <ScoreboardWidget
           admin

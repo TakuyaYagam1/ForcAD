@@ -7,7 +7,7 @@ import type { Task } from "@/entities/task/model/types";
 import type { TeamTaskLogEntry } from "@/entities/team-task/model/types";
 import type { TeamTaskStateRaw } from "@/entities/team-scoreboard/api";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import type { RawTeamTask } from "@/entities/scoreboard/model/store";
+import type { GameRuntimeStatus, RawTeamTask } from "@/entities/scoreboard/model/store";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
 import { api, http } from "@/shared/lib/axios";
 import {
@@ -27,20 +27,28 @@ let round = DEMO_INITIAL_ROUND;
 let roundStart = 0;
 let nextHistoryId = 1;
 let loggedIn = false;
+let phase: "running" | "paused" | "finished" = "running";
+let pausedAt: number | null = null;
+let pausedSeconds = 0;
+
+function getRuntime(): GameRuntimeStatus {
+  return {
+    phase,
+    paused_at: pausedAt,
+    paused_seconds: pausedSeconds,
+    round_time: DEMO_ROUND_TIME,
+    round: round + 1,
+    round_start: roundStart + DEMO_ROUND_TIME,
+    results_pending: false,
+  };
+}
 
 function publishState() {
   useScoreboardStore.getState().handleInitScoreboardMessage({
     teams,
     tasks,
     state: { round, round_start: roundStart, team_tasks: raw },
-    runtime: {
-      phase: "running",
-      paused_at: null,
-      paused_seconds: 0,
-      round_time: DEMO_ROUND_TIME,
-      round: round + 1,
-      round_start: roundStart + DEMO_ROUND_TIME,
-    },
+    runtime: getRuntime(),
   });
   useScoreboardStore.getState().setRoundTime(DEMO_ROUND_TIME);
   useScoreboardStore.getState().setConnected(true);
@@ -58,6 +66,9 @@ function rememberSession(value: boolean) {
 }
 
 export function resetDemoData() {
+  phase = "running";
+  pausedAt = null;
+  pausedSeconds = 0;
   teams = createDemoTeams();
   tasks = createDemoTasks();
   raw = createDemoTeamTasks(teams, tasks);
@@ -104,6 +115,7 @@ function recordSnapshot() {
 }
 
 export function simulateDemoCapture(promote = false) {
+  if (phase !== "running") return;
   const leaders = useScoreboardStore.getState().teams ?? [];
   const active = leaders.filter((team) => team.active);
   const taskIds = new Set(tasks.filter((task) => task.active).map((task) => task.id));
@@ -131,19 +143,11 @@ export function simulateDemoCapture(promote = false) {
   victimCell.score = Math.max(0, victimCell.score - delta);
   victimCell.lost += 1;
   round += 1;
+  pausedSeconds = 0;
   refreshGameQueries();
   roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
   recordSnapshot();
-  useScoreboardStore
-    .getState()
-    .setRuntime({
-      phase: "running",
-      paused_at: null,
-      paused_seconds: 0,
-      round_time: DEMO_ROUND_TIME,
-      round: round + 1,
-      round_start: roundStart + DEMO_ROUND_TIME,
-    });
+  useScoreboardStore.getState().setRuntime(getRuntime());
   useScoreboardStore.getState().handleUpdateScoreboardMessage({
     round,
     round_start: roundStart,
@@ -260,14 +264,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
   const body = readBody(config);
 
   if (path === "/client/status")
-    return makeResponse(config, {
-      phase: "running",
-      paused_at: null,
-      paused_seconds: 0,
-      round_time: DEMO_ROUND_TIME,
-      round: round + 1,
-      round_start: roundStart + DEMO_ROUND_TIME,
-    });
+    return makeResponse(config, getRuntime());
   if (path === "/client/config")
     return makeResponse(config, { round_time: DEMO_ROUND_TIME });
   if (path === "/scoreboard/init") {
@@ -275,14 +272,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
       teams,
       tasks,
       state: { round, round_start: roundStart, team_tasks: raw },
-      runtime: {
-        phase: "running",
-        paused_at: null,
-        paused_seconds: 0,
-        round_time: DEMO_ROUND_TIME,
-        round: round + 1,
-        round_start: roundStart + DEMO_ROUND_TIME,
-      },
+      runtime: getRuntime(),
     });
   }
   if (path === "/client/teams")
@@ -319,6 +309,25 @@ const demoAdapter: AxiosAdapter = async (config) => {
   }
   if (path.startsWith("/admin/") && !loggedIn)
     fail(config, 403, "No active demo session");
+
+  const gameAction = path.match(/^\/admin\/game\/(pause|resume|finish)$/)?.[1];
+  if (gameAction) {
+    if (method !== "POST") fail(config, 405, "Game controls require POST");
+    if (gameAction === "finish" && body.confirm !== true)
+      fail(config, 400, "Game finish confirmation is required");
+    if (phase === "finished" && gameAction !== "finish")
+      fail(config, 409, "Game has already finished");
+    if (gameAction === "resume") {
+      if (pausedAt !== null) pausedSeconds += Date.now() / 1000 - pausedAt;
+      pausedAt = null;
+      phase = "running";
+    } else {
+      pausedAt ??= Date.now() / 1000;
+      phase = gameAction === "finish" ? "finished" : "paused";
+    }
+    publishState();
+    return makeResponse(config, getRuntime());
+  }
 
   const entity = path.match(/^\/admin\/(teams|tasks)(?:\/(\d+))?$/);
   if (entity) {

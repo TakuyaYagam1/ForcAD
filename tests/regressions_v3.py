@@ -103,6 +103,7 @@ class V3RegressionTests(unittest.TestCase):
             Schedule('classic_rounds', datetime.fromtimestamp(0, timezone.utc), callback),
         ])
         with patch('services.ticker.__main__.sync_blitz_schedules'), \
+                patch.object(storage.game, 'finalize_finished_game'), \
                 patch.object(events, 'retry_scoreboard_refresh'), \
                 patch('services.ticker.__main__.recover_expired_jobs') as recover, \
                 patch('services.ticker.__main__.time.sleep', side_effect=InterruptedError):
