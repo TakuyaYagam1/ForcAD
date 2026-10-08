@@ -22,12 +22,14 @@ export function validateTeam(
   return null;
 }
 export function validateTask(task: Omit<Task, "id">): string | null {
-  for (const field of ["name", "checker", "checker_type"] as const) {
+  for (const field of ["name", "checker"] as const) {
     const limit =
-      field === "checker" ? 1024 : field === "checker_type" ? 32 : 255;
+      field === "checker" ? 1024 : 255;
     if (!task[field].trim() || task[field].trim().length > limit)
-      return "Название, путь и тип чекера должны быть заполнены (до 255 символов).";
+      return "Название и путь чекера должны быть заполнены (максимум 255 и 1024 символа).";
   }
+  if (typeof task.checker_type !== "string" || task.checker_type.trim().length > 32)
+    return "Тип чекера: строка до 32 символов; может быть пустой.";
   if ((task.env_path ?? "").length > 1024)
     return "Путь к окружению: максимум 1024 символов.";
   for (const field of [

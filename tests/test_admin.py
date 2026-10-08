@@ -25,7 +25,7 @@ class AdminAuthMixin:
                 'password': password,
             },
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         return s2
 
@@ -55,13 +55,13 @@ class BaseAdminTestCase(TestCase, AdminAuthMixin):
 
         self.s2 = self.get_admin_sess()
         r = self.s2.get('http://127.0.0.1:8080/api/admin/teams/')
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
         r = self.s2.get('http://127.0.0.1:8080/api/admin/tasks/')
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
     def test_health_page(self):
         r = requests.get('http://127.0.0.1:8080/api/admin/health/')
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
     def tearDown(self):
         if hasattr(self, 's1'):
@@ -76,7 +76,7 @@ class TeamsTestCase(TestCase, AdminAuthMixin):
 
     def get_teams(self):
         r = self.s.get('http://127.0.0.1:8080/api/admin/teams/')
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         data = r.json()
         return data
@@ -116,7 +116,7 @@ class TeamsTestCase(TestCase, AdminAuthMixin):
             f'http://127.0.0.1/api/admin/teams/{full_data["id"]}/',
             json=update_data,
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         full_data = r.json()
 
@@ -130,7 +130,7 @@ class TeamsTestCase(TestCase, AdminAuthMixin):
         r = self.s.delete(
             f'http://127.0.0.1/api/admin/teams/{full_data["id"]}/',
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         new_teams = self.get_teams()
         full_data['active'] = False
@@ -147,7 +147,7 @@ class TasksTestCase(TestCase, AdminAuthMixin):
 
     def get_tasks(self):
         r = self.s.get('http://127.0.0.1:8080/api/admin/tasks/')
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         data = r.json()
         return data
@@ -200,7 +200,7 @@ class TasksTestCase(TestCase, AdminAuthMixin):
             f'http://127.0.0.1/api/admin/tasks/{full_data["id"]}/',
             json=update_data,
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         full_data = r.json()
 
@@ -216,7 +216,7 @@ class TasksTestCase(TestCase, AdminAuthMixin):
         r = self.s.delete(
             f'http://127.0.0.1/api/admin/tasks/{full_data["id"]}/',
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
 
         new_tasks = self.get_tasks()
         full_data['active'] = False
@@ -231,4 +231,4 @@ class TasksTestCase(TestCase, AdminAuthMixin):
             'http://127.0.0.1:8080/api/admin/teamtasks/',
             params={'team_id': 1, 'task_id': 1},
         )
-        self.assertTrue(r.ok)
+        self.assertTrue(r.ok, f"HTTP {r.status_code}: {r.text}")
