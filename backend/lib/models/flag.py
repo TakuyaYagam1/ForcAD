@@ -1,8 +1,6 @@
 import secrets
 import string
 
-from typing import Optional
-
 from .base import BaseModel
 
 ALPHABET = string.ascii_uppercase + string.digits
@@ -17,17 +15,17 @@ class Flag(BaseModel):
     """
 
     round: int
-    id: Optional[int]
+    id: int | None
     team_id: int
     task_id: int
     flag: str
-    public_flag_data: Optional[str]
-    private_flag_data: Optional[str]
-    vuln_number: Optional[int]
+    public_flag_data: str | None
+    private_flag_data: str | None
+    vuln_number: int | None
 
     table_name = 'Flags'
 
-    __slots__ = (
+    __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'id',
         'team_id',
         'task_id',

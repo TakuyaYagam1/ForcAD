@@ -14,6 +14,12 @@ from pydantic import ValidationError
 from . import constants, models
 
 
+class _SetupConfig(models.BasicConfig):
+    """Basic game config plus storage settings that setup must preserve."""
+
+    storages: Optional[models.StoragesConfig] = None
+
+
 def load_raw_config(path: Path) -> dict:
     if not path.is_file():
         print_error(f'Config file missing at {path}')
@@ -34,7 +40,7 @@ def load_basic_config() -> models.BasicConfig:
     raw = load_raw_config(constants.CONFIG_PATH)
 
     try:
-        config = models.BasicConfig.model_validate(raw, strict=True)
+        config = _SetupConfig.model_validate(raw, strict=True)
     except ValidationError as e:
         print_error(f'Invalid configuration file: {e}')
         sys.exit(1)
@@ -59,12 +65,22 @@ def backup_config():
     backup_path = constants.BASE_DIR / f'config_backup_{int(time.time())}.yml'
     print_bold(f'Creating config backup at {backup_path}')
     shutil.copy2(constants.CONFIG_PATH, backup_path)
+    backup_path.chmod(0o600)
+
+
+def write_private_text(path: Path, text: str):
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, 'w') as stream:
+        os.fchmod(stream.fileno(), 0o600)
+        stream.write(text)
 
 
 def dump_config(config: models.Config):
     print_bold(f'Writing new configuration to {constants.CONFIG_PATH}')
-    with constants.CONFIG_PATH.open(mode='w') as f:
-        yaml.safe_dump(config.model_dump(by_alias=True, exclude_none=True), f)
+    write_private_text(
+        constants.CONFIG_PATH,
+        yaml.safe_dump(config.model_dump(by_alias=True, exclude_none=True)),
+    )
 
 
 def override_config(
@@ -92,24 +108,31 @@ def override_config(
 def setup_auxiliary_structure(config: models.BasicConfig) -> models.Config:
     if not config.admin:
         new_username = constants.ADMIN_USER
-        new_password = secrets.token_hex(8)
+        new_password = secrets.token_hex(32)
         config.admin = models.AdminConfig(
             username=new_username,
             password=new_password,
         )
 
-        print_bold(f'Created new admin credentials: {new_username}:{new_password}')
+        print_bold(
+            'Generated admin credentials in '
+            f'{constants.CONFIG_PATH}; see that file to retrieve them'
+        )
     else:
         print_bold('Using existing credentials specified in admin section')
 
     username = config.admin.username
-    password = config.admin.password
 
-    storages = models.StoragesConfig(
-        db=models.DatabaseConfig(user=username, password=password),
-        rabbitmq=models.RabbitMQConfig(user=username, password=password),
-        redis=models.RedisConfig(password=password),
-    )
+    storages = getattr(config, 'storages', None)
+    if storages is None:
+        storages = models.StoragesConfig(
+            db=models.DatabaseConfig(user=username, password=secrets.token_hex(32)),
+            rabbitmq=models.RabbitMQConfig(
+                user=username,
+                password=secrets.token_hex(32),
+            ),
+            redis=models.RedisConfig(password=secrets.token_hex(32)),
+        )
 
     return models.Config(
         admin=config.admin,

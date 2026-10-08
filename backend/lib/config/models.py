@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -40,12 +38,19 @@ class Celery(BaseModel):
     timezone: str
 
     worker_prefetch_multiplier: int = 1
+    task_acks_late: bool = True
+    task_reject_on_worker_lost: bool = True
+    worker_deduplicate_successful_tasks: bool = True
+    # RabbitMQ 4.3 rejects transient queues shared between connections.
+    control_queue_exclusive: bool = True
+    event_queue_exclusive: bool = True
 
     result_expires: int = 15 * 60
     redis_socket_timeout: int = 10
     redis_socket_keepalive: bool = True
     redis_retry_on_timeout: bool = True
 
-    accept_content: List[str] = ['pickle', 'json']
-    result_serializer: str = 'pickle'
-    task_serializer: str = 'pickle'
+    accept_content: list[str] = ['json']
+    result_accept_content: list[str] = ['json']
+    result_serializer: str = 'json'
+    task_serializer: str = 'json'

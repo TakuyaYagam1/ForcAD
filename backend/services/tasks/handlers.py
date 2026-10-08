@@ -1,8 +1,7 @@
-from typing import List, Union
-
 from celery import shared_task
 from celery.result import AsyncResult
 from celery.utils.log import get_task_logger
+
 from lib import models, storage
 from lib.helpers.jobs import JobNames
 from lib.models import Action, TaskStatus
@@ -12,22 +11,20 @@ logger = get_task_logger(__name__)
 
 @shared_task(name=JobNames.error_handler)
 def exception_callback(result: AsyncResult, exc: Exception, traceback: str) -> None:
-    print('!!!', result, type(result))
     action_name = result.task.split('.')[-1].split('_')[0].upper()
-    action = Action[action_name]
+    action = Action.__members__.get(action_name, Action.CHECK)
 
     kw = result.kwargs
     team, task, current_round = kw['team'], kw['task'], kw['current_round']
 
-    if action == Action.CHECK:
+    prev_verdict = result.args[0] if result.args else kw.get('_prev_verdict')
+    if not isinstance(prev_verdict, models.CheckerVerdict):
         prev_verdict = None
-    else:
-        prev_verdict, = result.args
 
     logger.error(
         f"Task exception handler was called for "
         f"team {team} task {task}, round {current_round}, "
-        f"exception {repr(exc)}, traceback\n{traceback}"
+        f"exception {exc!r}, traceback\n{traceback}"
     )
 
     if prev_verdict is not None and prev_verdict.status != TaskStatus.UP:
@@ -38,7 +35,7 @@ def exception_callback(result: AsyncResult, exc: Exception, traceback: str) -> N
             status=TaskStatus.CHECK_FAILED,
             command='',
             public_message=f'{action} failed',
-            private_message=f'Exception on {action}: {repr(exc)}\n{traceback}',
+            private_message=f'Exception on {action}: {exc!r}\n{traceback}',
         )
 
     storage.tasks.update_task_status(
@@ -46,16 +43,18 @@ def exception_callback(result: AsyncResult, exc: Exception, traceback: str) -> N
         team_id=team.id,
         current_round=current_round,
         checker_verdict=verdict,
+        job_id=kw.get('job_id'),
     )
     return verdict
 
 
 @shared_task(name=JobNames.result_handler)
 def checker_results_handler(
-        verdicts: Union[List[models.CheckerVerdict], models.CheckerVerdict],
+        verdicts: list[models.CheckerVerdict] | models.CheckerVerdict,
         team: models.Team,
         task: models.Task,
         current_round: int,
+        job_id: str | None = None,
 ) -> models.CheckerVerdict:
     """
     Parse returning verdicts and return the final one.
@@ -68,6 +67,15 @@ def checker_results_handler(
     # as the result itself, not the list, as documented.
     if not isinstance(verdicts, list):
         verdicts = [verdicts]
+
+    def flatten(items):
+        for item in items:
+            if isinstance(item, (list, tuple)):
+                yield from flatten(item)
+            elif isinstance(item, models.CheckerVerdict):
+                yield item
+
+    verdicts = list(flatten(verdicts))
 
     check_verdict = None
     puts_verdicts = []
@@ -100,14 +108,14 @@ def checker_results_handler(
     if gets_verdict is not None:
         parsed_verdicts.append(gets_verdict)
 
-    if verdicts:
+    if parsed_verdicts:
         try:
             result_verdict = next(filter(
                 lambda x: x.status != TaskStatus.UP,
-                verdicts,
+                parsed_verdicts,
             ))
         except StopIteration:
-            result_verdict = verdicts[0]
+            result_verdict = parsed_verdicts[0]
     else:
         logger.critical('No verdicts returned from actions!')
         result_verdict = models.CheckerVerdict(
@@ -123,5 +131,6 @@ def checker_results_handler(
         team_id=team.id or 0,
         current_round=current_round,
         checker_verdict=result_verdict,
+        job_id=job_id,
     )
     return result_verdict

@@ -7,8 +7,7 @@ from pathlib import Path
 import pytz
 import yaml
 
-from lib import models
-from lib import storage
+from lib import models, storage
 
 BACKEND_BASE = Path(__file__).resolve().absolute().parents[1]
 SCRIPTS_DIR = BACKEND_BASE / 'scripts'
@@ -19,6 +18,7 @@ def init_schema(curs):
     create_tables_path = SCRIPTS_DIR / 'create_tables.sql'
     create_tables_query = create_tables_path.read_text()
     curs.execute(create_tables_query)
+    curs.execute((SCRIPTS_DIR / 'create_dispatch.sql').read_text())
 
     create_functions_path = SCRIPTS_DIR / 'create_functions.sql'
     create_functions_query = create_functions_path.read_text()
@@ -45,7 +45,7 @@ def init_teams(config, curs):
         team_token = team_conf.pop('token', None)
         if team_token is None:
             team_token = models.Team.generate_token()
-        team = models.Team(id=None, **team_conf, token=team_token, logo_path=None)
+        team = models.Team(id=None, **team_conf, token=team_token)
         team.insert(curs)
         teams.append(team)
 
@@ -99,7 +99,7 @@ def init_game_config(game_config, curs):
 
 
 def run():
-    with open(CONFIG_PATH, 'r') as f:
+    with open(CONFIG_PATH) as f:
         file_config = yaml.safe_load(f)
 
     with storage.utils.db_cursor() as (conn, curs):
@@ -124,7 +124,7 @@ def run():
         game_config = file_config['game']
         for k, v in game_defaults.items():
             if k not in game_config:
-                game_defaults[k] = v
+                game_config[k] = v
 
         print('Initializing tasks')
         tasks = init_tasks(file_config['tasks'], game_config, curs)

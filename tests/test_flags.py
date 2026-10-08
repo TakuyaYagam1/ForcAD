@@ -87,6 +87,7 @@ class FlagSubmitTestCase(TestCase):
                 message,
             )
             self.assertTrue(match is not None, msg=f'{message} is incorrect')
+            results.append(message)
 
         return results
 

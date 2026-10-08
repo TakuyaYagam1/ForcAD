@@ -35,7 +35,7 @@ def setup_db(config: models.DatabaseConfig):
     ]
 
     utils.print_bold(f'Writing database env to {constants.POSTGRES_ENV_PATH}')
-    constants.POSTGRES_ENV_PATH.write_text('\n'.join(postgres_config))
+    utils.write_private_text(constants.POSTGRES_ENV_PATH, '\n'.join(postgres_config))
 
 
 def setup_redis(config: models.RedisConfig):
@@ -47,7 +47,7 @@ def setup_redis(config: models.RedisConfig):
     ]
 
     utils.print_bold(f'Writing redis env to {constants.REDIS_ENV_PATH}')
-    constants.REDIS_ENV_PATH.write_text('\n'.join(redis_config))
+    utils.write_private_text(constants.REDIS_ENV_PATH, '\n'.join(redis_config))
 
 
 def setup_rabbitmq(config: models.RabbitMQConfig):
@@ -63,7 +63,7 @@ def setup_rabbitmq(config: models.RabbitMQConfig):
     ]
 
     utils.print_bold(f'Writing broker env to {constants.RABBITMQ_ENV_PATH}')
-    constants.RABBITMQ_ENV_PATH.write_text('\n'.join(rabbitmq_config))
+    utils.write_private_text(constants.RABBITMQ_ENV_PATH, '\n'.join(rabbitmq_config))
 
 
 def setup_admin_api(config: models.AdminConfig):
@@ -74,7 +74,7 @@ def setup_admin_api(config: models.AdminConfig):
     ]
 
     utils.print_bold(f'Writing admin env to {constants.ADMIN_ENV_PATH}')
-    constants.ADMIN_ENV_PATH.write_text('\n'.join(admin_config))
+    utils.write_private_text(constants.ADMIN_ENV_PATH, '\n'.join(admin_config))
 
 
 def prepare_compose(redis: str, database: str, rabbitmq: str):
@@ -92,5 +92,4 @@ def prepare_compose(redis: str, database: str, rabbitmq: str):
 
     res_path = constants.BASE_DIR / constants.BASE_COMPOSE_FILE
     utils.print_bold(f'Writing generated compose base to {res_path}')
-    with res_path.open(mode='w') as f:
-        yaml.dump(base_conf, f)
+    utils.write_private_text(res_path, yaml.safe_dump(base_conf))

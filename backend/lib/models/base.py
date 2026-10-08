@@ -1,6 +1,7 @@
+from typing import Any, ClassVar, TextIO, TypeVar
+
 import yaml
 from kombu.utils import json as kjson
-from typing import List, Dict, Any, Tuple, TypeVar, Type, TextIO
 
 # noinspection PyTypeChecker
 T = TypeVar('T', bound='BaseModel')
@@ -10,9 +11,9 @@ T = TypeVar('T', bound='BaseModel')
 class BaseModel:
     """Generic model implementing basic methods to load and print"""
 
-    __slots__: Tuple[str, ...] = ()
+    __slots__: tuple[str, ...] = ()
     table_name = 'undefined'
-    defaults: Dict[str, Any] = {}
+    defaults: ClassVar[dict[str, Any]] = {}
 
     @property
     def model_name(self) -> str:
@@ -33,27 +34,27 @@ class BaseModel:
                 setattr(self, attr, kwargs[attr])
 
     @classmethod
-    def from_json(cls: Type[T], json_str: str) -> T:
+    def from_json(cls: type[T], json_str: str) -> T:
         d = kjson.loads(json_str)
         return cls(**d)
 
     @classmethod
-    def from_yaml(cls: Type[T], yaml_obj: TextIO) -> T:
+    def from_yaml(cls: type[T], yaml_obj: TextIO) -> T:
         d = yaml.safe_load(yaml_obj)
         return cls(**d)
 
     @classmethod
-    def from_dict(cls: Type[T], d: Dict[str, Any]) -> T:
+    def from_dict(cls: type[T], d: dict[str, Any]) -> T:
         return cls(**d)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.__slots__}
 
     def to_json(self) -> str:
         return kjson.dumps(self.to_dict())  # type: ignore
 
     @classmethod
-    def _get_column_names(cls) -> List[str]:
+    def _get_column_names(cls) -> list[str]:
         return list(filter(lambda x: x != 'id', cls.__slots__))
 
     @classmethod

@@ -1,13 +1,15 @@
 import logging
 import sys
 import time
-from datetime import timedelta, datetime, timezone
+from datetime import UTC, datetime, timedelta
 
-from lib import storage, models
+from lib import models, storage
 from lib.helpers import events
 from services.tasks import get_celery_app
+
 from . import hooks
-from .models import TickerState, Schedule
+from .hooks.utils import recover_expired_jobs
+from .models import Schedule, TickerState
 
 logger = logging.getLogger('ticker')
 logger.setLevel(logging.INFO)
@@ -75,8 +77,7 @@ def sync_blitz_schedules(state: TickerState):
     }
     state.schedules[:] = [
         schedule for schedule in state.schedules
-        if not schedule.schedule_id.startswith(prefix)
-        or schedule.schedule_id in active
+        if not schedule.schedule_id.startswith(prefix) or schedule.schedule_id in active
     ]
     existing = {schedule.schedule_id: schedule for schedule in state.schedules}
     for schedule_id, task in active.items():
@@ -99,6 +100,12 @@ def main(state: TickerState):
     while True:
         wall_now = time.time()
         if time.monotonic() >= next_maintenance:
+            try:
+                recover_expired_jobs()
+            except Exception:
+                logger.exception(
+                    'Checker recovery failed; retrying on next maintenance',
+                )
             sync_blitz_schedules(state)
             events.retry_scoreboard_refresh()
             next_maintenance = time.monotonic() + 5
@@ -106,12 +113,27 @@ def main(state: TickerState):
             time.sleep(0.1)
             continue
         now = datetime.fromtimestamp(
-            storage.game.get_scheduler_time(wall_now), timezone.utc,
+            storage.game.get_scheduler_time(wall_now), UTC,
         )
         due_schedules = state.get_due_schedules(now)
         for schedule in due_schedules:
+            if storage.game.is_game_paused():
+                break
             logger.info('Executing schedule %s', schedule.schedule_id)
-            schedule.execute(state=state)
+            state.scheduled_at = now
+            try:
+                completed = schedule.execute(state=state)
+            except Exception:
+                logger.exception(
+                    'Schedule %s interrupted; pending jobs will be retried',
+                    schedule.schedule_id,
+                )
+                time.sleep(1)
+                break
+            if completed is False:
+                # Stop BLITZ periodic dispatch while a round is draining.
+                time.sleep(0.5)
+                break
             logger.info('Schedule %s completed', schedule.schedule_id)
             schedule.last_run = now
             schedule.save_last_run()

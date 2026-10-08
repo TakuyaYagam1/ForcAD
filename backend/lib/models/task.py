@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Any, ClassVar
 
 from kombu.utils import json as kjson
 
@@ -15,7 +15,7 @@ class Task(BaseModel):
     (path, env, number of gets, puts, flag places), etc...
     """
 
-    id: Optional[int]
+    id: int | None
     name: str
     checker: str
     gets: int
@@ -30,11 +30,11 @@ class Task(BaseModel):
 
     table_name = 'Tasks'
 
-    defaults = {
+    defaults: ClassVar[dict[str, Any]] = {
         'active': True,
     }
 
-    __slots__ = (
+    __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'id',
         'name',
         'checker',
@@ -49,7 +49,7 @@ class Task(BaseModel):
         'active',
     )
 
-    def to_dict_for_participants(self) -> Dict[str, Any]:
+    def to_dict_for_participants(self) -> dict[str, Any]:
         return {
             'id': self.id,
             'name': self.name,
@@ -59,7 +59,7 @@ class Task(BaseModel):
         return kjson.dumps(self.to_dict_for_participants())  # type: ignore
 
     @property
-    def checker_tags(self) -> List[str]:
+    def checker_tags(self) -> list[str]:
         return self.checker_type.split('_')
 
     @property

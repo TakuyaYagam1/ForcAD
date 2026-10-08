@@ -102,8 +102,8 @@ BEGIN
                  SELECT preprocess.submit_time AS submit_time,
                         tm.name                AS attacker_name,
                         tk.name                AS task_name,
-                        preprocess.victim_id   AS victim_id,
                         tm.id                  AS attacker_id,
+                        preprocess.victim_id   AS victim_id,
                         tk.id                  AS task_id,
                         preprocess.vuln_number AS vuln_number
                  FROM preprocess

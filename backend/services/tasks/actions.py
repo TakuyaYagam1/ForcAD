@@ -1,14 +1,16 @@
 import random
 import secrets
-from typing import Optional, Any
+from typing import Any
 
 from celery import shared_task
+from celery.exceptions import Ignore
 from celery.utils.log import get_task_logger
 
 from lib import models, storage
 from lib.helpers import checkers
 from lib.helpers.jobs import JobNames
-from lib.models import TaskStatus, Action
+from lib.models import Action, TaskStatus
+from lib.storage import dispatch
 
 logger = get_task_logger(__name__)
 
@@ -21,10 +23,11 @@ def noop(data: Any) -> Any:
 
 @shared_task(name=JobNames.put_action)
 def put_action(
-    _prev_verdict: Optional[models.CheckerVerdict],
+    _prev_verdict: models.CheckerVerdict | None,
     team: models.Team,
     task: models.Task,
     current_round: int,
+    job_id: str | None = None,
 ) -> models.CheckerVerdict:
     """
     Run "put" checker action.
@@ -37,6 +40,8 @@ def put_action(
 
     If "check" action fails, put is not run.
     """
+    if not dispatch.touch_job(job_id):
+        raise Ignore()
 
     if _prev_verdict is not None and _prev_verdict.status != TaskStatus.UP:
         return models.CheckerVerdict(
@@ -75,7 +80,7 @@ def put_action(
 
     if verdict.status == TaskStatus.UP:
         flag = task.set_flag_data(flag, verdict)
-        storage.flags.add_flag(flag)
+        storage.flags.add_flag(flag, job_id=job_id)
 
     return verdict
 
@@ -86,6 +91,7 @@ def get_action(
     team: models.Team,
     task: models.Task,
     current_round: int,
+    job_id: str | None = None,
 ) -> models.CheckerVerdict:
     """
     Run "get" checker action.
@@ -98,6 +104,8 @@ def get_action(
 
     If "check" or previous "get" actions fail, get is not run.
     """
+    if not dispatch.touch_job(job_id):
+        raise Ignore()
     if prev_verdict.status != TaskStatus.UP:
         if prev_verdict.action == Action.GET:
             return prev_verdict
@@ -160,7 +168,8 @@ def get_action(
 
 @shared_task(name=JobNames.check_action)
 def check_action(
-    team: models.Team, task: models.Task, current_round: int
+    team: models.Team, task: models.Task, current_round: int,
+    job_id: str | None = None,
 ) -> models.CheckerVerdict:
     """
     Run "check" checker action.
@@ -171,6 +180,8 @@ def check_action(
 
     :return verdict: models.CheckerVerdict instance
     """
+    if not dispatch.touch_job(job_id):
+        raise Ignore()
 
     logger.info(
         'Running CHECK for team %s task %s, round %s',

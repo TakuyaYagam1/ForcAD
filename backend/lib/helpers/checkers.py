@@ -1,5 +1,4 @@
 from logging import Logger
-from typing import Optional
 
 from lib import models
 from lib.helpers.commands import run_generic_command
@@ -11,14 +10,14 @@ class CheckerRunner:
 
     team: models.Team
     task: models.Task
-    flag: Optional[models.Flag]
+    flag: models.Flag | None
 
     def __init__(
             self,
             team: models.Team,
             task: models.Task,
             logger: Logger,
-            flag: Optional[models.Flag] = None,
+            flag: models.Flag | None = None,
     ):
         self.team = team
         self.task = task

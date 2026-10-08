@@ -1,4 +1,4 @@
-from typing import Dict, Any, Tuple
+from typing import Any, ClassVar
 
 from .base import BaseModel
 
@@ -12,7 +12,7 @@ class AttackResult(BaseModel):
     attacker_delta: float
     victim_delta: float
 
-    __slots__ = (
+    __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'attacker_id',
         'victim_id',
         'task_id',
@@ -22,7 +22,7 @@ class AttackResult(BaseModel):
         'victim_delta',
     )
 
-    defaults = {
+    defaults: ClassVar[dict[str, Any]] = {
         'victim_id': 0,
         'task_id': 0,
         'submit_ok': False,
@@ -33,13 +33,13 @@ class AttackResult(BaseModel):
 
     labels = ('attacker_id', 'victim_id', 'task_id', 'submit_ok')
 
-    def get_label_key(self) -> Tuple[Any, ...]:
+    def get_label_key(self) -> tuple[Any, ...]:
         return tuple(getattr(self, k) for k in self.labels)
 
-    def get_label_values(self) -> Dict[str, Any]:
+    def get_label_values(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.labels}
 
-    def get_flag_notification(self) -> Dict[str, Any]:
+    def get_flag_notification(self) -> dict[str, Any]:
         return {
             'attacker_id': self.attacker_id,
             'victim_id': self.victim_id,

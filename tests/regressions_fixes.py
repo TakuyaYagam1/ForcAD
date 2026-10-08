@@ -200,6 +200,7 @@ class RegressionTests(unittest.TestCase):
     def test_duplicate_db_submit_returns_result_and_rolls_back(self):
         flag = SimpleNamespace(team_id=2, task_id=3, round=10, id=42)
         cursor = MagicMock()
+        cursor.fetchone.return_value = (10,)
         cursor.callproc.side_effect = UniqueViolation('duplicate flag')
         conn = MagicMock()
         conn.cursor.return_value = cursor
@@ -262,22 +263,13 @@ class RegressionTests(unittest.TestCase):
             generate.assert_not_called()
 
     def test_blitz_get_runner_submits_check_gets_not_puts(self):
-        with patch.object(
-            storage.game, 'get_real_round', return_value=10
-        ), patch.object(
-            blitz_tasks.utils,
-            'get_round_processor_args',
-            return_value=[('team', 'task', 10)],
-        ), patch.object(
-            blitz_tasks, 'submit_puts_jobs'
-        ) as puts, patch.object(
-            blitz_tasks, 'submit_check_gets_jobs'
-        ) as gets:
-            blitz_tasks.blitz_check_gets_runner_factory(7)(
-                SimpleNamespace(celery_app='app')
+        with patch.object(blitz_tasks.utils, 'dispatch_jobs') as dispatch:
+            state = SimpleNamespace(celery_app='app')
+            blitz_tasks.blitz_check_gets_runner_factory(7)(state)
+            dispatch.assert_called_once_with(
+                state, 'blitz_check_gets_task_7',
+                blitz_tasks.submit_check_gets_jobs, task_id=7,
             )
-            gets.assert_called_once_with('app', 'team', 'task', 10)
-            puts.assert_not_called()
 
     def test_pause_resume_idempotent_and_reported_over_http(self):
         self.redis.set(storage.keys.CacheKeys.current_round(), 3)

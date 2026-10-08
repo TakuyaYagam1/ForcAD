@@ -1,0 +1,20 @@
+# Runtime dependencies. Regenerate requirements.txt with uv pip compile on Python 3.11.
+celery>=5.3.4,<6
+Flask>=3.1,<4
+Flask-Cors>=6,<7
+Flask-SocketIO>=5.5,<6
+flower>=2,<3
+gunicorn>=23
+hiredis>=3
+kombu>=5.5,<6
+prometheus-client>=0.20
+prometheus-flask-exporter>=0.23
+psycopg2>=2.9.10,<3
+pydantic>=2.10,<3
+pydantic-settings>=2.7,<3
+python-dateutil>=2.9,<3
+python-socketio>=5.16.4,<6
+pytz
+PyYAML>=6.0.2,<7
+redis>=5
+requests>=2.32

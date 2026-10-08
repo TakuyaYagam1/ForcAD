@@ -1,7 +1,7 @@
 from redis.client import Pipeline
 
 from lib import models
-from lib.storage import utils, game
+from lib.storage import game, utils
 from lib.storage.keys import CacheKeys
 
 _SELECT_LAST_STOLEN_TEAM_FLAGS_QUERY = """

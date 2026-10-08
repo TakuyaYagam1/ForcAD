@@ -13,7 +13,7 @@ class CheckerVerdict(BaseModel):
     status: TaskStatus
     action: Action
 
-    __slots__ = (
+    __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'public_message',
         'private_message',
         'command',

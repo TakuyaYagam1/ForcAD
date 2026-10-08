@@ -1,6 +1,6 @@
 """Simple "viewsets" implementation for models' REST API."""
 
-from .authentication import login, status, logout
+from .authentication import login, logout, status
 from .tasks import TaskApi
 from .teams import TeamApi
 from .teamtasks import TeamTaskApi

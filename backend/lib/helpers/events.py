@@ -1,10 +1,13 @@
 import logging
+import time
 import uuid
 
 from lib import storage
 
 logger = logging.getLogger(__name__)
 PENDING_REFRESH = 'scoreboard:pending_refresh'
+RECONCILE_INTERVAL = 60
+_last_reconcile = 0.0
 
 
 def init_scoreboard(sid=None, refresh_state=False):
@@ -37,10 +40,20 @@ def _clear_pending(token):
 
 
 def retry_scoreboard_refresh():
+    global _last_reconcile
     try:
         token = storage.utils.RedisStorage.get().get(PENDING_REFRESH)
-        if token:
+        now = time.monotonic()
+        reconcile = now - _last_reconcile >= RECONCILE_INTERVAL
+        if token or reconcile:
+            if reconcile:
+                # Reload metadata even if a Redis outage lost the retry marker.
+                storage.caching.flush_teams_cache()
+                storage.caching.flush_tasks_cache()
             init_scoreboard(refresh_state=True)
-            _clear_pending(token)
+            if token:
+                _clear_pending(token)
+            if reconcile:
+                _last_reconcile = now
     except Exception:
         logger.exception('Scoreboard refresh unavailable; keeping pending retry')

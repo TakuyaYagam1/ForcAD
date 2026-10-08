@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import List, Callable, Optional
 
 from celery import Celery
 
@@ -12,9 +12,9 @@ class Schedule:
     schedule_id: str
     start: datetime
     func: Callable
-    end: Optional[datetime] = None
-    last_run: Optional[datetime] = None
-    interval: Optional[timedelta] = None
+    end: datetime | None = None
+    last_run: datetime | None = None
+    interval: timedelta | None = None
 
     def execute(self, state: 'TickerState'):
         return self.func(state=state)
@@ -52,12 +52,13 @@ class Schedule:
 class TickerState:
     celery_app: Celery
     game_started: bool
-    schedules: List[Schedule] = field(default_factory=list)
+    schedules: list[Schedule] = field(default_factory=list)
+    scheduled_at: datetime | None = None
 
     def register_schedule(self, schedule: Schedule) -> None:
         self.schedules.append(schedule)
 
-    def get_due_schedules(self, at: datetime) -> List[Schedule]:
+    def get_due_schedules(self, at: datetime) -> list[Schedule]:
         return list(filter(
             lambda x: x.should_be_called(at),
             self.schedules,
