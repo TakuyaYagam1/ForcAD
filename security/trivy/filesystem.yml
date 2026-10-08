@@ -1,0 +1,33 @@
+exit-code: 1
+format: json
+ignorefile: security/trivy/ignore.yml
+severity: [HIGH, CRITICAL]
+timeout: 10m
+scan:
+  disable-telemetry: true
+  skip-version-check: true
+  show-suppressed: true
+  scanners: [vuln, misconfig]
+  file-patterns:
+    - 'pip:(^|/)requirements-[^/]+\.txt$'
+    - 'dockerfile:(^|/)([^/]+\.Dockerfile|Dockerfile(\.fast)?)$'
+  skip-dirs:
+    - '**/.git'
+    - '**/.agents'
+    - '**/.codex'
+    - '**/.claude'
+    - '**/.aws'
+    - '**/node_modules'
+    - '**/.venv'
+    - '**/.cache'
+    - '**/.mypy_cache'
+    - '**/.ruff_cache'
+    - '**/.pytest_cache'
+    - '**/__pycache__'
+    - docker_volumes
+    - front/dist
+    - security/reports
+vulnerability:
+  ignore-unfixed: false
+pkg:
+  include-dev-deps: true

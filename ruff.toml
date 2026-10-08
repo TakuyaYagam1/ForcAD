@@ -1,0 +1,9 @@
+target-version = "py311"
+line-length = 88
+src = ["backend"]
+include = ["backend/**/*.py"]
+extend-exclude = ["tests", "front", "checkers", "security", ".agents", ".codex"]
+force-exclude = true
+
+[lint]
+select = ["E", "F", "I", "UP", "RUF"]

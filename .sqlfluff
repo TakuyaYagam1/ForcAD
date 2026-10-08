@@ -1,0 +1,5 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+rules = convention.not_equal, references.consistent, structure.unused_join
+max_line_length = 0

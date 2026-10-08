@@ -1,0 +1,4 @@
+# No accepted vulnerabilities. Any future exception must name the affected
+# package/path, reason, owner and expiry date.
+vulnerabilities: []
+misconfigurations: []
