@@ -70,6 +70,18 @@ class RegressionTests(unittest.TestCase):
             json={'username': 'organizer', 'password': 'test-password'},
         )
 
+    def test_task_update_accepts_empty_checker_tags(self):
+        self.login()
+        data = {**TASK, 'checker_type': ''}
+        task = models.Task(id=1, **data)
+        with patch.object(storage.tasks, 'get_all_tasks', return_value=[task]), \
+                patch.object(storage.tasks, 'update_task', return_value=task) as update, \
+                patch.object(events, 'refresh_scoreboard_after_commit'):
+            response = self.client.put('/api/admin/tasks/1/', json=data)
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+        self.assertEqual(response.json['checker_type'], '')
+        self.assertEqual(update.call_args.args[0].checker_type, '')
+
     def test_login_status_logout_invalidates_cookie_and_session(self):
         self.assertEqual(self.client.get('/api/admin/login/').status_code, 405)
         self.assertEqual(self.client.get('/api/admin/status/').status_code, 403)

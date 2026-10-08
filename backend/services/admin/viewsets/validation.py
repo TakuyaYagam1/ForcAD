@@ -21,7 +21,7 @@ def validate_data(data, model):
         fields.update(ip=45, token=16)
         result.setdefault('logo_path', '')
     else:
-        fields.update(checker=1024, checker_type=32)
+        fields.update(checker=1024)
         result.setdefault('env_path', '')
     for key, limit in fields.items():
         value = result.get(key)
@@ -39,6 +39,11 @@ def validate_data(data, model):
             if not isinstance(value, str) or len(value) > limit:
                 raise ValueError(f'{key}: строка до {limit} символов')
             result[key] = value
+    if model.table_name == 'Tasks':
+        value = result.get('checker_type')
+        if not isinstance(value, str) or len(value.strip()) > 32:
+            raise ValueError('checker_type: строка до 32 символов')
+        result['checker_type'] = value.strip()
     if model.table_name == 'Teams':
         try:
             ipaddress.ip_address(result['ip'])
