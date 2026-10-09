@@ -449,10 +449,11 @@ def get_runtime_status() -> dict:
     with utils.redis_pipeline(transaction=False) as pipe:
         paused_at, paused_seconds = pipe.get(PAUSED_AT).get(PAUSED_SECONDS).execute()
     real_round, running = get_lifecycle()
-    finished = (
-        real_round > 0 or session['practice_start'] is not None
-        or session.get('final_start') is not None
-    ) and not running
+    finished = any((
+        real_round > 0,
+        session['practice_start'] is not None,
+        session.get('final_start') is not None,
+    )) and not running
     phase = (
         'finished' if finished else
         'paused' if paused_at else
