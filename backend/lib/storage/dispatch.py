@@ -21,7 +21,8 @@ def prepare(schedule_id, teams, tasks, *, advances_round=False, puts_only=False)
     """
     with utils.db_cursor(dict_cursor=True) as (conn, curs):
         curs.execute(
-            'SELECT real_round, game_running FROM GameConfig WHERE id=1 FOR UPDATE',
+            'SELECT real_round, game_running, rounds '
+            'FROM GameConfig WHERE id=1 FOR UPDATE',
         )
         game = curs.fetchone()
         curs.execute('SELECT reset_pending FROM GameSession WHERE id=1')
@@ -40,6 +41,14 @@ def prepare(schedule_id, teams, tasks, *, advances_round=False, puts_only=False)
             return dict(pending)
 
         if advances_round:
+            # This hook runs at the next round boundary, not when the final
+            # round begins. Resume any interrupted publication above first.
+            # Finish before the accounting barrier: sent checks may drain, but
+            # must not extend flag reception beyond the last playable round.
+            if game['rounds'] is not None and current_round >= game['rounds']:
+                storage.sessions.stop(curs)
+                conn.commit()
+                return None
             curs.execute(
                 'SELECT 1 FROM CheckerJobs '
                 'WHERE round <= %s AND finished_at IS NULL LIMIT 1',

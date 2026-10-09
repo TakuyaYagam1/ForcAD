@@ -1,10 +1,16 @@
 import datetime
 import math
-from typing import Any
+from typing import Any, ClassVar
 
 from dateutil.parser import parse
 
 from .base import BaseModel
+
+
+def validate_rounds(value: int | None) -> int | None:
+    if value is not None and (type(value) is not int or not 1 <= value <= 2147483647):
+        raise ValueError('rounds must be a positive integer or null')
+    return value
 
 
 class GameConfig(BaseModel):
@@ -17,6 +23,7 @@ class GameConfig(BaseModel):
     volga_attacks_mode: bool
 
     round_time: int
+    rounds: int | None
     mode: str
     timezone: str
     start_time: datetime.datetime
@@ -25,6 +32,7 @@ class GameConfig(BaseModel):
     game_running: bool | None
 
     table_name = 'GameConfig'
+    defaults: ClassVar[dict[str, Any]] = {'rounds': None}
 
     __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'id',
@@ -38,10 +46,12 @@ class GameConfig(BaseModel):
         'start_time',
         'real_round',
         'game_running',
+        'rounds',
     )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        validate_rounds(self.rounds)
         if not math.isfinite(self.game_hardness) or self.game_hardness <= 1:
             raise ValueError("game_hardness must be finite and greater than 1")
         if isinstance(self.start_time, str):

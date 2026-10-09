@@ -2,6 +2,7 @@
 
 import os
 import sys
+from tempfile import TemporaryDirectory
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -23,6 +24,7 @@ from scripts.apply_fixes import main as migrate
 from services.ticker.hooks.utils import recover_expired_jobs
 from services.ticker.__main__ import bootstrap_schedules, sync_session
 from services.ticker.models import TickerState
+from services.ticker.hooks import run_classic_round
 from test_runtime import team, task, verdict
 
 DSN = os.getenv('FORCAD_TEST_DSN')
@@ -65,8 +67,8 @@ class DispatchIntegrationTests(TestCase):
                     cursor.execute((SCRIPTS / name).read_text())
                 cursor.execute(
                     'INSERT INTO GameConfig '
-                    '(id,real_round,game_hardness,flag_lifetime,round_time,inflation,game_running) '
-                    'VALUES (1,0,10,5,60,TRUE,TRUE)',
+                    '(id,real_round,game_hardness,flag_lifetime,round_time,inflation,game_running,start_time) '
+                    'VALUES (1,0,10,5,60,TRUE,TRUE,now())',
                 )
                 for item in (team(1), team(2)):
                     cursor.execute(
@@ -103,6 +105,179 @@ class DispatchIntegrationTests(TestCase):
             curs.execute('UPDATE GameConfig SET game_running=FALSE, start_time=%s WHERE id=1', (start,))
             conn.commit()
         return start
+
+    def set_round_limit(self, rounds):
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('UPDATE GameConfig SET rounds=%s WHERE id=1', (rounds,))
+            conn.commit()
+        self.fake_redis.delete(CacheKeys.game_config())
+
+    def test_300_full_rounds_finish_without_round_301_in_both_modes(self):
+        start = datetime(2026, 10, 10, 7, tzinfo=timezone.utc)
+        self.set_round_limit(300)
+        for mode in ('classic', 'blitz'):
+            with self.subTest(mode=mode):
+                with storage.utils.db_cursor() as (conn, curs):
+                    curs.execute('DELETE FROM CheckerJobs')
+                    curs.execute('DELETE FROM DispatchRuns')
+                    curs.execute('DELETE FROM ScheduleHistory')
+                    curs.execute(
+                        'UPDATE GameConfig SET mode=%s, start_time=%s, '
+                        'real_round=0, game_running=TRUE', (mode, start),
+                    )
+                    conn.commit()
+                self.fake_redis.flushdb()
+                with patch.object(storage.teams, 'get_teams', return_value=[]), \
+                        patch.object(storage.tasks, 'get_tasks', return_value=[]), \
+                        patch.object(storage.utils.SIOManager, 'write_only'):
+                    state = TickerState(MagicMock(), True)
+                    bootstrap_schedules(state)
+                    schedule = next(s for s in state.schedules if s.schedule_id == f'{mode}_rounds')
+                    for r in range(1, 301):
+                        at = start + timedelta(seconds=(r - 1) * 60)
+                        self.assertTrue(schedule.should_be_called(at))
+                        state.scheduled_at = at
+                        self.assertTrue(schedule.execute(state))
+                        schedule.last_run = at
+                        self.assertEqual(storage.game.get_lifecycle(), (r, True))
+                    # Reboot during the last minute; persisted checkpoint must
+                    # still leave the whole 300th round available to players.
+                    state = TickerState(MagicMock(), True)
+                    bootstrap_schedules(state)
+                    schedule = next(s for s in state.schedules if s.schedule_id == f'{mode}_rounds')
+                    end = start + timedelta(hours=5)
+                    self.assertFalse(schedule.should_be_called(end - timedelta(microseconds=1)))
+                    self.assertTrue(schedule.should_be_called(end))
+                    state.scheduled_at = end
+                    self.assertFalse(schedule.execute(state))
+                    self.assertEqual(storage.game.get_lifecycle(), (300, False))
+                    self.assertFalse(self.fake_redis.exists('game:round_waiting'))
+                    storage.game.finalize_finished_game()
+                    self.assertEqual(storage.game.get_cached_game_state().round, 300)
+                with storage.utils.db_cursor() as (_, curs):
+                    curs.execute('SELECT COUNT(*), MAX(round) FROM DispatchRuns')
+                    self.assertEqual(curs.fetchone(), (300, 300))
+
+    def test_final_boundary_closes_reception_before_pending_checks_drain(self):
+        self.set_round_limit(1)
+        run = self.plan_round()
+        jobs = dispatch.pending_jobs(run['id'])
+        for job in jobs:
+            dispatch.mark_sent(job['id'])
+        dispatch.finish(run['id'], datetime.now(timezone.utc))
+        self.assertIsNone(self.plan_round())
+        self.assertEqual(storage.game.get_lifecycle(), (1, False))
+        self.assertTrue(storage.game.has_pending_checks())
+        # Completion is authoritative in PostgreSQL, even after Redis loss.
+        self.fake_redis.flushdb()
+        flag = SimpleNamespace(team_id=2, task_id=1, round=1, id=42)
+        with patch.object(storage.flags, 'get_flag_by_str', return_value=flag), \
+                patch.object(storage.flags, 'try_add_stolen_flag', return_value=True):
+            self.assertFalse(storage.attacks.handle_attack(1, 'test-flag', 1).submit_ok)
+        with patch.object(storage.utils.SIOManager, 'write_only') as publisher:
+            storage.game.finalize_finished_game()
+            publisher.return_value.emit.assert_not_called()
+            for job in jobs:
+                storage.tasks.update_task_status(1, job['payload']['team']['id'], 1, verdict(), job['id'])
+            storage.game.finalize_finished_game()
+            storage.game.finalize_finished_game()
+            self.assertEqual(publisher.return_value.emit.call_count, 1)
+        self.assertEqual(storage.game.get_cached_game_state().round, 1)
+        self.assertFalse(storage.game.set_game_running(True))
+        self.assertIsNone(self.plan_round())
+
+    def test_interrupted_final_dispatch_resumes_without_premature_finish(self):
+        self.set_round_limit(1)
+        run = self.plan_round()
+        self.assertEqual(self.plan_round()['id'], run['id'])
+        self.assertEqual(storage.game.get_lifecycle(), (1, True))
+        self.assertEqual(len(dispatch.pending_jobs(run['id'])), 2)
+
+    def test_omitted_limit_allows_rounds_after_300(self):
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('UPDATE GameConfig SET real_round=300')
+            conn.commit()
+        self.assertEqual(self.plan_round()['round'], 301)
+        self.assertEqual(storage.game.get_lifecycle(), (301, True))
+
+    def test_pause_and_ticker_restart_preserve_final_round_remaining_time(self):
+        start = datetime.fromtimestamp(1000, timezone.utc)
+        self.set_round_limit(1)
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('UPDATE GameConfig SET start_time=%s', (start,))
+            conn.commit()
+        with patch.object(storage.teams, 'get_teams', return_value=[]), \
+                patch.object(storage.tasks, 'get_tasks', return_value=[]), \
+                patch.object(storage.utils.SIOManager, 'write_only'):
+            state = TickerState(MagicMock(), True, scheduled_at=start)
+            run_classic_round(state)
+            with patch('lib.storage.game.time.time', return_value=1030):
+                storage.game.change_game_state('pause')
+            self.assertIsNone(self.plan_round())
+            self.assertEqual(storage.game.get_scheduler_time(1500), 1030)
+            with patch('lib.storage.game.time.time', return_value=1630):
+                storage.game.change_game_state('resume')
+            restarted = TickerState(MagicMock(), True)
+            bootstrap_schedules(restarted)
+            schedule = next(s for s in restarted.schedules if s.schedule_id == 'classic_rounds')
+            before = datetime.fromtimestamp(storage.game.get_scheduler_time(1659), timezone.utc)
+            end = datetime.fromtimestamp(storage.game.get_scheduler_time(1660), timezone.utc)
+            self.assertFalse(schedule.should_be_called(before))
+            self.assertTrue(schedule.should_be_called(end))
+            restarted.scheduled_at = end
+            self.assertFalse(schedule.execute(restarted))
+            self.assertEqual(storage.game.get_lifecycle(), (1, False))
+
+    def test_rehearsal_limit_preserves_next_official_start_and_round_budget(self):
+        start = self.prepare_scheduled_game()
+        self.set_round_limit(1)
+        storage.game.change_game_state('start')
+        with patch.object(storage.teams, 'get_teams', return_value=[]), \
+                patch.object(storage.tasks, 'get_tasks', return_value=[]), \
+                patch.object(storage.utils.SIOManager, 'write_only'):
+            state = TickerState(MagicMock(), True)
+            run_classic_round(state)
+            run_classic_round(state)  # Next scheduled boundary.
+            self.assertEqual(storage.game.get_lifecycle(), (1, False))
+            storage.sessions.maintain(start)
+            self.assertEqual(storage.game.get_lifecycle(), (0, False))
+            self.assertEqual(storage.game.get_db_game_config().start_time, start)
+            self.assertEqual(storage.game.get_db_game_config().rounds, 1)
+            storage.game.set_game_running(True)
+            self.assertTrue(run_classic_round(state))
+            self.assertEqual(storage.game.get_lifecycle(), (1, True))
+            self.assertFalse(run_classic_round(state))
+            storage.sessions.maintain(start + timedelta(minutes=1))
+            self.assertEqual(storage.game.get_lifecycle(), (1, False))
+
+    def test_round_limit_migration_is_repeatable_and_keeps_existing_game(self):
+        start = self.prepare_scheduled_game()
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('ALTER TABLE GameConfig DROP COLUMN rounds')
+            curs.execute('UPDATE GameConfig SET real_round=11')
+            curs.execute('UPDATE TeamTasks SET score=2700, stolen=1')
+            curs.execute('SELECT id, name, token FROM Teams ORDER BY id')
+            teams = curs.fetchall()
+            conn.commit()
+        migrate()
+        migrate()
+        self.assertIsNone(storage.game.get_db_game_config().rounds)
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'config.yml'
+            path.write_text('game:\n  rounds: 300\n  start_time: ignored\n')
+            self.fake_redis.set(CacheKeys.game_config(), 'old')
+            migrate(config_path=path)
+            self.assertFalse(self.fake_redis.exists(CacheKeys.game_config()))
+            migrate(config_path=path)
+        config = storage.game.get_db_game_config()
+        self.assertEqual(config.rounds, 300)
+        self.assertEqual(config.start_time, start)
+        self.assertEqual(storage.game.get_lifecycle(), (11, False))
+        with storage.utils.db_cursor() as (_, curs):
+            curs.execute('SELECT id, name, token FROM Teams ORDER BY id')
+            self.assertEqual(curs.fetchall(), teams)
+            curs.execute('SELECT score, stolen FROM TeamTasks')
+            self.assertEqual(curs.fetchall(), [(2700, 1), (2700, 1)])
 
     def test_rehearsal_starts_early_without_changing_official_schedule(self):
         start = self.prepare_scheduled_game()

@@ -127,6 +127,15 @@ Config file (`config.yml`) is split into five main parts:
 
     * `round_time` (required): round duration in seconds. Example: `30`.
 
+    * `rounds` (optional, default unlimited): positive integer limiting the number of playable rounds.
+      With `rounds: 300` and `round_time: 60`, the game finishes at the boundary after round 300,
+      without starting round 301. This is five hours without pauses or checker delays.
+      Pauses preserve the remaining round time; unfinished checks can delay earlier round transitions.
+      At the final boundary, flag reception and new checks stop. Already sent checks can finish
+      before the final scoreboard is published. The limit also applies to rehearsals, without
+      changing the configured official start or the rehearsal cleanup behavior.
+      Omit `rounds` or set it to `null` to disable this automatic limit.
+
     * `flag_lifetime` (required): flag lifetime in rounds (see [flag format](#flag-format) section). Example: `5`.
 
     * `timezone` (optional, default `UTC`): the timezone in which `start_time` is specified. Example: `Europe/Moscow`.
@@ -240,6 +249,27 @@ tasks:
 For those familiar with Python typings, formal definition of configuration can be found [here](cli/models.py)
 . `BasicConfig` describes what is required before `setup`
 cli command is called, and `Config` describes the full configuration.
+
+### Applying a round limit to an existing game
+
+For a new database, `game.rounds` is loaded by the initializer. An existing database
+keeps its stored configuration when containers restart. To apply the limit without
+resetting teams, tokens, scores or history, edit `game.rounds` in `config.yml`, then
+run these commands from the project directory with the database and Redis running:
+
+```bash
+python control.py rd build
+python control.py rd run --rm --no-deps config-loader
+python control.py rd run --rm --no-deps initializer \
+  python -m scripts.apply_fixes --config /run/forcad-config/config.yml
+python control.py rd up -d
+```
+
+The migration applies only `game.rounds` from that file. It preserves `start_time`
+and the current lifecycle; a finished official game stays finished. Missing or null
+`rounds` removes the limit. Running `scripts.apply_fixes` without `--config` only
+updates the schema and preserves the stored limit. A limit at or below the current
+round finishes a running game at its next round boundary.
 
 ## Checkers
 

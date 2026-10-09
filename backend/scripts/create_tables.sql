@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS GameConfig
     inflation          BOOLEAN,
     volga_attacks_mode BOOLEAN,
     round_time         INTEGER CHECK ( round_time > 0 ),
+    rounds             INTEGER CHECK ( rounds > 0 ),
     mode               VARCHAR(8)  DEFAULT 'classic',
     timezone           VARCHAR(32) DEFAULT 'UTC',
     start_time         TIMESTAMP WITH TIME ZONE

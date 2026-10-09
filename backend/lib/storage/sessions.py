@@ -44,6 +44,7 @@ def stop(curs) -> None:
         'WHERE sent_at IS NULL AND deadline_at IS NULL AND finished_at IS NULL',
     )
     storage.game.set_game_paused(True)
+    utils.RedisStorage.get().delete('game:round_waiting')
 
 
 def maintain(at: datetime) -> bool:
