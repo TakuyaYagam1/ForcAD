@@ -24,9 +24,10 @@ def prepare(schedule_id, teams, tasks, *, advances_round=False, puts_only=False)
             'SELECT real_round, game_running FROM GameConfig WHERE id=1 FOR UPDATE',
         )
         game = curs.fetchone()
+        curs.execute('SELECT reset_pending FROM GameSession WHERE id=1')
+        resetting = curs.fetchone()['reset_pending']
         current_round = game['real_round']
-        finished = current_round > 0 and not game['game_running']
-        if finished or storage.game.is_game_paused():
+        if not game['game_running'] or resetting or storage.game.is_game_paused():
             conn.commit()
             return None
         curs.execute(

@@ -54,6 +54,7 @@ class TickerState:
     game_started: bool
     schedules: list[Schedule] = field(default_factory=list)
     scheduled_at: datetime | None = None
+    session_generation: int | None = None
 
     def register_schedule(self, schedule: Schedule) -> None:
         self.schedules.append(schedule)

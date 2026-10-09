@@ -30,9 +30,12 @@ def bootstrap_state() -> TickerState:
 
 def bootstrap_schedules(state: TickerState):
     game_config = storage.game.get_current_game_config()
+    session = storage.sessions.get_session()
+    state.session_generation = session['generation']
+    start = session['practice_start'] or game_config.start_time
     start_schedule = Schedule(
         schedule_id='start_game',
-        start=game_config.start_time,
+        start=start,
         func=hooks.start_game,
     )
     start_schedule.load_last_run()
@@ -43,7 +46,7 @@ def bootstrap_schedules(state: TickerState):
     if game_config.mode == models.GameMode.CLASSIC:
         rounds_schedule = Schedule(
             schedule_id='classic_rounds',
-            start=game_config.start_time,
+            start=start,
             func=hooks.run_classic_round,
             interval=round_interval,
         )
@@ -53,7 +56,7 @@ def bootstrap_schedules(state: TickerState):
     elif game_config.mode == models.GameMode.BLITZ:
         rounds_schedule = Schedule(
             'blitz_rounds',
-            start=game_config.start_time,
+            start=start,
             func=hooks.run_blitz_puts_round,
             interval=round_interval,
         )
@@ -72,6 +75,7 @@ def sync_blitz_schedules(state: TickerState):
     if game_config.mode != models.GameMode.BLITZ:
         return
     prefix = 'blitz_check_gets_task_'
+    session = storage.sessions.get_session()
     active = {
         f'{prefix}{task.id}': task for task in storage.tasks.get_tasks()
     }
@@ -87,7 +91,7 @@ def sync_blitz_schedules(state: TickerState):
         else:
             schedule = Schedule(
                 schedule_id,
-                start=game_config.start_time,
+                start=session['practice_start'] or game_config.start_time,
                 func=hooks.blitz_check_gets_runner_factory(task.id),
                 interval=interval,
             )
@@ -95,10 +99,31 @@ def sync_blitz_schedules(state: TickerState):
             state.register_schedule(schedule)
 
 
+def sync_session(state: TickerState, at: datetime):
+    reset = storage.sessions.maintain(at)
+    if reset:
+        events.refresh_scoreboard_after_commit()
+    session = storage.sessions.get_session()
+    if state.session_generation != session['generation']:
+        # A failed DB read must leave the generation unchanged so the next
+        # iteration retries the complete schedule rebuild.
+        replacement = TickerState(state.celery_app, state.game_started)
+        bootstrap_schedules(replacement)
+        state.schedules = replacement.schedules
+        state.session_generation = replacement.session_generation
+
+
 def main(state: TickerState):
     next_maintenance = 0
     while True:
         wall_now = time.time()
+        try:
+            # The official deadline uses wall time, not the paused game clock.
+            sync_session(state, datetime.fromtimestamp(wall_now, UTC))
+        except Exception:
+            logger.exception('Game session transition failed; retrying')
+            time.sleep(1)
+            continue
         if time.monotonic() >= next_maintenance:
             try:
                 recover_expired_jobs()

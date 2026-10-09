@@ -15,6 +15,7 @@ export interface LiveEvent {
 }
 
 export interface FlagNotificationPayload {
+  generation?: number;
   attacker_id: number;
   victim_id: number;
   task_id: number;
@@ -40,9 +41,10 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
     setError: (error) => set({ error }),
     clear: () => set({ events: [], error: null }),
 
-    pushNotification: ({ attacker_id, victim_id, task_id, attacker_delta }) => {
+    pushNotification: ({ attacker_id, victim_id, task_id, attacker_delta, generation }) => {
       const { events } = get();
-      const { teams, tasks } = useScoreboardStore.getState();
+      const { teams, tasks, generation: currentGeneration } = useScoreboardStore.getState();
+      if ((generation ?? 0) !== currentGeneration) return;
 
       const attackerName =
         teams?.find((t) => t.id === attacker_id)?.name ?? `#${attacker_id}`;
@@ -73,6 +75,10 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
 
 // Resolve names again when the scoreboard arrives after the event stream.
 useScoreboardStore.subscribe((state, previous) => {
+  if (state.generation !== previous.generation) {
+    useLiveScoreboardStore.getState().clear();
+    return;
+  }
   if (state.teams === previous.teams && state.tasks === previous.tasks) return;
   useLiveScoreboardStore.setState((current) => ({
     events: current.events.map((event) => ({

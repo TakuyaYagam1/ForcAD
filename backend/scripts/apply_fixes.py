@@ -119,6 +119,7 @@ def main():
                 'ALTER TABLE Teams ADD CONSTRAINT teams_token_unique UNIQUE (token)'
             )
         cursor.execute(Path(__file__).with_name('create_dispatch.sql').read_text())
+        cursor.execute(Path(__file__).with_name('create_sessions.sql').read_text())
         cursor.execute(Path(__file__).with_name('create_functions.sql').read_text())
         conn.commit()
     print(

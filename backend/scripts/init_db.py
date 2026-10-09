@@ -19,6 +19,7 @@ def init_schema(curs):
     create_tables_query = create_tables_path.read_text()
     curs.execute(create_tables_query)
     curs.execute((SCRIPTS_DIR / 'create_dispatch.sql').read_text())
+    curs.execute((SCRIPTS_DIR / 'create_sessions.sql').read_text())
 
     create_functions_path = SCRIPTS_DIR / 'create_functions.sql'
     create_functions_query = create_functions_path.read_text()

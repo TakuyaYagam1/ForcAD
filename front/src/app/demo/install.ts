@@ -27,18 +27,26 @@ let round = DEMO_INITIAL_ROUND;
 let roundStart = 0;
 let nextHistoryId = 1;
 let loggedIn = false;
-let phase: "running" | "paused" | "finished" = "running";
+let phase: "waiting" | "running" | "paused" | "finished" = "running";
+let practice = false;
+let generation = 0;
+let scheduledStart = new Date(Date.now() - 3600_000).toISOString();
 let pausedAt: number | null = null;
 let pausedSeconds = 0;
 
 function getRuntime(): GameRuntimeStatus {
   return {
     phase,
+    practice,
+    generation,
+    can_start: phase === "waiting",
+    reset_pending: false,
+    scheduled_start: scheduledStart,
     paused_at: pausedAt,
     paused_seconds: pausedSeconds,
     round_time: DEMO_ROUND_TIME,
-    round: round + 1,
-    round_start: roundStart + DEMO_ROUND_TIME,
+    round: phase === "waiting" ? 0 : round + 1,
+    round_start: phase === "waiting" ? null : roundStart + DEMO_ROUND_TIME,
     results_pending: false,
   };
 }
@@ -66,6 +74,9 @@ function rememberSession(value: boolean) {
 }
 
 export function resetDemoData() {
+  practice = false;
+  generation += 1;
+  scheduledStart = new Date(Date.now() - 3600_000).toISOString();
   phase = "running";
   pausedAt = null;
   pausedSeconds = 0;
@@ -100,6 +111,22 @@ export function resetDemoData() {
     delta,
   }));
   useLiveScoreboardStore.setState({ events: seededEvents, error: null });
+}
+
+export function prepareDemoGame() {
+  phase = "waiting";
+  practice = false;
+  generation += 1;
+  scheduledStart = new Date(Date.now() + 86400_000).toISOString();
+  pausedAt = null;
+  pausedSeconds = 0;
+  round = 0;
+  roundStart = 0;
+  history = [];
+  raw = raw.map((cell) => ({
+    ...cell, score: 2500, stolen: 0, lost: 0, checks: 0, checks_passed: 0, status: -1,
+  }));
+  publishState();
 }
 
 function recordSnapshot() {
@@ -154,6 +181,7 @@ export function simulateDemoCapture(promote = false) {
     team_tasks: raw,
   });
   useLiveScoreboardStore.getState().pushNotification({
+    generation,
     attacker_id: attacker.id!,
     victim_id: victim.id!,
     task_id: attackerCell.task_id,
@@ -310,14 +338,24 @@ const demoAdapter: AxiosAdapter = async (config) => {
   if (path.startsWith("/admin/") && !loggedIn)
     fail(config, 403, "No active demo session");
 
-  const gameAction = path.match(/^\/admin\/game\/(pause|resume|finish)$/)?.[1];
+  const gameAction = path.match(/^\/admin\/game\/(start|pause|resume|finish)$/)?.[1];
   if (gameAction) {
     if (method !== "POST") fail(config, 405, "Game controls require POST");
     if (gameAction === "finish" && body.confirm !== true)
       fail(config, 400, "Game finish confirmation is required");
     if (phase === "finished" && gameAction !== "finish")
       fail(config, 409, "Game has already finished");
-    if (gameAction === "resume") {
+    if (gameAction === "start") {
+      if (phase !== "waiting") fail(config, 409, "Game cannot be started in its current state");
+      practice = new Date(scheduledStart).getTime() > Date.now();
+      generation += 1;
+      phase = "running";
+      roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
+    } else if (gameAction === "finish" && practice) {
+      const originalStart = scheduledStart;
+      prepareDemoGame();
+      scheduledStart = originalStart;
+    } else if (gameAction === "resume") {
       if (pausedAt !== null) pausedSeconds += Date.now() / 1000 - pausedAt;
       pausedAt = null;
       phase = "running";

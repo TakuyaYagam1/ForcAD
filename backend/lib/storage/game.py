@@ -16,6 +16,7 @@ _SET_GAME_RUNNING_QUERY = (
     'UPDATE GameConfig SET game_running = %(value)s WHERE id=1 '
     'AND game_running IS DISTINCT FROM %(value)s '
     'AND (NOT %(value)s OR real_round=0)'
+    ' AND NOT EXISTS (SELECT 1 FROM GameSession WHERE reset_pending)'
 )
 
 _GET_GAME_RUNNING_QUERY = 'SELECT game_running FROM GameConfig WHERE id=1'
@@ -385,9 +386,9 @@ def has_pending_checks() -> bool:
         return curs.fetchone()[0]
 
 
-def change_game_state(action: str) -> None:
+def change_game_state(action: str, *, generation: int | None = None) -> None:
     """Serialize organizer controls with round creation and flag accounting."""
-    if action not in {'pause', 'resume', 'finish'}:
+    if action not in {'start', 'pause', 'resume', 'finish'}:
         raise ValueError('Unknown game action')
     with utils.db_cursor() as (conn, curs):
         curs.execute(
@@ -397,23 +398,27 @@ def change_game_state(action: str) -> None:
         if row is None:
             raise ValueError('Game is not initialized')
         real_round, running = row
-        if real_round > 0 and not running:
+        curs.execute('SELECT generation FROM GameSession WHERE id=1')
+        current_generation, = curs.fetchone()
+        if generation is not None and generation != current_generation:
+            raise ValueError('Game session has changed')
+        if action == 'start':
+            storage.sessions.start(curs, real_round, running)
+            conn.commit()
+            return
+        curs.execute('SELECT practice_start, reset_pending FROM GameSession WHERE id=1')
+        practice_start, reset_pending = curs.fetchone()
+        if reset_pending:
+            raise ValueError('Rehearsal cleanup is still in progress')
+        if (real_round > 0 or practice_start) and not running:
             if action == 'finish':
                 conn.commit()
                 return
             raise ValueError('Game has already finished')
         if action == 'finish':
-            if real_round < 1:
+            if real_round < 1 and not practice_start:
                 raise ValueError('Game has not started')
-            curs.execute('UPDATE GameConfig SET game_running=FALSE WHERE id=1')
-            # Unpublished jobs cannot drain after the scheduler has stopped.
-            # A late delivery is fenced by the existing finished_at check.
-            # A renewed lease means a worker already started before mark_sent.
-            curs.execute(
-                'UPDATE CheckerJobs SET finished_at=clock_timestamp() '
-                'WHERE sent_at IS NULL AND deadline_at IS NULL '
-                'AND finished_at IS NULL',
-            )
+            storage.sessions.stop(curs)
         set_game_paused(action != 'resume')
         conn.commit()
 
@@ -430,17 +435,26 @@ def finalize_finished_game() -> None:
 
 
 def get_runtime_status() -> dict:
+    session = storage.sessions.get_session()
     with utils.redis_pipeline(transaction=False) as pipe:
         paused_at, paused_seconds = pipe.get(PAUSED_AT).get(PAUSED_SECONDS).execute()
     real_round, running = get_lifecycle()
-    finished = real_round > 0 and not running
+    finished = (real_round > 0 or session['practice_start'] is not None) and not running
     phase = (
         'finished' if finished else
         'paused' if paused_at else
-        'running' if real_round >= 1 else 'waiting'
+        'running' if running else 'waiting'
     )
     return {
         'phase': phase,
+        'practice': session['practice_start'] is not None,
+        'reset_pending': session['reset_pending'],
+        'generation': session['generation'],
+        'scheduled_start': get_current_game_config().start_time.isoformat(),
+        'can_start': all((
+            not running, real_round == 0,
+            session['practice_start'] is None, not session['reset_pending'],
+        )),
         'round': real_round,
         'round_start': get_round_start(real_round) if real_round else None,
         'paused_at': float(paused_at) if paused_at else None,

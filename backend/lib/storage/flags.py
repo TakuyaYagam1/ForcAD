@@ -56,6 +56,12 @@ def add_flag(flag: models.Flag, job_id: str | None = None) -> models.Flag | None
     """
 
     with utils.db_cursor() as (conn, curs):
+        # Keep cleanup behind both the SQL write and its Redis projection.
+        curs.execute(
+            'SELECT flag_lifetime * round_time * 2 FROM GameConfig '
+            'WHERE id=1 FOR SHARE',
+        )
+        expires, = curs.fetchone()
         if job_id is not None:
             # Serialize with recovery so a late PUT cannot add a retired flag.
             curs.execute(
@@ -66,15 +72,11 @@ def add_flag(flag: models.Flag, job_id: str | None = None) -> models.Flag | None
                 conn.commit()
                 return None
         flag.insert(curs)
+        with utils.redis_pipeline(transaction=True) as pipe:
+            pipe.set(CacheKeys.flag_by_id(flag.id), flag.to_json(), ex=expires)
+            pipe.set(CacheKeys.flag_by_str(flag.flag), flag.to_json(), ex=expires)
+            pipe.execute()
         conn.commit()
-
-    game_config = game.get_current_game_config()
-    expires = game_config.flag_lifetime * game_config.round_time * 2
-
-    with utils.redis_pipeline(transaction=True) as pipe:
-        pipe.set(CacheKeys.flag_by_id(flag.id), flag.to_json(), ex=expires)
-        pipe.set(CacheKeys.flag_by_str(flag.flag), flag.to_json(), ex=expires)
-        pipe.execute()
 
     return flag
 

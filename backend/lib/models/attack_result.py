@@ -11,6 +11,7 @@ class AttackResult(BaseModel):
     message: str
     attacker_delta: float
     victim_delta: float
+    generation: int
 
     __slots__ = (  # noqa: RUF023 - Preserve SQL and serialized field order.
         'attacker_id',
@@ -20,6 +21,7 @@ class AttackResult(BaseModel):
         'message',
         'attacker_delta',
         'victim_delta',
+        'generation',
     )
 
     defaults: ClassVar[dict[str, Any]] = {
@@ -29,6 +31,7 @@ class AttackResult(BaseModel):
         'message': '',
         'attacker_delta': 0.0,
         'victim_delta': 0.0,
+        'generation': 0,
     }
 
     labels = ('attacker_id', 'victim_id', 'task_id', 'submit_ok')
@@ -45,4 +48,5 @@ class AttackResult(BaseModel):
             'victim_id': self.victim_id,
             'task_id': self.task_id,
             'attacker_delta': self.attacker_delta,
+            'generation': self.generation,
         }
