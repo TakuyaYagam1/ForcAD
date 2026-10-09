@@ -8,7 +8,7 @@
     rgb(255 197 115 / 8%) 44%,
     transparent 88%
   );
-  --leader-particles:
+  --leader-particles-a:
     radial-gradient(
       circle at 24% 24px,
       #ffe6af 0 1px,
@@ -28,17 +28,11 @@
       #ffe0a5 0 1px,
       #ffc57333 2px,
       transparent 4px
-    ),
+    );
+  --leader-particles-b:
     radial-gradient(circle at 54% 52px, #ffc57399 0 1px, transparent 3px),
     radial-gradient(circle at 14% 190px, #ffedc4cc 0 1px, transparent 4px),
     radial-gradient(circle at 66% 326px, #ffd99aaa 0 1px, transparent 3px);
-  --leader-particle-size:
-    100% 360px, 100% 360px, 100% 360px, 100% 360px, 100% 360px, 100% 440px,
-    100% 440px, 100% 440px;
-  --leader-particle-repeat: repeat-y;
-  --leader-particle-end:
-    0 -360px, 0 -360px, 0 -360px, 0 -360px, 0 -360px, 0 -440px, 0 -440px,
-    0 -440px;
 
   isolation: isolate;
 }
@@ -53,7 +47,7 @@
     rgb(255 197 115 / 8%) 36%,
     transparent 100%
   );
-  --leader-particles:
+  --leader-particles-a:
     radial-gradient(
       circle at 24px 24%,
       #ffe6af 0 1px,
@@ -73,22 +67,15 @@
       #ffe0a5 0 1px,
       #ffc57333 2px,
       transparent 4px
-    ),
+    );
+  --leader-particles-b:
     radial-gradient(circle at 52px 54%, #ffc57399 0 1px, transparent 3px),
     radial-gradient(circle at 190px 14%, #ffedc4cc 0 1px, transparent 4px),
     radial-gradient(circle at 326px 66%, #ffd99aaa 0 1px, transparent 3px);
-  --leader-particle-size:
-    360px 100%, 360px 100%, 360px 100%, 360px 100%, 360px 100%, 440px 100%,
-    440px 100%, 440px 100%;
-  --leader-particle-repeat: repeat-x;
-  --leader-particle-end:
-    360px 0, 360px 0, 360px 0, 360px 0, 360px 0, 440px 0, 440px 0, 440px 0;
 }
 
 .teams-page .team-card--medallion[data-rank="1"]::before,
-.teams-page .team-card--medallion[data-rank="1"]::after,
-.team-hero:has(.team-current-rank .rank-number--1)::before,
-.team-hero:has(.team-current-rank .rank-number--1)::after {
+.team-hero:has(.team-current-rank .rank-number--1)::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -96,9 +83,8 @@
   pointer-events: none;
 }
 
-/* Both layers cover only the left half of the team page header. */
-.team-hero:has(.team-current-rank .rank-number--1)::before,
-.team-hero:has(.team-current-rank .rank-number--1)::after {
+/* The leader treatment covers only the left half of the team page header. */
+.team-hero:has(.team-current-rank .rank-number--1)::before {
   right: 50%;
 }
 
@@ -108,14 +94,15 @@
   background: var(--leader-gradient);
 }
 
-.teams-page .team-card--medallion[data-rank="1"]::after,
-.team-hero:has(.team-current-rank .rank-number--1)::after {
+.leader-highlight-particles {
+  position: absolute;
+  inset: 0;
   z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
   opacity: 0.72;
   mix-blend-mode: screen;
-  background-image: var(--leader-particles);
-  background-size: var(--leader-particle-size);
-  background-repeat: var(--leader-particle-repeat);
   -webkit-mask-image: linear-gradient(
     var(--leader-mask-angle),
     transparent,
@@ -132,34 +119,83 @@
   );
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
-  animation: leader-highlight-particles 8s linear infinite;
+}
+
+.team-hero > .leader-highlight-particles {
+  right: 50%;
+}
+
+.leader-highlight-particles::before,
+.leader-highlight-particles::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-repeat: repeat;
+}
+
+.leader-highlight-particles::before {
+  --particle-period: 360px;
+  background-image: var(--leader-particles-a);
+}
+
+.leader-highlight-particles::after {
+  --particle-period: 440px;
+  background-image: var(--leader-particles-b);
+}
+
+.teams-page .team-card--medallion[data-rank="1"]
+  > .leader-highlight-particles::before,
+.teams-page .team-card--medallion[data-rank="1"]
+  > .leader-highlight-particles::after {
+  width: 100%;
+  height: calc(100% + var(--particle-period));
+  background-size: 100% var(--particle-period);
+  animation: leader-highlight-particles-y 8s linear infinite;
+}
+
+.team-hero > .leader-highlight-particles::before,
+.team-hero > .leader-highlight-particles::after {
+  width: calc(100% + var(--particle-period));
+  height: 100%;
+  background-size: var(--particle-period) 100%;
+  animation: leader-highlight-particles-x 8s linear infinite;
 }
 
 /* Text, the logo, and laurels stay above both decorative layers. */
-.teams-page .team-card--medallion[data-rank="1"] > * {
+.teams-page
+  .team-card--medallion[data-rank="1"]
+  > :not(.leader-highlight-particles) {
   position: relative;
   z-index: 2;
 }
 
-@keyframes leader-highlight-particles {
+@keyframes leader-highlight-particles-y {
   from {
-    background-position: 0 0;
+    transform: translateY(0);
   }
 
   to {
-    background-position: var(--leader-particle-end);
+    transform: translateY(calc(-1 * var(--particle-period)));
   }
 }
 
-html[data-motion="off"] .teams-page .team-card--medallion[data-rank="1"]::after,
-html[data-motion="off"]
-  .team-hero:has(.team-current-rank .rank-number--1)::after {
+@keyframes leader-highlight-particles-x {
+  from {
+    transform: translateX(calc(-1 * var(--particle-period)));
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+html[data-motion="off"] .leader-highlight-particles {
   display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .teams-page .team-card--medallion[data-rank="1"]::after,
-  .team-hero:has(.team-current-rank .rank-number--1)::after {
+  .leader-highlight-particles {
     display: none;
   }
 }

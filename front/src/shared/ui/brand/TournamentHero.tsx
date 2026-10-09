@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { GearMechanism } from "./GearMechanism";
 import { ClockworkDial } from "./ClockworkDial";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import "./TournamentHero.css";
 
 export function HeroArt() {
@@ -28,8 +29,13 @@ export function TournamentHero({
   children?: ReactNode;
   compact?: boolean;
 }) {
+  const heroRef = useRef<HTMLElement>(null);
+  useViewportAnimations(heroRef);
+
   return (
     <section
+      ref={heroRef}
+      data-viewport-animation="running"
       className={`tournament-hero ${compact ? "tournament-hero--compact" : ""}`}
     >
       <div className="hero-copy">

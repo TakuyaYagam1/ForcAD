@@ -9,14 +9,6 @@ div.brand-app::before {
   overflow: hidden;
   pointer-events: none;
   user-select: none;
-  mask-image: radial-gradient(
-    ellipse at 100% 100%,
-    #000 12%,
-    #000 35%,
-    rgb(0 0 0 / 75%) 58%,
-    rgb(0 0 0 / 25%) 80%,
-    transparent 100%
-  );
 }
 
 .side-rays-container {
@@ -28,11 +20,24 @@ div.brand-app::before {
   pointer-events: none;
   opacity: 0.9;
   mix-blend-mode: screen;
+}
+
+/* The shader normally supplies this glow and mask in the same draw call.
+   Keep a CSS fallback for browsers where WebGL cannot be initialized. */
+.side-rays-container:not(:has(canvas)) {
   background: radial-gradient(
     ellipse at 100% 100%,
     rgb(255 189 99 / 16%),
     rgb(255 209 137 / 5%) 35%,
     transparent 72%
+  );
+  mask-image: radial-gradient(
+    ellipse at 100% 100%,
+    #000 12%,
+    #000 35%,
+    rgb(0 0 0 / 75%) 58%,
+    rgb(0 0 0 / 25%) 80%,
+    transparent 100%
   );
 }
 
@@ -50,7 +55,7 @@ div.brand-app::before {
 }
 
 @media (max-width: 600px) {
-  .brand-background {
+  .side-rays-container:not(:has(canvas)) {
     mask-image: radial-gradient(
       ellipse at 100% 100%,
       #000 10%,

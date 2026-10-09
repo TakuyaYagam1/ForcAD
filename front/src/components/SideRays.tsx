@@ -66,6 +66,7 @@ uniform vec2 iTiltRotation;
 uniform vec2 iRayDirection1;
 uniform vec2 iRayDirection2;
 uniform float iBrightnessScale;
+uniform float iMobileMask;
 
 float rayStrength(float cosAngle, float distance,
                   float seedA, float seedB, float speed) {
@@ -77,7 +78,8 @@ float rayStrength(float cosAngle, float distance,
 }
 
 void main() {
-  vec2 fragCoord = gl_FragCoord.xy * iFlipScale + iFlipOffset;
+  vec2 rawFragCoord = gl_FragCoord.xy;
+  vec2 fragCoord = rawFragCoord * iFlipScale + iFlipOffset;
 
   vec2 coord = vec2(fragCoord.x, iResolution.y - fragCoord.y);
   vec2 rel = coord - iRayPos;
@@ -111,6 +113,64 @@ void main() {
   float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
   color.rgb = mix(vec3(gray), color.rgb, iSaturation);
   color.a = max(color.r, max(color.g, color.b)) * iOpacity;
+
+  // Fold the former full-screen CSS glow and parent mask into this draw.
+  // The normalized ellipse matches a farthest-corner radial gradient whose
+  // origin is the bottom-right corner of the viewport.
+  vec2 maskDelta = vec2(
+    (iResolution.x - rawFragCoord.x) / iResolution.x,
+    rawFragCoord.y / iResolution.y
+  );
+  float radialDistance = length(maskDelta) * 0.70710678;
+
+  float maskAlpha;
+  if (iMobileMask > 0.5) {
+    if (radialDistance <= 0.10) {
+      maskAlpha = 1.0;
+    } else if (radialDistance <= 0.55) {
+      maskAlpha = mix(1.0, 0.70, (radialDistance - 0.10) / 0.45);
+    } else {
+      maskAlpha = mix(0.70, 0.0, clamp((radialDistance - 0.55) / 0.45, 0.0, 1.0));
+    }
+  } else {
+    if (radialDistance <= 0.35) {
+      maskAlpha = 1.0;
+    } else if (radialDistance <= 0.58) {
+      maskAlpha = mix(1.0, 0.75, (radialDistance - 0.35) / 0.23);
+    } else if (radialDistance <= 0.80) {
+      maskAlpha = mix(0.75, 0.25, (radialDistance - 0.58) / 0.22);
+    } else {
+      maskAlpha = mix(0.25, 0.0, clamp((radialDistance - 0.80) / 0.20, 0.0, 1.0));
+    }
+  }
+
+  const vec3 glowColor1 = vec3(1.0, 0.74117647, 0.38823529);
+  const vec3 glowColor2 = vec3(1.0, 0.81960784, 0.53725490);
+  float glowAlpha = 0.0;
+  vec3 glowPremultiplied = vec3(0.0);
+
+  if (radialDistance <= 0.35) {
+    float glowMix = radialDistance / 0.35;
+    glowAlpha = mix(0.16, 0.05, glowMix);
+    glowPremultiplied = mix(
+      glowColor1 * 0.16,
+      glowColor2 * 0.05,
+      glowMix
+    );
+  } else if (radialDistance <= 0.72) {
+    float glowFade = 1.0 - (radialDistance - 0.35) / 0.37;
+    glowAlpha = 0.05 * glowFade;
+    glowPremultiplied = glowColor2 * glowAlpha;
+  }
+
+  float composedAlpha = color.a + glowAlpha * (1.0 - color.a);
+  vec3 composedPremultiplied =
+    color.rgb * color.a + glowPremultiplied * (1.0 - color.a);
+
+  color.rgb = composedAlpha > 0.0
+    ? composedPremultiplied / composedAlpha
+    : vec3(0.0);
+  color.a = composedAlpha * maskAlpha;
 
   gl_FragColor = color;
 }`;
@@ -174,6 +234,7 @@ export default function SideRays({
       iRayDirection1: { value: [0, 1] },
       iRayDirection2: { value: [0, 1] },
       iBrightnessScale: { value: 1 },
+      iMobileMask: { value: 0 },
     };
 
     const geometry = new Triangle(gl);
@@ -267,6 +328,7 @@ export default function SideRays({
       ];
       uniforms.iRayPos.value = [bufferWidth * 1.1, bufferHeight * -0.5];
       uniforms.iLightPos.value = [bufferWidth * 1.1, bufferHeight * 1.5];
+      uniforms.iMobileMask.value = width <= 600 ? 1 : 0;
       draw(performance.now());
     };
 
