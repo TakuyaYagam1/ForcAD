@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import test from "node:test";
 import { createDemoTeams } from "../src/app/demo/data.ts";
 import { demoTeams } from "../src/app/demo/teamLogos.ts";
+import { resolveTeamLogoPath } from "../viteTeamLogos.ts";
 
 test("demo uses the 20 server team names and shared logo paths", () => {
   const teams = createDemoTeams();
@@ -19,7 +20,7 @@ test("demo uses the 20 server team names and shared logo paths", () => {
       "Baba Is Win",
       "Trippy Troppy",
       "Caplag",
-      "f.society",
+      "Молоток",
       "IBEEE",
       ".dot",
       "SEGFAULT",
@@ -44,7 +45,7 @@ test("each demo team logo exists in the shared repository directory", () => {
   const logoDirectory = resolve(import.meta.dirname, "../../teams_logo");
 
   for (const { logo } of demoTeams) {
-    const file = join(logoDirectory, logo);
+    const file = resolveTeamLogoPath(logoDirectory, logo);
     assert.ok(existsSync(file), `${logo} should exist`);
     assert.ok(statSync(file).size > 0, `${logo} should not be empty`);
   }

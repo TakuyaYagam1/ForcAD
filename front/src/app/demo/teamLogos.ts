@@ -6,7 +6,7 @@ export const demoTeams = [
   { name: "Baba Is Win", logo: "baba-is-win.jpg" },
   { name: "Trippy Troppy", logo: "trippy-troppy.png" },
   { name: "Caplag", logo: "caplag.jpg" },
-  { name: "f.society", logo: "f-society.jpg" },
+  { name: "Молоток", logo: "molotok.jpg" },
   { name: "IBEEE", logo: "ibeee.jpg" },
   { name: ".dot", logo: "dot.png" },
   { name: "SEGFAULT", logo: "segfault.png" },

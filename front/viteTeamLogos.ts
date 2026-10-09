@@ -1,4 +1,4 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import { demoTeams } from "./src/app/demo/teamLogos.ts";
@@ -6,6 +6,15 @@ import { demoTeams } from "./src/app/demo/teamLogos.ts";
 const filesByRequestPath = new Map<string, string>(
   demoTeams.map(({ logo }) => [`/team-logos/${logo}`, logo] as const),
 );
+filesByRequestPath.set("/team-logos/mock_molotok.jpg", "mock_molotok.jpg");
+
+export function resolveTeamLogoPath(logoDirectory: string, logoFile: string) {
+  const filePath = resolve(logoDirectory, logoFile);
+  if (logoFile === "molotok.jpg" && !existsSync(filePath)) {
+    return resolve(logoDirectory, "mock_molotok.jpg");
+  }
+  return filePath;
+}
 
 export function createTeamLogosPlugin(logoDirectory: string): Plugin {
   return {
@@ -43,7 +52,12 @@ export function createTeamLogosPlugin(logoDirectory: string): Plugin {
           return;
         }
 
-        const filePath = resolve(logoDirectory, logoFile);
+        const filePath = resolveTeamLogoPath(logoDirectory, logoFile);
+        if (!existsSync(filePath)) {
+          response.statusCode = 404;
+          response.end("Not found");
+          return;
+        }
         response.setHeader(
           "Content-Type",
           logoFile.endsWith(".png") ? "image/png" : "image/jpeg",
