@@ -236,10 +236,9 @@ export default function SideRays({
 
       bounds = container.getBoundingClientRect();
 
-      renderer.dpr = Math.min(
-        window.devicePixelRatio || 1,
-        width < 600 ? 1 : 1.25,
-      );
+      // Soft background rays do not need display resolution. Keep the shader
+      // buffer small even on large or high-density screens; CSS scales it up.
+      renderer.dpr = Math.min(0.5, 960 / Math.max(width, height));
 
       renderer.setSize(width, height);
       uniforms.iResolution.value = [gl.canvas.width, gl.canvas.height];

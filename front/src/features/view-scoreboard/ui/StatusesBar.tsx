@@ -65,14 +65,14 @@ export function StatusesBar({
       >
         <span
           className="round-track-progress"
-          style={{ width: `${progress}%` }}
+          style={{ transform: `scaleX(${progress / 100})` }}
         />
         {Array.from({ length: 18 }, (_, index) => (
           <i key={index} className="round-tick" />
         ))}
         <span
           className="round-head"
-          style={{ left: `calc(${progress}% - 7px)` }}
+          style={{ transform: `translateX(${progress}cqw)` }}
           aria-hidden="true"
         />
       </div>

@@ -2,10 +2,9 @@
   position: relative;
 }
 
-.table-frame.has-leader::before {
+.table-frame > .leader-particles {
   --particles-fade: clamp(48px, 12%, 180px);
 
-  content: "";
   position: absolute;
   top: var(--leader-top, 0px);
   left: 0;
@@ -36,6 +35,22 @@
 
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+}
+
+/* Move cached tiles beneath a fixed mask instead of repainting gradients. */
+.leader-particles::before,
+.leader-particles::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(100% + var(--particle-period));
+  background-size: var(--particle-period) 100%;
+  background-repeat: repeat-x;
+  animation: scoreboard-leader-particles 8s linear infinite;
+}
+
+.leader-particles::before {
+  --particle-period: 360px;
 
   background-image:
     radial-gradient(
@@ -57,49 +72,33 @@
       #ffe0a5 0 1px,
       #ffc57333 2px,
       transparent 4px
-    ),
+    );
+}
+
+.leader-particles::after {
+  --particle-period: 440px;
+  background-image:
     radial-gradient(circle at 52px 54%, #ffc57399 0 1px, transparent 3px),
     radial-gradient(circle at 190px 14%, #ffedc4cc 0 1px, transparent 4px),
     radial-gradient(circle at 326px 66%, #ffd99aaa 0 1px, transparent 3px);
-
-  background-size:
-    360px 100%,
-    360px 100%,
-    360px 100%,
-    360px 100%,
-    360px 100%,
-    440px 100%,
-    440px 100%,
-    440px 100%;
-
-  background-repeat: repeat-x;
-  animation: scoreboard-leader-particles 8s linear infinite;
 }
 
 @keyframes scoreboard-leader-particles {
   from {
-    background-position: 0 0;
+    transform: translateX(calc(-1 * var(--particle-period)));
   }
 
   to {
-    background-position:
-      360px 0,
-      360px 0,
-      360px 0,
-      360px 0,
-      360px 0,
-      440px 0,
-      440px 0,
-      440px 0;
+    transform: translateX(0);
   }
 }
 
-html[data-motion="off"] .table-frame.has-leader::before {
+html[data-motion="off"] .leader-particles {
   display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .table-frame.has-leader::before {
+  .leader-particles {
     display: none;
   }
 }

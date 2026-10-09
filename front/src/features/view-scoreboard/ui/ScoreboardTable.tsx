@@ -184,6 +184,7 @@ export function ScoreboardTable({
       ref={frameRef}
       className={`table-frame ${leaderVisible ? "has-leader" : ""}`}
     >
+      {leaderVisible && <div className="leader-particles" aria-hidden="true" />}
       <div
         className="table-scroll"
         role="region"
