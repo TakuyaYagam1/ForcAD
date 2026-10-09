@@ -54,23 +54,21 @@ uniform float iSpeed;
 uniform vec3 iRayColor1;
 uniform vec3 iRayColor2;
 uniform float iIntensity;
-uniform float iSpread;
-uniform float iFlipX;
-uniform float iFlipY;
-uniform float iTilt;
 uniform float iSaturation;
 uniform float iBlend;
 uniform float iFalloff;
 uniform float iOpacity;
-uniform vec2 iMouse;
-uniform float iMouseInfluence;
+uniform vec2 iFlipScale;
+uniform vec2 iFlipOffset;
+uniform vec2 iRayPos;
+uniform vec2 iLightPos;
+uniform vec2 iTiltRotation;
+uniform vec2 iRayDirection1;
+uniform vec2 iRayDirection2;
+uniform float iBrightnessScale;
 
-float rayStrength(vec2 source, vec2 direction, vec2 coord,
+float rayStrength(float cosAngle, float distance,
                   float seedA, float seedB, float speed) {
-  vec2 delta = coord - source;
-  float distance = max(length(delta), 0.0001);
-  float cosAngle = dot(delta / distance, direction);
-
   return clamp(
     (0.45 + 0.15 * sin(cosAngle * seedA + iTime * speed)) +
     (0.30 + 0.20 * cos(-cosAngle * seedB + iTime * speed)),
@@ -79,43 +77,35 @@ float rayStrength(vec2 source, vec2 direction, vec2 coord,
 }
 
 void main() {
-  vec2 fragCoord = gl_FragCoord.xy;
-
-  if (iFlipX > 0.5) fragCoord.x = iResolution.x - fragCoord.x;
-  if (iFlipY > 0.5) fragCoord.y = iResolution.y - fragCoord.y;
+  vec2 fragCoord = gl_FragCoord.xy * iFlipScale + iFlipOffset;
 
   vec2 coord = vec2(fragCoord.x, iResolution.y - fragCoord.y);
-  vec2 rayPos = vec2(iResolution.x * 1.1, -0.5 * iResolution.y);
+  vec2 rel = coord - iRayPos;
+  vec2 tiltedCoord = vec2(
+    rel.x * iTiltRotation.x - rel.y * iTiltRotation.y,
+    rel.x * iTiltRotation.y + rel.y * iTiltRotation.x
+  ) + iRayPos;
 
-  float mouseTilt = (iMouse.x * 16.0 - iMouse.y * 6.0) * iMouseInfluence;
-  float tiltRad = (iTilt + mouseTilt) * 3.14159265 / 180.0;
-
-  float cs = cos(tiltRad);
-  float sn = sin(tiltRad);
-  vec2 rel = coord - rayPos;
-  vec2 tiltedCoord = vec2(rel.x * cs - rel.y * sn,
-                          rel.x * sn + rel.y * cs) + rayPos;
-
-  float halfSpread = (iSpread + iMouse.y * iMouseInfluence * 0.15) * 0.275;
-
-  vec2 direction1 = normalize(vec2(cos(0.785398 + halfSpread),
-                                    sin(0.785398 + halfSpread)));
-  vec2 direction2 = normalize(vec2(cos(0.785398 - halfSpread),
-                                    sin(0.785398 - halfSpread)));
+  // Both rays share the same origin and fragment. Reusing the normalized
+  // delta avoids a second length and vector division for every pixel.
+  vec2 rayDelta = tiltedCoord - iRayPos;
+  float rayDistance = max(length(rayDelta), 0.0001);
+  vec2 rayNormal = rayDelta / rayDistance;
 
   vec4 rays1 = vec4(iRayColor1, 1.0) *
-    rayStrength(rayPos, direction1, tiltedCoord, 36.2214, 21.11349, iSpeed);
+    rayStrength(dot(rayNormal, iRayDirection1), rayDistance,
+                36.2214, 21.11349, iSpeed);
   vec4 rays2 = vec4(iRayColor2, 1.0) *
-    rayStrength(rayPos, direction2, tiltedCoord, 22.3991, 18.0234, iSpeed * 0.2);
+    rayStrength(dot(rayNormal, iRayDirection2), rayDistance,
+                22.3991, 18.0234, iSpeed * 0.2);
 
   vec4 color = rays1 * (1.0 - iBlend) * 0.9 + rays2 * iBlend * 0.9;
 
-  float distanceToLight = length(fragCoord -
-    vec2(rayPos.x, iResolution.y - rayPos.y)) / iResolution.y;
+  float distanceToLight = length(fragCoord - iLightPos) / iResolution.y;
   float brightness = iIntensity * 0.4 /
     pow(max(distanceToLight, 0.001), iFalloff);
 
-  brightness *= 1.0 + iMouse.x * iMouseInfluence * 0.25;
+  brightness *= iBrightnessScale;
   color.rgb *= brightness;
 
   float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
@@ -172,16 +162,18 @@ export default function SideRays({
       iRayColor1: { value: hexToRgb(rayColor1) },
       iRayColor2: { value: hexToRgb(rayColor2) },
       iIntensity: { value: intensity },
-      iSpread: { value: spread },
-      iFlipX: { value: origin.endsWith("left") ? 1 : 0 },
-      iFlipY: { value: origin.startsWith("bottom") ? 1 : 0 },
-      iTilt: { value: tilt },
       iSaturation: { value: saturation },
       iBlend: { value: blend },
       iFalloff: { value: falloff },
       iOpacity: { value: opacity },
-      iMouse: { value: [0, 0] },
-      iMouseInfluence: { value: Math.max(0, Math.min(mouseInfluence, 1)) },
+      iFlipScale: { value: [1, 1] },
+      iFlipOffset: { value: [0, 0] },
+      iRayPos: { value: [0, 0] },
+      iLightPos: { value: [0, 0] },
+      iTiltRotation: { value: [1, 0] },
+      iRayDirection1: { value: [0, 1] },
+      iRayDirection2: { value: [0, 1] },
+      iBrightnessScale: { value: 1 },
     };
 
     const geometry = new Triangle(gl);
@@ -192,6 +184,7 @@ export default function SideRays({
     const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
 
     const start = performance.now();
+    const influence = Math.max(0, Math.min(mouseInfluence, 1));
     const targetMouse = { x: 0, y: 0 };
     const currentMouse = { x: 0, y: 0 };
 
@@ -221,8 +214,28 @@ export default function SideRays({
         ? currentMouse.y + (targetMouse.y - currentMouse.y) * smoothing
         : 0;
 
-      uniforms.iMouse.value[0] = currentMouse.x;
-      uniforms.iMouse.value[1] = currentMouse.y;
+      const tiltRadians =
+        (tilt + (currentMouse.x * 16 - currentMouse.y * 6) * influence) *
+        (3.14159265 / 180);
+      uniforms.iTiltRotation.value[0] = Math.cos(tiltRadians);
+      uniforms.iTiltRotation.value[1] = Math.sin(tiltRadians);
+
+      const halfSpread =
+        (spread + currentMouse.y * influence * 0.15) * 0.275;
+      const direction1 = 0.785398 + halfSpread;
+      const direction2 = 0.785398 - halfSpread;
+      const direction1X = Math.cos(direction1);
+      const direction1Y = Math.sin(direction1);
+      const direction2X = Math.cos(direction2);
+      const direction2Y = Math.sin(direction2);
+      const direction1Scale = 1 / Math.hypot(direction1X, direction1Y);
+      const direction2Scale = 1 / Math.hypot(direction2X, direction2Y);
+
+      uniforms.iRayDirection1.value[0] = direction1X * direction1Scale;
+      uniforms.iRayDirection1.value[1] = direction1Y * direction1Scale;
+      uniforms.iRayDirection2.value[0] = direction2X * direction2Scale;
+      uniforms.iRayDirection2.value[1] = direction2Y * direction2Scale;
+      uniforms.iBrightnessScale.value = 1 + currentMouse.x * influence * 0.25;
       uniforms.iTime.value = canAnimate() ? (now - start) * 0.001 : 0;
 
       renderer.render({ scene: mesh });
@@ -241,7 +254,19 @@ export default function SideRays({
       renderer.dpr = Math.min(0.5, 960 / Math.max(width, height));
 
       renderer.setSize(width, height);
-      uniforms.iResolution.value = [gl.canvas.width, gl.canvas.height];
+      const bufferWidth = gl.canvas.width;
+      const bufferHeight = gl.canvas.height;
+      const flipX = origin.endsWith("left");
+      const flipY = origin.startsWith("bottom");
+
+      uniforms.iResolution.value = [bufferWidth, bufferHeight];
+      uniforms.iFlipScale.value = [flipX ? -1 : 1, flipY ? -1 : 1];
+      uniforms.iFlipOffset.value = [
+        flipX ? bufferWidth : 0,
+        flipY ? bufferHeight : 0,
+      ];
+      uniforms.iRayPos.value = [bufferWidth * 1.1, bufferHeight * -0.5];
+      uniforms.iLightPos.value = [bufferWidth * 1.1, bufferHeight * 1.5];
       draw(performance.now());
     };
 
