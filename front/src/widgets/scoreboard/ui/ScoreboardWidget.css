@@ -1,3 +1,31 @@
+.scoreboard-page .banner-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px;
+  min-width: 28px;
+  min-height: 28px;
+  color: var(--gold);
+}
+
+.scoreboard-page .banner-toggle:hover {
+  color: var(--ivory);
+}
+
+.scoreboard-page .banner-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .scoreboard-page .banner-toggle {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
 @media (min-width: 901px) {
   .brand-app:has(> .site-main > .scoreboard-page:not(.scoreboard-page--admin)) {
     display: flex;
@@ -54,6 +82,296 @@
 
   .scoreboard-page:not(.scoreboard-page--admin) > .recent-events {
     margin: auto 0 0;
-    padding-top: 16px;
+    padding-top: 8px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .header-inner {
+    min-height: 48px;
+    padding: 0 24px;
+    gap: 24px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .brand-lockup {
+    gap: 12px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .brand-lockup img {
+    width: 32px;
+    height: 38px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .brand-lockup span {
+    font-size: 20px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .brand-lockup b {
+    font-size: 14px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .main-nav {
+    gap: 28px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .main-nav a {
+    font-size: 14px;
+    gap: 8px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .main-nav .brand-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .header-round {
+    font-size: 14px;
+    margin-right: 8px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .header-status {
+    font-size: 10px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .site-main {
+    padding: 0 24px 6px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .site-footer {
+    margin: 0 24px;
+    padding: 6px 0;
+  }
+
+  .scoreboard-page--compact .tournament-hero {
+    min-height: 76px;
+    margin: 0 -24px;
+    padding: 0 24px;
+  }
+
+  .scoreboard-page--compact .hero-copy {
+    padding: 4px 0;
+  }
+
+  .scoreboard-page--compact .hero-copy h1 {
+    font-size: 32px;
+    letter-spacing: -0.5px;
+    margin-bottom: 0;
+  }
+
+  .scoreboard-page--compact .hero-subtitle {
+    font-size: 16px;
+  }
+
+  .scoreboard-page--compact .hero-metadata {
+    font-size: 10px;
+    margin-top: 4px;
+    gap: 16px;
+  }
+
+  .scoreboard-page--compact .hero-metadata span {
+    gap: 6px;
+  }
+
+  .scoreboard-page--compact .hero-metadata .brand-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .scoreboard-page--compact .hero-art {
+    height: 110px;
+    top: -15px;
+  }
+
+  .scoreboard-page--compact .round-line {
+    margin: 0 -24px;
+    min-height: 32px;
+    padding: 0 24px;
+    gap: 24px;
+  }
+
+  .scoreboard-page--compact .round-label {
+    font-size: 10px;
+  }
+
+  .scoreboard-page--compact .round-timer {
+    gap: 6px;
+  }
+
+  .scoreboard-page--compact .round-timer strong {
+    font-size: 20px;
+  }
+
+  .scoreboard-page--compact .round-timer small {
+    font-size: 8px;
+  }
+
+  .scoreboard-page--compact .round-timer .brand-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .scoreboard-page--compact .scoreboard-toolbar {
+    min-height: 32px;
+    padding: 2px 0;
+    gap: 16px;
+  }
+
+  .scoreboard-page--compact .search-field {
+    height: 28px;
+    width: 280px;
+    padding: 0 10px;
+  }
+
+  .scoreboard-page--compact .search-field input {
+    font-size: 12px;
+  }
+
+  .scoreboard-page--compact .search-field svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .scoreboard-page--compact .status-legend {
+    font-size: 10px;
+    gap: 12px;
+  }
+
+  .scoreboard-page--compact .status-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table {
+    min-width: 1080px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table th {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table td {
+    height: var(--scoreboard-row-height, 32px);
+    padding: 1px 8px;
+  }
+
+  .scoreboard-page--compact .place-column {
+    width: 60px;
+    min-width: 60px;
+  }
+
+  .scoreboard-page--compact .team-column {
+    left: 60px;
+    min-width: 285px;
+    width: 26%;
+  }
+
+  .scoreboard-page--compact .team-identity {
+    gap: 8px;
+  }
+
+  .scoreboard-page--compact .team-identity > span:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .scoreboard-page--compact .team-name {
+    font-size: clamp(14px, calc(var(--scoreboard-row-height, 32px) * 0.48), 18px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .scoreboard-page--compact .team-ip {
+    font-size: 11px;
+    margin-top: 0;
+    flex-shrink: 0;
+  }
+
+  .scoreboard-page--compact .team-identity .team-avatar {
+    width: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
+    height: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
+  }
+
+  .scoreboard-page--compact .scoreboard-table .rank-number.rank-badge {
+    width: 48px;
+    height: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
+    font-size: clamp(18px, calc(var(--scoreboard-row-height, 32px) * 0.65), 26px);
+    line-height: 1;
+  }
+
+  .scoreboard-page--compact .total-column {
+    min-width: 80px;
+  }
+
+  .scoreboard-page--compact .score-value {
+    font-size: clamp(14px, calc(var(--scoreboard-row-height, 32px) * 0.5), 20px);
+  }
+
+  .scoreboard-page--compact .service-cell {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-width: 150px;
+    white-space: nowrap;
+  }
+
+  .scoreboard-page--compact .service-score {
+    font-size: clamp(12px, calc(var(--scoreboard-row-height, 32px) * 0.4), 16px);
+    gap: 6px;
+  }
+
+  .scoreboard-page--compact .service-meta {
+    flex: 1;
+    padding-left: 0;
+    font-size: 10px;
+    gap: 8px;
+  }
+
+  .scoreboard-page--compact .flag-count {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .scoreboard-page--compact .recent-events .section-heading h2 {
+    font-size: 12px;
+  }
+
+  .scoreboard-page--compact .recent-events .section-heading .brand-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .scoreboard-page--compact .recent-events .text-link {
+    font-size: 11px;
+  }
+
+  .scoreboard-page--compact .recent-events .event-item--compact {
+    grid-template-columns: 36px 96px minmax(0, 1fr);
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  .scoreboard-page--compact .event-item--compact time {
+    font-size: 11px;
+  }
+
+  .scoreboard-page--compact .event-avatars .team-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .scoreboard-page--compact .event-names,
+  .scoreboard-page--compact .event-item--compact .event-service,
+  .scoreboard-page--compact .event-item--compact .event-gain {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .scoreboard-page--compact .event-details {
+    margin-top: 2px;
+    gap: 14px;
   }
 }

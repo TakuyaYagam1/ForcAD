@@ -73,9 +73,8 @@ export function StatusesBar({
         <span
           className="round-head"
           style={{ left: `calc(${progress}% - 7px)` }}
-        >
-          <b className="round-current">Раунд {displayRound || "—"}</b>
-        </span>
+          aria-hidden="true"
+        />
       </div>
       <div className="round-timer">
         <BrandIcon name="timer" plain />

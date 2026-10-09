@@ -27,6 +27,7 @@ function outerHeight(element: HTMLElement, ignoreTopMargin = false): number {
 export function useScoreboardViewport(
   enabled: boolean,
   pageRef: RefObject<HTMLDivElement | null>,
+  teamCount: number,
 ) {
   useLayoutEffect(() => {
     if (!enabled) return;
@@ -44,6 +45,7 @@ export function useScoreboardViewport(
     const reset = () => {
       shell.style.removeProperty("--scoreboard-shell-offset");
       page.style.removeProperty("--scoreboard-table-max-height");
+      page.style.removeProperty("--scoreboard-row-height");
     };
 
     const update = () => {
@@ -74,7 +76,10 @@ export function useScoreboardViewport(
       const tableFrame = reveal?.querySelector<HTMLElement>(".table-frame");
       const scroll = tableFrame?.querySelector<HTMLElement>(".table-scroll");
       const head = scroll?.querySelector<HTMLElement>("thead");
-      const firstRow = scroll?.querySelector<HTMLElement>("tbody tr");
+      const rows = Array.from(
+        scroll?.querySelectorAll<HTMLElement>("tbody tr") ?? [],
+      );
+      const firstRow = rows[0];
       const empty = reveal?.querySelector<HTMLElement>(".empty-state");
 
       const available =
@@ -96,6 +101,18 @@ export function useScoreboardViewport(
             scroll.offsetHeight - scroll.clientHeight - verticalChrome(scroll),
           )
         : 0;
+      // Fill the viewport with all teams. Filtering keeps the same row density.
+      // Very short windows retain scrolling instead of shrinking text further.
+      if (rows.length && teamCount > 0) {
+        const rowHeight = `${Math.max(
+          24,
+          (Math.floor(available) - (head?.offsetHeight ?? 0) - scrollbar) /
+            Math.max(teamCount, rows.length),
+        )}px`;
+        if (page.style.getPropertyValue("--scoreboard-row-height") !== rowHeight) {
+          page.style.setProperty("--scoreboard-row-height", rowHeight);
+        }
+      }
       const minimum = scroll
         ? (head?.offsetHeight ?? 0) + (firstRow?.offsetHeight ?? 0) + scrollbar
         : empty
@@ -123,7 +140,7 @@ export function useScoreboardViewport(
         footer,
         ...page.children,
         ...page.querySelectorAll(
-          ".table-frame, .table-scroll, thead, tbody tr:first-child",
+          ".table-frame, .table-scroll, thead, tbody tr",
         ),
       ]);
       if (shell.parentElement) {
@@ -152,5 +169,5 @@ export function useScoreboardViewport(
       desktop.removeEventListener("change", schedule);
       reset();
     };
-  }, [enabled, pageRef]);
+  }, [enabled, pageRef, teamCount]);
 }

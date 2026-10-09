@@ -76,16 +76,6 @@ body {
   transform-origin: 300px 300px;
   animation: gear-spin 90s linear infinite;
 }
-.round-current {
-  position: absolute;
-  bottom: 19px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--gold);
-}
 .round-track {
   justify-content: space-between;
 }
@@ -777,10 +767,6 @@ body {
       0 0 0 4px #d1a35e50,
       0 0 20px #ffc573cc;
   }
-  .round-current {
-    font-size: 13px;
-    bottom: 18px;
-  }
   .round-timer {
     gap: 12px;
   }
@@ -1381,10 +1367,6 @@ body {
   }
   .hero-art {
     opacity: 0.3;
-  }
-  .round-current {
-    font-size: 10px;
-    bottom: 16px;
   }
   .round-line {
     padding-top: 22px;

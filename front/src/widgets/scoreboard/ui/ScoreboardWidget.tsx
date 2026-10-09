@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Search, WifiOff } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, WifiOff } from "lucide-react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
 import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
@@ -42,6 +42,23 @@ export function ScoreboardWidget({
 
   const [filter, setFilter] = useState("");
   const [appliedFilter, setAppliedFilter] = useState("");
+  const [bannerVisible, setBannerVisible] = useState(() => {
+    try {
+      return localStorage.getItem("cf-scoreboard-banner") !== "off";
+    } catch {
+      return true;
+    }
+  });
+
+  function toggleBanner() {
+    const visible = !bannerVisible;
+    setBannerVisible(visible);
+    try {
+      localStorage.setItem("cf-scoreboard-banner", visible ? "on" : "off");
+    } catch {
+      // The toggle still works when browser storage is unavailable.
+    }
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(() => setAppliedFilter(filter), 300);
@@ -54,7 +71,7 @@ export function ScoreboardWidget({
     teams.length > 0,
   );
 
-  useScoreboardViewport(!admin, pageRef);
+  useScoreboardViewport(!admin, pageRef, teams.length);
 
   const config = useQuery({
     queryKey: ["game-config"],
@@ -71,26 +88,30 @@ export function ScoreboardWidget({
     <div
       ref={pageRef}
       className={
-        admin ? "scoreboard-page scoreboard-page--admin" : "scoreboard-page"
+        admin
+          ? "scoreboard-page scoreboard-page--admin"
+          : "scoreboard-page scoreboard-page--compact"
       }
     >
       {!admin && (
-        <TournamentHero
-          title="Рейтинг команд"
-          subtitle="История хранит код. Будущее переписывает."
-        >
-          <div className="hero-metadata">
-            <span>
-              <BrandIcon name="team" plain />
-              {teams.length || "—"} команд
-            </span>
-            <span>
-              <BrandIcon name="terminal" plain />
-              {tasks.length || "—"} сервиса
-            </span>
-            <span>Attack–Defense</span>
-          </div>
-        </TournamentHero>
+        <div id="scoreboard-banner" hidden={!bannerVisible}>
+          <TournamentHero
+            title="Рейтинг команд"
+            subtitle="История хранит код. Будущее переписывает."
+          >
+            <div className="hero-metadata">
+              <span>
+                <BrandIcon name="team" plain />
+                {teams.length || "—"} команд
+              </span>
+              <span>
+                <BrandIcon name="terminal" plain />
+                {tasks.length || "—"} сервиса
+              </span>
+              <span>Attack–Defense</span>
+            </div>
+          </TournamentHero>
+        </div>
       )}
 
       {error && (
@@ -126,7 +147,23 @@ export function ScoreboardWidget({
             </span>
           ))}
         </div>
-
+        {!admin && (
+          <button
+            type="button"
+            className="banner-toggle"
+            aria-label={bannerVisible ? "Скрыть баннер" : "Показать баннер"}
+            title={bannerVisible ? "Скрыть баннер" : "Показать баннер"}
+            aria-expanded={bannerVisible}
+            aria-controls="scoreboard-banner"
+            onClick={toggleBanner}
+          >
+            {bannerVisible ? (
+              <ChevronUp size={18} aria-hidden="true" />
+            ) : (
+              <ChevronDown size={18} aria-hidden="true" />
+            )}
+          </button>
+        )}
       </div>
 
       <div ref={tableRef} className="scoreboard-reveal">

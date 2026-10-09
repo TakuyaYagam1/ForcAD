@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { MoveUpRight, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import SideRays from "@/components/SideRays";
@@ -147,9 +147,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Sparkles size={14} />
             Анимации {motion ? "вкл." : "выкл."}
           </button>
-          <Link to="/admin">
-            Администрирование <MoveUpRight size={13} />
-          </Link>
         </div>
       </footer>
     </div>
