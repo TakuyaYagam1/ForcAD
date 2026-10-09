@@ -32,10 +32,8 @@ def bootstrap_schedules(state: TickerState):
     game_config = storage.game.get_current_game_config()
     session = storage.sessions.get_session()
     state.session_generation = session['generation']
-    start = (
-        session.get('final_start') or session['practice_start']
-        or game_config.start_time
-    )
+    manual_start = session.get('final_start') or session['practice_start']
+    start = manual_start or game_config.start_time
     start_schedule = Schedule(
         schedule_id='start_game',
         start=start,
@@ -79,6 +77,7 @@ def sync_blitz_schedules(state: TickerState):
         return
     prefix = 'blitz_check_gets_task_'
     session = storage.sessions.get_session()
+    manual_start = session.get('final_start') or session['practice_start']
     active = {
         f'{prefix}{task.id}': task for task in storage.tasks.get_tasks()
     }
@@ -94,10 +93,7 @@ def sync_blitz_schedules(state: TickerState):
         else:
             schedule = Schedule(
                 schedule_id,
-                start=(
-                    session.get('final_start') or session['practice_start']
-                    or game_config.start_time
-                ),
+                start=manual_start or game_config.start_time,
                 func=hooks.blitz_check_gets_runner_factory(task.id),
                 interval=interval,
             )
