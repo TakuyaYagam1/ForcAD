@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowUpDown, Flag, RotateCcw } from "lucide-react";
-import { resetDemoData, simulateDemoCapture } from "./install";
+import { prepareDemoGame, resetDemoData, simulateDemoCapture } from "./install";
 import { leaveDemoMode } from "./mode";
 
 export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
@@ -18,6 +18,9 @@ export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
           <span>Данные для примера · Админка: demo / demo</span>
         </div>
         <div className="demo-panel-actions">
+          <button type="button" onClick={() => run(prepareDemoGame, "Ожидание старта по расписанию")}>
+            До старта
+          </button>
           <button
             type="button"
             onClick={() =>

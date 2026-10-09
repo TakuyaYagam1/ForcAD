@@ -58,6 +58,11 @@ class RegressionTests(unittest.TestCase):
         )
         self.redis_patch.start()
         self.addCleanup(self.redis_patch.stop)
+        session_patch = patch.object(storage.sessions, 'get_session', return_value={
+            'practice_start': None, 'reset_pending': False, 'generation': 0,
+        })
+        session_patch.start()
+        self.addCleanup(session_patch.stop)
         self.app = Flask('fixes-test')
         self.app.testing = True
         self.app.register_blueprint(admin_bp, url_prefix='/api/admin')
@@ -276,7 +281,7 @@ class RegressionTests(unittest.TestCase):
         with patch.object(storage.game, 'get_lifecycle', return_value=(3, True)), patch.object(
             storage.game,
             'get_current_game_config',
-            return_value=SimpleNamespace(round_time=60),
+            return_value=models.GameConfig(**CFG),
         ), patch(
             'lib.storage.game.time',
             SimpleNamespace(time=MagicMock(side_effect=[100, 105, 120, 140])),

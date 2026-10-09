@@ -99,6 +99,20 @@ def handle_attack(
                     result.message = str(FlagExceptionEnum.FLAG_TOO_OLD)
                     conn.commit()
                     return result
+                curs.execute(
+                    'SELECT generation, EXISTS(SELECT 1 FROM Flags WHERE id=%s) '
+                    'FROM GameSession WHERE id=1', (flag.id,),
+                )
+                result.generation, flag_exists = curs.fetchone()
+                if not flag_exists:
+                    result.submit_ok = False
+                    result.message = str(FlagExceptionEnum.FLAG_INVALID)
+                    conn.commit()
+                    with utils.redis_pipeline(transaction=False) as pipe:
+                        pipe.srem(
+                            CacheKeys.team_stolen_flags(attacker_id), flag.id,
+                        ).execute()
+                    return result
                 curs.callproc(
                     "recalculate_rating",
                     (

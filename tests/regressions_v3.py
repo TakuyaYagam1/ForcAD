@@ -103,6 +103,7 @@ class V3RegressionTests(unittest.TestCase):
             Schedule('classic_rounds', datetime.fromtimestamp(0, timezone.utc), callback),
         ])
         with patch('services.ticker.__main__.sync_blitz_schedules'), \
+                patch('services.ticker.__main__.sync_session'), \
                 patch.object(storage.game, 'finalize_finished_game'), \
                 patch.object(events, 'retry_scoreboard_refresh'), \
                 patch('services.ticker.__main__.recover_expired_jobs') as recover, \
@@ -118,6 +119,7 @@ class V3RegressionTests(unittest.TestCase):
         round_schedule = Schedule('blitz_rounds', cfg.start_time, lambda **_: None)
         state = TickerState(MagicMock(), True, [round_schedule])
         with patch.object(storage.game, 'get_current_game_config', return_value=cfg), \
+                patch.object(storage.sessions, 'get_session', return_value={'practice_start': None}), \
                 patch.object(storage.schedules, 'get_last_run', return_value=None), \
                 patch.object(storage.tasks, 'get_tasks', return_value=[task]):
             sync_blitz_schedules(state)

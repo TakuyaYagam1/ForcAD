@@ -124,22 +124,23 @@ def update_task_status(
         params['checks'] = 0
 
     with storage.utils.db_cursor(dict_cursor=True) as (conn, curs):
+        # A rehearsal reset must also wait for this result's cache publication.
+        curs.execute('SELECT id FROM GameConfig WHERE id=1 FOR SHARE')
         if not dispatch.claim_result(curs, job_id, expired_only=expired_only):
             conn.commit()
             return False
         curs.execute(_INSERT_TEAMTASKS_TO_LOG_QUERY, params)
         curs.execute(_UPDATE_TEAMTASKS_QUERY, params)
         data = curs.fetchone()
+        data['round'] = current_round
+        with storage.utils.redis_pipeline(transaction=True) as pipe:
+            pipe.xadd(
+                CacheKeys.teamtasks(team_id, task_id),
+                dict(data),
+                maxlen=50,
+                approximate=False,
+            ).execute()
         conn.commit()
-
-    data['round'] = current_round
-    with storage.utils.redis_pipeline(transaction=True) as pipe:
-        pipe.xadd(
-            CacheKeys.teamtasks(team_id, task_id),
-            dict(data),
-            maxlen=50,
-            approximate=False,
-        ).execute()
     return True
 
 

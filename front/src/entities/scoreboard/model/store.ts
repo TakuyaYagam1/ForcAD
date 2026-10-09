@@ -24,6 +24,11 @@ export interface GameStatePayload {
 }
 export interface GameRuntimeStatus {
   phase: GamePhase;
+  practice?: boolean;
+  can_start?: boolean;
+  reset_pending?: boolean;
+  generation?: number;
+  scheduled_start?: string;
   results_pending?: boolean;
   round_waiting?: boolean;
   paused_at: number | null;
@@ -52,6 +57,11 @@ interface ScoreboardState {
   phase: GameRuntimeStatus["phase"];
   roundWaiting: boolean;
   resultsPending: boolean;
+  practice: boolean;
+  canStart: boolean;
+  resetPending: boolean;
+  generation: number;
+  scheduledStart: string | null;
   pausedAt: number | null;
   pausedSeconds: number;
   runtimeRound: number | null;
@@ -121,6 +131,11 @@ export const useScoreboardStore = create<ScoreboardState>()(
     phase: "unknown",
     roundWaiting: false,
     resultsPending: false,
+    practice: false,
+    canStart: false,
+    resetPending: false,
+    generation: 0,
+    scheduledStart: null,
     pausedAt: null,
     pausedSeconds: 0,
     runtimeRound: null,
@@ -133,6 +148,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
         phase: "unknown",
         roundWaiting: false,
         resultsPending: false,
+        canStart: false,
         pausedAt: null,
         pausedSeconds: 0,
         runtimeRound: null,
@@ -143,6 +159,11 @@ export const useScoreboardStore = create<ScoreboardState>()(
         phase: runtime.phase,
         roundWaiting: runtime.round_waiting === true,
         resultsPending: runtime.results_pending === true,
+        practice: runtime.practice === true,
+        canStart: runtime.can_start === true,
+        resetPending: runtime.reset_pending === true,
+        generation: runtime.generation ?? 0,
+        scheduledStart: runtime.scheduled_start ?? null,
         pausedAt: runtime.paused_at,
         pausedSeconds: finiteNumber(runtime.paused_seconds),
         runtimeRound:

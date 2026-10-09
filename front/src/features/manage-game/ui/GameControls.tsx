@@ -12,19 +12,28 @@ import {
 import { api } from "@/shared/lib/axios";
 import { queryClient, refreshGameQueries } from "@/shared/lib/queryClient";
 
-type GameAction = "pause" | "resume" | "finish";
+type GameAction = "start" | "pause" | "resume" | "finish";
 
 export function GameControls() {
   const phase = useScoreboardStore((state) => state.phase);
-  const round = useScoreboardStore((state) => state.runtimeRound);
-  const [confirmFinish, setConfirmFinish] = useState(false);
+  const practice = useScoreboardStore((state) => state.practice);
+  const canStart = useScoreboardStore((state) => state.canStart);
+  const resetPending = useScoreboardStore((state) => state.resetPending);
+  const scheduledStart = useScoreboardStore((state) => state.scheduledStart);
+  const generation = useScoreboardStore((state) => state.generation);
+  const [earlyStart, setEarlyStart] = useState(false);
+  const [confirmationGeneration, setConfirmationGeneration] = useState(0);
+  const [confirmation, setConfirmation] = useState<"start" | "finish" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const action = phase === "paused" ? "resume" : "pause";
   const mutation = useMutation({
     mutationFn: async (next: GameAction) => (
       await api.post<GameRuntimeStatus>(`/admin/game/${next}/`,
-        next === "finish" ? { confirm: true } : {})
+        {
+          generation: next === "start" || next === "finish" ? confirmationGeneration : generation,
+          ...(next === "finish" ? { confirm: true } : {}),
+        })
     ).data,
     onMutate: async () => {
       setError(null);
@@ -33,7 +42,7 @@ export function GameControls() {
     onSuccess: (runtime) => {
       queryClient.setQueryData(["game-runtime"], runtime);
       useScoreboardStore.getState().setRuntime(runtime);
-      setConfirmFinish(false);
+      setConfirmation(null);
     },
     onError: (cause) => {
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
@@ -46,56 +55,87 @@ export function GameControls() {
     onSettled: refreshGameQueries,
     retry: false,
   });
-  const disabled = mutation.isPending || phase === "unknown" || phase === "finished";
+  const disabled = mutation.isPending || phase === "unknown" || resetPending;
+  const playing = phase === "running" || phase === "paused";
+  const staleConfirmation = confirmation !== null && confirmationGeneration !== generation;
+  const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
+  const scheduleLabel = scheduledDate?.toLocaleString("ru-RU", {
+    day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
   return (
     <section className="mb-5 rounded-lg border border-amber-200/15 p-4" aria-label="Управление игрой">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">
-          {phase === "finished"
-            ? "Игра завершена. Возобновление недоступно."
-            : phase === "paused"
-              ? "Раунды приостановлены, прием флагов закрыт. Можно продолжить игру."
-              : "Пауза временно останавливает новые раунды и прием флагов."}
-        </p>
+        <div className="max-w-xl text-sm text-muted-foreground">
+          <p>{resetPending || (practice && phase === "finished")
+            ? "Пробная игра завершена. Ждем завершения проверок и очищаем тестовые результаты."
+            : practice
+              ? "Пробная игра. После завершения ее результаты очистятся. Команды, токены и настройки сохранятся."
+              : phase === "finished"
+                ? "Игра завершена. Возобновление недоступно."
+                : canStart
+                  ? "Игра начнется по расписанию. До этого времени можно провести пробный запуск."
+                  : phase === "paused"
+                    ? "Раунды приостановлены, прием флагов закрыт. Можно продолжить игру."
+                    : "Пауза временно останавливает новые раунды и прием флагов."}</p>
+          {scheduleLabel && (canStart || practice || resetPending) && (
+            <p className="mt-1">Официальный старт: {scheduleLabel}.</p>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={disabled} onClick={() => mutation.mutate(action)}>
-            {mutation.isPending && mutation.variables !== "finish"
+          <Button variant="outline" disabled={disabled || !playing} onClick={() => mutation.mutate(action)}>
+            {mutation.isPending && (mutation.variables === "pause" || mutation.variables === "resume")
               ? <LoaderCircle className="animate-spin" />
               : phase === "paused" ? <Play /> : <Pause />}
             {phase === "paused" ? "Продолжить" : "Приостановить"}
           </Button>
-          <Button variant="destructive" disabled={disabled || !round} onClick={() => {
-            setError(null);
-            setConfirmFinish(true);
-          }}>
-            <Flag /> Завершить игру
+          <Button variant={canStart ? "default" : "destructive"}
+            className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+            disabled={disabled || (!canStart && !playing)} onClick={() => {
+              setError(null);
+              setConfirmationGeneration(generation);
+              setEarlyStart(scheduledDate !== null && scheduledDate.getTime() > Date.now());
+              setConfirmation(canStart ? "start" : "finish");
+            }}>
+            {canStart ? <Play /> : <Flag />}
+            {canStart ? "Начать игру" : "Завершить игру"}
           </Button>
         </div>
       </div>
-      {error && !confirmFinish && <p className="mt-3 text-sm text-red-300" role="alert">{error}</p>}
-      <Dialog open={confirmFinish} onOpenChange={(open) => {
-        if (!mutation.isPending) setConfirmFinish(open);
+      {error && !confirmation && <p className="mt-3 text-sm text-red-300" role="alert">{error}</p>}
+      <Dialog open={confirmation !== null} onOpenChange={(open) => {
+        if (!mutation.isPending && !open) setConfirmation(null);
       }}>
         <DialogContent onOpenAutoFocus={(event) => {
           event.preventDefault();
           cancelRef.current?.focus();
         }}>
           <DialogHeader>
-            <DialogTitle>Завершить игру?</DialogTitle>
+            <DialogTitle>{confirmation === "start"
+              ? earlyStart ? "Начать пробную игру?" : "Начать игру?"
+              : "Завершить игру?"}</DialogTitle>
             <DialogDescription>
-              Прием флагов и запуск новых раундов прекратятся. Уже отправленные
-              проверки завершатся, после чего обновится итоговый рейтинг.
-              Продолжить эту игру будет нельзя. Если нужен перерыв, используй паузу.
+              {confirmation === "start"
+                ? earlyStart
+                  ? `Проверки и прием флагов начнутся сейчас. Официальный старт остается ${scheduleLabel}. Перед ним пробная игра завершится, а ее очки, флаги и история очистятся. Команды, токены и настройки сохранятся.`
+                  : "Проверки и прием флагов начнутся сейчас. Это официальный запуск игры."
+                : practice
+                  ? "Прием флагов и новые раунды прекратятся. После завершения отправленных проверок тестовые очки, флаги и история очистятся. Борд вернется в ожидание официального старта."
+                  : "Прием флагов и запуск новых раундов прекратятся. Уже отправленные проверки завершатся, после чего обновится итоговый рейтинг. Продолжить эту игру будет нельзя. Если нужен перерыв, используй паузу."}
             </DialogDescription>
           </DialogHeader>
+          {staleConfirmation && <p className="text-sm text-amber-200" role="alert">
+            Игра уже изменилась. Закрой окно и проверь ее состояние.
+          </p>}
           {error && <p className="text-sm text-red-300" role="alert">{error}</p>}
           <DialogFooter>
             <Button ref={cancelRef} variant="outline" disabled={mutation.isPending}
-              onClick={() => setConfirmFinish(false)}>Отмена</Button>
-            <Button variant="destructive" disabled={disabled || !round}
-              onClick={() => mutation.mutate("finish")}>
+              onClick={() => setConfirmation(null)}>Отмена</Button>
+            <Button variant={confirmation === "start" ? "default" : "destructive"}
+              className={confirmation === "start" ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+              disabled={disabled || staleConfirmation || (confirmation === "start" ? !canStart : !playing)}
+              onClick={() => { if (confirmation) mutation.mutate(confirmation); }}>
               {mutation.isPending && <LoaderCircle className="animate-spin" />}
-              Завершить игру
+              {confirmation === "start" ? "Начать игру" : "Завершить игру"}
             </Button>
           </DialogFooter>
         </DialogContent>
