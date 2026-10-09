@@ -22,7 +22,7 @@ from lib.storage import dispatch, schedules
 from lib.storage.keys import CacheKeys
 from scripts.apply_fixes import main as migrate
 from services.ticker.hooks.utils import recover_expired_jobs
-from services.ticker.__main__ import bootstrap_schedules, sync_session
+from services.ticker.__main__ import bootstrap_schedules, sync_blitz_schedules, sync_session
 from services.ticker.models import TickerState
 from services.ticker.hooks import run_classic_round
 from test_runtime import team, task, verdict
@@ -290,6 +290,211 @@ class DispatchIntegrationTests(TestCase):
             storage.game.change_game_state('start')
         self.fake_redis.flushdb()
         self.assertEqual(storage.sessions.get_session()['practice_start'], session['practice_start'])
+
+    def check_manual_final_after_rehearsal(self, mode):
+        scheduled = self.prepare_scheduled_game()
+        self.set_round_limit(300)
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('UPDATE GameConfig SET mode=%s', (mode,))
+            curs.execute('SELECT id, token FROM Teams ORDER BY id')
+            teams_before = curs.fetchall()
+            conn.commit()
+        self.assertTrue(storage.game.get_runtime_status()['can_start_practice'])
+        storage.game.change_game_state('start_practice')
+        practice_generation = storage.sessions.get_session()['generation']
+        with patch.object(storage.teams, 'get_teams', return_value=[]), \
+                patch.object(storage.tasks, 'get_tasks', return_value=[]), \
+                patch.object(storage.utils.SIOManager, 'write_only'):
+            state = TickerState(MagicMock(), True)
+            bootstrap_schedules(state)
+            rehearsal = next(s for s in state.schedules if s.schedule_id == f'{mode}_rounds')
+            for r in range(5):
+                state.scheduled_at = rehearsal.start + timedelta(minutes=r)
+                self.assertTrue(rehearsal.execute(state))
+                storage.tasks.update_task_status(1, 1, r + 1, verdict())
+            self.assertEqual(storage.game.get_lifecycle(), (5, True))
+            storage.game.change_game_state('finish')
+            self.assertTrue(storage.sessions.maintain(datetime.now(timezone.utc)))
+            self.assertEqual(storage.game.get_lifecycle(), (0, False))
+            with storage.utils.db_cursor() as (_, curs):
+                curs.execute('SELECT COUNT(*) FROM TeamTasksLog')
+                self.assertEqual(curs.fetchone()[0], 0)
+
+            generation = storage.sessions.get_session()['generation']
+            with self.assertRaisesRegex(ValueError, 'session has changed'):
+                storage.game.change_game_state('start_final', generation=practice_generation)
+            storage.game.change_game_state('start_final', generation=generation)
+            session = storage.sessions.get_session()
+            self.assertIsNone(session['practice_start'])
+            self.assertLess(session['final_start'], scheduled)
+            runtime = storage.game.get_runtime_status()
+            self.assertEqual(runtime['phase'], 'running')
+            self.assertFalse(runtime['practice'])
+            self.assertFalse(runtime['can_start'])
+            self.assertFalse(runtime['can_start_practice'])
+            with self.assertRaisesRegex(ValueError, 'session has changed'):
+                storage.game.change_game_state('finish', generation=practice_generation)
+            sync_session(state, session['final_start'])
+            final = next(s for s in state.schedules if s.schedule_id == f'{mode}_rounds')
+            self.assertEqual(final.start, session['final_start'])
+            self.assertEqual(storage.game.get_db_game_config().start_time, scheduled)
+            # Persist distinct final data so accidental rehearsal cleanup is observable.
+            with storage.utils.db_cursor() as (conn, curs):
+                curs.execute("INSERT INTO Flags(flag,team_id,task_id,round,public_flag_data,private_flag_data) "
+                             "VALUES ('final-flag',2,1,1,'public','private') RETURNING id")
+                flag_id = curs.fetchone()[0]
+                curs.execute('INSERT INTO StolenFlags(flag_id,attacker_id) VALUES (%s,1)', (flag_id,))
+                curs.execute('UPDATE TeamTasks SET score=3000,stolen=1')
+                conn.commit()
+            for r in range(1, 301):
+                at = final.start + timedelta(minutes=r - 1)
+                self.assertTrue(final.should_be_called(at))
+                state.scheduled_at = at
+                self.assertTrue(final.execute(state))
+                storage.tasks.update_task_status(1, 1, r, verdict())
+                final.last_run = at
+                self.assertEqual(storage.game.get_lifecycle(), (r, True))
+            # Restart in round 300. Its entire minute must remain playable.
+            state = TickerState(MagicMock(), True)
+            bootstrap_schedules(state)
+            final = next(s for s in state.schedules if s.schedule_id == f'{mode}_rounds')
+            end = session['final_start'] + timedelta(hours=5)
+            self.assertFalse(final.should_be_called(end - timedelta(microseconds=1)))
+            self.assertTrue(final.should_be_called(end))
+            state.scheduled_at = end
+            self.assertFalse(final.execute(state))
+            storage.game.finalize_finished_game()
+            self.assertEqual(storage.game.get_cached_game_state().round, 300)
+
+            with storage.utils.db_cursor() as (_, curs):
+                curs.execute('SELECT COUNT(*) FROM TeamTasksLog')
+                history_count = curs.fetchone()[0]
+                self.assertGreater(history_count, 0)
+            # Redis loss, a migration rerun and the configured date must not erase finals.
+            self.fake_redis.flushdb()
+            migrate()
+            self.assertFalse(storage.sessions.maintain(scheduled + timedelta(days=1)))
+            restarted = TickerState(MagicMock(), False)
+            bootstrap_schedules(restarted)
+            self.assertTrue(storage.game.is_game_finished())
+            self.assertFalse(storage.game.set_game_running(True))
+            self.assertFalse(run_classic_round(restarted))
+            storage.game.finalize_finished_game()
+            self.assertEqual(storage.game.get_cached_game_state().round, 300)
+        self.assertEqual(storage.game.get_lifecycle(), (300, False))
+        self.assertEqual(storage.game.get_db_game_config().rounds, 300)
+        self.assertFalse(storage.game.get_runtime_status()['can_start'])
+        for action in ('start', 'start_practice', 'start_final', 'resume'):
+            with self.assertRaises(ValueError):
+                storage.game.change_game_state(action)
+        with storage.utils.db_cursor() as (_, curs):
+            curs.execute('SELECT id, token FROM Teams ORDER BY id')
+            self.assertEqual(curs.fetchall(), teams_before)
+            curs.execute('SELECT score, stolen FROM TeamTasks')
+            self.assertEqual(curs.fetchall(), [(3000, 1), (3000, 1)])
+            curs.execute('SELECT flag FROM Flags')
+            self.assertEqual(curs.fetchall(), [('final-flag',)])
+            curs.execute('SELECT flag_id, attacker_id FROM StolenFlags')
+            self.assertEqual(curs.fetchall(), [(flag_id, 1)])
+            curs.execute('SELECT COUNT(*) FROM TeamTasksLog')
+            self.assertEqual(curs.fetchone()[0], history_count)
+            curs.execute('SELECT COUNT(*), MAX(round) FROM DispatchRuns')
+            self.assertEqual(curs.fetchone(), (300, 300))
+
+    def test_classic_final_after_five_rehearsal_rounds_retains_300_rounds(self):
+        self.check_manual_final_after_rehearsal('classic')
+
+    def test_blitz_final_after_five_rehearsal_rounds_retains_300_rounds(self):
+        self.check_manual_final_after_rehearsal('blitz')
+
+    def test_manual_final_waits_for_rehearsal_cleanup_and_pending_results(self):
+        self.prepare_scheduled_game()
+        storage.game.change_game_state('start_practice')
+        run = self.plan_round()
+        job = dispatch.pending_jobs(run['id'])[0]
+        dispatch.mark_sent(job['id'])
+        with self.assertRaises(ValueError):
+            storage.game.change_game_state('start_final')
+        storage.game.change_game_state('pause')
+        with self.assertRaises(ValueError):
+            storage.game.change_game_state('start_final')
+        storage.game.change_game_state('finish')
+        self.assertFalse(storage.sessions.maintain(datetime.now(timezone.utc)))
+        with self.assertRaises(ValueError):
+            storage.game.change_game_state('start_final')
+        storage.tasks.update_task_status(1, job['payload']['team']['id'], 1, verdict(), job['id'])
+        with patch.object(self.fake_redis, 'scan_iter', side_effect=ConnectionError('cache unavailable')):
+            with self.assertRaises(ConnectionError):
+                storage.sessions.maintain(datetime.now(timezone.utc))
+        with self.assertRaises(ValueError):
+            storage.game.change_game_state('start_final')
+        self.assertTrue(storage.sessions.maintain(datetime.now(timezone.utc)))
+        storage.game.change_game_state('start_final')
+        self.assertEqual(self.plan_round()['round'], 1)
+
+    def test_manual_final_finished_before_first_round_stays_terminal(self):
+        scheduled = self.prepare_scheduled_game()
+        storage.game.change_game_state('start_final')
+        storage.game.change_game_state('finish')
+        self.fake_redis.flushdb()
+        self.assertTrue(storage.game.is_game_finished())
+        self.assertEqual(storage.game.get_runtime_status()['phase'], 'finished')
+        self.assertFalse(storage.game.get_runtime_status()['can_start'])
+        self.assertFalse(storage.game.set_game_running(True))
+        self.assertIsNone(self.plan_round())
+        self.assertFalse(storage.sessions.maintain(scheduled))
+        for action in ('start', 'start_practice', 'start_final', 'pause', 'resume'):
+            with self.assertRaises(ValueError):
+                storage.game.change_game_state(action)
+
+    def test_manual_final_pause_restart_and_blitz_task_keep_manual_start(self):
+        scheduled = self.prepare_scheduled_game()
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute("UPDATE GameConfig SET mode='blitz'")
+            conn.commit()
+        storage.game.change_game_state('start_final')
+        started = storage.sessions.get_session()['final_start']
+        self.plan_round()
+        with patch('lib.storage.game.time.time', return_value=started.timestamp() + 30):
+            storage.game.change_game_state('pause')
+        self.assertFalse(storage.sessions.maintain(scheduled))
+        restarted = TickerState(MagicMock(), True)
+        bootstrap_schedules(restarted)
+        self.assertTrue(all(s.start == started for s in restarted.schedules))
+        self.assertTrue(storage.game.is_game_paused())
+        with patch('lib.storage.game.time.time', return_value=started.timestamp() + 130):
+            storage.game.change_game_state('resume')
+        self.assertAlmostEqual(storage.game.get_scheduler_time(started.timestamp() + 140),
+                               started.timestamp() + 40)
+        new_task = task()
+        new_task.id = 2
+        with patch.object(storage.tasks, 'get_tasks', return_value=[new_task]):
+            sync_blitz_schedules(restarted)
+        added = next(s for s in restarted.schedules if s.schedule_id == 'blitz_check_gets_task_2')
+        self.assertEqual(added.start, started)
+
+    def test_explicit_rehearsal_cannot_silently_become_an_official_start(self):
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('UPDATE GameConfig SET game_running=FALSE')
+            conn.commit()
+        self.assertFalse(storage.game.get_runtime_status()['can_start_practice'])
+        with self.assertRaisesRegex(ValueError, 'scheduled start has arrived'):
+            storage.game.change_game_state('start_practice')
+        self.assertEqual(storage.game.get_lifecycle(), (0, False))
+        self.assertIsNone(storage.sessions.get_session()['final_start'])
+
+    def test_final_session_migration_preserves_legacy_rehearsal(self):
+        self.prepare_scheduled_game()
+        storage.game.change_game_state('start_practice')
+        self.plan_round()
+        before = storage.sessions.get_session()
+        with storage.utils.db_cursor() as (conn, curs):
+            curs.execute('ALTER TABLE GameSession DROP COLUMN final_start')
+            conn.commit()
+        migrate()
+        migrate()
+        self.assertEqual(storage.sessions.get_session(), before)
+        self.assertEqual(storage.game.get_lifecycle(), (1, True))
 
     def test_rehearsal_finish_drains_then_cleans_results_preserving_settings(self):
         self.prepare_scheduled_game()

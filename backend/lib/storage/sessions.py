@@ -1,4 +1,4 @@
-"""Early rehearsals with a durable return to the configured official start."""
+"""Durable rehearsal and final sessions with separate result retention."""
 
 from datetime import UTC, datetime
 from itertools import islice
@@ -14,19 +14,25 @@ def get_session() -> dict:
         return dict(curs.fetchone())
 
 
-def start(curs, real_round: int, running: bool) -> None:
+def start(curs, real_round: int, running: bool, *, mode: str = 'auto') -> None:
     """Called with the GameConfig row locked by the organizer control."""
-    curs.execute('SELECT practice_start, reset_pending FROM GameSession WHERE id=1')
-    practice_start, reset_pending = curs.fetchone()
-    if real_round or running or practice_start or reset_pending:
+    curs.execute(
+        'SELECT practice_start, final_start, reset_pending FROM GameSession WHERE id=1',
+    )
+    practice_start, final_start, reset_pending = curs.fetchone()
+    if real_round or running or practice_start or final_start or reset_pending:
         raise ValueError('Game cannot be started in its current state')
     curs.execute('SELECT start_time FROM GameConfig WHERE id=1')
     scheduled, = curs.fetchone()
     now = datetime.now(UTC)
-    practice_start = now if scheduled and now < scheduled else None
+    early = scheduled is not None and now < scheduled
+    if mode == 'practice' and not early:
+        raise ValueError('The scheduled start has arrived; rehearsal cannot start')
+    practice_start = now if mode != 'final' and early else None
+    final_start = now if mode == 'final' else None
     curs.execute(
-        'UPDATE GameSession SET practice_start=%s, generation=generation+1 '
-        'WHERE id=1', (practice_start,),
+        'UPDATE GameSession SET practice_start=%s, final_start=%s, '
+        'generation=generation+1 WHERE id=1', (practice_start, final_start),
     )
     curs.execute('UPDATE GameConfig SET game_running=TRUE WHERE id=1')
     utils.RedisStorage.get().delete(
@@ -55,6 +61,8 @@ def maintain(at: datetime) -> bool:
     cache outage cannot release the ticker into a half-reset game.
     """
     session = get_session()
+    if session['final_start'] is not None:
+        return False
     if not session['practice_start'] and not session['reset_pending']:
         return False
     with utils.db_cursor() as (conn, curs):
@@ -62,8 +70,16 @@ def maintain(at: datetime) -> bool:
             'SELECT start_time, game_running FROM GameConfig WHERE id=1 FOR UPDATE',
         )
         scheduled, running = curs.fetchone()
-        curs.execute('SELECT practice_start, reset_pending FROM GameSession WHERE id=1')
-        practice_start, reset_pending = curs.fetchone()
+        curs.execute(
+            'SELECT practice_start, final_start, reset_pending '
+            'FROM GameSession WHERE id=1',
+        )
+        practice_start, final_start, reset_pending = curs.fetchone()
+        # Recheck under the same lock used by manual starts. A final is never
+        # rehearsal data, including after it finishes or the scheduled date passes.
+        if final_start is not None:
+            conn.commit()
+            return False
         if practice_start and (not running or at >= scheduled):
             stop(curs)
             curs.execute('SELECT 1 FROM CheckerJobs WHERE finished_at IS NULL LIMIT 1')

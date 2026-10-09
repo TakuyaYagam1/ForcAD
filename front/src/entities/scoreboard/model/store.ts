@@ -26,6 +26,7 @@ export interface GameRuntimeStatus {
   phase: GamePhase;
   practice?: boolean;
   can_start?: boolean;
+  can_start_practice?: boolean;
   reset_pending?: boolean;
   generation?: number;
   scheduled_start?: string;
@@ -59,6 +60,7 @@ interface ScoreboardState {
   resultsPending: boolean;
   practice: boolean;
   canStart: boolean;
+  canStartPractice: boolean;
   resetPending: boolean;
   generation: number;
   scheduledStart: string | null;
@@ -133,6 +135,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
     resultsPending: false,
     practice: false,
     canStart: false,
+    canStartPractice: false,
     resetPending: false,
     generation: 0,
     scheduledStart: null,
@@ -149,6 +152,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
         roundWaiting: false,
         resultsPending: false,
         canStart: false,
+        canStartPractice: false,
         pausedAt: null,
         pausedSeconds: 0,
         runtimeRound: null,
@@ -161,6 +165,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
         resultsPending: runtime.results_pending === true,
         practice: runtime.practice === true,
         canStart: runtime.can_start === true,
+        canStartPractice: runtime.can_start_practice === true,
         resetPending: runtime.reset_pending === true,
         generation: runtime.generation ?? 0,
         scheduledStart: runtime.scheduled_start ?? null,

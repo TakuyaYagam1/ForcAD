@@ -132,8 +132,9 @@ Config file (`config.yml`) is split into five main parts:
       without starting round 301. This is five hours without pauses or checker delays.
       Pauses preserve the remaining round time; unfinished checks can delay earlier round transitions.
       At the final boundary, flag reception and new checks stop. Already sent checks can finish
-      before the final scoreboard is published. The limit also applies to rehearsals, without
-      changing the configured official start or the rehearsal cleanup behavior.
+      before the final scoreboard is published. The limit applies to scheduled games, manually
+      started finals and rehearsals. Each new session starts its round count from one;
+      rehearsals retain their cleanup behavior.
       Omit `rounds` or set it to `null` to disable this automatic limit.
 
     * `flag_lifetime` (required): flag lifetime in rounds (see [flag format](#flag-format) section). Example: `5`.
@@ -270,6 +271,39 @@ and the current lifecycle; a finished official game stays finished. Missing or n
 `rounds` removes the limit. Running `scripts.apply_fixes` without `--config` only
 updates the schema and preserves the stored limit. A limit at or below the current
 round finishes a running game at its next round boundary.
+
+### Starting a rehearsal or final from the admin page
+
+Before the scheduled start, `/admin/` offers two separate controls:
+
+* **Начать тестовую игру** starts a rehearsal. **Завершить тестовую игру**, the round
+  limit, or the configured start date ends it. After outstanding checks finish, test
+  scores, flags and history are cleared. Teams, tokens and settings are kept.
+* **Начать финал** starts the official game immediately, even when `start_time` is
+  in the future. Finish the rehearsal and wait for cleanup before starting the final.
+  The final starts at round one and uses the configured `rounds` limit independently
+  of the rehearsal. **Завершить игру** or the round limit ends the final and preserves
+  its results. A finished final cannot be resumed; use pause for a temporary break.
+
+The manual final start is stored in PostgreSQL. Restarting containers or reaching
+the configured start date does not reset or restart that final. If no final is
+started manually, the existing scheduled start still applies. The legacy
+`POST /api/admin/game/start/` retains its date-based behavior; the new controls use
+`start_practice/` and `start_final/`. The latter requires `confirm: true`, as does
+`finish/`. The UI sends the session generation to reject stale commands.
+
+For an existing installation, build the updated images and apply the additive
+session migration before recreating the services, with PostgreSQL and Redis running:
+
+```bash
+python control.py rd build
+python control.py rd run --rm --no-deps initializer python -m scripts.apply_fixes
+python control.py rd up -d
+```
+
+This migration preserves the stored configuration and all existing results. It does
+not convert a running rehearsal into a final. For a new database, initialization
+creates the required session fields automatically.
 
 ## Checkers
 

@@ -41,7 +41,7 @@ class GameControlTests(TestCase):
 
     def test_control_rejects_anonymous_requests_and_cross_origin(self):
         with patch.object(storage.game, 'change_game_state') as change:
-            for action in ('start', 'pause', 'resume', 'finish'):
+            for action in ('start', 'start_practice', 'start_final', 'pause', 'resume', 'finish'):
                 self.assertEqual(self.client.post(f'/api/admin/game/{action}/', json={'confirm': True}).status_code, 403)
             self.login()
             self.assertEqual(self.client.post('/api/admin/game/finish/', json={'confirm': True},
@@ -49,16 +49,19 @@ class GameControlTests(TestCase):
             self.assertEqual(self.client.get('/api/admin/game/finish/').status_code, 405)
             change.assert_not_called()
 
-    def test_finish_requires_explicit_boolean_confirmation(self):
+    def test_final_start_and_finish_require_explicit_boolean_confirmation(self):
         self.login()
         with patch.object(storage.game, 'change_game_state') as change:
-            for body in ({}, {'confirm': False}, {'confirm': 'true'}, {'confirm': 1}, []):
-                self.assertEqual(self.client.post('/api/admin/game/finish/', json=body).status_code, 400)
+            for action in ('finish', 'start_final'):
+                for body in ({}, {'confirm': False}, {'confirm': 'true'}, {'confirm': 1}, []):
+                    self.assertEqual(self.client.post(f'/api/admin/game/{action}/', json=body).status_code, 400)
             change.assert_not_called()
 
     def test_actions_return_authoritative_state(self):
         self.login()
-        for action, phase in (('start', 'running'), ('pause', 'paused'), ('resume', 'running'), ('finish', 'finished')):
+        for action, phase in (('start', 'running'), ('start_practice', 'running'),
+                              ('start_final', 'running'), ('pause', 'paused'),
+                              ('resume', 'running'), ('finish', 'finished')):
             with self.subTest(action=action), patch.object(storage.game, 'change_game_state') as change, \
                     patch.object(storage.game, 'get_runtime_status', return_value={'phase': phase}), \
                     patch.object(events, 'refresh_scoreboard_after_commit') as refresh:
@@ -76,10 +79,11 @@ class GameControlTests(TestCase):
     def test_controls_pass_session_generation_and_reject_invalid_values(self):
         self.login()
         with patch.object(storage.game, 'change_game_state', side_effect=ValueError('Game session has changed')) as change:
-            response = self.client.post('/api/admin/game/finish/', json={'confirm': True, 'generation': 7})
-            self.assertEqual(response.status_code, 409)
-            change.assert_called_once_with('finish', generation=7)
-            change.reset_mock()
+            for action in ('finish', 'start_final', 'start_practice'):
+                response = self.client.post(f'/api/admin/game/{action}/', json={'confirm': True, 'generation': 7})
+                self.assertEqual(response.status_code, 409)
+                change.assert_called_once_with(action, generation=7)
+                change.reset_mock()
             for value in (True, '7', 7.5, []):
                 response = self.client.post('/api/admin/game/start/', json={'generation': value})
                 self.assertEqual(response.status_code, 400)
