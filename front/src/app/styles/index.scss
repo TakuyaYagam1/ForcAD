@@ -2156,6 +2156,16 @@ html[data-motion="off"] *::after {
   transition-duration: 0.01ms !important;
 }
 
+/* Off-screen decorative regions keep their frame but stop compositor work. */
+[data-viewport-animation="paused"],
+[data-viewport-animation="paused"] *,
+[data-viewport-animation="paused"]::before,
+[data-viewport-animation="paused"]::after,
+[data-viewport-animation="paused"] *::before,
+[data-viewport-animation="paused"] *::after {
+  animation-play-state: paused !important;
+}
+
 .demo-panel {
   border-bottom: 1px solid #dbbb8233;
   background: #111b28;

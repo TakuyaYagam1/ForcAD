@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ArrowUpRight } from "lucide-react";
 import { AppShell } from "@/shared/ui/layout/AppShell";
@@ -9,6 +9,7 @@ import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import type { Team } from "@/entities/team/model/types";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import "./TeamsPage.css";
 
 function TeamCard({ team, rank }: { team: Team; rank: number }) {
@@ -20,6 +21,9 @@ function TeamCard({ team, rank }: { team: Team; rank: number }) {
       className={`team-card ${medal ? "team-card--medallion" : ""}`}
       data-rank={rank}
     >
+      {rank === 1 && (
+        <span className="leader-highlight-particles" aria-hidden="true" />
+      )}
       {medal ? (
         <>
           <div className="team-medallion">
@@ -59,6 +63,7 @@ function TeamCard({ team, rank }: { team: Team; rank: number }) {
 }
 
 export function TeamsPage() {
+  const leadersRef = useRef<HTMLElement>(null);
   const teams = useScoreboardStore((state) => state.teams) ?? [];
   const [filter, setFilter] = useState("");
   const query = filter.trim().toLocaleLowerCase("ru-RU");
@@ -71,6 +76,7 @@ export function TeamsPage() {
 
   const leaders = filtered.filter(({ rank }) => rank <= 3);
   const others = filtered.filter(({ rank }) => rank > 3);
+  useViewportAnimations(leadersRef, leaders.length > 0);
 
   return (
     <AppShell>
@@ -107,6 +113,8 @@ export function TeamsPage() {
           <>
             {leaders.length > 0 && (
               <section
+                ref={leadersRef}
+                data-viewport-animation="running"
                 className="teams-leaders"
                 aria-labelledby="teams-leaders-title"
               >

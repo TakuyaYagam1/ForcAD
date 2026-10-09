@@ -1,5 +1,5 @@
 import { groupHistoryByRound } from "@/entities/team-scoreboard/model/history";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, AlertCircle } from "lucide-react";
@@ -18,10 +18,13 @@ import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
 import { HeroArt } from "@/shared/ui/brand/TournamentHero";
 import type { Task } from "@/entities/task/model/types";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 
 const EMPTY_TASKS: Task[] = [];
 
 export function TeamScoreboardView() {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const emblemRef = useRef<HTMLDivElement>(null);
   const [expandedHistory, setExpandedHistory] = useState(false);
   const { teamId: rawTeamId } = useParams();
   const teamId = Number(rawTeamId);
@@ -32,6 +35,9 @@ export function TeamScoreboardView() {
   const current = useScoreboardStore((state) => state.teamTasks) ?? [];
 
   const team = teams?.find((item) => item.id === teamId);
+  useViewportAnimations(heroRef, team?.id);
+  useViewportAnimations(emblemRef, team?.id);
+
   const values = current.filter((item) => item.teamId === teamId);
   const place = teams?.findIndex((item) => item.id === teamId);
 
@@ -89,7 +95,14 @@ export function TeamScoreboardView() {
 
   return (
     <div className="team-page">
-      <div className="team-hero">
+      <div
+        ref={heroRef}
+        className="team-hero"
+        data-viewport-animation="running"
+      >
+        {place === 0 && (
+          <span className="leader-highlight-particles" aria-hidden="true" />
+        )}
         <Link to="/" className="back-link">
           <ArrowLeft size={18} />К рейтингу
         </Link>
@@ -324,7 +337,12 @@ export function TeamScoreboardView() {
         <aside className="team-content-aside" aria-label="События команды">
           <RecentEvents teamId={teamId} />
 
-          <div className="team-emblem" aria-hidden="true">
+          <div
+            ref={emblemRef}
+            className="team-emblem"
+            data-viewport-animation="running"
+            aria-hidden="true"
+          >
             <ClockworkDial />
             <img src="/brand/mechanism.webp" alt="" />
             <BrandIcon name="shield" />

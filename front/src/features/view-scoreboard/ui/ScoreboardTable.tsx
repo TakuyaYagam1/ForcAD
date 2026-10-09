@@ -6,6 +6,7 @@ import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import "./ScoreboardTable.css";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 
 export interface ScoreboardTeam {
   id: number;
@@ -65,6 +66,7 @@ export function ScoreboardTable({
   );
   const ranks = new Map(teams.map((team, index) => [team.id, index + 1]));
   const leaderVisible = visible.some((team) => ranks.get(team.id) === 1);
+  useViewportAnimations(frameRef, visible.length > 0);
 
   const cells = useMemo(
     () =>
@@ -183,6 +185,7 @@ export function ScoreboardTable({
   return (
     <div
       ref={frameRef}
+      data-viewport-animation="running"
       className={`table-frame ${leaderVisible ? "has-leader" : ""}`}
     >
       {leaderVisible && <div className="leader-particles" aria-hidden="true" />}
