@@ -1,11 +1,21 @@
 """Non-destructive schema update for an already initialized ForcAD database."""
 
+import argparse
 from pathlib import Path
 
+import yaml
+
+from lib.models.game_config import validate_rounds
 from lib.storage import utils
+from lib.storage.keys import CacheKeys
 
 
-def main():
+def main(*, config_path: Path | None = None):
+    # Opt in to applying only the round limit from an existing configuration.
+    # Never reload start_time, credentials, teams or scores during a migration.
+    if config_path is not None:
+        with config_path.open() as stream:
+            rounds = validate_rounds(yaml.safe_load(stream)['game'].get('rounds'))
     with utils.db_cursor() as (conn, cursor):
         cursor.execute('SELECT game_hardness FROM GameConfig WHERE id=1')
         row = cursor.fetchone()
@@ -81,6 +91,8 @@ def main():
             ALTER TABLE GameConfig
                 ADD CONSTRAINT gameconfig_game_hardness_check
                 CHECK (game_hardness > 1 AND game_hardness < 'Infinity'::float8);
+            ALTER TABLE GameConfig
+                ADD COLUMN IF NOT EXISTS rounds INTEGER CHECK (rounds > 0);
             ALTER TABLE Teams ALTER COLUMN ip TYPE VARCHAR(45);
             ALTER TABLE Teams
                 ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255) DEFAULT '';
@@ -121,7 +133,12 @@ def main():
         cursor.execute(Path(__file__).with_name('create_dispatch.sql').read_text())
         cursor.execute(Path(__file__).with_name('create_sessions.sql').read_text())
         cursor.execute(Path(__file__).with_name('create_functions.sql').read_text())
+        if config_path is not None:
+            cursor.execute('UPDATE GameConfig SET rounds=%s WHERE id=1', (rounds,))
         conn.commit()
+    if config_path is not None:
+        utils.RedisStorage.get().delete(CacheKeys.game_config())
+        print(f'Round limit: {rounds if rounds is not None else "unlimited"}.')
     print(
         'Schema updated. Existing teams, scores and history retained. '
         'Team tokens were validated without modification.'
@@ -129,4 +146,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--config', type=Path,
+        help='Apply game.rounds from this YAML file; missing/null means unlimited',
+    )
+    args = parser.parse_args()
+    main(config_path=args.config)

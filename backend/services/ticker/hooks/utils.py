@@ -87,7 +87,7 @@ def dispatch_jobs(state, schedule_id, submit, *, advances_round=False,
         advances_round=advances_round, puts_only=puts_only,
     )
     if run is None:
-        if advances_round:
+        if advances_round and not storage.game.is_game_paused():
             storage.utils.RedisStorage.get().set('game:round_waiting', 1)
         return False
     if advances_round:

@@ -41,6 +41,7 @@ class StoragesConfig(BaseModel):
 class GameConfig(BaseModel):
     flag_lifetime: int
     round_time: int
+    rounds: Optional[int] = Field(default=None, strict=True, gt=0, le=2147483647)
     start_time: datetime
 
     timezone: str = 'UTC'
