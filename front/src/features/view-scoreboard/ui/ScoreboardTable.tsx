@@ -111,6 +111,7 @@ export function ScoreboardTable({
         "--glint-delay",
         `${80 + Math.min(index, 6) * 25}ms`,
       );
+      row.style.setProperty("--glint-travel", `${row.offsetWidth + 150}px`);
 
       row.classList.remove("is-sweeping");
       void row.offsetWidth;
