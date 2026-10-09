@@ -12,18 +12,19 @@ import {
 import { api } from "@/shared/lib/axios";
 import { queryClient, refreshGameQueries } from "@/shared/lib/queryClient";
 
-type GameAction = "start" | "pause" | "resume" | "finish";
+type ConfirmedAction = "start_practice" | "start_final" | "finish";
+type GameAction = ConfirmedAction | "pause" | "resume";
 
 export function GameControls() {
   const phase = useScoreboardStore((state) => state.phase);
   const practice = useScoreboardStore((state) => state.practice);
   const canStart = useScoreboardStore((state) => state.canStart);
+  const canStartPractice = useScoreboardStore((state) => state.canStartPractice);
   const resetPending = useScoreboardStore((state) => state.resetPending);
   const scheduledStart = useScoreboardStore((state) => state.scheduledStart);
   const generation = useScoreboardStore((state) => state.generation);
-  const [earlyStart, setEarlyStart] = useState(false);
   const [confirmationGeneration, setConfirmationGeneration] = useState(0);
-  const [confirmation, setConfirmation] = useState<"start" | "finish" | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmedAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const action = phase === "paused" ? "resume" : "pause";
@@ -31,8 +32,8 @@ export function GameControls() {
     mutationFn: async (next: GameAction) => (
       await api.post<GameRuntimeStatus>(`/admin/game/${next}/`,
         {
-          generation: next === "start" || next === "finish" ? confirmationGeneration : generation,
-          ...(next === "finish" ? { confirm: true } : {}),
+          generation: next === "pause" || next === "resume" ? generation : confirmationGeneration,
+          ...(next === "finish" || next === "start_final" ? { confirm: true } : {}),
         })
     ).data,
     onMutate: async () => {
@@ -58,6 +59,15 @@ export function GameControls() {
   const disabled = mutation.isPending || phase === "unknown" || resetPending;
   const playing = phase === "running" || phase === "paused";
   const staleConfirmation = confirmation !== null && confirmationGeneration !== generation;
+  const starting = confirmation === "start_practice" || confirmation === "start_final";
+  const finishLabel = practice ? "Завершить тестовую игру" : "Завершить игру";
+  const confirmLabel = confirmation === "start_practice" ? "Начать тестовую игру"
+    : confirmation === "start_final" ? "Начать финал" : finishLabel;
+  const openConfirmation = (next: ConfirmedAction) => {
+    setError(null);
+    setConfirmationGeneration(generation);
+    setConfirmation(next);
+  };
   const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
   const scheduleLabel = scheduledDate?.toLocaleString("ru-RU", {
     day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZoneName: "short",
@@ -71,14 +81,14 @@ export function GameControls() {
             : practice
               ? "Пробная игра. После завершения ее результаты очистятся. Команды, токены и настройки сохранятся."
               : phase === "finished"
-                ? "Игра завершена. Возобновление недоступно."
+                ? "Финал завершен. Результаты сохранены. Возобновление недоступно."
                 : canStart
-                  ? "Игра начнется по расписанию. До этого времени можно провести пробный запуск."
+                  ? "Можно начать финал сейчас. Его результаты сохранятся после завершения."
                   : phase === "paused"
                     ? "Раунды приостановлены, прием флагов закрыт. Можно продолжить игру."
                     : "Пауза временно останавливает новые раунды и прием флагов."}</p>
           {scheduleLabel && (canStart || practice || resetPending) && (
-            <p className="mt-1">Официальный старт: {scheduleLabel}.</p>
+            <p className="mt-1">Старт по расписанию: {scheduleLabel}.</p>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -88,16 +98,18 @@ export function GameControls() {
               : phase === "paused" ? <Play /> : <Pause />}
             {phase === "paused" ? "Продолжить" : "Приостановить"}
           </Button>
+          {canStart && canStartPractice && (
+            <Button variant="outline" disabled={disabled}
+              onClick={() => openConfirmation("start_practice")}>
+              <Play /> Начать тестовую игру
+            </Button>
+          )}
           <Button variant={canStart ? "default" : "destructive"}
             className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
-            disabled={disabled || (!canStart && !playing)} onClick={() => {
-              setError(null);
-              setConfirmationGeneration(generation);
-              setEarlyStart(scheduledDate !== null && scheduledDate.getTime() > Date.now());
-              setConfirmation(canStart ? "start" : "finish");
-            }}>
+            disabled={disabled || (!canStart && !playing)}
+            onClick={() => openConfirmation(canStart ? "start_final" : "finish")}>
             {canStart ? <Play /> : <Flag />}
-            {canStart ? "Начать игру" : "Завершить игру"}
+            {canStart ? "Начать финал" : finishLabel}
           </Button>
         </div>
       </div>
@@ -110,17 +122,15 @@ export function GameControls() {
           cancelRef.current?.focus();
         }}>
           <DialogHeader>
-            <DialogTitle>{confirmation === "start"
-              ? earlyStart ? "Начать пробную игру?" : "Начать игру?"
-              : "Завершить игру?"}</DialogTitle>
+            <DialogTitle>{confirmLabel}?</DialogTitle>
             <DialogDescription>
-              {confirmation === "start"
-                ? earlyStart
-                  ? `Проверки и прием флагов начнутся сейчас. Официальный старт остается ${scheduleLabel}. Перед ним пробная игра завершится, а ее очки, флаги и история очистятся. Команды, токены и настройки сохранятся.`
-                  : "Проверки и прием флагов начнутся сейчас. Это официальный запуск игры."
+              {confirmation === "start_practice"
+                ? `Проверки и прием флагов начнутся сейчас. Старт по расписанию остается ${scheduleLabel}. После завершения теста или при наступлении этой даты тестовые очки, флаги и история очистятся. Команды, токены и настройки сохранятся.`
+                : confirmation === "start_final"
+                  ? "Официальная игра начнется сейчас с первого раунда. Лимит раундов из config.yml действует и при ручном старте. После завершения очки, флаги и история сохранятся. Дата старта из config.yml больше не перезапустит эту игру. Завершенный финал возобновить нельзя."
                 : practice
                   ? "Прием флагов и новые раунды прекратятся. После завершения отправленных проверок тестовые очки, флаги и история очистятся. Борд вернется в ожидание официального старта."
-                  : "Прием флагов и запуск новых раундов прекратятся. Уже отправленные проверки завершатся, после чего обновится итоговый рейтинг. Продолжить эту игру будет нельзя. Если нужен перерыв, используй паузу."}
+                  : "Прием флагов и запуск новых раундов прекратятся. Уже отправленные проверки завершатся, после чего обновится итоговый рейтинг. Очки, флаги и история сохранятся. Продолжить эту игру будет нельзя. Если нужен перерыв, используй паузу."}
             </DialogDescription>
           </DialogHeader>
           {staleConfirmation && <p className="text-sm text-amber-200" role="alert">
@@ -130,12 +140,13 @@ export function GameControls() {
           <DialogFooter>
             <Button ref={cancelRef} variant="outline" disabled={mutation.isPending}
               onClick={() => setConfirmation(null)}>Отмена</Button>
-            <Button variant={confirmation === "start" ? "default" : "destructive"}
-              className={confirmation === "start" ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
-              disabled={disabled || staleConfirmation || (confirmation === "start" ? !canStart : !playing)}
+            <Button variant={starting ? "default" : "destructive"}
+              className={starting ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+              disabled={disabled || staleConfirmation || (starting ? !canStart : !playing)
+                || (confirmation === "start_practice" && !canStartPractice)}
               onClick={() => { if (confirmation) mutation.mutate(confirmation); }}>
               {mutation.isPending && <LoaderCircle className="animate-spin" />}
-              {confirmation === "start" ? "Начать игру" : "Завершить игру"}
+              {confirmLabel}
             </Button>
           </DialogFooter>
         </DialogContent>

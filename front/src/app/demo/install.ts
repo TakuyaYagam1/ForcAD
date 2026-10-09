@@ -40,6 +40,7 @@ function getRuntime(): GameRuntimeStatus {
     practice,
     generation,
     can_start: phase === "waiting",
+    can_start_practice: phase === "waiting" && new Date(scheduledStart).getTime() > Date.now(),
     reset_pending: false,
     scheduled_start: scheduledStart,
     paused_at: pausedAt,
@@ -338,16 +339,21 @@ const demoAdapter: AxiosAdapter = async (config) => {
   if (path.startsWith("/admin/") && !loggedIn)
     fail(config, 403, "No active demo session");
 
-  const gameAction = path.match(/^\/admin\/game\/(start|pause|resume|finish)$/)?.[1];
+  const gameAction = path.match(/^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/)?.[1];
   if (gameAction) {
     if (method !== "POST") fail(config, 405, "Game controls require POST");
-    if (gameAction === "finish" && body.confirm !== true)
-      fail(config, 400, "Game finish confirmation is required");
+    if ((gameAction === "finish" || gameAction === "start_final") && body.confirm !== true)
+      fail(config, 400, "Game action confirmation is required");
+    if (body.generation !== undefined && body.generation !== generation)
+      fail(config, 409, "Game session has changed");
     if (phase === "finished" && gameAction !== "finish")
       fail(config, 409, "Game has already finished");
-    if (gameAction === "start") {
+    if (gameAction === "start" || gameAction === "start_practice" || gameAction === "start_final") {
       if (phase !== "waiting") fail(config, 409, "Game cannot be started in its current state");
-      practice = new Date(scheduledStart).getTime() > Date.now();
+      const early = new Date(scheduledStart).getTime() > Date.now();
+      if (gameAction === "start_practice" && !early)
+        fail(config, 409, "The scheduled start has arrived; rehearsal cannot start");
+      practice = gameAction !== "start_final" && early;
       generation += 1;
       phase = "running";
       roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
