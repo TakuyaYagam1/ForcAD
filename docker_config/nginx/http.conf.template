@@ -93,6 +93,12 @@ server {
         include /etc/nginx/api_limits.conf;
     }
 
+    location = /team-logos/molotok.jpg {
+        root /var/www/front;
+        try_files $uri /team-logos/mock_molotok.jpg =404;
+        add_header Cache-Control "no-cache";
+    }
+
     location ^~ /team-logos/ {
         alias /var/www/front/team-logos/;
         autoindex off;

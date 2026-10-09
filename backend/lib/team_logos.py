@@ -9,7 +9,7 @@ TEAM_LOGOS = {
     'baba is win': '/team-logos/baba-is-win.jpg',
     'trippy troppy': '/team-logos/trippy-troppy.png',
     'caplag': '/team-logos/caplag.jpg',
-    'f.society': '/team-logos/f-society.jpg',
+    'молоток': '/team-logos/molotok.jpg',
     'ibeee': '/team-logos/ibeee.jpg',
     '.dot': '/team-logos/dot.png',
     'segfault': '/team-logos/segfault.png',
