@@ -95,16 +95,19 @@ def get_db_game_config() -> models.GameConfig:
 
 
 def get_current_game_config() -> models.GameConfig:
-    """Get game config from cache is cached, cache it otherwise."""
-    with utils.redis_pipeline(transaction=True) as pipe:
-        cache_helper(
-            pipeline=pipe,
-            cache_key=CacheKeys.game_config(),
-            cache_func=caching.cache_game_config,
-            cache_args=(pipe,),
-        )
+    """Read cached config directly; coordinate only cache initialization."""
+    key = CacheKeys.game_config()
+    result = utils.RedisStorage.get().get(key)
+    if result is None:
+        with utils.redis_pipeline(transaction=True) as pipe:
+            cache_helper(
+                pipeline=pipe,
+                cache_key=key,
+                cache_func=caching.cache_game_config,
+                cache_args=(pipe,),
+            )
 
-        (result,) = pipe.get(CacheKeys.game_config()).execute()
+            (result,) = pipe.get(key).execute()
 
     game_config = models.GameConfig.from_json(result)
     return game_config

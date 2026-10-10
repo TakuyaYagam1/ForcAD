@@ -31,11 +31,9 @@ def try_add_stolen_flag(flag: models.Flag, attacker: int, current_round: int) ->
     :param current_round: current round
     """
     stolen_key = CacheKeys.team_stolen_flags(attacker)
-    with utils.redis_pipeline(transaction=True) as pipe:
-        # optimization of redis request count
-        (cached_stolen,) = pipe.exists(stolen_key).execute()
-
-        if not cached_stolen:
+    redis = utils.RedisStorage.get()
+    if not redis.exists(stolen_key):
+        with utils.redis_pipeline(transaction=True) as pipe:
             cache_helper(
                 pipeline=pipe,
                 cache_key=stolen_key,
@@ -43,8 +41,8 @@ def try_add_stolen_flag(flag: models.Flag, attacker: int, current_round: int) ->
                 cache_args=(attacker, current_round, pipe),
             )
 
-        (is_new,) = pipe.sadd(stolen_key, flag.id).execute()
-    return bool(is_new)
+    # SADD itself is atomic; a one-command MULTI/EXEC adds no protection.
+    return bool(redis.sadd(stolen_key, flag.id))
 
 
 def add_flag(flag: models.Flag, job_id: str | None = None) -> models.Flag | None:
@@ -95,9 +93,10 @@ def get_flag_by_field(
     :returns: Flag model instance with flag.field_name == field_value or None
     """
     cached_key = CacheKeys.flags_cached()
-    with utils.redis_pipeline(transaction=True) as pipe:
-        (cached,) = pipe.exists(cached_key).execute()
-        if not cached:
+    flag_key = CacheKeys.flag_by_field(name, value)
+    cached, flag_json = utils.RedisStorage.get().mget(cached_key, flag_key)
+    if cached is None:
+        with utils.redis_pipeline(transaction=True) as pipe:
             cache_helper(
                 pipeline=pipe,
                 cache_key=cached_key,
@@ -105,7 +104,7 @@ def get_flag_by_field(
                 cache_args=(current_round, pipe),
             )
 
-        (flag_json,) = pipe.get(CacheKeys.flag_by_field(name, value)).execute()
+            (flag_json,) = pipe.get(flag_key).execute()
 
     if not flag_json:
         queries = {
