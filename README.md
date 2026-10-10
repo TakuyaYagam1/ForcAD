@@ -100,6 +100,25 @@ services remain stopped for diagnosis. Storage connection retries and SQL execut
 
 ## Configuration and usage
 
+### Scoreboard connections
+
+The scoreboard and live feed share one Socket.IO transport per browser tab.
+The threaded `events` service holds a request thread for each WebSocket, so keep
+spare threads for handshakes and HTTP polling. It defaults to 300 request threads
+and a PID limit of 2048, including helper threads. This is not a guaranteed user
+capacity: multiple tabs, polling clients, memory and proxy limits also matter.
+
+Set `FORCAD_EVENTS_THREADS` to tune only `events`. If unset, it uses the existing
+`FORCAD_HTTP_THREADS` override, then 300. Other HTTP services still default to 100.
+`FORCAD_EVENTS_PIDS` overrides the events PID limit. Keep one Gunicorn worker;
+additional workers require a load balancer with session affinity.
+
+Existing installations use the generated `docker-compose-base.yml`. Update its
+`events` environment and PID limit too, then recreate only that service with
+`python control.py rd up -d --no-deps --force-recreate events`. This reconnects
+scoreboard clients without resetting game data. Frontend changes require rebuilding
+the Nginx image and reloading browser tabs.
+
 ### Receiving flags
 
 Teams are identified by tokens. Set `teams[].token` to reuse a token after a full reset, or omit it to generate a
