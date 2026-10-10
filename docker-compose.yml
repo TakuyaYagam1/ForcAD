@@ -199,7 +199,7 @@ services:
     depends_on:
       postgres-data:
         condition: service_completed_successfully
-    command: "postgres --max-connections=200"
+    command: "postgres --max-connections=1000"
     ports:
       - "127.0.0.1:5432:5432"
       - "127.0.0.1:6432:5432"
