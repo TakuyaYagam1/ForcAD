@@ -6,7 +6,6 @@ TEAM_LOGOS = {
     # This team's proper name is Cyrillic, matching the configured team name.
     'сборная г. москва': '/team-logos/moscow.jpg',  # noqa: RUF001
     'w0lv3s_ctf': '/team-logos/w0lv3s-ctf.jpg',
-    'baba is win': '/team-logos/baba-is-win.jpg',
     'trippy troppy': '/team-logos/trippy-troppy.png',
     'caplag': '/team-logos/caplag.jpg',
     'молоток': '/team-logos/molotok.jpg',

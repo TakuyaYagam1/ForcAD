@@ -3,7 +3,6 @@ export const demoTeams = [
   { name: "daywave.", logo: "daywave.jpg" },
   { name: "Сборная г. Москва", logo: "moscow.jpg" },
   { name: "W0LV3S_CTF", logo: "w0lv3s-ctf.jpg" },
-  { name: "Baba Is Win", logo: "baba-is-win.jpg" },
   { name: "Trippy Troppy", logo: "trippy-troppy.png" },
   { name: "Caplag", logo: "caplag.jpg" },
   { name: "Молоток", logo: "molotok.jpg" },
