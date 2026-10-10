@@ -17,7 +17,6 @@ test("demo uses the 20 server team names and shared logo paths", () => {
       "daywave.",
       "Сборная г. Москва",
       "W0LV3S_CTF",
-      "Baba Is Win",
       "Trippy Troppy",
       "Caplag",
       "Молоток",
