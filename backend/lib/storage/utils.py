@@ -1,4 +1,5 @@
 import json
+import os
 from contextlib import contextmanager
 from threading import BoundedSemaphore, Lock
 
@@ -39,8 +40,11 @@ class DBPool(Singleton[ConnectionPool]):
     @staticmethod
     def create() -> ConnectionPool:
         database_config = config.get_db_config()
+        # psycopg2 closes returned connections once minconn idle slots are full.
+        # Keep the receiver's bounded pool warm between concurrent flag batches.
+        minconn = 20 if os.getenv('SERVICE') == 'http_receiver' else 1
         return ConnectionPool(
-            minconn=1,
+            minconn=minconn,
             maxconn=20,
             **database_config.model_dump(),
         )
