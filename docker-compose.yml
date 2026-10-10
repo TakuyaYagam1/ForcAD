@@ -131,6 +131,7 @@ services:
 
   http-receiver:
     <<: *default-ms
+    mem_limit: "16g"
     environment:
       TEST: "${TEST:-}"
       SERVICE: http_receiver

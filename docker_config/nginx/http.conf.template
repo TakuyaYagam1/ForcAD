@@ -1,5 +1,6 @@
 limit_conn_zone $binary_remote_addr zone=http_ip_conn:16m;
-limit_req_zone $http_x_team_token zone=token_limit:64m rate=2r/s;
+limit_req_zone $http_x_team_token zone=token_limit:64m rate=120r/s;
+limit_req_zone $binary_remote_addr zone=flags_ip_limit:10m rate=120r/s;
 limit_req_zone $binary_remote_addr zone=api_ip_limit:10m rate=30r/s;
 limit_req_log_level info;
 limit_req_status 429;
@@ -63,13 +64,16 @@ server {
         include proxy_params;
 
         client_max_body_size 10K;
-        include /etc/nginx/api_limits.conf;
+        if ($reject_api_content_encoding) {
+            return 415;
+        }
 
-        limit_conn http_ip_conn 10;
+        limit_conn http_ip_conn 120;
         limit_conn_log_level info;
         limit_conn_status 429;
 
-        limit_req zone=token_limit;
+        limit_req zone=flags_ip_limit burst=120 nodelay;
+        limit_req zone=token_limit burst=120 nodelay;
     }
 
     location /api/http-receiver {
