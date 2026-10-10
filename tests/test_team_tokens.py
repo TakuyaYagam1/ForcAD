@@ -233,7 +233,7 @@ class TeamTokenInitializationTestCase(TestCase):
             self.assertEqual(call.args[1]['logo_path'], team.logo_path)
 
     def test_team_logo_fallback_uses_name_and_unknown_is_empty(self):
-        self.assertEqual(len(TEAM_LOGOS), 20)
+        self.assertEqual(len(TEAM_LOGOS), 19)
         for name, logo_path in TEAM_LOGOS.items():
             with self.subTest(name=name):
                 team = Team(
