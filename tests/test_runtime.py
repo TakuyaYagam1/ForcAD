@@ -220,10 +220,10 @@ class RuntimeTests(TestCase):
         sent.assert_called_once_with('first')
         finished.assert_not_called()
 
-    def test_all_twenty_team_logos_resolve_and_custom_logos_are_preserved(self):
+    def test_all_team_logos_resolve_and_custom_logos_are_preserved(self):
         directory = Path(__file__).resolve().parents[1] / 'teams_logo'
-        self.assertEqual(len(TEAM_LOGOS), 20)
-        self.assertEqual(len(set(TEAM_LOGOS.values())), 20)
+        self.assertEqual(len(TEAM_LOGOS), 19)
+        self.assertEqual(len(set(TEAM_LOGOS.values())), 19)
         for name, path in TEAM_LOGOS.items():
             with self.subTest(name=name):
                 item = team()

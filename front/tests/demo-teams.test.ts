@@ -6,10 +6,10 @@ import { createDemoTeams } from "../src/app/demo/data.ts";
 import { demoTeams } from "../src/app/demo/teamLogos.ts";
 import { resolveTeamLogoPath } from "../viteTeamLogos.ts";
 
-test("demo uses the 20 server team names and shared logo paths", () => {
+test("demo uses the server team names and shared logo paths", () => {
   const teams = createDemoTeams();
 
-  assert.equal(teams.length, 20);
+  assert.equal(teams.length, 19);
   assert.deepEqual(
     teams.map(({ name }) => name),
     [
