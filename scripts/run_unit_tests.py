@@ -10,6 +10,7 @@ OFFLINE_PATTERNS = (
     'test_checker_limits.py',
     'test_cleanup.py',
     'test_db_pool.py',
+    'test_flag_cache.py',
     'test_game_control.py',
     'test_round_limits.py',
     'test_request_limits.py',
