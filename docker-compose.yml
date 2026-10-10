@@ -122,11 +122,12 @@ services:
 
   events:
     <<: *default-ms
-    pids_limit: ${FORCAD_EVENTS_PIDS:-1024}
+    # Threaded WebSockets also allocate reader, writer and heartbeat threads.
+    pids_limit: ${FORCAD_EVENTS_PIDS:-2048}
     environment:
       TEST: "${TEST:-}"
       SERVICE: events
-      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+      FORCAD_HTTP_THREADS: "${FORCAD_EVENTS_THREADS:-${FORCAD_HTTP_THREADS:-300}}"
 
   http-receiver:
     <<: *default-ms

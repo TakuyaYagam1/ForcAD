@@ -4,10 +4,10 @@ import { SERVER_URL } from "@/app/config";
 let gameEventsSocket: Socket | null = null;
 let liveEventsSocket: Socket | null = null;
 
+// Both namespaces share one transport, leaving server threads for new clients.
 export function getGameEventsSocket(): Socket {
   if (!gameEventsSocket) {
     gameEventsSocket = io(`${SERVER_URL}/game_events`, {
-      forceNew: true,
       transports: ["polling", "websocket"],
     });
   }
@@ -17,7 +17,6 @@ export function getGameEventsSocket(): Socket {
 export function getLiveEventsSocket(): Socket {
   if (!liveEventsSocket) {
     liveEventsSocket = io(`${SERVER_URL}/live_events`, {
-      forceNew: true,
       transports: ["polling", "websocket"],
     });
   }
