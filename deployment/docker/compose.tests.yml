@@ -1,0 +1,45 @@
+name: forcad
+
+services:
+  celery:
+    restart: "no"
+
+  flower:
+    restart: "no"
+
+  initializer:
+    restart: "no"
+
+  ticker:
+    restart: "no"
+
+  client-api:
+    restart: "no"
+
+  admin-api:
+    restart: "no"
+
+  events:
+    restart: "no"
+
+  http-receiver:
+    restart: "no"
+
+  nginx:
+    restart: "no"
+
+  redis:
+    restart: "no"
+
+  postgres:
+    restart: "no"
+
+  rabbitmq:
+    restart: "no"
+
+  test-service:
+    build:
+      context: ../../backend/tests/service
+    ports:
+      - "127.0.0.1:10000:10000"
+    restart: "no"

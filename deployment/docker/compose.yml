@@ -1,0 +1,234 @@
+name: forcad
+
+x-service: &service
+  build:
+    context: ../..
+    dockerfile: backend/Dockerfile
+    target: runtime
+  env_file: &runtime-environment
+    - ../../config/runtime/postgres_environment.env
+    - ../../config/runtime/redis_environment.env
+    - ../../config/runtime/rabbitmq_environment.env
+  restart: on-failure
+  mem_limit: "${FORCAD_SERVICE_MEMORY:-512m}"
+  pids_limit: ${FORCAD_SERVICE_PIDS:-512}
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-worker: &worker
+  <<: *service
+  build:
+    context: ../..
+    dockerfile: backend/Dockerfile
+    target: worker
+  volumes:
+    - ../../checkers:/checkers
+
+services:
+  celery:
+    <<: *worker
+    command: ["worker"]
+    mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
+    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
+    pids_limit: ${FORCAD_WORKER_PIDS:-256}
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: worker
+      FORCAD_CHECKER_MEMORY_LIMIT_MB: "${FORCAD_CHECKER_MEMORY_LIMIT_MB:-1024}"
+      FORCAD_CHECKER_OUTPUT_LIMIT_BYTES: "${FORCAD_CHECKER_OUTPUT_LIMIT_BYTES:-1048576}"
+      FORCAD_WORKER_AUTOSCALE: "${FORCAD_WORKER_AUTOSCALE:-32,16}"
+
+  flower:
+    <<: *worker
+    command: ["flower"]
+    mem_limit: "${FORCAD_SERVICE_MEMORY:-512m}"
+    pids_limit: ${FORCAD_SERVICE_PIDS:-512}
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: flower
+    env_file:
+      - ../../config/runtime/admin.env
+      - ../../config/runtime/postgres_environment.env
+      - ../../config/runtime/redis_environment.env
+      - ../../config/runtime/rabbitmq_environment.env
+
+  initializer:
+    <<: *service
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: initializer
+    command: ["--fast"]
+    env_file: *runtime-environment
+    volumes:
+      - forcad-config:/run/forcad-config:ro
+    environment:
+      TEST: "${TEST:-}"
+      CONFIG_PATH: /run/forcad-config/config.yml
+    restart: on-failure
+    depends_on:
+      config-loader:
+        condition: service_completed_successfully
+
+  # Copies the private host config into the named volume for the initializer.
+  config-loader:
+    <<: *service
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/stage_config"]
+    command: []
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    volumes:
+      - ../../config/config.yml:/source/config.yml:ro
+      - forcad-config:/run/forcad-config
+    restart: "no"
+
+  ticker:
+    <<: *service
+    command: ["ticker"]
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: ticker
+
+  client-api:
+    <<: *service
+    command: ["api"]
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: api
+      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+
+  admin-api:
+    <<: *service
+    command: ["admin"]
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: admin
+      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+    env_file:
+      - ../../config/runtime/admin.env
+      - ../../config/runtime/postgres_environment.env
+      - ../../config/runtime/redis_environment.env
+      - ../../config/runtime/rabbitmq_environment.env
+
+  events:
+    <<: *service
+    command: ["events"]
+    pids_limit: ${FORCAD_EVENTS_PIDS:-1024}
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: events
+      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+
+  http-receiver:
+    <<: *service
+    command: ["http_receiver"]
+    environment:
+      TEST: "${TEST:-}"
+      SERVICE: http_receiver
+      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+      args:
+        DNS_RESOLVER: 127.0.0.11
+        VITE_BRAND_NAME: "${VITE_BRAND_NAME:-ForcAD}"
+        VITE_BRAND_LOGO: "${VITE_BRAND_LOGO:-/brand/forcad-mark.svg}"
+        VITE_BRAND_PRIMARY: "${VITE_BRAND_PRIMARY:-#5B8DEF}"
+        VITE_BRAND_ACCENT: "${VITE_BRAND_ACCENT:-#38B7B0}"
+    ports:
+      - "${FORCAD_NGINX_BIND:-0.0.0.0}:8080:8080"
+      - "${FORCAD_NGINX_BIND:-0.0.0.0}:80:8080"
+    volumes:
+      - ../../public/teams:/var/www/front/team-logos:ro
+    environment:
+      PUBLIC_SCHEME: "${PUBLIC_SCHEME:-http}"
+      TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+    restart: on-failure
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - flower
+      - client-api
+      - admin-api
+      - events
+      - http-receiver
+
+  redis:
+    image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
+    command: ["sh", "-c", "redis-server --requirepass $$REDIS_PASSWORD"]
+    restart: on-failure
+    sysctls:
+      net.core.somaxconn: 1024
+    env_file:
+      - ../../config/runtime/redis_environment.env
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
+    hostname: rabbitmq
+    restart: on-failure
+    env_file:
+      - ../../config/runtime/rabbitmq_environment.env
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+
+  postgres:
+    image: forcad_postgres:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/postgres/Dockerfile
+    volumes:
+      - ../../docker_volumes/postgres/data:/var/lib/postgresql
+    env_file:
+      - ../../config/runtime/postgres_environment.env
+    restart: on-failure
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres-data:
+        condition: service_completed_successfully
+    command: ["postgres", "--max-connections=200"]
+    ports:
+      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:6432:5432"
+
+  postgres-data:
+    image: forcad_postgres:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/postgres/Dockerfile
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/prepare-data"]
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ../../docker_volumes/postgres/data:/var/lib/postgresql
+    restart: "no"
+
+volumes:
+  forcad-config: {}

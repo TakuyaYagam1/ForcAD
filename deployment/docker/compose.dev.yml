@@ -1,0 +1,35 @@
+name: forcad
+
+x-source-mount: &source-mount
+  - ../../backend/src/forcad:/opt/forcad/lib/python3.14/site-packages/forcad:ro
+
+services:
+  celery:
+    volumes:
+      - ../../checkers:/checkers
+      - ../../backend/src/forcad:/opt/forcad/lib/python3.14/site-packages/forcad:ro
+
+  flower:
+    volumes:
+      - ../../checkers:/checkers
+      - ../../backend/src/forcad:/opt/forcad/lib/python3.14/site-packages/forcad:ro
+
+  initializer:
+    volumes:
+      - forcad-config:/run/forcad-config:ro
+      - ../../backend/src/forcad:/opt/forcad/lib/python3.14/site-packages/forcad:ro
+
+  ticker:
+    volumes: *source-mount
+
+  client-api:
+    volumes: *source-mount
+
+  admin-api:
+    volumes: *source-mount
+
+  events:
+    volumes: *source-mount
+
+  http-receiver:
+    volumes: *source-mount

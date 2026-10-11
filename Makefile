@@ -1,32 +1,45 @@
-.PHONY: lint-backend
+UV ?= uv
+RUN = $(UV) run --project backend --locked --all-groups
+FORCAD = $(UV) run --project backend --locked --group cli forcad
+
+.PHONY: sync setup up start build dev lint lint-backend lint-frontend lint-sql test test-integration clean
+
+sync:
+	$(UV) sync --project backend --locked --all-groups
+
+setup:
+	$(FORCAD) setup
+
+up start:
+	$(FORCAD) start
+
+build:
+	$(FORCAD) build
+
+dev:
+	$(FORCAD) rd -f deployment/docker/compose.dev.yml up -d --build
+
 lint-backend:
-	flake8 --config .flake8
+	$(RUN) ruff check backend/src
+	$(RUN) flake8 --config .flake8 backend/src scripts
 
-.PHONY: lint-frontend
 lint-frontend:
-	cd front && npx eslint .
+	cd frontend && pnpm run lint && pnpm exec tsc -b --pretty false
 
-.PHONY: lint
-lint: lint-backend lint-frontend
+lint-sql:
+	$(RUN) python scripts/lint_sql.py --uv "$(UV)" lint backend/src/forcad/scripts
 
-.PHONY: clean
+lint: lint-backend lint-frontend lint-sql
+
+test:
+	$(RUN) python scripts/run_unit_tests.py
+
+test-integration:
+	@if [ "$${FORCAD_ALLOW_DESTRUCTIVE_TESTS:-}" != "1" ]; then \
+		echo "Run integration tests only in a disposable checkout with FORCAD_ALLOW_DESTRUCTIVE_TESTS=1." >&2; \
+		exit 2; \
+	fi
+	$(RUN) bash scripts/run_tests.sh
+
 clean:
-	./control.py clean
-
-.PHONY: test
-test: clean
-	./scripts/run_tests.sh
-
-.PHONY: build-base
-build-base:
-	./scripts/release_base.sh
-
-.PHONY: release-base
-release-base:
-	./scripts/release_base.sh --push
-
-.PHONY: start
-start: clean
-	./control.py setup
-	./control.py start --fast
-	./control.py rd logs -f initializer
+	$(FORCAD) clean
