@@ -1,0 +1,258 @@
+.team-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.team-hero > .back-link {
+  position: relative;
+  z-index: 2;
+}
+
+.team-hero .team-header {
+  position: static;
+}
+
+.team-header > .hero-art {
+  z-index: 0;
+}
+
+.teams-page .leaders-heading {
+  margin: 8px 0 20px;
+}
+
+.teams-page .leaders-heading h2 {
+  font-family: "Spectral", serif;
+  font-size: 24px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ivory);
+}
+
+.teams-page .leaders-caption {
+  color: var(--soft);
+  font-size: 12px;
+}
+
+.teams-page .teams-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 18px;
+}
+
+.teams-page .team-card--podium {
+  --podium-height: 382px;
+
+  min-width: 0;
+  min-height: var(--podium-height);
+  padding: 24px 22px 20px;
+  gap: 0;
+  border-color: #29404d;
+  border-top: 2px solid var(--brand-primary);
+  border-radius: 10px;
+  background: #0a1926;
+  text-align: center;
+}
+
+.teams-page .team-card--podium[data-rank="1"] {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.teams-page .team-card--podium[data-rank="2"] {
+  --podium-height: 344px;
+
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.teams-page .team-card--podium[data-rank="3"] {
+  --podium-height: 306px;
+
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.teams-page .team-card--podium:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 45%, #29404d);
+  border-top-color: var(--brand-primary);
+  background: #0d2030;
+}
+
+.teams-page .team-podium-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 4px auto 20px;
+}
+
+.teams-page .team-podium-head .rank-number {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgb(var(--brand-primary-rgb) / 28%);
+  border-radius: 12px;
+  background: rgb(var(--brand-primary-rgb) / 10%);
+  color: var(--brand-primary);
+  font-family: "Inter Tight", Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.teams-page .team-podium-head .team-avatar {
+  width: 56px;
+  height: 56px;
+  border-color: #355064;
+  border-radius: 12px;
+  background: #07131e;
+}
+
+.teams-page .team-podium-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.teams-page .team-podium-copy h2 {
+  margin: 0 0 5px;
+  color: var(--ivory);
+  font-weight: 400;
+}
+
+.teams-page .team-podium-copy .team-ip {
+  color: #a8b8c9;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.teams-page .team-podium-place {
+  order: -1;
+  margin-bottom: 8px;
+  color: var(--brand-accent);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.teams-page .team-card--podium .team-card-bottom {
+  margin-top: auto;
+  border-color: #28414a;
+  text-align: left;
+  gap: 12px;
+}
+
+.teams-page .team-card--podium .team-card-bottom small {
+  color: #a8b8c9;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.teams-page .team-card--podium .score-value {
+  color: var(--brand-primary);
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.teams-page .team-card--podium .text-link {
+  color: #a8b8c9;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.teams-page .team-card--podium .text-link svg {
+  color: var(--brand-accent);
+}
+
+.teams-page .teams-roster {
+  margin-top: 28px;
+}
+
+.teams-page .teams-roster .teams-grid {
+  margin-top: 16px;
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+  .teams-page .teams-podium {
+    gap: 12px;
+  }
+
+  .teams-page .team-card--podium {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .teams-page .team-card--podium .score-value {
+    font-size: 25px;
+  }
+}
+
+@media (max-width: 700px) {
+  .teams-page .teams-podium {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .teams-page .team-card--podium {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: center;
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 0;
+    padding: 18px 16px;
+    gap: 0 12px;
+    text-align: left;
+  }
+
+  .teams-page .team-card--podium[data-rank] {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .teams-page .team-podium-head {
+    grid-row: 1 / 3;
+    flex-direction: column;
+    gap: 9px;
+    margin: 0;
+  }
+
+  .teams-page .team-podium-head .rank-number {
+    width: 38px;
+    height: 34px;
+    border-radius: 9px;
+    font-size: 16px;
+  }
+
+  .teams-page .team-podium-head .team-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .teams-page .team-podium-copy {
+    align-items: flex-start;
+    margin: 0;
+  }
+
+  .teams-page .team-podium-copy h2 {
+    font-size: 22px;
+  }
+
+  .teams-page .team-podium-place {
+    margin-bottom: 4px;
+  }
+
+  .teams-page .team-card--podium .team-card-bottom {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .teams-page .team-card--podium .score-value {
+    font-size: 25px;
+  }
+}
