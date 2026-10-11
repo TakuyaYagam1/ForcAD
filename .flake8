@@ -1,4 +1,4 @@
 [flake8]
 max_line_length = 88
-exclude = .git,front,docker_config,tests,checkers
+exclude = .git,front,frontend,docker_config,deployment,tests,checkers,.venv
 ignore = E402

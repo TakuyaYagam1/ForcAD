@@ -1,1 +1,10 @@
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.2
 checklib==0.7.0
+cryptography==50.0.2
+idna==3.20
+portalocker==4.4.0
+pycparser==3.1
+requests==2.34.2
+urllib3==2.8.0

@@ -1,0 +1,161 @@
+"""Organizer controls require a session and enforce terminal game state."""
+
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest import TestCase
+from unittest.mock import MagicMock, patch
+
+import fakeredis
+from flask import Flask
+
+
+from forcad.lib import config, storage
+from forcad.lib.helpers import events
+from forcad.services.admin.viewsets import admin_bp
+from forcad.services.ticker.__main__ import main, sync_session
+from forcad.services.ticker.models import Schedule, TickerState
+
+
+class GameControlTests(TestCase):
+    def setUp(self):
+        self.redis = fakeredis.FakeRedis(decode_responses=True)
+        for target, name, value in (
+            (storage.utils.RedisStorage, 'get', self.redis),
+            (config, 'get_web_credentials', SimpleNamespace(username='organizer', password='test-password')),
+        ):
+            mocked = patch.object(target, name, return_value=value)
+            mocked.start()
+            self.addCleanup(mocked.stop)
+        self.app = Flask('game-control-test')
+        self.app.register_blueprint(admin_bp, url_prefix='/api/admin')
+        self.client = self.app.test_client()
+
+    def login(self):
+        response = self.client.post('/api/admin/login/', json={
+            'username': 'organizer', 'password': 'test-password',
+        })
+        self.assertEqual(response.status_code, 200)
+
+    def test_control_rejects_anonymous_requests_and_cross_origin(self):
+        with patch.object(storage.game, 'change_game_state') as change:
+            for action in ('start', 'start_practice', 'start_final', 'pause', 'resume', 'finish'):
+                self.assertEqual(self.client.post(f'/api/admin/game/{action}/', json={'confirm': True}).status_code, 403)
+            self.login()
+            self.assertEqual(self.client.post('/api/admin/game/finish/', json={'confirm': True},
+                                             headers={'Origin': 'https://other.example'}).status_code, 403)
+            self.assertEqual(self.client.get('/api/admin/game/finish/').status_code, 405)
+            change.assert_not_called()
+
+    def test_final_start_and_finish_require_explicit_boolean_confirmation(self):
+        self.login()
+        with patch.object(storage.game, 'change_game_state') as change:
+            for action in ('finish', 'start_final'):
+                for body in ({}, {'confirm': False}, {'confirm': 'true'}, {'confirm': 1}, []):
+                    self.assertEqual(self.client.post(f'/api/admin/game/{action}/', json=body).status_code, 400)
+            change.assert_not_called()
+
+    def test_actions_return_authoritative_state(self):
+        self.login()
+        for action, phase in (('start', 'running'), ('start_practice', 'running'),
+                              ('start_final', 'running'), ('pause', 'paused'),
+                              ('resume', 'running'), ('finish', 'finished')):
+            with self.subTest(action=action), patch.object(storage.game, 'change_game_state') as change, \
+                    patch.object(storage.game, 'get_runtime_status', return_value={'phase': phase}), \
+                    patch.object(events, 'refresh_scoreboard_after_commit') as refresh:
+                response = self.client.post(f'/api/admin/game/{action}/', json={'confirm': True})
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json['phase'], phase)
+                change.assert_called_once_with(action)
+                refresh.assert_called_once_with()
+
+    def test_finished_game_rejects_resume_as_conflict(self):
+        self.login()
+        with patch.object(storage.game, 'change_game_state', side_effect=ValueError('Game has already finished')):
+            self.assertEqual(self.client.post('/api/admin/game/resume/', json={}).status_code, 409)
+
+    def test_controls_pass_session_generation_and_reject_invalid_values(self):
+        self.login()
+        with patch.object(storage.game, 'change_game_state', side_effect=ValueError('Game session has changed')) as change:
+            for action in ('finish', 'start_final', 'start_practice'):
+                response = self.client.post(f'/api/admin/game/{action}/', json={'confirm': True, 'generation': 7})
+                self.assertEqual(response.status_code, 409)
+                change.assert_called_once_with(action, generation=7)
+                change.reset_mock()
+            for value in (True, '7', 7.5, []):
+                response = self.client.post('/api/admin/game/start/', json={'generation': value})
+                self.assertEqual(response.status_code, 400)
+            change.assert_not_called()
+
+    def test_unknown_action_does_not_change_game(self):
+        self.login()
+        with patch.object(storage.game, 'change_game_state') as change:
+            self.assertEqual(self.client.post('/api/admin/game/restart/', json={}).status_code, 404)
+            change.assert_not_called()
+
+    def test_finished_status_survives_missing_redis_state(self):
+        with patch.object(storage.game, 'get_lifecycle', return_value=(14, False)), \
+                patch.object(storage.sessions, 'get_session', return_value={
+                    'practice_start': None, 'reset_pending': False, 'generation': 0,
+                }), \
+                patch.object(storage.game, 'get_current_game_config', return_value=SimpleNamespace(
+                    round_time=60, start_time=datetime.fromtimestamp(0, timezone.utc),
+                )), \
+                patch.object(storage.game, 'has_pending_checks', return_value=True):
+            status = storage.game.get_runtime_status()
+        self.assertEqual(status['phase'], 'finished')
+        self.assertEqual(status['round'], 14)
+        self.assertTrue(status['results_pending'])
+
+    def test_final_snapshot_waits_for_results_and_publishes_once(self):
+        with patch.object(storage.game, 'is_game_finished', return_value=True), \
+                patch.object(storage.game, 'has_pending_checks', return_value=True) as pending, \
+                patch.object(storage.game, 'get_real_round_from_db', return_value=14), \
+                patch.object(storage.game, 'update_game_state') as publish:
+            storage.game.finalize_finished_game()
+            publish.assert_not_called()
+            pending.return_value = False
+            storage.game.finalize_finished_game()
+            storage.game.finalize_finished_game()
+            publish.assert_called_once_with(14)
+
+    def test_restarted_ticker_does_not_restart_a_finished_game(self):
+        callback = MagicMock()
+        state = TickerState(MagicMock(), False, [
+            Schedule('start_game', datetime.fromtimestamp(0, timezone.utc), callback),
+        ])
+        with patch.object(storage.game, 'is_game_finished', return_value=True), \
+                patch.object(storage.game, 'finalize_finished_game') as finalize, \
+                patch('forcad.services.ticker.__main__.sync_blitz_schedules'), \
+                patch('forcad.services.ticker.__main__.sync_session'), \
+                patch('forcad.services.ticker.__main__.recover_expired_jobs'), \
+                patch.object(events, 'retry_scoreboard_refresh'), \
+                patch('forcad.services.ticker.__main__.time.sleep', side_effect=InterruptedError):
+            with self.assertRaises(InterruptedError):
+                main(state)
+        callback.assert_not_called()
+        finalize.assert_called_once_with()
+
+    def test_failed_session_rebuild_preserves_schedules_and_retries(self):
+        start = datetime.fromtimestamp(100, timezone.utc)
+        previous = Schedule('classic_rounds', start, MagicMock())
+        state = TickerState(MagicMock(), True, [previous], session_generation=1)
+        with patch.object(storage.sessions, 'maintain', return_value=False), \
+                patch.object(storage.sessions, 'get_session', return_value={
+                    'generation': 2, 'practice_start': None,
+                }), \
+                patch.object(storage.game, 'get_current_game_config', return_value=SimpleNamespace(
+                    start_time=start, round_time=60, mode='classic',
+                )), \
+                patch.object(storage.schedules, 'get_last_run', side_effect=[
+                    None, RuntimeError('Database unavailable'), None, None,
+                ]):
+            with self.assertRaisesRegex(RuntimeError, 'Database unavailable'):
+                sync_session(state, start)
+            self.assertEqual(state.session_generation, 1)
+            self.assertEqual(state.schedules, [previous])
+            sync_session(state, start)
+        self.assertEqual(state.session_generation, 2)
+        self.assertEqual(
+            [schedule.schedule_id for schedule in state.get_due_schedules(start)],
+            ['start_game', 'classic_rounds'],
+        )
