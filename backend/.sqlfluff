@@ -1,0 +1,7 @@
+[sqlfluff]
+dialect = postgres
+templater = raw
+rules = AL04,AL05,AL08,AL10,AM01,AM04,AM07,AM08,AM09,CV02,CV05,CV06,CV12,PG01,PG02,RF01,RF07,ST03,ST08,ST10,ST11,ST12
+large_file_skip_byte_limit = 0
+large_file_skip_fail = true
+max_parse_nodes = 500000

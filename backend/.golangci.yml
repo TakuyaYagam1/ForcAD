@@ -1,0 +1,140 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - durationcheck
+    - embeddedstructfieldcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - gochecksumtype
+    - gocritic
+    - gocyclo
+    - gosec
+    - goprintffuncname
+    - inamedparam
+    - iotamixing
+    - loggercheck
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnesserr
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - tagalign
+    - testableexamples
+    - testifylint
+    - thelper
+    - unconvert
+    - unparam
+    - unqueryvet
+    - wastedassign
+    - whitespace
+    - zerologlint
+
+  settings:
+    gocyclo:
+      min-complexity: 15
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    nolintlint:
+      allow-unused: false
+      require-explanation: true
+      require-specific: true
+    gosec:
+      excludes:
+        - G104
+    staticcheck:
+      checks:
+        - all
+    testifylint:
+      enable-all: true
+      disable:
+        - go-require
+
+  exclusions:
+    generated: strict
+    paths:
+      - internal/adapter/primary/http/api/
+      - internal/adapter/secondary/postgres/sqlc/
+      - internal/bootstrap/wire_gen\.go$
+    presets:
+      - comments
+      - common-false-positives
+    rules:
+      # Error locations use actual Go identifiers, including exported type names.
+      - linters:
+          - staticcheck
+        text: 'ST1005: error strings should not be capitalized'
+        source: '(fmt\.Errorf|errors\.New)\("[A-Z][A-Za-z0-9]*\.[A-Za-z0-9]+ - '
+      - path: _test\.go
+        linters:
+          - gocyclo
+          - gosec
+          - errcheck
+      - path: _test\.go
+        text: net/http/httptest\.NewRequest must not be called
+        linters:
+          - noctx
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: strict
+    paths:
+      - internal/adapter/primary/http/api/
+      - internal/adapter/secondary/postgres/sqlc/
+      - internal/bootstrap/wire_gen\.go$
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
