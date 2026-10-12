@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getSameOriginProxyOrigin } from "../viteProxy.ts";
+import viteConfig from "../vite.config.ts";
 
 const target = "http://127.0.0.1:8080/api";
 
@@ -50,4 +51,17 @@ test("does not treat URLs with paths as serialized origins", () => {
     ),
     undefined,
   );
+});
+
+test("proxies the native event stream as a WebSocket", () => {
+  const config = viteConfig({
+    command: "serve",
+    mode: "test",
+    isSsrBuild: false,
+    isPreview: false,
+  });
+  const eventProxy = config.server?.proxy?.["/api/events/ws"];
+
+  assert.equal(typeof eventProxy, "object");
+  assert.equal(eventProxy && "ws" in eventProxy && eventProxy.ws, true);
 });

@@ -1,8 +1,17 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, type QueryKey } from "@tanstack/react-query";
 export const queryClient = new QueryClient();
-export function refreshGameQueries() {
+
+export function setQuerySnapshot<TData>(
+  client: QueryClient,
+  queryKey: QueryKey,
+  data: TData,
+) {
+  void client.cancelQueries({ queryKey, exact: true });
+  client.setQueryData(queryKey, data);
+}
+
+export function refreshGameQueries(client: QueryClient = queryClient) {
   for (const key of [
-    "game-runtime",
     "team-history",
     "teamtask-log",
     "team",
@@ -10,6 +19,6 @@ export function refreshGameQueries() {
     "admin-teams",
     "admin-tasks",
   ]) {
-    void queryClient.invalidateQueries({ queryKey: [key] });
+    void client.invalidateQueries({ queryKey: [key] });
   }
 }

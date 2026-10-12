@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { isMotionAllowed, watchMotionDisable } from "./motionPreference";
 
 export function usePageEntrance(pathname: string, navigationKey: string) {
   const mainRef = useRef<HTMLElement>(null);
@@ -18,23 +19,7 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
 
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    const motionAllowed = () => {
-      if (
-        preference.matches ||
-        document.documentElement.dataset.motion === "off" ||
-        document.visibilityState === "hidden"
-      ) {
-        return false;
-      }
-
-      try {
-        return localStorage.getItem("cf-motion") !== "off";
-      } catch {
-        return true;
-      }
-    };
-
-    if (!motionAllowed()) return;
+    if (!isMotionAllowed(preference)) return;
 
     const played = new Set<string>();
     const animations = new Set<Animation>();
@@ -81,7 +66,7 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
       frame = 0;
       if (stopped) return;
 
-      if (!motionAllowed()) {
+      if (!isMotionAllowed(preference)) {
         stop();
         return;
       }
@@ -164,12 +149,8 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
       if (!stopped && !frame) frame = window.requestAnimationFrame(run);
     };
 
-    const checkMotion = () => {
-      if (!motionAllowed()) stop();
-    };
-
     const observer = new MutationObserver(schedule);
-    const motionObserver = new MutationObserver(checkMotion);
+    let stopWatchingMotion = () => {};
 
     const stop = () => {
       if (stopped) return;
@@ -179,24 +160,14 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
       if (frame) window.cancelAnimationFrame(frame);
 
       observer.disconnect();
-      motionObserver.disconnect();
-
-      preference.removeEventListener("change", checkMotion);
-      document.removeEventListener("visibilitychange", checkMotion);
+      stopWatchingMotion();
 
       animations.forEach((animation) => animation.cancel());
       animations.clear();
     };
 
     observer.observe(main, { childList: true, subtree: true });
-
-    motionObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-motion"],
-    });
-
-    preference.addEventListener("change", checkMotion);
-    document.addEventListener("visibilitychange", checkMotion);
+    stopWatchingMotion = watchMotionDisable(preference, stop);
 
     run();
 

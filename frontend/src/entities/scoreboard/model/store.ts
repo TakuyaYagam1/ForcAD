@@ -1,48 +1,35 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Team } from "@/entities/team/model/types";
-import type { Task } from "@/entities/task/model/types";
 import type { TeamTask } from "@/entities/team-task/model/types";
+import type { GameRuntimeStatus as ApiGameRuntimeStatus } from "@/shared/api/generated/schemas/gameRuntimeStatus.zod";
+import type { GameState } from "@/shared/api/generated/schemas/client/gameState.zod";
+import type { ParticipantTask } from "@/shared/api/generated/schemas/client/participantTask.zod";
+import type { ParticipantTeam } from "@/shared/api/generated/schemas/client/participantTeam.zod";
+import type { ScoreboardTeamTask } from "@/shared/api/generated/schemas/client/scoreboardTeamTask.zod";
 import { finiteNumber } from "@/shared/lib/numbers";
-import { getSlaPercent } from "@/shared/lib/sla";
 import type { GamePhase } from "@/shared/lib/gameStatus";
-export interface RawTeamTask {
-  task_id: number;
-  team_id: number;
-  status: number;
-  stolen: number;
-  lost: number;
-  score: number;
-  checks: number;
-  checks_passed: number;
-  message: string;
-}
-export interface GameStatePayload {
-  round: number;
-  round_start: number | null;
-  team_tasks: RawTeamTask[];
-}
-export interface GameRuntimeStatus {
+import { compareUuid } from "@/shared/lib/uuid";
+import {
+  getActiveTeamTasks,
+  mapRawTeamTask,
+  recalculateTeamScores,
+} from "./transforms";
+
+export type RawTeamTask = ScoreboardTeamTask;
+export type GameStatePayload = GameState;
+export type GameRuntimeStatus = Omit<ApiGameRuntimeStatus, "phase"> & {
   phase: GamePhase;
-  practice?: boolean;
-  can_start?: boolean;
-  can_start_practice?: boolean;
-  reset_pending?: boolean;
-  generation?: number;
-  scheduled_start?: string;
-  results_pending?: boolean;
-  round_waiting?: boolean;
-  paused_at: number | null;
-  paused_seconds: number;
-  round_time?: number;
-  round?: number;
-  round_start?: number | null;
-}
+};
+export type ScoreboardTeam = ParticipantTeam & {
+  score?: number;
+  token?: string;
+  taskStats?: unknown;
+};
 export interface InitScoreboardPayload {
   state: GameStatePayload | null;
-  teams: Team[];
-  tasks: Task[];
-  config?: { round_time?: number };
+  teams: ScoreboardTeam[];
+  tasks: ParticipantTask[];
+  config?: { round_time: number };
   runtime?: GameRuntimeStatus;
 }
 interface ScoreboardState {
@@ -50,8 +37,8 @@ interface ScoreboardState {
   roundStart: number | null;
   roundTime: number | null;
   roundProgress: number | null;
-  teams: Team[] | null;
-  tasks: Task[] | null;
+  teams: ScoreboardTeam[] | null;
+  tasks: ParticipantTask[] | null;
   teamTasks: TeamTask[] | null;
   error: string | null;
   connected: boolean;
@@ -75,49 +62,6 @@ interface ScoreboardState {
   invalidateRuntime(): void;
   handleInitScoreboardMessage(payload: InitScoreboardPayload): void;
   handleUpdateScoreboardMessage(payload: GameStatePayload): void;
-}
-function mapRawTeamTask(raw: RawTeamTask, index: number): TeamTask {
-  const checks = Math.max(0, Math.trunc(finiteNumber(raw.checks)));
-  const passed = Math.min(
-    checks,
-    Math.max(0, Math.trunc(finiteNumber(raw.checks_passed))),
-  );
-  const status = finiteNumber(raw.status, -1);
-  return {
-    id: index,
-    teamId: finiteNumber(raw.team_id),
-    taskId: finiteNumber(raw.task_id),
-    status,
-    stolen: finiteNumber(raw.stolen),
-    lost: finiteNumber(raw.lost),
-    checks,
-    checksPassed: passed,
-    sla: getSlaPercent(checks, passed) ?? 0,
-    score: finiteNumber(raw.score),
-    message: raw.message ? String(raw.message) : status === 101 ? "OK" : "",
-  };
-}
-function activeCells(
-  raw: RawTeamTask[],
-  teams: Team[],
-  tasks: Task[],
-): TeamTask[] {
-  const teamIds = new Set(teams.map((t) => t.id));
-  const taskIds = new Set(tasks.map((t) => t.id));
-  return raw
-    .map(mapRawTeamTask)
-    .filter((tt) => teamIds.has(tt.teamId) && taskIds.has(tt.taskId));
-}
-function recalcTeamScores(teams: Team[], cells: TeamTask[]): Team[] {
-  const totals = new Map<number, number>();
-  for (const cell of cells)
-    totals.set(
-      cell.teamId,
-      (totals.get(cell.teamId) ?? 0) + (cell.score * cell.sla) / 100,
-    );
-  return teams
-    .map((team) => ({ ...team, score: totals.get(team.id ?? -1) ?? 0 }))
-    .sort((a, b) => b.score - a.score || (a.id ?? 0) - (b.id ?? 0));
 }
 export const useScoreboardStore = create<ScoreboardState>()(
   devtools((set, get) => ({
@@ -182,18 +126,16 @@ export const useScoreboardStore = create<ScoreboardState>()(
       }),
     handleInitScoreboardMessage: ({ state, teams, tasks, config, runtime }) => {
       const activeTeams = teams.filter((t) => t.active !== false);
-      const activeTasks = tasks
-        .filter((t) => t.active !== false)
-        .sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
-      const cells = activeCells(
+      const activeTasks = [...tasks].sort((a, b) => compareUuid(a.id, b.id));
+      const teamTasks = getActiveTeamTasks(
         state?.team_tasks ?? [],
         activeTeams,
         activeTasks,
       );
       set({
-        teams: recalcTeamScores(activeTeams, cells),
+        teams: recalculateTeamScores(activeTeams, teamTasks),
         tasks: activeTasks,
-        teamTasks: cells,
+        teamTasks,
         round: finiteNumber(state?.round),
         roundStart: state?.round_start ?? null,
         error:
@@ -208,15 +150,15 @@ export const useScoreboardStore = create<ScoreboardState>()(
     },
     handleUpdateScoreboardMessage: (payload) => {
       const { teams, tasks } = get();
-      const cells =
+      const teamTasks =
         teams && tasks
-          ? activeCells(payload.team_tasks ?? [], teams, tasks)
+          ? getActiveTeamTasks(payload.team_tasks ?? [], teams, tasks)
           : (payload.team_tasks ?? []).map(mapRawTeamTask);
       set({
         round: finiteNumber(payload.round),
         roundStart: payload.round_start ?? null,
-        teamTasks: cells,
-        ...(teams ? { teams: recalcTeamScores(teams, cells) } : {}),
+        teamTasks,
+        ...(teams ? { teams: recalculateTeamScores(teams, teamTasks) } : {}),
         error: null,
       });
     },

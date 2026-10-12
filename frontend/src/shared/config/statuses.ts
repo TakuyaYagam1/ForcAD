@@ -1,6 +1,7 @@
 // src/shared/config/statuses.ts
 
-export type ScoreboardStatusCode = 101 | 102 | 103 | 104 | 110;
+export const STATUS_OK = 101 as const;
+export type ScoreboardStatusCode = typeof STATUS_OK | 102 | 103 | 104 | 110;
 
 export interface ScoreboardStatusMeta {
   code: ScoreboardStatusCode;
@@ -12,7 +13,7 @@ export interface ScoreboardStatusMeta {
 
 export const SCOREBOARD_STATUSES: ScoreboardStatusMeta[] = [
   {
-    code: 101,
+    code: STATUS_OK,
     label: "В норме",
     description: "Сервис работает штатно (UP)",
     color: "#6be273",

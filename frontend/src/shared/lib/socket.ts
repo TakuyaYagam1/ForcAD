@@ -1,25 +1,24 @@
-import { io, Socket } from "socket.io-client";
+import { parseRealtimeEvent } from "@/shared/api/realtime";
 import { SERVER_URL } from "@/app/config";
+import { EventSocket, eventStreamUrl } from "./eventSocket";
 
-let gameEventsSocket: Socket | null = null;
-let liveEventsSocket: Socket | null = null;
+let eventSocket: EventSocket | null = null;
 
-export function getGameEventsSocket(): Socket {
-  if (!gameEventsSocket) {
-    gameEventsSocket = io(`${SERVER_URL}/game_events`, {
-      forceNew: true,
-      transports: ["polling", "websocket"],
+function getEventSocket(): EventSocket {
+  if (!eventSocket) {
+    eventSocket = new EventSocket({
+      url: eventStreamUrl(SERVER_URL),
+      parseMessage: parseRealtimeEvent,
     });
+    eventSocket.connect();
   }
-  return gameEventsSocket;
+  return eventSocket;
 }
 
-export function getLiveEventsSocket(): Socket {
-  if (!liveEventsSocket) {
-    liveEventsSocket = io(`${SERVER_URL}/live_events`, {
-      forceNew: true,
-      transports: ["polling", "websocket"],
-    });
-  }
-  return liveEventsSocket;
+export function getGameEventsSocket(): EventSocket {
+  return getEventSocket();
+}
+
+export function getLiveEventsSocket(): EventSocket {
+  return getEventSocket();
 }

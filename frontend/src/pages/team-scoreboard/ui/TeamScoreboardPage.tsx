@@ -1,12 +1,11 @@
 import { useParams } from "react-router-dom";
 import { AppShell } from "@/shared/ui/layout/AppShell";
 import { TeamScoreboardWidget } from "@/widgets/team-scoreboard/ui/TeamScoreboardWidget";
+import { normalizeUuid } from "@/shared/lib/uuid";
 
 export function TeamScoreboardPage() {
   const { teamId: rawTeamId } = useParams();
-  const teamId = Number(rawTeamId);
-
-  const isInvalid = !Number.isInteger(teamId) || teamId <= 0;
+  const isInvalid = !normalizeUuid(rawTeamId);
 
   return (
     <AppShell>

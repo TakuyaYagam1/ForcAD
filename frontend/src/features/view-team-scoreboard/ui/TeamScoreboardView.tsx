@@ -17,6 +17,7 @@ import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
 import { HeroArt } from "@/shared/ui/brand/PageHero";
 import type { Task } from "@/entities/task/model/types";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
+import { normalizeUuid } from "@/shared/lib/uuid";
 
 const EMPTY_TASKS: Task[] = [];
 
@@ -24,8 +25,8 @@ export function TeamScoreboardView() {
   const heroRef = useRef<HTMLDivElement>(null);
   const [expandedHistory, setExpandedHistory] = useState(false);
   const { teamId: rawTeamId } = useParams();
-  const teamId = Number(rawTeamId);
-  const invalid = !Number.isInteger(teamId) || teamId <= 0;
+  const teamId = normalizeUuid(rawTeamId) ?? null;
+  const invalid = teamId === null;
 
   const teams = useScoreboardStore((state) => state.teams);
   const tasks = useScoreboardStore((state) => state.tasks) ?? EMPTY_TASKS;
@@ -44,7 +45,7 @@ export function TeamScoreboardView() {
 
   const historyQuery = useQuery({
     queryKey: ["team-history", teamId],
-    queryFn: () => fetchTeamStates(teamId),
+    queryFn: ({ signal }) => fetchTeamStates(teamId ?? "", signal),
     enabled: !invalid,
     refetchInterval: 10000,
   });
@@ -53,7 +54,7 @@ export function TeamScoreboardView() {
     () =>
       groupHistoryByRound(
         historyQuery.data ?? [],
-        (tasks ?? []).map((task) => task.id!).filter(Number.isFinite),
+        tasks.map((task) => task.id).filter((id): id is string => id !== null),
       ),
     [historyQuery.data, tasks],
   );

@@ -1,9 +1,8 @@
-// src/entities/team-task/model/types.ts
+import type { AdminTeamTaskLogEntry } from "@/shared/api/generated/schemas/admin/adminTeamTaskLogEntry.zod";
 
 export interface TeamTask {
-  id: number;
-  teamId: number;
-  taskId: number;
+  teamId: string;
+  taskId: string;
   status: number;
   stolen: number;
   lost: number;
@@ -14,23 +13,4 @@ export interface TeamTask {
   message: string;
 }
 
-export interface TeamTaskLogEntry {
-  id: number;
-  ts: number; // timestamp (unix seconds)
-  round: number;
-  team_id: number;
-  task_id: number;
-
-  status: number;
-  score: number;
-
-  stolen: number;
-  lost: number;
-
-  checks: number;
-  checks_passed: number;
-
-  public_message: string | null;
-  private_message: string | null;
-  command: string | null;
-}
+export type TeamTaskLogEntry = AdminTeamTaskLogEntry;

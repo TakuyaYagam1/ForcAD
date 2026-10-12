@@ -19,9 +19,9 @@ import { useScoreboardViewport } from "../model/useScoreboardViewport";
 import "./ScoreboardWidget.css";
 
 interface ScoreboardWidgetProps {
-  onTeamClick?: (teamId: number) => void;
-  onTaskClick?: (taskId: number) => void;
-  onCellClick?: (teamId: number, taskId: number) => void;
+  onTeamClick?: (teamId: string) => void;
+  onTaskClick?: (taskId: string) => void;
+  onCellClick?: (teamId: string, taskId: string) => void;
   admin?: boolean;
 }
 
@@ -75,7 +75,7 @@ export function ScoreboardWidget({
 
   const config = useQuery({
     queryKey: ["game-config"],
-    queryFn: fetchScoreboardConfig,
+    queryFn: ({ signal }) => fetchScoreboardConfig(signal),
     enabled: roundTime === null,
     retry: 2,
     refetchInterval: 10000,

@@ -8,28 +8,28 @@ import { fetchTaskAdmin } from "@/entities/task/api/admin";
 import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { formatScore } from "@/shared/lib/formatScore";
+import { normalizeUuid } from "@/shared/lib/uuid";
 
 export function AdminTeamTaskLogPage() {
   const { teamId: rawTeamId, taskId: rawTaskId } = useParams();
-  const teamId = Number(rawTeamId);
-  const taskId = Number(rawTaskId);
+  const teamId = normalizeUuid(rawTeamId);
+  const taskId = normalizeUuid(rawTaskId);
+  const validIds = teamId !== undefined && taskId !== undefined;
   const logQuery = useQuery({
     queryKey: ["teamtask-log", teamId, taskId],
-    queryFn: () => fetchTeamTaskLog(teamId, taskId),
-    enabled:
-      Number.isInteger(teamId) &&
-      teamId > 0 &&
-      Number.isInteger(taskId) &&
-      taskId > 0,
+    queryFn: ({ signal }) => fetchTeamTaskLog(teamId!, taskId!, signal),
+    enabled: validIds,
     refetchInterval: 5000,
   });
   const teamQuery = useQuery({
     queryKey: ["team", teamId],
-    queryFn: () => fetchTeamAdmin(teamId),
+    queryFn: ({ signal }) => fetchTeamAdmin(teamId!, signal),
+    enabled: validIds,
   });
   const taskQuery = useQuery({
     queryKey: ["task", taskId],
-    queryFn: () => fetchTaskAdmin(taskId),
+    queryFn: ({ signal }) => fetchTaskAdmin(taskId!, signal),
+    enabled: validIds,
   });
   return (
     <AppShell>

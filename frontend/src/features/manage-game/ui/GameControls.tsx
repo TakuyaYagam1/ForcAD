@@ -1,16 +1,18 @@
 import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { changeAdminGameState } from "@/shared/api/generated/endpoints";
 import { Flag, LoaderCircle, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import {
-  useScoreboardStore, type GameRuntimeStatus,
-} from "@/entities/scoreboard/model/store";
-import { api } from "@/shared/lib/axios";
-import { queryClient, refreshGameQueries } from "@/shared/lib/queryClient";
+  queryClient,
+  refreshGameQueries,
+  setQuerySnapshot,
+} from "@/shared/lib/queryClient";
 
 type ConfirmedAction = "start_practice" | "start_final" | "finish";
 type GameAction = ConfirmedAction | "pause" | "resume";
@@ -29,23 +31,27 @@ export function GameControls() {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const action = phase === "paused" ? "resume" : "pause";
   const mutation = useMutation({
-    mutationFn: async (next: GameAction) => (
-      await api.post<GameRuntimeStatus>(`/admin/game/${next}/`,
-        {
-          generation: next === "pause" || next === "resume" ? generation : confirmationGeneration,
-          ...(next === "finish" || next === "start_final" ? { confirm: true } : {}),
-        })
-    ).data,
+    mutationFn: async (next: GameAction) =>
+      changeAdminGameState(next, {
+        generation:
+          next === "pause" || next === "resume"
+            ? generation
+            : confirmationGeneration,
+        ...(next === "finish" || next === "start_final"
+          ? { confirm: true }
+          : {}),
+      }),
     onMutate: async () => {
       setError(null);
-      await queryClient.cancelQueries({ queryKey: ["game-runtime"] });
+      await queryClient.cancelQueries({ queryKey: ["game-runtime"], exact: true });
     },
     onSuccess: (runtime) => {
-      queryClient.setQueryData(["game-runtime"], runtime);
+      setQuerySnapshot(queryClient, ["game-runtime"], runtime);
       useScoreboardStore.getState().setRuntime(runtime);
       setConfirmation(null);
     },
     onError: (cause) => {
+      void queryClient.refetchQueries({ queryKey: ["game-runtime"], exact: true });
       const status = isAxiosError(cause) ? cause.response?.status : undefined;
       setError(status === 409
         ? "Состояние игры изменилось. Обнови страницу перед следующей командой."
@@ -53,7 +59,7 @@ export function GameControls() {
           ? "Сессия администратора завершена. Войди снова."
           : "Не удалось подтвердить результат команды. Проверь статус игры перед повторной попыткой.");
     },
-    onSettled: refreshGameQueries,
+    onSettled: () => refreshGameQueries(queryClient),
     retry: false,
   });
   const disabled = mutation.isPending || phase === "unknown" || resetPending;

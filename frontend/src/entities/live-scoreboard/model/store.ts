@@ -3,11 +3,11 @@ import { devtools } from "zustand/middleware";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 
 export interface LiveEvent {
-  id: number;
+  id: string;
   ts: number;
-  attackerId: number;
-  victimId: number;
-  taskId: number;
+  attackerId: string;
+  victimId: string;
+  taskId: string;
   attackerName: string;
   victimName: string;
   taskName: string;
@@ -16,9 +16,9 @@ export interface LiveEvent {
 
 export interface FlagNotificationPayload {
   generation?: number;
-  attacker_id: number;
-  victim_id: number;
-  task_id: number;
+  attacker_id: string;
+  victim_id: string;
+  task_id: string;
   attacker_delta: number;
 }
 
@@ -30,8 +30,6 @@ interface LiveScoreboardState {
   setError: (error: string | null) => void;
   clear: () => void;
 }
-
-let nextEventId = Date.now();
 
 export const useLiveScoreboardStore = create<LiveScoreboardState>()(
   devtools((set, get) => ({
@@ -56,7 +54,7 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
       const now = Date.now();
 
       const next: LiveEvent = {
-        id: ++nextEventId,
+        id: crypto.randomUUID(),
         ts: now,
         attackerId: attacker_id,
         victimId: victim_id,

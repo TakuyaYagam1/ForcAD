@@ -108,7 +108,7 @@ export function EventItem({
   );
 }
 
-export function RecentEvents({ teamId }: { teamId?: number }) {
+export function RecentEvents({ teamId }: { teamId?: string }) {
   const events = useLiveScoreboardStore((state) => state.events);
   const selected = (
     teamId === undefined

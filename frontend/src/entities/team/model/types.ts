@@ -1,13 +1,7 @@
-// src/entities/team/model/types.ts
+import type { AdminTeam } from "@/shared/api/generated/schemas/admin/adminTeam.zod";
 
-export interface Team {
-  id: number | null;
-  name: string;
-  ip: string;
-  token: string;
-  logo_path: string;
-  highlighted: boolean;
-  active: boolean;
+export type Team = Omit<AdminTeam, "id"> & {
+  id: string | null;
   score?: number;
   taskStats?: unknown;
-}
+};

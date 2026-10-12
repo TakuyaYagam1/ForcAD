@@ -1,13 +1,12 @@
-import { api } from "@/shared/lib/axios";
-import type { TeamTaskLogEntry } from "../model/types";
+import { getAdminTeamTaskHistory } from "@/shared/api/generated/endpoints";
 
-export async function fetchTeamTaskLog(teamId: number, taskId: number) {
-  const { data } = await api.get<TeamTaskLogEntry[]>("/admin/teamtasks/", {
-    params: {
-      team_id: teamId,
-      task_id: taskId,
-    },
-  });
-
-  return data;
+export async function fetchTeamTaskLog(
+  teamId: string,
+  taskId: string,
+  signal?: AbortSignal,
+) {
+  return getAdminTeamTaskHistory({
+    team_id: teamId,
+    task_id: taskId,
+  }, signal);
 }

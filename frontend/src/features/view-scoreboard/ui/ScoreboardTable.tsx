@@ -9,7 +9,7 @@ import "./ScoreboardTable.css";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 
 export interface ScoreboardTeam {
-  id: number;
+  id: string;
   name: string;
   score: number;
   highlighted?: boolean;
@@ -18,14 +18,13 @@ export interface ScoreboardTeam {
 }
 
 export interface ScoreboardTask {
-  id: number;
+  id: string;
   name: string;
 }
 
 export interface ScoreboardTeamTask {
-  id: number;
-  teamId: number;
-  taskId: number;
+  teamId: string;
+  taskId: string;
   status: number;
   score: number;
   checks: number;
@@ -41,9 +40,9 @@ interface ScoreboardTableProps {
   tasks: ScoreboardTask[];
   teamTasks: ScoreboardTeamTask[];
   filter?: string;
-  onTeamClick?: (teamId: number) => void;
-  onTaskClick?: (taskId: number) => void;
-  onCellClick?: (teamId: number, taskId: number) => void;
+  onTeamClick?: (teamId: string) => void;
+  onTaskClick?: (taskId: string) => void;
+  onCellClick?: (teamId: string, taskId: string) => void;
 }
 
 export function ScoreboardTable({
@@ -57,8 +56,8 @@ export function ScoreboardTable({
 }: ScoreboardTableProps) {
   const navigate = useNavigate();
   const frameRef = useRef<HTMLDivElement>(null);
-  const rows = useRef(new Map<number, HTMLTableRowElement>());
-  const previous = useRef(new Map<number, { rank: number; top: number }>());
+  const rows = useRef(new Map<string, HTMLTableRowElement>());
+  const previous = useRef(new Map<string, { rank: number; top: number }>());
 
   const query = filter.trim().toLocaleLowerCase("ru-RU");
   const visible = teams.filter((team) =>
@@ -76,7 +75,7 @@ export function ScoreboardTable({
   );
 
   useLayoutEffect(() => {
-    const next = new Map<number, { rank: number; top: number }>();
+    const next = new Map<string, { rank: number; top: number }>();
     const animations: Animation[] = [];
     const timers: number[] = [];
     const animatedRows: HTMLTableRowElement[] = [];

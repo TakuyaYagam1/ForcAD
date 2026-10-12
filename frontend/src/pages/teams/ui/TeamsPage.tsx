@@ -8,11 +8,11 @@ import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
-import type { Team } from "@/entities/team/model/types";
+import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import "./TeamsPage.css";
 
-function TeamCard({ team, rank }: { team: Team; rank: number }) {
+function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
   const podium = rank >= 1 && rank <= 3;
 
   return (

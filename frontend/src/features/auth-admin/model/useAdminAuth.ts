@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { api } from "@/shared/lib/axios";
+import {
+  adminLogin,
+  adminLogout,
+  getAdminSessionStatus,
+} from "@/shared/api/generated/endpoints";
 import { apiErrorMessage } from "@/shared/lib/apiError";
 import { isAxiosError } from "axios";
 export interface AdminLoginPayload {
@@ -29,15 +33,12 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
     const current = ++revision;
     set({ error: null });
     try {
-      const { data } = await api.post<{ username?: string }>(
-        "/admin/login/",
-        payload,
-      );
+      const data = await adminLogin(payload);
       if (revision === current)
         set({
           isAuthenticated: true,
           isAuthChecked: true,
-          user: { username: data.username ?? payload.username },
+          user: { username: data.username },
           error: null,
         });
     } catch (error) {
@@ -58,7 +59,7 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
     const current = ++revision;
     set({ error: null });
     try {
-      await api.post("/admin/logout/");
+      await adminLogout();
       if (revision === current)
         set({
           isAuthenticated: false,
@@ -82,7 +83,7 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
     const current = revision;
     checkInFlight = (async () => {
       try {
-        const { data } = await api.get<{ username: string }>("/admin/status/");
+        const data = await getAdminSessionStatus();
         if (revision === current)
           set({
             isAuthenticated: true,

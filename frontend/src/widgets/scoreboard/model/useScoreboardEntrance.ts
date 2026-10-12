@@ -1,4 +1,8 @@
 import { useLayoutEffect, useRef } from "react";
+import {
+  isMotionAllowed,
+  watchMotionDisable,
+} from "@/shared/lib/motionPreference";
 
 interface EntranceStep {
   element: Element | null;
@@ -11,54 +15,23 @@ interface EntranceStep {
 
 function playEntrance(steps: EntranceStep[]) {
   const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  const motionAllowed = () => {
-    if (
-      preference.matches ||
-      document.documentElement.dataset.motion === "off" ||
-      document.visibilityState === "hidden"
-    ) {
-      return false;
-    }
-
-    // AppShell writes data-motion after mounting; also check the saved setting.
-    try {
-      return localStorage.getItem("cf-motion") !== "off";
-    } catch {
-      return true;
-    }
-  };
-
-  if (!motionAllowed()) return () => {};
+  if (!isMotionAllowed(preference)) return () => {};
 
   const animations = new Set<Animation>();
   let stopped = false;
+  let stopWatchingMotion = () => {};
 
   const stop = () => {
     if (stopped) return;
     stopped = true;
 
-    observer.disconnect();
-    preference.removeEventListener("change", checkMotion);
-    document.removeEventListener("visibilitychange", checkMotion);
+    stopWatchingMotion();
 
     animations.forEach((animation) => animation.cancel());
     animations.clear();
   };
 
-  const checkMotion = () => {
-    if (!motionAllowed()) stop();
-  };
-
-  const observer = new MutationObserver(checkMotion);
-
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["data-motion"],
-  });
-
-  preference.addEventListener("change", checkMotion);
-  document.addEventListener("visibilitychange", checkMotion);
+  stopWatchingMotion = watchMotionDisable(preference, stop);
 
   steps.forEach(({ element, name, from, to, duration, delay = 0 }) => {
     if (!element || typeof element.animate !== "function") return;

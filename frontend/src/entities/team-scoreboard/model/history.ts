@@ -1,15 +1,15 @@
 import type { TeamTaskState } from "../api";
 export function groupHistoryByRound(
   states: TeamTaskState[],
-  activeTaskIds: number[],
+  activeTaskIds: string[],
 ) {
   const active = new Set(activeTaskIds);
-  const rounds = new Map<number, Map<number, TeamTaskState>>();
+  const rounds = new Map<number, Map<string, TeamTaskState>>();
   // API order is newest first: keep the last checker result for each service and round.
   for (const state of states) {
     if (!active.has(state.taskId)) continue;
     const services =
-      rounds.get(state.round) ?? new Map<number, TeamTaskState>();
+      rounds.get(state.round) ?? new Map<string, TeamTaskState>();
     if (!services.has(state.taskId)) services.set(state.taskId, state);
     rounds.set(state.round, services);
   }

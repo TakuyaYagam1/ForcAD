@@ -1,64 +1,48 @@
-// src/pages/admin-team/ui/TeamAdminPage.tsx
-import { useEffect, useLayoutEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-
-import { AppShell } from "@/shared/ui/layout/AppShell";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Team } from "@/entities/team/model/types";
 import {
-  fetchTeamAdmin,
   createTeamAdmin,
+  fetchTeamAdmin,
   updateTeamAdmin,
 } from "@/entities/team/api/admin";
-
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-
-import { validateTeam } from "@/shared/lib/adminValidation";
 import { apiErrorMessage } from "@/shared/lib/apiError";
+import { validateTeam } from "@/shared/lib/adminValidation";
 import { queryClient } from "@/shared/lib/queryClient";
+import { AppShell } from "@/shared/ui/layout/AppShell";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { TeamForm } from "./TeamForm";
+import { normalizeUuid } from "@/shared/lib/uuid";
 
 interface TeamAdminPageProps {
   mode?: "create" | "edit";
 }
 
 export function TeamAdminPage({ mode }: TeamAdminPageProps) {
-  const params = useParams<{ teamId?: string }>();
+  const { teamId: teamIdParam } = useParams<{ teamId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const teamIdParam = params.teamId;
   const isCreate = mode === "create" || !teamIdParam;
-  const teamId = !isCreate && teamIdParam ? Number(teamIdParam) : null;
-
+  const teamId = !isCreate ? (normalizeUuid(teamIdParam) ?? null) : null;
   const routeKey = useRef(location.key);
-  useLayoutEffect(() => {
-    routeKey.current = location.key;
-  }, [location.key]);
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const canSave =
     loadedKey === location.key && !!team && (isCreate || team.id === teamId);
 
+  useLayoutEffect(() => {
+    routeKey.current = location.key;
+  }, [location.key]);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadTeam() {
       setLoading(true);
       setTeam(null);
       setLoadedKey(null);
@@ -67,8 +51,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
 
       try {
         if (isCreate) {
-          // Default values match the Vue Team.vue form.
-          const empty: Team = {
+          const emptyTeam: Team = {
             id: null,
             name: "",
             ip: "",
@@ -78,72 +61,79 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             active: true,
           };
           if (!cancelled) {
-            setTeam(empty);
+            setTeam(emptyTeam);
             setLoadedKey(location.key);
           }
-        } else if (teamId != null && Number.isInteger(teamId) && teamId > 0) {
-          const data = await fetchTeamAdmin(teamId);
+        } else if (teamId !== null) {
+          const loadedTeam = await fetchTeamAdmin(teamId);
           if (!cancelled) {
-            setTeam({ ...data, logo_path: data.logo_path ?? "" });
+            setTeam({ ...loadedTeam, logo_path: loadedTeam.logo_path ?? "" });
             setLoadedKey(location.key);
           }
-        } else {
-          if (!cancelled) {
-            setError("Некорректный ID команды");
-          }
+        } else if (!cancelled) {
+          setError("Некорректный ID команды");
         }
-      } catch (e: unknown) {
-        console.error(e);
+      } catch (loadError: unknown) {
+        console.error(loadError);
         if (!cancelled) {
-          setError(apiErrorMessage(e, "Ошибка загрузки данных"));
+          setError(apiErrorMessage(loadError, "Ошибка загрузки данных"));
         }
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
-    void load();
+    void loadTeam();
 
     return () => {
       cancelled = true;
     };
   }, [isCreate, teamId, location.key]);
 
-  const handleChange = (field: keyof Team, value: unknown) => {
-    setTeam((prev) => (prev ? { ...prev, [field]: value } : prev));
+  const handleChange = <Field extends keyof Team,>(
+    field: Field,
+    value: Team[Field],
+  ) => {
+    setTeam((currentTeam) =>
+      currentTeam ? { ...currentTeam, [field]: value } : currentTeam,
+    );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!team || !canSave || saving) return;
-    const validation = validateTeam(team, isCreate);
-    if (validation) {
-      setError(validation);
+
+    const validationError = validateTeam(team, isCreate);
+    if (validationError) {
+      setError(validationError);
       return;
     }
-    const submittedKey = location.key;
+
+    const submittedRouteKey = location.key;
     setSaving(true);
     setError(null);
 
     try {
       const payload: Omit<Team, "id"> & { id?: Team["id"] } = { ...team };
       delete payload.id;
+
       if (isCreate) {
-        const created = await createTeamAdmin(payload);
-        if (routeKey.current === submittedKey)
-          navigate(`/admin/team/${created.id}`, { replace: true });
+        const createdTeam = await createTeamAdmin(payload);
+        if (routeKey.current === submittedRouteKey) {
+          navigate(`/admin/team/${createdTeam.id}`, { replace: true });
+        }
       } else if (teamId != null) {
-        const updated = await updateTeamAdmin(teamId, payload);
-        if (routeKey.current === submittedKey) setTeam(updated);
+        const updatedTeam = await updateTeamAdmin(teamId, payload);
+        if (routeKey.current === submittedRouteKey) setTeam(updatedTeam);
       }
+
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
-    } catch (e: unknown) {
-      if (routeKey.current === submittedKey)
-        setError(apiErrorMessage(e, "Ошибка сохранения данных"));
+    } catch (saveError: unknown) {
+      if (routeKey.current === submittedRouteKey) {
+        setError(apiErrorMessage(saveError, "Ошибка сохранения данных"));
+      }
     } finally {
-      if (routeKey.current === submittedKey) setSaving(false);
+      if (routeKey.current === submittedRouteKey) setSaving(false);
     }
   };
 
@@ -153,9 +143,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
         <div className="admin-heading">
           <div>
             <p className="eyebrow">Панель организатора</p>
-            <h1 className="">
-              {isCreate ? "Создание команды" : "Редактирование команды"}
-            </h1>
+            <h1>{isCreate ? "Создание команды" : "Редактирование команды"}</h1>
             <p className="text-xs text-slate-400">
               Название, доступ и оформление команды.
             </p>
@@ -170,129 +158,16 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             {error ?? "Команда не найдена"}
           </div>
         ) : (
-          <form onSubmit={handleSubmit}>
-            <Card className="admin-form max-w-3xl !p-0">
-              <CardHeader>
-                <CardTitle className="text-sm text-slate-100">
-                  {isCreate
-                    ? "Новая команда"
-                    : `Команда ${team.name} (${team.id ?? "—"})`}
-                </CardTitle>
-                <CardDescription className="text-xs text-slate-400">
-                  Измените поля и сохраните изменения.
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                <div className="logo-preview md:col-span-2">
-                  <TeamAvatar
-                    name={team.name || "Команда"}
-                    src={team.logo_path}
-                    size="large"
-                  />
-                  <p>
-                    Так логотип будет выглядеть в профиле.
-                    <br />
-                    Укажи ссылку или путь к изображению в поле ниже.
-                  </p>
-                </div>
-                {error && (
-                  <div className="notice md:col-span-2" role="alert">
-                    {error}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="name">Название команды</Label>
-                  <Input
-                    disabled={saving}
-                    id="name"
-                    required
-                    maxLength={255}
-                    value={team.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ip">IP-адрес</Label>
-                  <Input
-                    disabled={saving}
-                    id="ip"
-                    required
-                    value={team.ip}
-                    onChange={(e) => handleChange("ip", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="token">
-                    Токен команды{isCreate ? " (создаётся сервером)" : ""}
-                  </Label>
-                  <Input
-                    disabled={saving}
-                    id="token"
-                    readOnly={isCreate}
-                    placeholder={isCreate ? "Будет создан автоматически" : ""}
-                    maxLength={16}
-                    value={team.token}
-                    onChange={(e) => handleChange("token", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="logo_path">Ссылка на логотип</Label>
-                  <Input
-                    disabled={saving}
-                    id="logo_path"
-                    placeholder="/team-logo.png или https://…"
-                    value={team.logo_path}
-                    onChange={(e) => handleChange("logo_path", e.target.value)}
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-4 md:col-span-2">
-                  <label className="flex items-center gap-2 text-xs text-slate-200">
-                    <Checkbox
-                      disabled={saving}
-                      checked={team.highlighted}
-                      onCheckedChange={(v) =>
-                        handleChange("highlighted", Boolean(v))
-                      }
-                    />
-                    Выделить в рейтинге
-                  </label>
-
-                  <label className="flex items-center gap-2 text-xs text-slate-200">
-                    <Checkbox
-                      disabled={saving}
-                      checked={team.active}
-                      onCheckedChange={(v) =>
-                        handleChange("active", Boolean(v))
-                      }
-                    />
-                    Активна
-                  </label>
-                </div>
-              </CardContent>
-
-              <CardFooter className="form-actions mx-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-
-                  disabled={saving}
-                  onClick={() => navigate(-1)}
-                >
-                  Отмена
-                </Button>
-                <Button type="submit" size="sm" disabled={saving || !canSave}>
-                  {saving ? "Сохраняем…" : "Сохранить"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </form>
+          <TeamForm
+            team={team}
+            isCreate={isCreate}
+            saving={saving}
+            error={error}
+            canSave={canSave}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+            onCancel={() => navigate(-1)}
+          />
         )}
       </div>
     </AppShell>

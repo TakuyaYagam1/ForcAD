@@ -46,8 +46,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        "/api/events/ws": createProxy(true),
         "/api": createProxy(),
-        "/socket.io": createProxy(true),
       },
     },
     plugins: [

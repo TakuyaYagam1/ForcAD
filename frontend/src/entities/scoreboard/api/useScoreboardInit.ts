@@ -5,7 +5,7 @@ import { fetchScoreboardInit } from "./index";
 export function useScoreboardInit() {
   return useQuery({
     queryKey: ["scoreboardInit"],
-    queryFn: fetchScoreboardInit,
-    refetchInterval: 5_000, // Refresh every 5 seconds.
+    queryFn: ({ signal }) => fetchScoreboardInit(signal),
+    staleTime: Infinity,
   });
 }

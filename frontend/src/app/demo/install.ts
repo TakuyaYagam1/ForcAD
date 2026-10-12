@@ -15,22 +15,60 @@ import {
   createDemoTasks,
   createDemoTeamTasks,
   createDemoHistory,
+  DEMO_DEFAULT_SCORE,
+  demoUuid,
   DEMO_INITIAL_ROUND,
   DEMO_ROUND_TIME,
 } from "./data";
 
+const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
+const DEMO_SESSION_STORAGE_KEY = "forcad-demo-auth";
+const DEMO_REQUEST_DELAY_MS = 100;
+const DEMO_ADMIN_USERNAME = "demo";
+const DEMO_ADMIN_PASSWORD = "demo";
+const DEMO_CAPTURE_DELTA = 185;
+const DEMO_PROMOTION_MARGIN = 275;
+const MIN_DEMO_CAPTURE_PASS_RATE = 0.01;
+const GAME_ACTION_PATH =
+  /^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/;
+const UUID_PATH = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+const ADMIN_ENTITY_PATH = new RegExp(`^/admin/(teams|tasks)(?:/(${UUID_PATH}))?$`, "i");
+const CLIENT_TEAM_HISTORY_PATH = new RegExp(`^/client/teams/(${UUID_PATH})$`, "i");
+
+interface DemoCaptureSeed {
+  attackerId: string;
+  victimId: string;
+  taskId: string;
+  delta: number;
+}
+
+const INITIAL_CAPTURE_EVENTS: DemoCaptureSeed[] = [
+  {
+    attackerId: demoUuid(2),
+    victimId: demoUuid(1),
+    taskId: demoUuid(1001),
+    delta: 185,
+  },
+  { attackerId: demoUuid(3), victimId: demoUuid(5), taskId: demoUuid(1002), delta: 122.5 },
+  { attackerId: demoUuid(1), victimId: demoUuid(4), taskId: demoUuid(1003), delta: 210 },
+  { attackerId: demoUuid(5), victimId: demoUuid(7), taskId: demoUuid(1004), delta: 96.75 },
+  { attackerId: demoUuid(4), victimId: demoUuid(2), taskId: demoUuid(1001), delta: 154 },
+  { attackerId: demoUuid(6), victimId: demoUuid(8), taskId: demoUuid(1002), delta: 88.25 },
+];
+
 let teams: Team[] = [];
 let tasks: Task[] = [];
-let raw: RawTeamTask[] = [];
-let history: TeamTaskStateRaw[] = [];
+let rawTeamTasks: RawTeamTask[] = [];
+let teamTaskHistory: TeamTaskStateRaw[] = [];
+const demoAdminLogIds = new Map<string, string>();
 let round = DEMO_INITIAL_ROUND;
 let roundStart = 0;
-let nextHistoryId = 1;
-let loggedIn = false;
+let isLoggedIn = false;
 let phase: "waiting" | "running" | "paused" | "finished" = "running";
 let practice = false;
 let generation = 0;
-let scheduledStart = new Date(Date.now() - 3600_000).toISOString();
+let scheduledStart = new Date(Date.now() - ONE_HOUR_MS).toISOString();
 let pausedAt: number | null = null;
 let pausedSeconds = 0;
 
@@ -48,27 +86,86 @@ function getRuntime(): GameRuntimeStatus {
     round_time: DEMO_ROUND_TIME,
     round: phase === "waiting" ? 0 : round + 1,
     round_start: phase === "waiting" ? null : roundStart + DEMO_ROUND_TIME,
+    round_waiting: false,
     results_pending: false,
   };
 }
 
+function getDemoConfig() {
+  return {
+    id: 1,
+    flag_lifetime: 3,
+    game_hardness: 2,
+    inflation: false,
+    volga_attacks_mode: false,
+    round_time: DEMO_ROUND_TIME,
+    rounds: null,
+    mode: "demo",
+    timezone: "UTC",
+    start_time: scheduledStart,
+    real_round: round,
+    game_running: phase === "running",
+  };
+}
+
+function getParticipantTeams() {
+  return teams
+    .filter((team) => team.active)
+    .map(({ id, name, ip, highlighted, active, logo_path }) => ({
+      id: id!,
+      name,
+      ip,
+      highlighted,
+      active,
+      logo_path,
+    }));
+}
+
+function getParticipantTasks() {
+  return tasks
+    .filter((task) => task.active)
+    .map(({ id, name }) => ({ id: id!, name }));
+}
+
+function getDemoScoreboard() {
+  const participantTeams = getParticipantTeams();
+  const participantTasks = getParticipantTasks();
+  const teamIds = new Set(participantTeams.map((team) => team.id));
+  const taskIds = new Set(participantTasks.map((task) => task.id));
+
+  return {
+    state: {
+      round_start: roundStart,
+      round,
+      team_tasks: rawTeamTasks.filter(
+        (cell) => teamIds.has(cell.team_id) && taskIds.has(cell.task_id),
+      ),
+    },
+    teams: participantTeams,
+    tasks: participantTasks,
+    config: getDemoConfig(),
+    runtime: getRuntime(),
+  };
+}
+
 function publishState() {
-  useScoreboardStore.getState().handleInitScoreboardMessage({
-    teams,
-    tasks,
-    state: { round, round_start: roundStart, team_tasks: raw },
+  const scoreboard = useScoreboardStore.getState();
+  scoreboard.handleInitScoreboardMessage({
+    teams: getParticipantTeams(),
+    tasks: getParticipantTasks(),
+    state: { round, round_start: roundStart, team_tasks: rawTeamTasks },
     runtime: getRuntime(),
   });
-  useScoreboardStore.getState().setRoundTime(DEMO_ROUND_TIME);
-  useScoreboardStore.getState().setConnected(true);
+  scoreboard.setRoundTime(DEMO_ROUND_TIME);
+  scoreboard.setConnected(true);
   refreshGameQueries();
 }
 
 function rememberSession(value: boolean) {
-  loggedIn = value;
+  isLoggedIn = value;
   try {
-    if (value) sessionStorage.setItem("forcad-demo-auth", "on");
-    else sessionStorage.removeItem("forcad-demo-auth");
+    if (value) sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, "on");
+    else sessionStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
   } catch {
     // In-memory demo login still works without storage.
   }
@@ -77,40 +174,35 @@ function rememberSession(value: boolean) {
 export function resetDemoData() {
   practice = false;
   generation += 1;
-  scheduledStart = new Date(Date.now() - 3600_000).toISOString();
+  scheduledStart = new Date(Date.now() - ONE_HOUR_MS).toISOString();
   phase = "running";
   pausedAt = null;
   pausedSeconds = 0;
   teams = createDemoTeams();
   tasks = createDemoTasks();
-  raw = createDemoTeamTasks(teams, tasks);
+  rawTeamTasks = createDemoTeamTasks(teams, tasks);
   round = DEMO_INITIAL_ROUND;
   const now = Math.floor(Date.now() / 1000);
   roundStart = now - DEMO_ROUND_TIME - 35;
-  history = createDemoHistory(raw, round, now);
-  nextHistoryId = history.length + 1;
+  teamTaskHistory = createDemoHistory(rawTeamTasks, round, now);
+  demoAdminLogIds.clear();
   publishState();
 
   const scoreboard = useScoreboardStore.getState();
-  const seededEvents = [
-    [2, 1, 1, 185],
-    [3, 5, 2, 122.5],
-    [1, 4, 3, 210],
-    [5, 7, 4, 96.75],
-    [4, 2, 1, 154],
-    [6, 8, 2, 88.25],
-  ].map(([attackerId, victimId, taskId, delta], index) => ({
-    id: index + 1,
-    ts: Date.now() - (index * 43 + 12) * 1000,
-    attackerId,
-    victimId,
-    taskId,
-    attackerName: scoreboard.teams!.find((team) => team.id === attackerId)!
-      .name,
-    victimName: scoreboard.teams!.find((team) => team.id === victimId)!.name,
-    taskName: tasks.find((task) => task.id === taskId)!.name,
-    delta,
-  }));
+  const seededEvents = INITIAL_CAPTURE_EVENTS.map(
+    ({ attackerId, victimId, taskId, delta }, index) => ({
+      id: demoUuid(300_000 + index),
+      ts: Date.now() - (index * 43 + 12) * 1000,
+      attackerId,
+      victimId,
+      taskId,
+      attackerName: scoreboard.teams!.find((team) => team.id === attackerId)!
+        .name,
+      victimName: scoreboard.teams!.find((team) => team.id === victimId)!.name,
+      taskName: tasks.find((task) => task.id === taskId)!.name,
+      delta,
+    }),
+  );
   useLiveScoreboardStore.setState({ events: seededEvents, error: null });
 }
 
@@ -118,54 +210,68 @@ export function prepareDemoGame() {
   phase = "waiting";
   practice = false;
   generation += 1;
-  scheduledStart = new Date(Date.now() + 86400_000).toISOString();
+  scheduledStart = new Date(Date.now() + ONE_DAY_MS).toISOString();
   pausedAt = null;
   pausedSeconds = 0;
   round = 0;
   roundStart = 0;
-  history = [];
-  raw = raw.map((cell) => ({
-    ...cell, score: 2500, stolen: 0, lost: 0, checks: 0, checks_passed: 0, status: -1,
+  teamTaskHistory = [];
+  demoAdminLogIds.clear();
+  rawTeamTasks = rawTeamTasks.map((cell) => ({
+    ...cell,
+    score: DEMO_DEFAULT_SCORE,
+    stolen: 0,
+    lost: 0,
+    checks: 0,
+    checks_passed: 0,
+    status: -1,
   }));
   publishState();
 }
 
 function recordSnapshot() {
   const now = Math.floor(Date.now() / 1000);
-  history.unshift(
-    ...raw.map((item) => ({
-      ...item,
-      id: nextHistoryId++,
+  teamTaskHistory.unshift(
+    ...rawTeamTasks.map((teamTask) => ({
+      ...teamTask,
       round,
-      timestamp: `${now}-${item.task_id}`,
+      timestamp: `${now}-${tasks.findIndex((task) => task.id === teamTask.task_id) + 1}`,
     })),
   );
 }
 
 export function simulateDemoCapture(promote = false) {
   if (phase !== "running") return;
-  const leaders = useScoreboardStore.getState().teams ?? [];
-  const active = leaders.filter((team) => team.active);
-  const taskIds = new Set(tasks.filter((task) => task.active).map((task) => task.id));
-  if (active.length < 2 || !taskIds.size) return;
-  const attacker = active[1];
-  const victim = active[0];
-  const attackerCell = raw.find((item) => item.team_id === attacker.id && taskIds.has(item.task_id) && item.checks_passed > 0);
-  const victimCell = raw.find(
-    (item) =>
-      item.team_id === victim.id && item.task_id === attackerCell?.task_id,
+  const rankedTeams = useScoreboardStore.getState().teams ?? [];
+  const activeTeams = rankedTeams.filter((team) => team.active);
+  const activeTaskIds = new Set(
+    tasks.filter((task) => task.active).map((task) => task.id),
+  );
+  if (activeTeams.length < 2 || !activeTaskIds.size) return;
+  const attacker = activeTeams[1];
+  const victim = activeTeams[0];
+  const attackerCell = rawTeamTasks.find(
+    (teamTask) =>
+      teamTask.team_id === attacker.id &&
+      activeTaskIds.has(teamTask.task_id) &&
+      teamTask.checks_passed > 0,
+  );
+  const victimCell = rawTeamTasks.find(
+    (teamTask) =>
+      teamTask.team_id === victim.id &&
+      teamTask.task_id === attackerCell?.task_id,
   );
   if (!attackerCell || !victimCell) return;
   const delta = promote
     ? Math.max(
-        185,
-        ((victim.score ?? 0) - (attacker.score ?? 0) + 275) /
+        DEMO_CAPTURE_DELTA,
+        ((victim.score ?? 0) - (attacker.score ?? 0) + DEMO_PROMOTION_MARGIN) /
           Math.max(
-            0.01,
+            MIN_DEMO_CAPTURE_PASS_RATE,
             attackerCell.checks_passed / Math.max(1, attackerCell.checks),
           ),
       )
-    : 185;
+    : DEMO_CAPTURE_DELTA;
   attackerCell.score += delta;
   attackerCell.stolen += 1;
   victimCell.score = Math.max(0, victimCell.score - delta);
@@ -179,7 +285,7 @@ export function simulateDemoCapture(promote = false) {
   useScoreboardStore.getState().handleUpdateScoreboardMessage({
     round,
     round_start: roundStart,
-    team_tasks: raw,
+    team_tasks: rawTeamTasks,
   });
   useLiveScoreboardStore.getState().pushNotification({
     generation,
@@ -237,13 +343,17 @@ function readBody(config: InternalAxiosRequestConfig): Record<string, unknown> {
 }
 
 function addMissingCells() {
+  const teamIds = new Set(teams.map((team) => team.id));
+  const taskIds = new Set(tasks.map((task) => task.id));
+  const existingCells = new Set(
+    rawTeamTasks.map(({ team_id, task_id }) => `${team_id}:${task_id}`),
+  );
+
   for (const team of teams) {
     for (const task of tasks) {
-      if (
-        raw.some((item) => item.team_id === team.id && item.task_id === task.id)
-      )
-        continue;
-      raw.push({
+      const cellKey = `${team.id}:${task.id}`;
+      if (existingCells.has(cellKey)) continue;
+      rawTeamTasks.push({
         team_id: team.id!,
         task_id: task.id!,
         score: task.default_score,
@@ -254,206 +364,317 @@ function addMissingCells() {
         status: -1,
         message: "",
       });
+      existingCells.add(cellKey);
     }
   }
-  raw = raw.filter(
-    (item) =>
-      teams.some((team) => team.id === item.team_id) &&
-      tasks.some((task) => task.id === item.task_id),
+  rawTeamTasks = rawTeamTasks.filter(
+    (teamTask) =>
+      teamIds.has(teamTask.team_id) && taskIds.has(teamTask.task_id),
   );
 }
 
-function demoLogs(teamId: number, taskId: number): TeamTaskLogEntry[] {
-  return history
-    .filter((item) => item.team_id === teamId && item.task_id === taskId)
+function demoLogs(teamId: string, taskId: string): TeamTaskLogEntry[] {
+  return teamTaskHistory
+    .filter((entry) => entry.team_id === teamId && entry.task_id === taskId)
     .slice(0, 15)
-    .map((item, index) => ({
-      ...item,
-      id: item.id ?? index + 1,
+    .map((entry) => ({
+      ...entry,
+      id: getDemoAdminLogId(entry),
       team_id: teamId,
       task_id: taskId,
-      ts: Number(item.timestamp.split("-")[0]),
-      public_message: item.message || "OK",
+      ts: Number(entry.timestamp.slice(0, entry.timestamp.indexOf("-"))),
+      public_message: entry.message || "OK",
       private_message: "Demo entry: check completed",
       command: `python demo/checker.py check ${teams.find((team) => team.id === teamId)?.ip ?? "10.10.14.8"}`,
     }));
 }
 
-const demoAdapter: AxiosAdapter = async (config) => {
-  // Resolve requests entirely in the browser; no backend connection is made.
-  await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
-  if (config.signal?.aborted)
-    throw new AxiosError("Cancelled", AxiosError.ERR_CANCELED, config);
-  const url = new URL(
-    config.url ?? "/",
-    `${config.baseURL ?? window.location.origin}/`,
-  );
-  const path = url.pathname.replace(/^\/api/, "").replace(/\/$/, "");
-  const method = config.method?.toUpperCase() ?? "GET";
-  const body = readBody(config);
+function getDemoAdminLogId(entry: TeamTaskStateRaw): string {
+  const key = `${entry.team_id}:${entry.task_id}:${entry.timestamp}`;
+  const existingId = demoAdminLogIds.get(key);
+  if (existingId) return existingId;
 
-  if (path === "/client/status")
-    return makeResponse(config, getRuntime());
-  if (path === "/client/config")
-    return makeResponse(config, { round_time: DEMO_ROUND_TIME });
-  if (path === "/scoreboard/init") {
+  const id = crypto.randomUUID();
+  demoAdminLogIds.set(key, id);
+  return id;
+}
+
+type DemoResponse = ReturnType<typeof makeResponse>;
+
+function handleClientRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+): DemoResponse | undefined {
+  if (requestPath === "/client/status") return makeResponse(config, getRuntime());
+  if (requestPath === "/client/config")
+    return makeResponse(config, getDemoConfig());
+  if (requestPath === "/client/scoreboard")
+    return makeResponse(config, getDemoScoreboard());
+  if (requestPath === "/client/teams")
+    return makeResponse(config, getParticipantTeams());
+  if (requestPath === "/client/tasks")
+    return makeResponse(config, getParticipantTasks());
+
+  const teamHistoryMatch = requestPath.match(CLIENT_TEAM_HISTORY_PATH);
+  if (!teamHistoryMatch) return;
+
+  const teamId = teamHistoryMatch[1]!.toLowerCase();
+  return makeResponse(
+    config,
+    teamTaskHistory.filter((entry) => entry.team_id === teamId),
+  );
+}
+
+function handleAdminSessionRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+  method: string,
+  body: Record<string, unknown>,
+): DemoResponse | undefined {
+  if (requestPath === "/admin/login") {
+    if (method !== "POST") fail(config, 405, "Sign-in requires POST");
+    if (
+      body.username !== DEMO_ADMIN_USERNAME ||
+      body.password !== DEMO_ADMIN_PASSWORD
+    ) {
+      fail(config, 403, "Use demo as both the username and password");
+    }
+    rememberSession(true);
+    if (!isLoggedIn) fail(config, 403, "No active demo session");
+    return makeResponse(config, { status: "ok", username: DEMO_ADMIN_USERNAME });
+  }
+  if (requestPath === "/admin/status") {
+    if (method !== "GET") fail(config, 405, "Session checks require GET");
+    if (!isLoggedIn) fail(config, 403, "No active demo session");
     return makeResponse(config, {
-      teams,
-      tasks,
-      state: { round, round_start: roundStart, team_tasks: raw },
-      runtime: getRuntime(),
+      username: DEMO_ADMIN_USERNAME,
+      status: "ok",
     });
   }
-  if (path === "/client/teams")
-    return makeResponse(
-      config,
-      teams.filter((team) => team.active),
-    );
-  const teamHistory = path.match(/^\/client\/teams\/(\d+)$/);
-  if (teamHistory)
-    return makeResponse(
-      config,
-      history.filter((item) => item.team_id === Number(teamHistory[1])),
-    );
-  if (path === "/admin/login") {
-    if (method !== "POST") fail(config, 405, "Sign-in requires POST");
-    if (method === "POST") {
-      if (body.username !== "demo" || body.password !== "demo")
-        fail(config, 403, "Use demo as both the username and password");
-      rememberSession(true);
-    }
-    if (!loggedIn) fail(config, 403, "No active demo session");
-    return makeResponse(config, { username: "demo" });
-  }
-  if (path === "/admin/status") {
-    if (method !== "GET")
-      fail(config, 405, "Session checks require GET");
-    if (!loggedIn) fail(config, 403, "No active demo session");
-    return makeResponse(config, { username: "demo", status: "ok" });
-  }
-  if (path === "/admin/logout") {
+  if (requestPath === "/admin/logout") {
     if (method !== "POST") fail(config, 405, "Sign-out requires POST");
     rememberSession(false);
     return makeResponse(config, { status: "ok" });
   }
-  if (path.startsWith("/admin/") && !loggedIn)
-    fail(config, 403, "No active demo session");
+}
 
-  const gameAction = path.match(/^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/)?.[1];
-  if (gameAction) {
-    if (method !== "POST") fail(config, 405, "Game controls require POST");
-    if ((gameAction === "finish" || gameAction === "start_final") && body.confirm !== true)
-      fail(config, 400, "Game action confirmation is required");
-    if (body.generation !== undefined && body.generation !== generation)
-      fail(config, 409, "Game session has changed");
-    if (phase === "finished" && gameAction !== "finish")
-      fail(config, 409, "Game has already finished");
-    if (gameAction === "start" || gameAction === "start_practice" || gameAction === "start_final") {
-      if (phase !== "waiting") fail(config, 409, "Game cannot be started in its current state");
-      const early = new Date(scheduledStart).getTime() > Date.now();
-      if (gameAction === "start_practice" && !early)
-        fail(config, 409, "The scheduled start has arrived; rehearsal cannot start");
-      practice = gameAction !== "start_final" && early;
-      generation += 1;
-      phase = "running";
-      roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
-    } else if (gameAction === "finish" && practice) {
-      const originalStart = scheduledStart;
-      prepareDemoGame();
-      scheduledStart = originalStart;
-    } else if (gameAction === "resume") {
-      if (pausedAt !== null) pausedSeconds += Date.now() / 1000 - pausedAt;
-      pausedAt = null;
-      phase = "running";
-    } else {
-      pausedAt ??= Date.now() / 1000;
-      phase = gameAction === "finish" ? "finished" : "paused";
-    }
-    publishState();
-    return makeResponse(config, getRuntime());
+function requireAdminSession(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+): void {
+  if (requestPath.startsWith("/admin/") && !isLoggedIn) {
+    fail(config, 403, "No active demo session");
+  }
+}
+
+function handleGameActionRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+  method: string,
+  body: Record<string, unknown>,
+): DemoResponse | undefined {
+  const gameAction = requestPath.match(GAME_ACTION_PATH)?.[1];
+  if (!gameAction) return;
+
+  if (method !== "POST") fail(config, 405, "Game controls require POST");
+  if (
+    (gameAction === "finish" || gameAction === "start_final") &&
+    body.confirm !== true
+  ) {
+    fail(config, 400, "Game action confirmation is required");
+  }
+  if (body.generation !== undefined && body.generation !== generation) {
+    fail(config, 409, "Game session has changed");
+  }
+  if (phase === "finished" && gameAction !== "finish") {
+    fail(config, 409, "Game has already finished");
   }
 
-  const entity = path.match(/^\/admin\/(teams|tasks)(?:\/(\d+))?$/);
-  if (entity) {
-    const isTeam = entity[1] === "teams";
-    const collection = isTeam ? teams : tasks;
-    const id = entity[2] ? Number(entity[2]) : null;
-    const existing = collection.find((item) => item.id === id);
-    if (method === "GET") {
-      if (id === null) return makeResponse(config, collection);
-      if (!existing) fail(config, 404, "Record not found");
-      return makeResponse(config, existing);
+  const startsGame =
+    gameAction === "start" ||
+    gameAction === "start_practice" ||
+    gameAction === "start_final";
+  if (startsGame) {
+    if (phase !== "waiting") {
+      fail(config, 409, "Game cannot be started in its current state");
     }
-    if (method === "DELETE") {
-      if (!existing) fail(config, 404, "Record not found");
-      existing.active = false;
-      addMissingCells();
-      publishState();
-      return makeResponse(config, { status: "ok" });
+    const scheduledStartIsFuture =
+      new Date(scheduledStart).getTime() > Date.now();
+    if (gameAction === "start_practice" && !scheduledStartIsFuture) {
+      fail(config, 409, "The scheduled start has arrived; rehearsal cannot start");
     }
-    if (method === "POST" || method === "PUT") {
-      if (method === "PUT" && !existing) fail(config, 404, "Record not found");
-      const nextId =
-        existing?.id ??
-        Math.max(0, ...collection.map((item) => item.id ?? 0)) + 1;
-      let saved: Team | Task;
-      if (isTeam) {
-        saved = {
-          ...createDemoTeams()[0],
-          ...(existing ?? {}),
-          ...body,
-          id: nextId,
-        } as Team;
-        if (method === "POST")
-          saved.token = [...crypto.getRandomValues(new Uint8Array(8))]
-            .map((n) => n.toString(16).padStart(2, "0"))
-            .join("");
-        const error = validateTeam(saved, method === "POST");
-        if (error) fail(config, 400, error);
-        if (
-          teams.some(
-            (team) =>
-              team.id !== nextId && team.token === (saved as Team).token,
-          )
-        )
-          fail(config, 409, "Token is already used by another team");
-        saved.name = saved.name.trim();
-        saved.ip = saved.ip.trim();
-        teams = [...teams.filter((item) => item.id !== nextId), saved];
-      } else {
-        saved = {
-          ...createDemoTasks()[0],
-          ...(existing ?? {}),
-          ...body,
-          id: nextId,
-        } as Task;
-        const error = validateTask(saved);
-        if (error) fail(config, 400, error);
-        tasks = [...tasks.filter((item) => item.id !== nextId), saved];
-      }
-      addMissingCells();
-      recordSnapshot();
-      publishState();
-      return makeResponse(config, saved, method === "POST" ? 201 : 200);
-    }
+    practice = gameAction !== "start_final" && scheduledStartIsFuture;
+    generation += 1;
+    phase = "running";
+    roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
+  } else if (gameAction === "finish" && practice) {
+    const originalStart = scheduledStart;
+    prepareDemoGame();
+    scheduledStart = originalStart;
+  } else if (gameAction === "resume") {
+    if (pausedAt !== null) pausedSeconds += Date.now() / 1000 - pausedAt;
+    pausedAt = null;
+    phase = "running";
+  } else {
+    pausedAt ??= Date.now() / 1000;
+    phase = gameAction === "finish" ? "finished" : "paused";
+  }
+
+  publishState();
+  return makeResponse(config, getRuntime());
+}
+
+function handleAdminEntityRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+  method: string,
+  body: Record<string, unknown>,
+): DemoResponse | undefined {
+  const entityMatch = requestPath.match(ADMIN_ENTITY_PATH);
+  if (!entityMatch) return;
+
+  const isTeamCollection = entityMatch[1] === "teams";
+  const collection = isTeamCollection ? teams : tasks;
+  const recordId = entityMatch[2]?.toLowerCase() ?? null;
+  const existingRecord = collection.find((record) => record.id === recordId);
+
+  if (method === "GET") {
+    if (recordId === null) return makeResponse(config, collection);
+    if (!existingRecord) fail(config, 404, "Record not found");
+    return makeResponse(config, existingRecord);
+  }
+  if (method === "DELETE") {
+    if (!existingRecord) fail(config, 404, "Record not found");
+    existingRecord.active = false;
+    addMissingCells();
+    publishState();
+    return makeResponse(config, { status: "ok" });
+  }
+  if (method !== "POST" && method !== "PUT") {
     fail(config, 405, "Action is not supported in demo mode");
   }
-  if (path === "/admin/teamtasks") {
-    const params = config.params as
-      { team_id?: number; task_id?: number } | undefined;
-    return makeResponse(
-      config,
-      demoLogs(Number(params?.team_id), Number(params?.task_id)),
-    );
+  if (method === "PUT" && !existingRecord) {
+    fail(config, 404, "Record not found");
   }
+
+  const nextId = existingRecord?.id ?? crypto.randomUUID();
+  let savedRecord: Team | Task;
+
+  if (isTeamCollection) {
+    const savedTeam = {
+      ...createDemoTeams()[0],
+      ...(existingRecord ?? {}),
+      ...body,
+      id: nextId,
+    } as Team;
+    if (method === "POST") {
+      savedTeam.token = [...crypto.getRandomValues(new Uint8Array(8))]
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+    }
+    const validationError = validateTeam(savedTeam, method === "POST");
+    if (validationError) fail(config, 400, validationError);
+    const tokenAlreadyExists = teams.some(
+      (team) => team.id !== nextId && team.token === savedTeam.token,
+    );
+    if (tokenAlreadyExists) {
+      fail(config, 409, "Token is already used by another team");
+    }
+    savedTeam.name = savedTeam.name.trim();
+    savedTeam.ip = savedTeam.ip.trim();
+    teams = [...teams.filter((team) => team.id !== nextId), savedTeam];
+    savedRecord = savedTeam;
+  } else {
+    const savedTask = {
+      ...createDemoTasks()[0],
+      ...(existingRecord ?? {}),
+      ...body,
+      id: nextId,
+    } as Task;
+    const validationError = validateTask(savedTask);
+    if (validationError) fail(config, 400, validationError);
+    tasks = [...tasks.filter((task) => task.id !== nextId), savedTask];
+    savedRecord = savedTask;
+  }
+
+  addMissingCells();
+  recordSnapshot();
+  publishState();
+  return makeResponse(config, savedRecord, method === "POST" ? 201 : 200);
+}
+
+function handleAdminTeamTaskLogRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+): DemoResponse | undefined {
+  if (requestPath !== "/admin/teamtasks") return;
+
+  const params = config.params as
+    | { team_id?: string; task_id?: string }
+    | undefined;
+  return makeResponse(
+    config,
+    params?.team_id && params.task_id
+      ? demoLogs(params.team_id.toLowerCase(), params.task_id.toLowerCase())
+      : [],
+  );
+}
+
+const demoAdapter: AxiosAdapter = async (config) => {
+  // Resolve requests entirely in the browser; no backend connection is made.
+  await new Promise<void>((resolve) =>
+    window.setTimeout(resolve, DEMO_REQUEST_DELAY_MS),
+  );
+  if (config.signal?.aborted) {
+    throw new AxiosError("Cancelled", AxiosError.ERR_CANCELED, config);
+  }
+
+  const requestBase = config.baseURL ?? window.location.origin;
+  const requestUrl = new URL(config.url ?? "/", requestBase + "/");
+  const requestPath = requestUrl.pathname.replace(/^\/api/, "").replace(/\/$/, "");
+  const method = config.method?.toUpperCase() ?? "GET";
+  const body = readBody(config);
+
+  const clientResponse = handleClientRequest(config, requestPath);
+  if (clientResponse) return clientResponse;
+
+  const sessionResponse = handleAdminSessionRequest(
+    config,
+    requestPath,
+    method,
+    body,
+  );
+  if (sessionResponse) return sessionResponse;
+
+  requireAdminSession(config, requestPath);
+
+  const gameResponse = handleGameActionRequest(
+    config,
+    requestPath,
+    method,
+    body,
+  );
+  if (gameResponse) return gameResponse;
+
+  const entityResponse = handleAdminEntityRequest(
+    config,
+    requestPath,
+    method,
+    body,
+  );
+  if (entityResponse) return entityResponse;
+
+  const logResponse = handleAdminTeamTaskLogRequest(config, requestPath);
+  if (logResponse) return logResponse;
+
   fail(config, 404, "Request is not supported in demo mode");
 };
 
 export function installDemoData() {
   try {
-    loggedIn = sessionStorage.getItem("forcad-demo-auth") === "on";
+    isLoggedIn = sessionStorage.getItem(DEMO_SESSION_STORAGE_KEY) === "on";
   } catch {
-    loggedIn = false;
+    isLoggedIn = false;
   }
   api.defaults.adapter = demoAdapter;
   http.defaults.adapter = demoAdapter;

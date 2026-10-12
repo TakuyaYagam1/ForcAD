@@ -7,12 +7,12 @@ import { apiErrorMessage } from "@/shared/lib/apiError";
 export function AdminEntityLists() {
   const teams = useQuery({
     queryKey: ["admin-teams"],
-    queryFn: fetchTeamsAdmin,
+    queryFn: ({ signal }) => fetchTeamsAdmin(signal),
     refetchInterval: 10000,
   });
   const tasks = useQuery({
     queryKey: ["admin-tasks"],
-    queryFn: fetchTasksAdmin,
+    queryFn: ({ signal }) => fetchTasksAdmin(signal),
     refetchInterval: 10000,
   });
   return (
