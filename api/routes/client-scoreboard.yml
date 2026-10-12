@@ -1,0 +1,14 @@
+get:
+  operationId: getScoreboard
+  tags:
+  - client
+  summary: Get the complete participant scoreboard.
+  description: Used to initialize and resynchronize clients after event-stream reconnects.
+  security: []
+  responses:
+    '200':
+      description: The same full scoreboard shape sent in init_scoreboard events.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/Scoreboard"

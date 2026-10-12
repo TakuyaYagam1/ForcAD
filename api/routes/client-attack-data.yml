@@ -1,0 +1,13 @@
+get:
+  operationId: getClientAttackData
+  tags:
+  - client
+  summary: Get public flag data grouped by task and team address.
+  security: []
+  responses:
+    '200':
+      description: Public attack data, or null before data is available.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AttackData"

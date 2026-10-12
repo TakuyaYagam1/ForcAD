@@ -1,0 +1,291 @@
+schemas:
+  AdminTeam:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    - ip
+    - token
+    - highlighted
+    - active
+    - logo_path
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+        maxLength: 255
+      ip:
+        type: string
+        maxLength: 45
+      token:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
+      highlighted:
+        type: boolean
+      active:
+        type: boolean
+      logo_path:
+        type: string
+        maxLength: 255
+  AdminTeamCreate:
+    type: object
+    additionalProperties: true
+    required:
+    - name
+    - ip
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      ip:
+        type: string
+        minLength: 1
+        maxLength: 45
+      token:
+        type: string
+        description: Ignored by the server, which generates a fresh token.
+      highlighted:
+        type: boolean
+        default: false
+      active:
+        type: boolean
+        default: true
+      logo_path:
+        type: string
+        maxLength: 255
+        default: ''
+  AdminTeamUpdate:
+    type: object
+    additionalProperties: true
+    required:
+    - name
+    - ip
+    - token
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      ip:
+        type: string
+        minLength: 1
+        maxLength: 45
+      token:
+        type: string
+        pattern: "^[0-9a-f]{16}$"
+      highlighted:
+        type: boolean
+        default: false
+      active:
+        type: boolean
+        default: true
+      logo_path:
+        type: string
+        maxLength: 255
+        default: ''
+  AdminTask:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    - checker
+    - gets
+    - puts
+    - places
+    - checker_timeout
+    - checker_type
+    - env_path
+    - default_score
+    - get_period
+    - active
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+        maxLength: 255
+      checker:
+        type: string
+        maxLength: 1024
+      gets:
+        type: integer
+        format: int32
+      puts:
+        type: integer
+        format: int32
+      places:
+        type: integer
+        format: int32
+      checker_timeout:
+        type: integer
+        format: int32
+      checker_type:
+        type: string
+        maxLength: 32
+      env_path:
+        type: string
+        maxLength: 1024
+      default_score:
+        type: number
+      get_period:
+        type: integer
+        format: int32
+      active:
+        type: boolean
+  AdminTaskWrite:
+    type: object
+    additionalProperties: true
+    required:
+    - name
+    - checker
+    - gets
+    - puts
+    - places
+    - checker_timeout
+    - checker_type
+    - default_score
+    - get_period
+    properties:
+      name:
+        type: string
+        minLength: 1
+        maxLength: 255
+      checker:
+        type: string
+        minLength: 1
+        maxLength: 1024
+      gets:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 2147483647
+      puts:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 2147483647
+      places:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 2147483647
+      checker_timeout:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 2147483647
+      checker_type:
+        type: string
+        maxLength: 32
+      env_path:
+        type: string
+        maxLength: 1024
+        default: ''
+      default_score:
+        type: integer
+        minimum: 0
+        maximum: 2147483647
+      get_period:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 2147483647
+      active:
+        type: boolean
+        default: true
+  AdminTeamTaskLogEntry:
+    type: object
+    additionalProperties: true
+    required:
+    - id
+    - round
+    - team_id
+    - task_id
+    - status
+    - score
+    - stolen
+    - lost
+    - checks
+    - checks_passed
+    - ts
+    - public_message
+    - private_message
+    - command
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      round:
+        type: integer
+        format: int32
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      status:
+        type: integer
+        format: int32
+      score:
+        type: number
+      stolen:
+        type: integer
+        format: int32
+      lost:
+        type: integer
+        format: int32
+      checks:
+        type: integer
+        format: int32
+      checks_passed:
+        type: integer
+        format: int32
+      ts:
+        type: number
+      public_message:
+        type:
+        - string
+        - 'null'
+      private_message:
+        type:
+        - string
+        - 'null'
+      command:
+        type:
+        - string
+        - 'null'
+  GameActionRequest:
+    type: object
+    additionalProperties: true
+    properties:
+      generation:
+        type: integer
+        format: int64
+      confirm:
+        type: boolean
+  AdminLoginRequest:
+    type: object
+    additionalProperties: false
+    required:
+    - username
+    - password
+    properties:
+      username:
+        type: string
+      password:
+        type: string
+  AdminSession:
+    type: object
+    additionalProperties: false
+    required:
+    - status
+    - username
+    properties:
+      status:
+        type: string
+        enum:
+        - ok
+      username:
+        type: string

@@ -1,0 +1,9 @@
+get:
+  operationId: getAdminHealth
+  tags:
+  - admin
+  summary: Check the administration API service.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Health"

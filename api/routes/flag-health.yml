@@ -1,0 +1,9 @@
+get:
+  operationId: getFlagReceiverHealth
+  tags:
+  - flag-receiver
+  summary: Check the flag receiver service.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Health"

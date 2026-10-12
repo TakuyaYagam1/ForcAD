@@ -1,0 +1,72 @@
+openapi: 3.2.0
+info:
+  title: ForcAD API
+  version: 1.0.0
+  description: Public, administration, flag receiver, and event-stream contracts for
+    ForcAD. Administration mutations retain the server's same-origin check.
+servers:
+- url: "/"
+paths:
+  "/api/client/teams/":
+    "$ref": "./routes/client-teams.yml"
+  "/api/client/tasks/":
+    "$ref": "./routes/client-tasks.yml"
+  "/api/client/config/":
+    "$ref": "./routes/client-config.yml"
+  "/api/client/attack_data/":
+    "$ref": "./routes/client-attack-data.yml"
+  "/api/client/teams/{team_id}/":
+    "$ref": "./routes/client-teams-by-team-id.yml"
+  "/api/client/ctftime/":
+    "$ref": "./routes/client-ctftime.yml"
+  "/api/client/health/":
+    "$ref": "./routes/client-health.yml"
+  "/api/client/status/":
+    "$ref": "./routes/client-status.yml"
+  "/api/client/scoreboard/":
+    "$ref": "./routes/client-scoreboard.yml"
+  "/api/admin/teams/":
+    "$ref": "./routes/admin-teams.yml"
+  "/api/admin/teams/{team_id}/":
+    "$ref": "./routes/admin-teams-by-team-id.yml"
+  "/api/admin/tasks/":
+    "$ref": "./routes/admin-tasks.yml"
+  "/api/admin/tasks/{task_id}/":
+    "$ref": "./routes/admin-tasks-by-task-id.yml"
+  "/api/admin/teamtasks/":
+    "$ref": "./routes/admin-teamtasks.yml"
+  "/api/admin/teamtasks/{teamtask_id}/":
+    "$ref": "./routes/admin-teamtasks-by-teamtask-id.yml"
+  "/api/admin/game/{action}/":
+    "$ref": "./routes/admin-game-by-action.yml"
+  "/api/admin/login/":
+    "$ref": "./routes/admin-login.yml"
+  "/api/admin/status/":
+    "$ref": "./routes/admin-status.yml"
+  "/api/admin/logout/":
+    "$ref": "./routes/admin-logout.yml"
+  "/api/admin/health/":
+    "$ref": "./routes/admin-health.yml"
+  "/flags/":
+    "$ref": "./routes/flag-submissions.yml"
+  "/flags/health/":
+    "$ref": "./routes/flag-health.yml"
+  "/api/client/metrics":
+    "$ref": "./routes/client-metrics.yml"
+  "/api/admin/metrics":
+    "$ref": "./routes/admin-metrics.yml"
+  "/api/http-receiver/metrics":
+    "$ref": "./routes/receiver-metrics.yml"
+  "/api/events/health/":
+    "$ref": "./routes/events-health.yml"
+  "/api/events/ws":
+    "$ref": "./routes/events-ws.yml"
+components:
+  parameters:
+    $ref: ./components/parameters.yml
+  responses:
+    $ref: ./components/responses.yml
+  schemas:
+    $ref: ./components/schemas.yml
+  securitySchemes:
+    $ref: ./components/security.yml

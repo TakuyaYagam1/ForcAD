@@ -1,0 +1,44 @@
+get:
+  operationId: getAdminTasks
+  tags:
+  - admin
+  summary: List all tasks, including inactive tasks.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: All tasks with administration fields.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/AdminTask"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+post:
+  operationId: createAdminTask
+  tags:
+  - admin
+  summary: Create a task.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminTaskWrite"
+  responses:
+    '201':
+      description: The created task.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminTask"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"

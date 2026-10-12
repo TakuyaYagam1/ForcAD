@@ -1,0 +1,21 @@
+TeamId:
+  name: team_id
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+TaskId:
+  name: task_id
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+TeamTaskId:
+  name: teamtask_id
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid

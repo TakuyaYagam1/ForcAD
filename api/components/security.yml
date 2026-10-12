@@ -1,0 +1,10 @@
+sessionCookie:
+  type: apiKey
+  in: cookie
+  name: session
+  description: Administrator session cookie. The frontend sends it with credentials included.
+teamToken:
+  type: apiKey
+  in: header
+  name: X-Team-Token
+  description: Team token required by the flag receiver.

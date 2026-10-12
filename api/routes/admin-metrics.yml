@@ -1,0 +1,9 @@
+get:
+  operationId: getAdminMetrics
+  tags:
+  - metrics
+  summary: Read administration API Prometheus metrics.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Metrics"

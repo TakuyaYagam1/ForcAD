@@ -1,0 +1,15 @@
+get:
+  operationId: getClientTeams
+  tags:
+  - client
+  summary: List teams visible to participants.
+  security: []
+  responses:
+    '200':
+      description: Active teams with participant-visible fields.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/ParticipantTeam"

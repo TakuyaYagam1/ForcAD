@@ -1,0 +1,16 @@
+get:
+  operationId: getAdminSessionStatus
+  tags:
+  - admin
+  summary: Check the current administrator session.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: Session is active.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminSession"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"

@@ -1,0 +1,9 @@
+get:
+  operationId: getClientHealth
+  tags:
+  - client
+  summary: Check the client API service.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Health"

@@ -1,0 +1,86 @@
+schemas:
+  InitScoreboardEventPayload:
+    type: object
+    additionalProperties: false
+    required:
+    - data
+    properties:
+      data:
+        "$ref": "#/schemas/Scoreboard"
+  UpdateScoreboardEventPayload:
+    type: object
+    additionalProperties: false
+    required:
+    - data
+    properties:
+      data:
+        "$ref": "#/schemas/GameState"
+  FlagStolenEventPayload:
+    type: object
+    additionalProperties: false
+    required:
+    - data
+    properties:
+      data:
+        "$ref": "#/schemas/FlagNotification"
+  InitScoreboardEvent:
+    type: object
+    additionalProperties: false
+    required:
+    - type
+    - payload
+    - timestamp
+    properties:
+      type:
+        type: string
+        enum:
+        - init_scoreboard
+      payload:
+        "$ref": "#/schemas/InitScoreboardEventPayload"
+      timestamp:
+        type: string
+  UpdateScoreboardEvent:
+    type: object
+    additionalProperties: false
+    required:
+    - type
+    - payload
+    - timestamp
+    properties:
+      type:
+        type: string
+        enum:
+        - update_scoreboard
+      payload:
+        "$ref": "#/schemas/UpdateScoreboardEventPayload"
+      timestamp:
+        type: string
+  FlagStolenEvent:
+    type: object
+    additionalProperties: false
+    required:
+    - type
+    - payload
+    - timestamp
+    properties:
+      type:
+        type: string
+        enum:
+        - flag_stolen
+      payload:
+        "$ref": "#/schemas/FlagStolenEventPayload"
+      timestamp:
+        type: string
+  RealtimeEvent:
+    description: Public event sent as a JSON text frame on /api/events/ws. No administration
+      or checker-private data is included.
+    oneOf:
+    - "$ref": "#/schemas/InitScoreboardEvent"
+    - "$ref": "#/schemas/UpdateScoreboardEvent"
+    - "$ref": "#/schemas/FlagStolenEvent"
+    discriminator:
+      propertyName: type
+      mapping:
+        init_scoreboard: "#/schemas/InitScoreboardEvent"
+        update_scoreboard: "#/schemas/UpdateScoreboardEvent"
+        flag_stolen: "#/schemas/FlagStolenEvent"

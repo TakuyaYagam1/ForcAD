@@ -1,0 +1,13 @@
+get:
+  operationId: getClientConfig
+  tags:
+  - client
+  summary: Get the current game configuration.
+  security: []
+  responses:
+    '200':
+      description: Current game configuration.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/GameConfig"

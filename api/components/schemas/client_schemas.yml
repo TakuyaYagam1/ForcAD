@@ -1,0 +1,188 @@
+schemas:
+  ParticipantTeam:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    - ip
+    - highlighted
+    - active
+    - logo_path
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+      ip:
+        type: string
+      highlighted:
+        type: boolean
+      active:
+        type: boolean
+      logo_path:
+        type: string
+  ParticipantTask:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+  AttackData:
+    description: Task name to team IP to public flag values.
+    type:
+    - object
+    - 'null'
+    additionalProperties:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+  ScoreboardTeamTask:
+    type: object
+    additionalProperties: true
+    required:
+    - team_id
+    - task_id
+    - status
+    - stolen
+    - lost
+    - score
+    - checks
+    - checks_passed
+    - message
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      status:
+        type: integer
+        format: int32
+      stolen:
+        type: integer
+        format: int32
+      lost:
+        type: integer
+        format: int32
+      score:
+        type: number
+      checks:
+        type: integer
+        format: int32
+      checks_passed:
+        type: integer
+        format: int32
+      message:
+        type:
+        - string
+        - 'null'
+  GameState:
+    type: object
+    additionalProperties: false
+    required:
+    - round_start
+    - round
+    - team_tasks
+    properties:
+      round_start:
+        type: integer
+        format: int64
+      round:
+        type: integer
+        format: int32
+      team_tasks:
+        type: array
+        items:
+          "$ref": "#/schemas/ScoreboardTeamTask"
+  Scoreboard:
+    type: object
+    additionalProperties: false
+    required:
+    - state
+    - teams
+    - tasks
+    - config
+    - runtime
+    properties:
+      state:
+        "$ref": "#/schemas/GameState"
+      teams:
+        type: array
+        items:
+          "$ref": "#/schemas/ParticipantTeam"
+      tasks:
+        type: array
+        items:
+          "$ref": "#/schemas/ParticipantTask"
+      config:
+        "$ref": "#/schemas/GameConfig"
+      runtime:
+        "$ref": "#/schemas/GameRuntimeStatus"
+  ParticipantTeamTaskHistory:
+    type: object
+    additionalProperties: true
+    required:
+    - team_id
+    - task_id
+    - round
+    - status
+    - stolen
+    - lost
+    - score
+    - checks
+    - checks_passed
+    - timestamp
+    - message
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      round:
+        type: integer
+        format: int32
+      status:
+        type: integer
+        format: int32
+      stolen:
+        type: integer
+        format: int32
+      lost:
+        type: integer
+        format: int32
+      score:
+        type: number
+      checks:
+        type: integer
+        format: int32
+      checks_passed:
+        type: integer
+        format: int32
+      timestamp:
+        type: string
+      message:
+        type:
+        - string
+        - 'null'
+  CtftimeStanding:
+    type: object
+    additionalProperties: false
+    required:
+    - pos
+    - team
+    - score
+    properties:
+      pos:
+        type: integer
+        format: int32
+      team:
+        type: string
+      score:
+        type: number

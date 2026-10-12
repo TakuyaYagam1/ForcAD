@@ -1,0 +1,68 @@
+parameters:
+- "$ref": "../components/parameters.yml#/TaskId"
+get:
+  operationId: getAdminTask
+  tags:
+  - admin
+  summary: Get one task, including administration fields.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: The requested task.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminTask"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+put:
+  operationId: updateAdminTask
+  tags:
+  - admin
+  summary: Replace a task's editable fields.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminTaskWrite"
+  responses:
+    '200':
+      description: The updated task.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminTask"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"
+delete:
+  operationId: deleteAdminTask
+  tags:
+  - admin
+  summary: Deactivate a task.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: The task was deactivated.
+      content:
+        application/json:
+          schema:
+            type: string
+            enum:
+            - ok
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"

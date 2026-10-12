@@ -1,0 +1,9 @@
+get:
+  operationId: getClientMetrics
+  tags:
+  - metrics
+  summary: Read client API Prometheus metrics.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Metrics"
