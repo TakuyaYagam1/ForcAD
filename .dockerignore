@@ -16,7 +16,19 @@
 **/.venv
 /front/dist
 /frontend/dist
+/frontend/test-results
+/frontend/playwright-report
+/api/openapi.yml
+/api/.openapi.lock
+/api/.venv
+/api/components/schemas.yml
 /backend/dist
+/backend/bin
+/backend/forcad
+/backend/integration_test
+/backend/load_test/reports
+/docs
+/-
 **/*.egg-info
 .env
 .env.*
@@ -32,7 +44,6 @@
 /config/runtime
 /checkers/**
 !/checkers/requirements.txt
-/control.py
 /README.md
 /cli
 /docker_volumes

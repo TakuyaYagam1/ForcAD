@@ -1,28 +1,22 @@
 name: forcad
 
 services:
-  celery:
+  api:
     restart: "no"
 
-  flower:
+  receiver:
     restart: "no"
 
-  initializer:
+  worker:
     restart: "no"
 
   ticker:
     restart: "no"
 
-  client-api:
+  initializer:
     restart: "no"
 
-  admin-api:
-    restart: "no"
-
-  events:
-    restart: "no"
-
-  http-receiver:
+  config-loader:
     restart: "no"
 
   nginx:
@@ -34,12 +28,8 @@ services:
   postgres:
     restart: "no"
 
-  rabbitmq:
+  postgres-data:
     restart: "no"
 
-  test-service:
-    build:
-      context: ../../backend/tests/service
-    ports:
-      - "127.0.0.1:10000:10000"
+  rabbitmq:
     restart: "no"

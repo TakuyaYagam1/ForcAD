@@ -1,0 +1,72 @@
+name: forcad-go-tests
+
+services:
+  postgres:
+    image: postgres:18.6-alpine3.24@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+    environment:
+      POSTGRES_USER: forcad_test
+      POSTGRES_PASSWORD: local-integration-password
+      POSTGRES_DB: forcad_test
+    ports:
+      - "127.0.0.1::5432"
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forcad_test -d forcad_test"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+  pgbouncer:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/pgbouncer/Dockerfile
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: forcad_test
+      POSTGRES_PASSWORD: local-integration-password
+      POSTGRES_DB: forcad_test
+      PGBOUNCER_API_CONNECTIONS: "32"
+      PGBOUNCER_RECEIVER_CONNECTIONS: "2"
+      PGBOUNCER_WORKER_CONNECTIONS: "32"
+      PGBOUNCER_TICKER_CONNECTIONS: "8"
+    ports: ["127.0.0.1::6432"]
+    tmpfs:
+      - /run/pgbouncer:uid=10001,gid=10001,mode=0700,size=1m
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -p 6432 -U \"$$POSTGRES_USER\" -d forcad_ticker -X -Atc 'SELECT 1' | grep -qx 1"]
+      interval: 1s
+      timeout: 4s
+      retries: 30
+
+  redis:
+    image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1::6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
+    environment:
+      RABBITMQ_DEFAULT_USER: forcad_test
+      RABBITMQ_DEFAULT_PASS: local-integration-password
+      RABBITMQ_DEFAULT_VHOST: forcad_test
+    ports:
+      - "127.0.0.1::5672"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity
+      interval: 2s
+      timeout: 5s
+      retries: 30

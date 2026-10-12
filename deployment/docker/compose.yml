@@ -1,58 +1,119 @@
 name: forcad
 
+x-memory: &memory
+  mem_reservation: "${FORCAD_SERVICE_MEMORY_RESERVATION:-1g}"
+  mem_limit: "${FORCAD_SERVICE_MEMORY:-0}"
+
 x-service: &service
+  <<: *memory
   build:
     context: ../..
     dockerfile: backend/Dockerfile
     target: runtime
-  env_file: &runtime-environment
-    - ../../config/runtime/postgres_environment.env
-    - ../../config/runtime/redis_environment.env
-    - ../../config/runtime/rabbitmq_environment.env
+  env_file:
+    - path: ../../config/runtime/postgres_environment.env
+      format: raw
+    - path: ../../config/runtime/redis_environment.env
+      format: raw
+    - path: ../../config/runtime/rabbitmq_environment.env
+      format: raw
   restart: on-failure
-  mem_limit: "${FORCAD_SERVICE_MEMORY:-512m}"
   pids_limit: ${FORCAD_SERVICE_PIDS:-512}
   cap_drop:
     - ALL
   security_opt:
     - no-new-privileges:true
 
-x-worker: &worker
+x-runtime-settings: &runtime-settings
+  FORCAD_CONFIG: /run/forcad-config/config.yml
+  DATABASE_POOLER_ADDR: pgbouncer:6432
+  FORCAD_API_DATABASE_MAX_CONNS: "${FORCAD_API_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-32}}"
+  FORCAD_WORKER_DATABASE_MAX_CONNS: "${FORCAD_WORKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_TICKER_DATABASE_MAX_CONNS: "${FORCAD_TICKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-8}}"
+  METRICS_ADDR: 127.0.0.1:9090
+  PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
+  TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+  CHECKER_JOB_GRACE: "${CHECKER_JOB_GRACE:-30s}"
+  CHECKER_WORKFLOW_TIMEOUT: "${CHECKER_WORKFLOW_TIMEOUT:-30m}"
+  WORKER_CONCURRENCY: "${FORCAD_WORKER_CONCURRENCY:-8}"
+  FORCAD_CHECKER_MEMORY_LIMIT_MB: "${FORCAD_CHECKER_MEMORY_LIMIT_MB:-1024}"
+  FORCAD_CHECKER_OUTPUT_LIMIT_BYTES: "${FORCAD_CHECKER_OUTPUT_LIMIT_BYTES:-1048576}"
+  FLAG_RATE: "${FLAG_RATE:-200}"
+  FLAG_BURST: "${FLAG_BURST:-400}"
+
+x-app-dependencies: &app-dependencies
+  pgbouncer:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
+  initializer:
+    condition: service_completed_successfully
+
+x-app-service: &app-service
   <<: *service
+  depends_on: *app-dependencies
+  volumes:
+    - forcad-config:/run/forcad-config:ro
+
+x-worker: &worker-service
+  <<: *app-service
   build:
     context: ../..
     dockerfile: backend/Dockerfile
     target: worker
   volumes:
-    - ../../checkers:/checkers
+    - ../../checkers:/checkers:ro
+    - forcad-config:/run/forcad-config:ro
 
 services:
-  celery:
-    <<: *worker
-    command: ["worker"]
-    mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
-    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
-    pids_limit: ${FORCAD_WORKER_PIDS:-256}
+  api:
+    <<: *app-service
     environment:
-      TEST: "${TEST:-}"
-      SERVICE: worker
-      FORCAD_CHECKER_MEMORY_LIMIT_MB: "${FORCAD_CHECKER_MEMORY_LIMIT_MB:-1024}"
-      FORCAD_CHECKER_OUTPUT_LIMIT_BYTES: "${FORCAD_CHECKER_OUTPUT_LIMIT_BYTES:-1048576}"
-      FORCAD_WORKER_AUTOSCALE: "${FORCAD_WORKER_AUTOSCALE:-32,16}"
-
-  flower:
-    <<: *worker
-    command: ["flower"]
-    mem_limit: "${FORCAD_SERVICE_MEMORY:-512m}"
-    pids_limit: ${FORCAD_SERVICE_PIDS:-512}
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: flower
+      <<: *runtime-settings
+      FORCAD_ROLE: api
     env_file:
-      - ../../config/runtime/admin.env
-      - ../../config/runtime/postgres_environment.env
-      - ../../config/runtime/redis_environment.env
-      - ../../config/runtime/rabbitmq_environment.env
+      - path: ../../config/runtime/admin.env
+        format: raw
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
+      - path: ../../config/runtime/rabbitmq_environment.env
+        format: raw
+    deploy:
+      replicas: 2
+
+  receiver:
+    <<: *app-service
+    mem_reservation: "${FORCAD_RECEIVER_MEMORY_RESERVATION:-2g}"
+    mem_limit: "${FORCAD_RECEIVER_MEMORY:-0}"
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: receiver
+    deploy:
+      replicas: 2
+
+  worker:
+    <<: *worker-service
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: worker
+    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
+    mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
+    pids_limit: ${FORCAD_WORKER_PIDS:-2048}
+    deploy:
+      replicas: 2
+
+  ticker:
+    <<: *app-service
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: ticker
+    deploy:
+      replicas: 1
 
   initializer:
     <<: *service
@@ -60,19 +121,30 @@ services:
       context: ../..
       dockerfile: backend/Dockerfile
       target: initializer
-    command: ["--fast"]
-    env_file: *runtime-environment
+    command: ["init"]
+    env_file:
+      - path: ../../config/runtime/admin.env
+        format: raw
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
+      - path: ../../config/runtime/rabbitmq_environment.env
+        format: raw
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: api
+      FORCAD_CONFIG: /run/forcad-config/config.yml
+      DATABASE_POOLER_ADDR: ""
     volumes:
       - forcad-config:/run/forcad-config:ro
-    environment:
-      TEST: "${TEST:-}"
-      CONFIG_PATH: /run/forcad-config/config.yml
-    restart: on-failure
+    restart: "no"
     depends_on:
       config-loader:
         condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
 
-  # Copies the private host config into the named volume for the initializer.
   config-loader:
     <<: *service
     user: "0:0"
@@ -90,53 +162,13 @@ services:
       - ../../config/config.yml:/source/config.yml:ro
       - forcad-config:/run/forcad-config
     restart: "no"
-
-  ticker:
-    <<: *service
-    command: ["ticker"]
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: ticker
-
-  client-api:
-    <<: *service
-    command: ["api"]
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: api
-      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
-
-  admin-api:
-    <<: *service
-    command: ["admin"]
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: admin
-      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
-    env_file:
-      - ../../config/runtime/admin.env
-      - ../../config/runtime/postgres_environment.env
-      - ../../config/runtime/redis_environment.env
-      - ../../config/runtime/rabbitmq_environment.env
-
-  events:
-    <<: *service
-    command: ["events"]
-    pids_limit: ${FORCAD_EVENTS_PIDS:-1024}
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: events
-      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
-
-  http-receiver:
-    <<: *service
-    command: ["http_receiver"]
-    environment:
-      TEST: "${TEST:-}"
-      SERVICE: http_receiver
-      FORCAD_HTTP_THREADS: "${FORCAD_HTTP_THREADS:-100}"
+    healthcheck:
+      disable: true
 
   nginx:
+    <<: *memory
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
     build:
       context: ../..
       dockerfile: frontend/Dockerfile
@@ -160,34 +192,88 @@ services:
     security_opt:
       - no-new-privileges:true
     depends_on:
-      - flower
-      - client-api
-      - admin-api
-      - events
-      - http-receiver
+      api:
+        condition: service_healthy
+      receiver:
+        condition: service_healthy
 
   redis:
+    <<: *memory
     image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
-    command: ["sh", "-c", "redis-server --requirepass $$REDIS_PASSWORD"]
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxclients 10000"]
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
     restart: on-failure
     sysctls:
       net.core.somaxconn: 1024
     env_file:
-      - ../../config/runtime/redis_environment.env
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
     ports:
       - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -qx PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   rabbitmq:
+    <<: *memory
     image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
     hostname: rabbitmq
     restart: on-failure
     env_file:
-      - ../../config/runtime/rabbitmq_environment.env
+      - path: ../../config/runtime/rabbitmq_environment.env
+        format: raw
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  pgbouncer:
+    <<: *memory
+    build:
+      context: ../..
+      dockerfile: deployment/docker/pgbouncer/Dockerfile
+    env_file:
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+    environment:
+      PGBOUNCER_API_CONNECTIONS: "${PGBOUNCER_API_CONNECTIONS:-32}"
+      PGBOUNCER_RECEIVER_CONNECTIONS: "${PGBOUNCER_RECEIVER_CONNECTIONS:-64}"
+      PGBOUNCER_WORKER_CONNECTIONS: "${PGBOUNCER_WORKER_CONNECTIONS:-32}"
+      PGBOUNCER_TICKER_CONNECTIONS: "${PGBOUNCER_TICKER_CONNECTIONS:-8}"
+    ports:
+      - "127.0.0.1:6432:6432"
+    read_only: true
+    tmpfs:
+      - /run/pgbouncer:uid=10001,gid=10001,mode=0700,size=1m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -p 6432 -U \"$$POSTGRES_USER\" -d forcad_ticker -X -Atc 'SELECT 1' | grep -qx 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
 
   postgres:
+    <<: *memory
     image: forcad_postgres:local
     build:
       context: ../..
@@ -195,7 +281,8 @@ services:
     volumes:
       - ../../docker_volumes/postgres/data:/var/lib/postgresql
     env_file:
-      - ../../config/runtime/postgres_environment.env
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
     restart: on-failure
     cap_drop:
       - ALL
@@ -204,12 +291,18 @@ services:
     depends_on:
       postgres-data:
         condition: service_completed_successfully
-    command: ["postgres", "--max-connections=200"]
+    command: ["postgres", "--max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-500}"]
     ports:
       - "127.0.0.1:5432:5432"
-      - "127.0.0.1:6432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
 
   postgres-data:
+    <<: *memory
     image: forcad_postgres:local
     build:
       context: ../..

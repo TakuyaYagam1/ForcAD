@@ -20,7 +20,7 @@ refuse_symlink() {
 refuse_legacy_data() {
     marker=$1
     if [ -e "$marker" ] || [ -L "$marker" ]; then
-        echo "Legacy PostgreSQL data found at $marker; refusing to initialize PostgreSQL 18 at $data_dir. Keep the volume unchanged and see the PostgreSQL upgrade note in README.md." >&2
+        echo "Legacy PostgreSQL data found at $marker; refusing to initialize PostgreSQL 18 at $data_dir. Keep the volume unchanged and see Start a game in README.md." >&2
         exit 1
     fi
 }
@@ -52,7 +52,7 @@ for child in "$data_root"/* "$data_root"/.[!.]* "$data_root"/..?*; do
         [ "$child" = "$data_root/18" ] || refuse_legacy_data "$child/docker/PG_VERSION"
     fi
     if [ "$child" != "$data_root/18" ]; then
-        echo "Unexpected entry at $child; refusing to initialize PostgreSQL 18. Keep the volume unchanged and see the PostgreSQL upgrade note in README.md." >&2
+        echo "Unexpected entry at $child; refusing to initialize PostgreSQL 18. Keep the volume unchanged and see Start a game in README.md." >&2
         exit 1
     fi
 done
@@ -90,7 +90,7 @@ if [ -z "$(find "$data_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
 else
     if [ -L "$data_dir/PG_VERSION" ] || [ ! -f "$data_dir/PG_VERSION" ] \
         || [ "$(cat "$data_dir/PG_VERSION")" != 18 ]; then
-        echo "Unrecognized or incomplete PostgreSQL data at $data_dir; refusing to change it. Keep the volume unchanged and see the PostgreSQL upgrade note in README.md." >&2
+        echo "Unrecognized or incomplete PostgreSQL data at $data_dir; refusing to change it. Keep the volume unchanged and see Start a game in README.md." >&2
         exit 1
     fi
     require_postgres_access "$data_dir" 0700

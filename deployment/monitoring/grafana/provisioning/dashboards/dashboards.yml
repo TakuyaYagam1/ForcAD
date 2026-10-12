@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: forcad
+    orgId: 1
+    folder: ForcAD
+    type: file
+    disableDeletion: true
+    editable: false
+    updateIntervalSeconds: 15
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

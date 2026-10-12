@@ -28,6 +28,7 @@ config_backup*.yml
 
 checkers/*
 !checkers/requirements.txt
+!checkers/examples/
 
 *.env
 /docker-compose-base.yml
@@ -36,6 +37,17 @@ node_modules/
 /front/dist/
 /frontend/dist/
 /backend/dist/
+/backend/bin/
+/backend/forcad
+/backend/load_test/reports/
+/api/openapi.yml
+/api/.openapi.lock
+/api/.venv/
+/api/components/schemas.yml
+!/api/routes/*.yml
+!/backend/integration_test/fixtures/config.yml
+/frontend/test-results/
+/frontend/playwright-report/
 *.egg-info/
 .pnpm-store/
 .eslintcache

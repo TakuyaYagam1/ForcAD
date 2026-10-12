@@ -1,0 +1,53 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 5s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]
+
+  - job_name: forcad_api
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [api]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: forcad_receiver
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [receiver]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: forcad_worker
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [worker]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: forcad_ticker
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [ticker]
+        type: A
+        port: 9090
+        refresh_interval: 15s
+
+  - job_name: forcad_router
+    metrics_path: /metrics
+    honor_labels: true
+    scrape_interval: 15s
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/file_sd/routers.yml
+        refresh_interval: 15s

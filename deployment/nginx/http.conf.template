@@ -1,8 +1,7 @@
-limit_conn_zone $binary_remote_addr zone=http_ip_conn:16m;
-limit_req_zone $http_x_team_token zone=token_limit:64m rate=2r/s;
-limit_req_zone $binary_remote_addr zone=api_ip_limit:10m rate=30r/s;
-limit_req_log_level info;
-limit_req_status 429;
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
 
 map $http_content_encoding $reject_api_content_encoding {
     default 1;
@@ -17,6 +16,18 @@ map $uri $team_logo_csp {
 
 resolver ${DNS_RESOLVER} valid=10s ipv6=off;
 resolver_timeout 5s;
+
+upstream api_backend {
+    zone api_backend 64k;
+    server api:5000 resolve;
+    keepalive 32;
+}
+
+upstream receiver_backend {
+    zone receiver_backend 64k;
+    server receiver:5000 resolve;
+    keepalive 32;
+}
 
 client_body_temp_path /tmp/nginx/client_temp;
 proxy_temp_path /tmp/nginx/proxy_temp;
@@ -42,60 +53,41 @@ server {
     real_ip_header X-Forwarded-For;
     real_ip_recursive on;
 
-    location /flower {
-        set $backend flower:5000;
-        proxy_pass http://$backend;
+    location = /api/client/metrics {
+        return 404;
+    }
+
+    location = /api/admin/metrics {
+        return 404;
+    }
+
+    location = /api/http-receiver/metrics {
+        return 404;
+    }
+
+    location = /api/events/ws {
+        proxy_pass http://api_backend;
         include proxy_params_ws;
-    }
-
-    location /api/client {
-        set $backend client-api:5000;
-        proxy_pass http://$backend;
-        include proxy_params;
-        include /etc/nginx/api_limits.conf;
-    }
-
-    location /api/admin {
-        set $backend admin-api:5000;
-        proxy_pass http://$backend;
-        include proxy_params;
         include /etc/nginx/api_limits.conf;
     }
 
     location /flags {
-        set $backend http-receiver:5000;
-        proxy_pass http://$backend;
+        proxy_pass http://receiver_backend;
+        proxy_next_upstream off;
         include proxy_params;
 
         client_max_body_size 10K;
         include /etc/nginx/api_limits.conf;
-
-        limit_conn http_ip_conn 10;
-        limit_conn_log_level info;
-        limit_conn_status 429;
-
-        limit_req zone=token_limit;
     }
 
-    location /api/http-receiver {
-        set $backend http-receiver:5000;
-        proxy_pass http://$backend;
-        include proxy_params_ws;
+    location /api/ {
+        proxy_pass http://api_backend;
+        include proxy_params;
         include /etc/nginx/api_limits.conf;
     }
 
-    location /api/events {
-        set $backend events:5000;
-        proxy_pass http://$backend;
-        include proxy_params_ws;
-        include /etc/nginx/api_limits.conf;
-    }
-
-    location /socket.io {
-        set $backend events:5000;
-        proxy_pass http://$backend;
-        include proxy_params_ws;
-        include /etc/nginx/api_limits.conf;
+    location ^~ /socket.io {
+        return 404;
     }
 
     location ^~ /team-logos/ {

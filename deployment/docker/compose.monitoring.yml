@@ -1,0 +1,77 @@
+services:
+  api:
+    environment:
+      METRICS_ADDR: "0.0.0.0:9090"
+
+  receiver:
+    environment:
+      METRICS_ADDR: "0.0.0.0:9090"
+
+  worker:
+    environment:
+      METRICS_ADDR: "0.0.0.0:9090"
+
+  ticker:
+    environment:
+      METRICS_ADDR: "0.0.0.0:9090"
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    profiles: [monitoring]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=4GB
+    ports:
+      - "127.0.0.1:${FORCAD_PROMETHEUS_PORT-9090}:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/rules:/etc/prometheus/rules:ro
+      - ../monitoring/file_sd:/etc/prometheus/file_sd:ro
+      - prometheus-data:/prometheus
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    mem_reservation: 1g
+    pids_limit: 512
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    profiles: [monitoring]
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before starting monitoring}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:${FORCAD_GRAFANA_PORT-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    mem_reservation: 1g
+    pids_limit: 512
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  prometheus-data: {}
+  grafana-data: {}

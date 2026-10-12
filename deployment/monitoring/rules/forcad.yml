@@ -1,0 +1,116 @@
+groups:
+  - name: forcad-team-inventory
+    rules:
+      - record: forcad:team_info:latest
+        expr: topk by (team_id) (1, forcad_team_info * on (job, instance) group_left forcad_team_inventory_refresh_timestamp_seconds) ^ 0
+
+      - record: forcad:team_network_info:unique
+        expr: |
+          max by (team_ip, team_id) (forcad:team_info:latest{team_ip!=""})
+          and on (team_ip)
+          count by (team_ip) (forcad:team_info:latest{team_ip!=""}) == 1
+
+      - alert: ForcadTeamInventoryRefreshStale
+        expr: time() - forcad_team_inventory_refresh_timestamp_seconds{job=~"forcad_api|forcad_receiver"} > 60
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Team inventory refresh is stale
+          description: "{{ $labels.job }} at {{ $labels.instance }} has not refreshed team inventory successfully for more than 60 seconds."
+
+  - name: forcad-pools
+    rules:
+      - alert: ForcadDatabasePoolSaturated
+        expr: forcad_database_connections_in_use / clamp_min(forcad_database_connection_limit, 1) >= 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database connection pool is near its limit
+          description: "{{ $labels.job }} at {{ $labels.instance }} has used at least 90% of its database pool for 5 minutes."
+
+      - alert: ForcadDatabaseAcquireCanceled
+        expr: rate(forcad_database_acquire_canceled_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database pool acquisitions are being canceled
+          description: "{{ $labels.job }} at {{ $labels.instance }} has canceled database pool acquisitions."
+
+      - alert: ForcadRedisPoolPending
+        expr: forcad_redis_pool_pending_requests > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis pool requests are waiting
+          description: "{{ $labels.job }} at {{ $labels.instance }} has pending Redis pool requests for 5 minutes."
+
+      - alert: ForcadRedisPoolTimeouts
+        expr: rate(forcad_redis_pool_timeouts_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Redis pool requests are timing out
+          description: "{{ $labels.job }} at {{ $labels.instance }} has Redis pool timeouts."
+
+  - name: forcad-http
+    rules:
+      - alert: ForcadHttpErrorRatioHigh
+        expr: |
+          (
+            sum by (team_id) (rate(forcad_team_http_requests_total{status=~"4..|5.."}[5m]))
+            /
+            sum by (team_id) (rate(forcad_team_http_requests_total[5m]))
+          ) > 0.05
+          and on (team_id)
+          sum by (team_id) (rate(forcad_team_http_requests_total[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: HTTP error ratio is above 5%
+          description: "Team {{ $labels.team_id }} has had an HTTP 4xx/5xx ratio above 5% for 10 minutes."
+
+  - name: forcad-websockets
+    rules:
+      - alert: ForcadWebSocketSlotsNearLimit
+        expr: forcad_websocket_connections / clamp_min(forcad_websocket_connection_limit, 1) >= 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: WebSocket slots are near their limit
+          description: "{{ $labels.job }} at {{ $labels.instance }} has used at least 90% of its WebSocket slots for 5 minutes."
+
+      - alert: ForcadWebSocketSlowClientDrops
+        expr: rate(forcad_websocket_slow_client_drops_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: WebSocket events are being dropped for slow clients
+          description: "{{ $labels.job }} at {{ $labels.instance }} has dropped events for slow WebSocket clients."
+
+  - name: forcad-router
+    rules:
+      - alert: ForcadNetworkCounterScrapeFailed
+        expr: forcad_network_scrape_success == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Router network counter scrape failed
+          description: "The router exporter at {{ $labels.instance }} could not read or parse its network counters."
+
+      - alert: ForcadRouterExporterDown
+        expr: up{job="forcad_router"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Configured router exporter is unreachable
+          description: "The configured router exporter at {{ $labels.instance }} has failed scrapes for 5 minutes."

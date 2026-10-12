@@ -1,74 +1,48 @@
-# Copy to config/config.yml and replace the example date, services and team IPs.
-# Setup generates admin and storage credentials when those sections are omitted.
-
 game:
-  # Scheduling: classic waits for round checks; blitz schedules tasks separately.
   mode: classic
-  # Seconds per round. Checker delays and pauses can extend the total game time.
   round_time: 60
-  # Positive integer, or null for unlimited rounds. Applies to practice and final.
-  # 300 rounds at 60 seconds is nominally 5 hours; round 301 will not start.
   rounds: 300
-
-  # Scheduled final start in the timezone below. Replace this example date.
-  # Leave the datetime unquoted and without a UTC offset for setup validation.
-  start_time: 2027-01-01 12:00:00
+  start_time: "2027-01-01 12:00:00"
   timezone: Europe/Moscow
-
-  # The admin panel can start a practice game before start_time, or a final now.
-  # Practice results are cleared after checks finish when it ends or the date
-  # arrives. Teams, tokens and settings remain. Final results are preserved;
-  # a finished final cannot resume or restart at the scheduled date.
-
   default_score: 2500
-  # Flag lifetime is measured in rounds, not seconds.
   flag_lifetime: 5
-  # Scoring parameter: must be finite and greater than 1.
   game_hardness: 10.0
   inflation: true
-  # Reject submissions when the attacker's corresponding service is not UP.
   volga_attacks_mode: false
-
-  # Paths inside the worker container. Host checkers/ is mounted at /checkers/.
+  # Host checkers/ is mounted here; keep unchanged with the supplied Compose setup.
   checkers_path: /checkers/
+  # Python executables built into the worker image; keep unchanged with the supplied Dockerfile.
   env_path: /opt/checkers/bin
-  # Blitz GET interval in seconds; defaults to round_time and can vary per task.
+  # CHECK/GET interval in seconds; used only in blitz mode.
   # get_period: 60
 
 tasks:
   - name: example_service
-    # Relative to game.checkers_path. Install your executable checker here.
-    checker: example_service/checker.py
-    # Timeout in seconds for each CHECK, PUT or GET action.
+    checker: examples/note/checker.py
     checker_timeout: 10
     checker_type: hackerdom
-    # Flags placed per team per round, GET actions, and possible flag locations.
     puts: 2
     gets: 2
-    places: 5
-    # Optional overrides of the corresponding game settings:
-    # default_score: 2500
-    # env_path: /opt/checkers/bin
+    places: 2
+    default_score: 2500
+    # Task-specific CHECK/GET interval in seconds; blitz only.
     # get_period: 60
 
-  - name: public_service
-    checker: public_service/checker.py
-    checker_timeout: 10
-    # pfr publishes the checker's public flag data in the participants' API.
-    checker_type: pfr
-    puts: 2
-    gets: 2
-    places: 5
-
 teams:
-  - ip: 192.168.1.2
-    name: "Team 1"
-    # Optional image from public/teams. Omit to use the default avatar.
-    # logo_path: "/team-logos/team-1.svg"
-    # Omit token to generate it during database initialization.
-    # Set a unique random 16-character lowercase hex token to retain it on reset.
-    # token: "0123456789abcdef"
+  - name: danosito's ai farm
+    ip: 192.168.1.2
+    highlighted: false
+    logo_path: "/team-logos/danosito.jpg"
+    token: null
+    traffic_cidrs:
+      - 192.168.1.2/32
+      - 10.200.0.2/32
 
-  - ip: 192.168.1.3
-    name: "Team 2 (highlighted)"
+  - name: pod egidoy
+    ip: 192.168.1.3
     highlighted: true
+    logo_path: "/team-logos/egida.png"
+    token: null
+    traffic_cidrs:
+      - 192.168.1.3/32
+      - 10.200.0.3/32

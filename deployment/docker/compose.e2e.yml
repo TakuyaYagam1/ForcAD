@@ -1,0 +1,115 @@
+x-runtime: &runtime
+  image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-runtime
+  build:
+    context: ${FORCAD_TEST_BUILD_ROOT:?required}
+  healthcheck:
+    interval: 2s
+    start_period: 2s
+    timeout: 4s
+    retries: 30
+
+services:
+  api:
+    <<: *runtime
+
+  receiver:
+    <<: *runtime
+
+  ticker:
+    <<: *runtime
+
+  config-loader:
+    <<: *runtime
+    healthcheck:
+      disable: true
+    volumes: !override
+      - ${FORCAD_TEST_PROJECT_ROOT:?required}/config/config.yml:/source/config.yml:ro
+      - forcad-config:/run/forcad-config
+
+  initializer:
+    <<: *runtime
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+      target: runtime
+    healthcheck:
+      disable: true
+
+  worker:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-worker
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    environment:
+      WORKER_CONCURRENCY: "2"
+    healthcheck:
+      interval: 2s
+      start_period: 2s
+      timeout: 4s
+      retries: 30
+
+  nginx:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-nginx
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    ports: !override ["127.0.0.1::8080"]
+    volumes: !override
+      - ${FORCAD_TEST_PROJECT_ROOT:?required}/public/teams:/var/www/front/team-logos:ro
+
+  pgbouncer:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-pgbouncer
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    ports: !reset []
+
+  postgres:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-postgres
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    ports: !reset []
+    volumes: !override
+      - postgres-data:/var/lib/postgresql
+
+  postgres-data:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-postgres
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    volumes: !override
+      - postgres-data:/var/lib/postgresql
+
+  redis:
+    ports: !reset []
+
+  rabbitmq:
+    ports: !reset []
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.64.0-noble@sha256:06a9939e57531807f8d5fd76ce44b53165ffb7d7501d87ab10e285c20b1e971f
+    profiles: [e2e]
+    working_dir: /workspace
+    user: ${FORCAD_E2E_UID:-1000}:${FORCAD_E2E_GID:-1000}
+    init: true
+    read_only: true
+    shm_size: 1gb
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=1g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      HOME: /tmp
+      FORCAD_E2E_BASE_URL: http://nginx:8080
+      FORCAD_E2E_PROJECT: ${FORCAD_E2E_PROJECT:?required}
+      FORCAD_E2E_ADMIN_ENV_FILE: /run/forcad/runtime.env
+    volumes:
+      - ${FORCAD_E2E_FRONTEND_DIR:?required}:/workspace:ro
+      - ${FORCAD_E2E_RUNTIME_ENV_HOST:?required}:/run/forcad/runtime.env:ro
+      - ${FORCAD_E2E_ARTIFACTS:?required}:/artifacts
+    command:
+      - ./node_modules/.bin/playwright
+      - test
+      - --config=playwright.config.ts
+      - --reporter=line
+      - --output=/artifacts/test-results
+
+volumes:
+  postgres-data: {}
