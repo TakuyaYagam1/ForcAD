@@ -1,0 +1,30 @@
+# Monitoring
+
+Set `GRAFANA_ADMIN_PASSWORD`, then start the full stack with `./control.sh monitoring up -d`. The full `up` applies the overlay's metrics listener bind to running API and receiver containers; it preserves existing Compose volumes. Grafana uses the `admin` account and does not reuse ForcAD credentials. The dashboard UID is `forcad-monitoring`. Grafana and Prometheus bind to `127.0.0.1:3000` and `127.0.0.1:9090`; set `FORCAD_GRAFANA_PORT` or `FORCAD_PROMETHEUS_PORT` to an empty value to request a random host port.
+
+Prometheus discovers every API, receiver, worker, and ticker replica through Docker DNS A records on port 9090. Metrics are served at `/metrics` on the internal Compose network without authentication. The separate `/drain` endpoint still uses `ControlToken`. No Docker socket or mandatory exporter is used. Prometheus retains at most 15 days or 4 GB of data.
+
+The dashboard table includes every configured team, including `__unknown__`, with its name and UUID. Its eight metric columns are REST API RPS, flags/s, HTTP 4xx/5xx errors/s, p99 REST API latency, WebSocket connections, outgoing Mbps, incoming Mbps, and packets/s. RPS includes REST endpoints such as flags, status, and attack data; it excludes static assets and requests rejected by Nginx. Application counters sum across API and receiver replicas. If those source roles are unavailable, their values are N/A rather than zeros. Missing p99 samples and router data are also shown as N/A.
+
+Router monitoring needs one exporter on the organizer's Linux router, with `nft` and permission to read counters. Nothing is installed on the teams' vulnboxes. On the ForcAD host, export only the public network inventory:
+
+```sh
+./control.sh network-config > config/runtime/network.json
+./control.sh network-rules --config config/runtime/network.json > config/runtime/network.nft
+```
+
+Copy the `forcad` binary, `network.json` and `network.nft` to the router. Review the generated rules, validate with `sudo nft -c -f network.nft`, then apply with `sudo nft -f network.nft`. Only the new `inet forcad_monitoring` table is created. Repeated application fails instead of duplicating counters. Existing filtering rules remain in effect. Run the exporter as a supervised process:
+
+```sh
+sudo ./forcad network-metrics --config network.json --listen ROUTER_PRIVATE_IP:9109
+```
+
+Allow only Prometheus to reach that private listener. Add `- targets: ["router.private:9109"]` to `deployment/monitoring/file_sd/routers.yml`; leave the file as `[]` until deployed. Do not add team labels to targets: each exporter reports all teams. Never copy the full game config or database credentials to the router.
+
+Backend team metadata refreshes every 15 seconds. Configure VPN/farm networks through team `traffic_cidrs` in [CONFIGURATION.md](CONFIGURATION.md). Changes require restaging the config and restarting API/receiver. Router inventory does not auto-refresh: regenerate it, replace only the monitoring table with the reviewed rules, and restart the exporter. A fingerprint mismatch reports a scrape failure instead of attributing old counters to new teams.
+
+Network rates count forwarded IPv4/IPv6 traffic matching these networks. They include packets reaching the monitoring hook, even if a later firewall rule drops them. Local router traffic, L2 traffic bypassing it, and offloaded flows may be invisible. Shared NAT addresses cannot distinguish teams; duplicate team IPs display N/A for network rates. Monitor each traffic path once to avoid counting the same packet on several exporters. See the [nftables reference](https://netfilter.org/projects/nftables/manpage.html) for table and counter semantics.
+
+Prometheus alerts cover saturated DB/Redis pools, HTTP error ratio, WebSocket slots at 90%, slow-client drops, stale backend inventory, router counter scrape failures, and configured router targets. An empty router target list creates no router-down alert. Alerts are visible in Prometheus; no Alertmanager is configured. Image tags are pinned to Prometheus v3.15.0 and Grafana v13.2.2, verified against the [Prometheus releases](https://github.com/prometheus/prometheus/releases) and [Grafana releases](https://github.com/grafana/grafana/releases) on 2026-10-12.
+
+Run `make -C deployment test-monitoring` for the isolated Grafana/Prometheus checks and `make -C deployment test-network` for the nftables exporter checks. The latter grants NET_ADMIN only inside a disposable container with its own network namespace.
