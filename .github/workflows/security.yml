@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - modernization
   pull_request:
     branches:
       - main
@@ -15,6 +16,21 @@ permissions:
   contents: read
 
 jobs:
+  go_dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Check reachable Go vulnerabilities
+        working-directory: backend
+        run: go tool govulncheck ./...
+
   scans:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -96,4 +112,4 @@ jobs:
             scan --strict --error --disable-nosem --metrics off \
             --config /work/security/semgrep/rules.yml \
             --json-output /reports/semgrep.json \
-            /work/backend/src /work/frontend/src
+            /work/backend/internal /work/backend/config /work/backend/cmd /work/frontend/src

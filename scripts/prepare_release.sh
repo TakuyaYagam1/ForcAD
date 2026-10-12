@@ -16,6 +16,7 @@ while read -r file; do
 done <"${SCRIPTS_DIR}/BOM.txt"
 
 find "${RELEASE_DIR}" -type d \( \
+  -path "${RELEASE_DIR}/backend/load_test/reports" -o \
   -name '__pycache__' -o \
   -name '.cache' -o \
   -name '.mypy_cache' -o \
@@ -32,7 +33,7 @@ find "${RELEASE_DIR}" -type f \( \
   -name '*.env' -o \
   -name '.env' -o \
   \( -name '.env.*' ! -name '.env.example' \) -o \
-  -name 'config.yml' -o \
+  \( -name 'config.yml' ! -path "${RELEASE_DIR}/backend/integration_test/fixtures/config.yml" \) -o \
   -name 'config_backup*.yml' -o \
   -name '*.tsbuildinfo' -o \
   -name '.DS_Store' \

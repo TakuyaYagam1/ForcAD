@@ -11,7 +11,7 @@ description = "Public example team token and matching test fixtures"
 condition = "AND"
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
-paths = ['''^((config/)?config\.yml\.example|README\.md|(backend/)?tests/test_team_tokens\.py|(backend/)?tests/test_cleanup_integration\.py|(front|frontend)/tests/admin-validation\.test\.ts)$''']
+paths = ['''^((config/)?config\.yml\.example|README\.md|(backend/)?tests/test_team_tokens\.py|(backend/)?tests/test_cleanup_integration\.py|(front|frontend)/tests/admin-validation\.test\.ts|frontend/tests/api-contract\.test\.ts)$''']
 regexes = ['''^0123456789abcdef$''']
 
 [[allowlists]]
@@ -21,3 +21,22 @@ targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^(backend/)?tests/regressions_fixes\.py$''']
 regexes = ['''^abcdef0123456789$''']
+
+[[allowlists]]
+description = "Deterministic Go team-token fixtures"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = [
+    '''^backend/internal/(adapter/primary/http/router_test|worker/checker/worker(_integration)?_test|operator/setup_test|bootstrap/(maintenance|network)_test)\.go$''',
+    '''^backend/integration_test/checker/worker_test\.go$''',
+]
+regexes = ['''^0123456789abcdef$''']
+
+[[allowlists]]
+description = "Malformed-session test identifier with no corresponding credentials"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^backend/internal/usecase/auth/service_test\.go$''']
+regexes = ['''^(0123456789abcdef){4}$''']

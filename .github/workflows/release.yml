@@ -40,6 +40,20 @@ jobs:
           printf 'value=%s\n' "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$RELEASE_TAG" > .version
 
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Verify Go application
+        working-directory: backend
+        run: |
+          go mod verify
+          go vet ./...
+          go test -race ./...
+          go tool govulncheck ./...
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:

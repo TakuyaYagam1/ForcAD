@@ -1,0 +1,34 @@
+x-fixture: &fixture
+  image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-fixture
+  build:
+    context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    dockerfile: backend/load_test/test-data/services/Dockerfile
+  read_only: true
+  tmpfs: ["/data:uid=10001,gid=10001,mode=0700,size=256m"]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  mem_limit: 384m
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+    interval: 2s
+    timeout: 3s
+    retries: 20
+
+services:
+  notes:
+    <<: *fixture
+    command: [notes]
+  vault:
+    <<: *fixture
+    command: [vault]
+  queue:
+    <<: *fixture
+    command: [jobs]
+  worker:
+    environment:
+      WORKER_CONCURRENCY: "8"
+    depends_on:
+      notes: {condition: service_healthy}
+      vault: {condition: service_healthy}
+      queue: {condition: service_healthy}

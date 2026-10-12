@@ -95,3 +95,29 @@ rules:
       - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
       - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
       - pattern: "{..., rejectUnauthorized: false, ...}"
+
+  - id: forcad-go-disabled-tls
+    languages: [go]
+    message: Keep certificate verification enabled for outbound connections.
+    severity: ERROR
+    pattern: 'tls.Config{..., InsecureSkipVerify: true, ...}'
+
+  - id: forcad-go-shell-command
+    languages: [go]
+    message: Execute a program with separate arguments instead of a shell command.
+    severity: ERROR
+    pattern-either:
+      - pattern: exec.Command("sh", "-c", ...)
+      - pattern: exec.Command("bash", "-c", ...)
+      - pattern: exec.CommandContext($CTX, "sh", "-c", ...)
+      - pattern: exec.CommandContext($CTX, "bash", "-c", ...)
+
+  - id: forcad-go-unbounded-http-client
+    languages: [go]
+    message: Use a bounded HTTP client and a request context.
+    severity: ERROR
+    pattern-either:
+      - pattern: http.Get(...)
+      - pattern: http.Post(...)
+      - pattern: http.PostForm(...)
+      - pattern: http.DefaultClient.Do(...)

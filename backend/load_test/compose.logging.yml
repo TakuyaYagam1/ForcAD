@@ -1,0 +1,33 @@
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+    mode: non-blocking
+    max-buffer-size: "4m"
+
+services:
+  api:
+    logging: *logging
+  receiver:
+    logging: *logging
+  worker:
+    logging: *logging
+  ticker:
+    logging: *logging
+  nginx:
+    logging: *logging
+  postgres:
+    logging: *logging
+  pgbouncer:
+    logging: *logging
+  redis:
+    logging: *logging
+  rabbitmq:
+    logging: *logging
+  notes:
+    logging: *logging
+  vault:
+    logging: *logging
+  queue:
+    logging: *logging

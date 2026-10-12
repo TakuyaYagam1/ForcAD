@@ -1,4 +1,13 @@
 # No accepted vulnerabilities. Any future exception must name the affected
 # package/path, reason, owner and expiry date.
 vulnerabilities: []
-misconfigurations: []
+misconfigurations:
+  - id: AVD-DS-0002
+    paths:
+      - backend/integration_test/fixtures/network/Dockerfile
+    expired_at: 2027-01-10
+    statement: >-
+      Owner: project maintainers. The nftables integration fixture needs root
+      and NET_ADMIN to install counters in its disposable network namespace.
+      test_network.sh uses --network none and never mounts the host network.
+      This image is not part of the production deployment.

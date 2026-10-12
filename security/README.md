@@ -1,77 +1,57 @@
 # Security checks
 
-Local checks for ForcAD source code, dependencies, and built images. These commands
-do not start a game, reset databases, or contact participant services.
+See the [README documentation index](../README.md#documentation).
 
-Requirements: Python 3.11+, GNU Make, Trivy, Gitleaks, and Semgrep in `PATH`.
-Install the tools from their official distributions; this directory does not
-provide an installer. Image scans also require a local Docker daemon. Trivy
-downloads its vulnerability database and checks, so the first run needs network
-access.
+Run checks from the repository root. They inspect local source, dependencies,
+and images; they do not start a game or contact participant services. Trivy and
+govulncheck may access vulnerability data, and Trivy may download checks on its
+first run. Image scans also need a local Docker daemon.
 
-Run from the repository root:
-
-```sh
-make -C security test
-make -C security check
-make -C security filesystem
-make -C security secrets
-make -C security semgrep
-make -C security image IMAGE=forcad-nginx:local
-```
-
-`check` runs all three source checks, even when one fails. Findings and scanner
-errors both produce a nonzero exit status. Trivy blocks HIGH/CRITICAL findings,
-including vulnerabilities without a published fix and development dependencies.
-Severity determines review priority; it does not prove that every vulnerability
-is reachable in this application.
-
-`secrets` scans current tracked files and nonignored untracked files, then all
-reachable Git history. Tracked files remain in scope even if they match
-`.gitignore`. Ignored local configuration and symbolic links are excluded from
-the current snapshot. Use a full checkout, with `fetch-depth: 0` in CI. Reports
-redact secret values. Exceptions cover only two public fixture tokens in specific
-test files.
-
-Semgrep uses local rules without downloading a registry ruleset. Nine rules cover
-dynamic code execution, unsafe deserialization, shell calls, disabled TLS
-verification, and unsafe HTML rendering. Coverage is limited to the listed APIs;
-arbitrary import aliases and other ways to call the same functions may go
-undetected. The `test` target checks rule fixtures without executing them as
-application code.
-
-`image` scans an existing local Docker image by its immutable ID. It does not
-build, pull, or publish images. Scan every image that will be deployed, including
-storage services and workers: source scans do not cover OS packages in images.
-
-JSON reports and tool versions are written to the ignored `security/reports/`
-directory. Caches use `security/.cache/`. Override these paths when needed:
+Requirements are Go from `backend/go.mod`, Python 3, GNU Make, Trivy, Gitleaks,
+and Semgrep. Image scans additionally need Docker and an existing local image.
 
 ```sh
-make -C security check REPORTS=/private/reports CACHE=/private/cache
+make -C deployment security-test
+make -C deployment security
+make -C deployment security-image IMAGE=forcad-nginx:local
 ```
 
-GitHub Actions runs these source checks through `.github/workflows/security.yml`
-for `main` and `master`, using pinned tool versions. Do not use
-`continue-on-error` or broad exclusions to hide findings. `trivy/ignore.yml` starts
-empty; any future exception must identify the package, path, reason, owner, and
-expiry date.
+`security` runs `security-filesystem`, `security-secrets`, `security-semgrep`,
+and `security-go-vuln`; scanner errors
+and findings fail the target. Run an individual check with, for example,
+`make -C deployment security-semgrep`.
 
-These checks do not verify scoring, CHECK/PUT/GET ordering, pause behavior,
-concurrent flag submissions, or backup completeness. Those require separate
-tests and a rehearsal on the target infrastructure.
+- `security-filesystem` scans repository dependencies and Dockerfiles with Trivy.
+  Custom file patterns also include `requirements-*.txt`. It reports HIGH and
+  CRITICAL findings, includes development dependencies, and includes unfixed
+  vulnerabilities.
+- `security-secrets` uses Gitleaks on tracked files, nonignored untracked files, and all
+  reachable Git history. It requires a full checkout, keeps tracked files in
+  scope even when ignored, excludes symbolic links from the current-file copy,
+  and redacts report values.
+- `security-semgrep` runs the local rules in `security/semgrep/rules.yml` over
+  `backend/internal`, `backend/config`, `backend/cmd`, and `frontend/src`. Rules
+  cover Python, Go, JavaScript, and TypeScript patterns for `eval` and function
+  constructors, unsafe YAML and pickle loads, shell calls, disabled TLS, bare Go
+  HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not
+  cover every way to call these APIs.
+- `security-go-vuln` runs the `govulncheck` Go tool declared in `backend/go.mod` against
+  backend packages.
+- `security-image` scans an existing local Docker image by its image ID. It does not
+  build, pull, or publish the image.
 
-Checker jobs persist their recovery deadline in PostgreSQL. Publication and each
-CHECK/PUT/GET start allow the checker timeout plus five minutes for further
-progress. Ticker checks expired jobs every five seconds, including during a game
-pause. Recovery records CHECK_FAILED without changing SLA counters or scores;
-it does not replay PUTs. Late results and flag inserts from closed jobs are
-ignored. This prevents a lost delivery or callback from blocking rounds forever,
-but does not recover the missing verdict or replace capacity testing. For an
-existing database, run `python -m forcad.scripts.apply_fixes` in the backend environment
-before starting the updated ticker and workers. New installations initialize the
-schema automatically.
+`make -C deployment security-test` checks Semgrep positive and negative fixtures, then runs
+Python unit tests for secret-scan input handling and error cases. It does not run
+the source scanners. Reports and caches default to `security/reports/` and
+`security/.cache/`; set `REPORTS` and `CACHE` to use other paths.
 
-Documentation: [Trivy](https://trivy.dev/docs/latest/),
-[Gitleaks](https://github.com/gitleaks/gitleaks),
-[Semgrep](https://semgrep.dev/docs/running-rules).
+GitHub Actions runs the source checks on pushes to `main`, `master`, and
+`modernization`, on pull requests to `main` and `master`, and on manual dispatch.
+Trivy and Semgrep use pinned container images
+in [security.yml](../.github/workflows/security.yml).
+
+Checker integration coverage is separate from these scanner targets; see
+[development tests](../docs/DEVELOPMENT.md#tests).
+
+Scanner scope and thresholds are defined in [deployment/Makefile](../deployment/Makefile),
+[Trivy config](trivy/filesystem.yml), and [Semgrep rules](semgrep/rules.yml).
