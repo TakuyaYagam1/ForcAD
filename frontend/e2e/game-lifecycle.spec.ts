@@ -116,6 +116,24 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       const url = new URL(response.url());
       return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
     }, { timeout: 60_000 });
+    const resynchronizedRuntime = publicPage.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/client/status/" && response.request().method() === "GET";
+    });
+    const pausedRound = publicPage.getByRole("region", { name: "Текущий раунд" })
+      .getByText("Пауза", { exact: true });
+    // Another API replica can return its pre-pause, 500 ms cached scoreboard.
+    // Deliver that snapshot after the authoritative status has reached the UI.
+    await publicPage.route("**/api/client/scoreboard/", async (route) => {
+      const response = await route.fetch();
+      const body = await response.json() as ScoreboardResponse;
+      await resynchronizedRuntime;
+      await expect(pausedRound).toBeVisible();
+      await route.fulfill({ response, json: {
+        ...body,
+        runtime: { ...body.runtime, phase: "running", practice: true },
+      } });
+    }, { times: 1 });
     const phasesBeforeReconnect = observation.phases.length;
     observation.suppressInits(true);
     observation.reconnect();
@@ -133,13 +151,15 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     expect(resyncBody.teams.map((team) => team.name)).toEqual(
       expect.arrayContaining(["first", "second"]),
     );
-    expect(resyncBody.runtime.phase).toBe("paused");
+    expect(resyncBody.runtime.phase).toBe("running");
     expect(resyncBody.runtime.practice).toBe(true);
+    const runtimeBody = await (await resynchronizedRuntime).json() as ScoreboardResponse["runtime"];
+    expect(runtimeBody.phase).toBe("paused");
+    expect(runtimeBody.practice).toBe(true);
     await expect.poll(async () =>
       (await firstTaskScore.textContent() ?? "").replace(/\D/g, ""),
     ).not.toBe(String(staleScore));
-    await expect(publicPage.getByRole("region", { name: "Текущий раунд" })
-      .getByText("Пауза", { exact: true })).toBeVisible();
+    await expect(pausedRound).toBeVisible({ timeout: 1000 });
     expect(observation.phases).toHaveLength(phasesBeforeReconnect);
     observation.suppressInits(false);
 

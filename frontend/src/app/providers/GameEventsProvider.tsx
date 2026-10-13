@@ -17,7 +17,6 @@ function initialSnapshotPayload(scoreboard: Scoreboard): InitScoreboardPayload {
     teams: scoreboard.teams,
     tasks: scoreboard.tasks,
     config: { round_time: scoreboard.config.round_time },
-    runtime: scoreboard.runtime,
   };
 }
 
@@ -46,9 +45,8 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
     if (queryClient.getQueryData(["scoreboardInit"]) !== snapshot) return;
 
     appliedSnapshot.current = snapshot;
-    if (snapshot.runtime) {
-      setQuerySnapshot(queryClient, ["game-runtime"], snapshot.runtime);
-    }
+    // HTTP scoreboards may come from another replica's short-lived cache.
+    // The separate status query owns runtime reconciliation after reconnect.
     useScoreboardStore
       .getState()
       .handleInitScoreboardMessage(initialSnapshotPayload(snapshot));
