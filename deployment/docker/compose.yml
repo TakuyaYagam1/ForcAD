@@ -27,6 +27,8 @@ x-service: &service
 x-runtime-settings: &runtime-settings
   FORCAD_CONFIG: /run/forcad-config/config.yml
   DATABASE_POOLER_ADDR: pgbouncer:6432
+  FORCAD_API_HTTP_MAX_INFLIGHT: "${FORCAD_API_HTTP_MAX_INFLIGHT:-256}"
+  FORCAD_RECEIVER_HTTP_MAX_INFLIGHT: "${FORCAD_RECEIVER_HTTP_MAX_INFLIGHT:-128}"
   FORCAD_API_DATABASE_MAX_CONNS: "${FORCAD_API_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
   FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-32}}"
   FORCAD_WORKER_DATABASE_MAX_CONNS: "${FORCAD_WORKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
@@ -84,7 +86,7 @@ services:
       - path: ../../config/runtime/rabbitmq_environment.env
         format: raw
     deploy:
-      replicas: 2
+      replicas: 4
 
   receiver:
     <<: *app-service
@@ -112,8 +114,6 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: ticker
-    deploy:
-      replicas: 1
 
   initializer:
     <<: *service

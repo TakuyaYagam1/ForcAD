@@ -54,6 +54,8 @@ const (
 	minAdminPasswordLength = 16
 	maxTCPPort             = 65535
 	maxDatabaseMaxConns    = 1000
+	defaultHTTPMaxInflight = 128
+	maxHTTPMaxInflight     = 4096
 )
 
 func New() (Config, error) { return Load(os.LookupEnv) }
@@ -117,11 +119,12 @@ func Load(lookup LookupEnv) (Config, error) {
 	}
 	poolSize, poolErr := DatabasePoolSize(c.Role, lookup)
 	c.DatabaseMaxConns = poolSize
-	if poolErr != nil {
-		errs = append(errs, poolErr)
+	databaseMinimum := integer("DATABASE_MIN_CONNS", 0, 0, int(c.DatabaseMaxConns))
+	if databaseMinimum >= 0 && databaseMinimum <= maxDatabaseMaxConns {
+		c.DatabaseMinConns = int32(databaseMinimum)
 	}
-	c.DatabaseMinConns = int32(integer("DATABASE_MIN_CONNS", 0, 0, int(c.DatabaseMaxConns)))
-	c.HTTPMaxInflight = integer("HTTP_MAX_INFLIGHT", 128, 1, 4096)
+	httpLimit, httpErr := HTTPInflightLimit(c.Role, lookup)
+	c.HTTPMaxInflight = httpLimit
 	c.DatabaseTimeout = duration("DATABASE_TIMEOUT", 5*time.Second)
 	c.RedisDB = integer("REDIS_DB", 0, 0, 1024)
 	c.WorkerConcurrency = integer("WORKER_CONCURRENCY", 8, 1, 1024)
@@ -133,9 +136,7 @@ func Load(lookup LookupEnv) (Config, error) {
 	c.RequestTimeout = duration("REQUEST_TIMEOUT", 10*time.Second)
 	c.FlagRate = integer("FLAG_RATE", 200, 1, 1000000)
 	c.FlagBurst = integer("FLAG_BURST", 400, 1, 1000000)
-	if err := c.Validate(); err != nil {
-		errs = append(errs, err)
-	}
+	errs = append(errs, poolErr, httpErr, c.Validate())
 	if c.DatabasePoolerAddr != "" {
 		if err := c.usePooler(); err != nil {
 			errs = append(errs, err)
@@ -167,6 +168,20 @@ func DatabasePoolSize(role string, lookup LookupEnv) (int32, error) {
 		}
 	}
 	return defaultDatabaseMaxConns(role), nil
+}
+
+func HTTPInflightLimit(role string, lookup LookupEnv) (int, error) {
+	const location = "config.HTTPInflightLimit"
+	for _, key := range []string{"FORCAD_" + strings.ToUpper(role) + "_HTTP_MAX_INFLIGHT", "HTTP_MAX_INFLIGHT"} {
+		if raw, ok := lookup(key); ok {
+			limit, err := strconv.Atoi(raw)
+			if err != nil || limit < 1 || limit > maxHTTPMaxInflight {
+				return 0, fmt.Errorf("%s - %s must be an integer between 1 and %d", location, key, maxHTTPMaxInflight)
+			}
+			return limit, nil
+		}
+	}
+	return defaultHTTPMaxInflight, nil
 }
 
 func (c *Config) usePooler() error {

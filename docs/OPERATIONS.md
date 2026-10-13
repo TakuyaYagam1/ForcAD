@@ -63,7 +63,7 @@ Use `--rounds 0` to remove the limit. The change preserves game state and does
 not resume or reset a session. Editing `game.rounds` in YAML affects initial
 game setup only.
 
-The Compose defaults are two API, two receiver and two worker replicas, plus one
+The Compose defaults are four API, two receiver and two worker replicas, plus one
 ticker. Scale services with Compose, for example:
 
 ```bash
@@ -78,13 +78,18 @@ add per-role overrides for workers, pass the worker's `WORKER_CONCURRENCY` and
 
 ```bash
 ./control.sh runtime-capacity \
-  --api-replicas 2 --receiver-replicas 3 --worker-replicas 3 --ticker-replicas 1
+  --api-replicas 4 --receiver-replicas 3 --worker-replicas 3 --ticker-replicas 1
 ```
 
-The command reports configured ceilings, not throughput or reserved RAM. Defaults
-are 128 HTTP requests in flight per API/receiver, 8 checker actions per worker,
-and a 1024 MiB address-space ceiling per checker on Linux. Redis enforces 200
-flags/s with a burst of 400 per team across replicas; a batch of 100 costs 100.
+The command reports configured ceilings, not throughput or reserved RAM. Compose
+allows 256 HTTP requests in flight per API and 128 per receiver: 1024 API slots
+and 256 receiver slots with the default replicas. Override these per-replica
+limits with `FORCAD_API_HTTP_MAX_INFLIGHT` and `FORCAD_RECEIVER_HTTP_MAX_INFLIGHT`
+before starting or recreating containers. These are concurrency limits, not RPS.
+Native processes fall back to `HTTP_MAX_INFLIGHT` (128) when no role override is set.
+Workers default to 8 checker actions and a 1024 MiB address-space ceiling per
+checker on Linux. Redis enforces 200 flags/s with a burst of 400 per team across
+replicas; a batch of 100 costs 100.
 
 All application roles connect through PgBouncer in transaction mode. Each role
 has a separate database alias and server budget, so flag traffic cannot consume
@@ -101,7 +106,7 @@ directly to PostgreSQL; migrations need session advisory locks.
 Set `FORCAD_<ROLE>_DATABASE_MAX_CONNS` for client pools and
 `PGBOUNCER_<ROLE>_CONNECTIONS` for server pools, with uppercase role names.
 `DATABASE_MAX_CONNS` is a fallback for every role. Client connections open on
-demand. The default seven application replicas total 136 client slots; one
+demand. The default nine application replicas total 168 client slots; one
 PgBouncer instance permits at most 136 server connections across its four aliases.
 Scaling receivers increases client slots while preserving their 64-server budget.
 Each alias admits up to 256 clients, with 1024 clients across the pooler.
@@ -170,8 +175,8 @@ and adds a 12 GiB hard cap per worker. Set any nonzero cap above its reservation
 A [Docker memory reservation](https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory)
 does not preallocate RAM or guarantee a minimum. Without hard caps, containers
 share available host memory and can exhaust it. The default long-running
-replicas total 28 GiB of soft reservations; three workers and five receivers
-raise that to 42 GiB. Scaling therefore still requires a host memory budget.
+replicas total 30 GiB of soft reservations; three workers and five receivers
+raise that to 44 GiB. Scaling therefore still requires a host memory budget.
 `runtime-capacity` reports checker address-space ceilings, not these Compose
 reservations. Application `pids_limit` defaults to 512 (`FORCAD_SERVICE_PIDS`),
 or 2048 for workers (`FORCAD_WORKER_PIDS`). The worker limit includes its runtime

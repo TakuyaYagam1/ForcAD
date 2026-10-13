@@ -20,6 +20,44 @@ func TestRuntimeBounds(t *testing.T) {
 	}
 }
 
+func TestHTTPInflightLimitsByRole(t *testing.T) {
+	for _, test := range []struct {
+		name, role, common, override string
+		want                         int
+	}{
+		{name: "default", role: "receiver", want: 128},
+		{name: "common fallback", role: "receiver", common: "64", want: 64},
+		{name: "API override", role: "api", common: "64", override: "256", want: 256},
+		{name: "receiver override", role: "receiver", common: "64", override: "128", want: 128},
+		{name: "zero", role: "api", common: "64", override: "0"},
+		{name: "above maximum", role: "receiver", override: "4097"},
+		{name: "malformed", role: "receiver", override: "invalid"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			values := map[string]string{
+				"FORCAD_ROLE": test.role, "ADMIN_USERNAME": "operator",
+				"ADMIN_PASSWORD": strings.Repeat("a", 16),
+			}
+			if test.common != "" {
+				values["HTTP_MAX_INFLIGHT"] = test.common
+			}
+			if test.override != "" {
+				values["FORCAD_"+strings.ToUpper(test.role)+"_HTTP_MAX_INFLIGHT"] = test.override
+			}
+			cfg, err := loadTest(values)
+			if test.want == 0 {
+				if err == nil || !strings.Contains(err.Error(), "HTTP_MAX_INFLIGHT") {
+					t.Fatalf("expected admission validation error, got %v", err)
+				}
+				return
+			}
+			if err != nil || cfg.HTTPMaxInflight != test.want {
+				t.Fatalf("admission = %d, want %d; error: %v", cfg.HTTPMaxInflight, test.want, err)
+			}
+		})
+	}
+}
+
 func TestDatabasePoolerKeepsCredentialsAndSeparatesRoles(t *testing.T) {
 	for role, limit := range map[string]int32{"receiver": 32, "worker": 16, "ticker": 8} {
 		c, err := loadTest(map[string]string{

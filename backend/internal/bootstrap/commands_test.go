@@ -15,6 +15,7 @@ func TestCapacityUsesEveryRolePool(t *testing.T) {
 	for key, value := range map[string]string{
 		"FORCAD_API_DATABASE_MAX_CONNS": "16", "FORCAD_RECEIVER_DATABASE_MAX_CONNS": "32",
 		"FORCAD_WORKER_DATABASE_MAX_CONNS": "16", "FORCAD_TICKER_DATABASE_MAX_CONNS": "8",
+		"FORCAD_API_HTTP_MAX_INFLIGHT": "256", "FORCAD_RECEIVER_HTTP_MAX_INFLIGHT": "128",
 	} {
 		t.Setenv(key, value)
 	}
@@ -25,11 +26,12 @@ func TestCapacityUsesEveryRolePool(t *testing.T) {
 	var report struct {
 		Total int            `json:"database_connection_ceiling"`
 		Roles map[string]int `json:"database_connections_by_role"`
+		HTTP  int            `json:"http_inflight_ceiling"`
 	}
 	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
 		t.Fatal(err)
 	}
-	if report.Total != 136 || report.Roles["receiver"] != 64 || report.Roles["ticker"] != 8 {
+	if report.Total != 168 || report.Roles["api"] != 64 || report.Roles["receiver"] != 64 || report.Roles["ticker"] != 8 || report.HTTP != 1280 {
 		t.Fatalf("capacity=%+v", report)
 	}
 }

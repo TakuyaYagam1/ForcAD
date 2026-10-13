@@ -155,7 +155,7 @@ func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
 	}
 	options := flag.NewFlagSet("runtime-capacity", flag.ContinueOnError)
 	options.SetOutput(out)
-	apiReplicas := options.Int("api-replicas", 2, "API process count")
+	apiReplicas := options.Int("api-replicas", 4, "API process count")
 	receiverReplicas := options.Int("receiver-replicas", 2, "receiver process count")
 	workerReplicas := options.Int("worker-replicas", 2, "worker process count")
 	tickerReplicas := options.Int("ticker-replicas", 1, "scheduler process count")
@@ -187,11 +187,17 @@ func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
 		DatabaseConnectionsByRole: make(map[string]int64),
 		CheckerProcessCeiling:     int64(*workerReplicas) * int64(cfg.WorkerConcurrency),
 		CheckerMemoryCeilingMiB:   int64(*workerReplicas) * int64(cfg.WorkerConcurrency) * int64(cfg.CheckerMemoryMB),
-		HTTPInflightCeiling:       int64(*apiReplicas+*receiverReplicas) * int64(cfg.HTTPMaxInflight),
 		PerTeamFlagsPerSecond:     cfg.FlagRate, PerTeamFlagBurst: cfg.FlagBurst,
 		Note: "Configured ceilings, not measured throughput or reserved RAM. Include database, runtime and operating system overhead in the host budget.",
 	}
 	for role, replicas := range map[string]int{"api": *apiReplicas, "receiver": *receiverReplicas, "worker": *workerReplicas, "ticker": *tickerReplicas} {
+		if role == "api" || role == "receiver" {
+			limit, err := config.HTTPInflightLimit(role, os.LookupEnv)
+			if err != nil {
+				return err
+			}
+			report.HTTPInflightCeiling += int64(replicas) * int64(limit)
+		}
 		limit, err := config.DatabasePoolSize(role, os.LookupEnv)
 		if err != nil {
 			return err
