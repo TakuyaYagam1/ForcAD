@@ -1,0 +1,82 @@
+ForcAD: 5-hour soak results, October 13, 2026
+
+VERDICT: FAILED the strict requirement of zero REST errors.
+The test completed the entire scheduled workload. It was neither aborted nor failed by the log collector.
+10000 offered REST RPS with rare capacity-503 responses was demonstrated; 10000 RPS without 503s was not.
+
+Configuration
+i9-13900KF, 24 physical / 32 logical CPUs, 32 GB RAM on Windows.
+WSL2: 32 CPUs, 28 GB RAM limit. Generator, application, database and checkers share one host.
+4 API replicas: admission 256, pgx min=max=16 per instance, GOGC=200.
+PgBouncer API min=max=32; two workers with 8 slots each; two receivers.
+20 teams, 3 fixture services, 20 WS observers; disk-backed PostgreSQL, json-file logging.
+
+Main stage
+Start: 14:28:11 MSK. Scheduled duration: 18000 seconds of monotonic time.
+REST requests: 180000000; HTTP 200: 179997347; HTTP 503: 2653.
+All rejections were classified as Service capacity exceeded; no other REST errors occurred.
+503 rate: 0.00147389%; success rate: 99.99852611%.
+Actual generator RPS: 9999.99988; successful RPS approximately 9999.85249.
+REST p95 / p99: 6.807755 / 11.184407 ms.
+REST generator lag p99 / p999 / max: 2.747141 / 6.626964 / 126.137825 ms.
+The generator passed the load-delivery criterion. Rare bursts of request starts remain part of the profile.
+
+Flag submissions
+720000 batches of 100 values at 40 batches/s; all returned HTTP 200 and passed response validation.
+The 72 million submitted values include duplicates, own flags and deliberately invalid flags.
+Batch p95 / p99: 23.247292 / 33.285496 ms; no batch errors or timeouts were recorded.
+2041676 unique steals accepted, 2041676 committed to the database.
+Expected steals per team, stolen/lost counters and score validity were reconciled.
+WebSocket: 17220 connections, 40013108 received JSON messages, 0 recorded errors.
+Recovery passed. The separate limiter burst was skipped after the REST failure.
+
+503 episodes from saved API counters (MSK; localized to polling intervals, not exact request times)
+16:00:44.59–16:00:58.69: 2448 rejections across all four API replicas.
+16:29:40.45–16:29:47.70: 89 rejections.
+16:39:00.65–16:39:07.94: 66 rejections.
+17:29:03.76–17:29:10.75: 50 rejections.
+By hour of load: 0 / 2448 / 155 / 50 / 0.
+
+Resources and queues
+Linux/WSL CPU excluding iowait: mean 71.71%, peak 86.82% over a 5-second interval.
+Mean iowait 0.263%, peak 1.22%.
+Aggregate API RSS: mean 208.73 MiB, simultaneous peak 253.93 MiB.
+Mean API RSS in the first/last 5 minutes: 202.7 / 210.8 MiB; no sustained increase in CPU usage.
+Generator: mean 1.412 cores; RSS in the first/last 5 minutes 268.0 / 483.2 MiB.
+Its expected-steal bookkeeping grows with the continuous stage duration; this is separate from the application.
+Minimum available Windows memory: 135 MiB. Maximum WSL swap usage: approximately 216 KiB.
+Near the largest 503 episode, samples recorded 221–404 MiB of available Windows RAM,
+14114–24024 Pages Input/sec and 99% Windows CPU; API pgx queues grew at the same time.
+Pages Input/sec measures page reads due to hard faults, not specifically WSL swapping or only pagefile reads.
+One PgBouncer API snapshot showed all 32 server connections busy and 9 clients waiting.
+The other episodes did not show Windows memory pressure of the same severity.
+Redis: blocked_clients=0, rejected_connections=0, evicted_keys=0, no new errors.
+RabbitMQ continued processing; the sampled ready queue never exceeded 44, and unacked never exceeded 16.
+PostgreSQL recorded no deadlocks or fatal/abandoned sessions in the saved samples.
+
+Interpretation
+The immediate source of 503s was the API admission gate with all 256 slots occupied.
+Increased pgx waits and severe Windows memory pressure during the largest episode are confirmed.
+The root cause of all four episodes has not been established. These correlations do not identify PostgreSQL,
+GC or WSL as the sole cause; the rare pauses require a separate reproduction.
+The next comparison should prioritize controlling physical memory across the entire Windows/WSL host
+and repeating the same workload without memory pressure, keeping application limits unchanged for comparison.
+
+Validation limits
+After the runStages error, the harness returns before the SQL checks of final TeamTasks states and
+error statuses in TeamTasksLog. Checkers produced results (110617, including the log-collection period),
+but this report cannot establish that every workflow succeeded. Cleanup has already removed the database.
+The WS check validates connections and JSON, not the completeness of the event sequence.
+The stage's wall-clock Started/Finished interval is 18020.668s, while Vegeta and the request volume indicate 18000s.
+A wall/monotonic clock discrepancy is likely; the exact cause is unknown. This is not a timeout tail.
+Resource windows are approximately aligned to Started + 18000s; alternative boundaries are retained.
+
+Artifacts
+latest-report.json next to this file is the final client report.
+Raw artifacts remain in backend/load_test/reports/20261013-112709-soak/:
+20261013-112753-soak-911290442/report.json - original client report.
+analysis/host-summary.json - CPU/RAM by hour, 5-minute window and 503 window.
+analysis/service-summary.json - queues, connections and localization of 503s.
+analysis/database-error-windows.json - PostgreSQL 250ms probes around the episodes.
+Log collection completed; the entire suite finished around 19:37 MSK, exit code 2.
+Test containers were removed normally; no new load runs were started during the analysis.

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { useEffect, useState } from "react";
 
 export function StatusesBar({
   round,
@@ -33,8 +33,12 @@ export function StatusesBar({
   const effectiveNow = phase === "paused" && pausedAt ? pausedAt * 1000 : now;
   // Prefer the real current-round timestamp; legacy snapshots describe the completed round.
   const elapsed =
-    phase === "unknown" || phase === "waiting" || phase === "finished" ||
-    startMs === null || roundTime === null || !displayRound
+    phase === "unknown" ||
+    phase === "waiting" ||
+    phase === "finished" ||
+    startMs === null ||
+    roundTime === null ||
+    !displayRound
       ? null
       : Math.max(
           0,
@@ -50,7 +54,7 @@ export function StatusesBar({
       : Math.min(100, (elapsed / roundTime) * 100);
   const time =
     elapsed === null
-      ? "—:—"
+      ? "-:-"
       : `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   return (
     <section className="round-line" aria-label="Текущий раунд">
@@ -91,12 +95,12 @@ export function StatusesBar({
             {phase === "finished"
               ? "Игра завершилась"
               : phase === "paused"
-              ? "Пауза"
-              : phase === "running" && roundWaiting
-                ? "Ожидание результатов проверок"
-                : phase === "unknown"
-                  ? "Статус недоступен"
-                  : "С начала раунда"}
+                ? "Пауза"
+                : phase === "running" && roundWaiting
+                  ? "Ожидание результатов проверок"
+                  : phase === "unknown"
+                    ? "Статус недоступен"
+                    : "С начала раунда"}
           </small>
         </div>
       </div>

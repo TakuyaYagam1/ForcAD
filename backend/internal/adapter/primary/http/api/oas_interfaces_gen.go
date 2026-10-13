@@ -65,6 +65,10 @@ type GetClientCtftimeScoreboardRes interface {
 	getClientCtftimeScoreboardRes()
 }
 
+type GetScoreboardRes interface {
+	getScoreboardRes()
+}
+
 type SubmitFlagsRes interface {
 	submitFlagsRes()
 }

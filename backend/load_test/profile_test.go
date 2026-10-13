@@ -3,6 +3,7 @@ package load_test
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -33,6 +34,10 @@ func loadProfile() (string, []stage, error) {
 	if name == "" {
 		name = "smoke"
 	}
+	readRPS, err := restRPSSetting(name)
+	if err != nil {
+		return name, nil, err
+	}
 	warmup, err := durationSetting("LOAD_WARMUP", 10*time.Second)
 	if err != nil {
 		return name, nil, err
@@ -47,11 +52,15 @@ func loadProfile() (string, []stage, error) {
 	}
 	switch name {
 	case "smoke", "load", "soak":
+		checkpoint, checkpointErr := durationSetting("LOAD_CHECKPOINT_INTERVAL", 5*time.Minute)
+		if checkpointErr != nil {
+			return name, nil, checkpointErr
+		}
 		duration := map[string]time.Duration{"smoke": 30 * time.Second, "load": 15 * time.Minute, "soak": 4 * time.Hour}[name]
 		duration, err = durationSetting("LOAD_DURATION", duration)
 		for part := 1; duration > 0 && err == nil; part++ {
-			chunk := min(duration, 5*time.Minute)
-			appendStage(fmt.Sprintf("steady-%02d", part), chunk, 500, false, "")
+			chunk := min(duration, checkpoint)
+			appendStage(fmt.Sprintf("steady-%02d", part), chunk, readRPS, false, "")
 			duration -= chunk
 		}
 	case "stress", "endpoints":
@@ -86,6 +95,23 @@ func loadProfile() (string, []stage, error) {
 		return name, nil, fmt.Errorf("load.loadProfile - total scheduled duration exceeds 23h")
 	}
 	return name, stages, nil
+}
+
+func restRPSSetting(profile string) (int, error) {
+	raw := os.Getenv("LOAD_REST_RPS")
+	if raw == "" {
+		return 500, nil
+	}
+	switch profile {
+	case "smoke", "load", "soak":
+	default:
+		return 0, fmt.Errorf("load.restRPSSetting - LOAD_REST_RPS is only supported by smoke, load and soak profiles")
+	}
+	rps, err := strconv.Atoi(raw)
+	if err != nil || rps < 1 || rps > 100000 {
+		return 0, fmt.Errorf("load.restRPSSetting - LOAD_REST_RPS must be an integer between 1 and 100000")
+	}
+	return rps, nil
 }
 
 func durationSetting(key string, fallback time.Duration) (time.Duration, error) {

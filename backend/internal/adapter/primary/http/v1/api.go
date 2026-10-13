@@ -31,4 +31,5 @@ func NewHandler(game GameService, auth AuthService, flags FlagService) *Handler 
 }
 
 var _ api.Handler = (*Handler)(nil)
+var _ api.RawHandler = (*Handler)(nil)
 var _ api.SecurityHandler = (*Handler)(nil)

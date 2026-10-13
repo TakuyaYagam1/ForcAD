@@ -1,86 +1,67 @@
 # Load testing
 
-Vegeta runs against an isolated local Compose stack through Nginx. The runner
-builds the images, creates test data and removes its containers and volumes on
-exit. Requires Go, Python 3 and Docker Compose. Run from the repository root:
-
-```sh
-make -C backend test-load
-LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load
-LOAD_PROFILE=load make -C backend test-load
-LOAD_PROFILE=soak make -C backend test-load
-```
-
-Start with smoke, find the capacity boundary with stress, then run load and soak
-on the intended host. The current runner starts both the generator and stack
-locally; it has no remote-target option. Run performance tests without `-race`.
+Vegeta tests an isolated local Compose stack through Nginx. Requires Linux/WSL,
+Bash, Make, Go, Python 3 and Docker Compose. Run from the repository root;
+test containers and volumes are removed on exit.
 
 ## Workload
 
-- 20 teams, three small services (`notes`, `vault`, `queue`) with real storage
-  and Python CHECK/PUT/GET processes. Each service uses one container with
-  separate team namespaces.
-- Two API replicas, two receivers, two workers with eight slots each, one ticker.
-  Rounds last 10 seconds; flags live for five rounds.
-- Six public REST endpoints: status, scoreboard, teams, tasks, config, attack_data.
-- 40 flag batches/s, 100 flags per batch: 70 foreign, 10 own, 20 unknown.
-  Flags recur, so 4000 submitted flags/s includes duplicates. The fixture
-  produces about six new flags/s when rounds stay on schedule.
-- 20 WebSocket spectators, reconnecting every 20 seconds.
+20 teams, three fixture services, six REST routes, active Python checkers and
+20 WebSocket clients. Flag traffic: 40 batches/s × 100 values, including duplicates.
+Two receivers and two workers with eight checker slots each share the host with
+the application, database and generator.
 
-## Profiles
+## Run
 
-| `LOAD_PROFILE` | Measurement duration | REST requests/s |
-| --- | --- | --- |
-| `smoke` (default) | 30 seconds | 500 |
-| `load` | 15 minutes | 500 |
-| `stress` | 1 minute per step | 500, 1000, 2500, 5000, 10000 |
-| `endpoints` | Same steps for each of six endpoints | Same as stress |
-| `spike` | 30 seconds baseline + 30 seconds spike | 500, then 10000 |
-| `soak` | 4 hours | 500 |
+```sh
+make -C backend test-load                                      # smoke: 500 RPS, 30s
+LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # 500 -> 10000 RPS
+```
 
-Each run adds warmup (10s), a flag burst to verify rate limiting, and recovery
-(30s). Startup and database reconciliation take additional time.
+Configuration used for the 10k runs below (four API replicas):
 
-| Setting | Purpose |
-| --- | --- |
-| `LOAD_DURATION=15s` | Override measurement duration; per step for stress/endpoints/spike |
-| `LOAD_WARMUP`, `LOAD_RECOVERY` | Override warmup/recovery duration |
-| `LOAD_DIAGNOSTICS=1` | Collect DB locks/WAL, pool/WS counters and available request logs |
-| `LOAD_DATABASE_STORAGE=memory` | PostgreSQL on 1 GiB tmpfs; default is `disk` |
-| `LOAD_CONTAINER_LOGGING=local` | Bounded Docker local logs; default inherits deployment settings |
-| `LOAD_REPORT_DIR` | Override output directory; default is `backend/load_test/reports/` |
+```sh
+GOMAXPROCS=32 \
+LOAD_PROFILE=load LOAD_REST_RPS=10000 \
+LOAD_DURATION=15m LOAD_CHECKPOINT_INTERVAL=15m \
+LOAD_API_REPLICAS=4 LOAD_WORKER_CONCURRENCY=8 \
+LOAD_API_DATABASE_MAX_CONNS=16 LOAD_API_DATABASE_MIN_CONNS=16 \
+LOAD_API_HTTP_MAX_INFLIGHT=256 LOAD_API_GOGC=200 \
+LOAD_PGBOUNCER_API_CONNECTIONS=32 LOAD_PGBOUNCER_API_MIN_CONNECTIONS=32 \
+LOAD_DATABASE_STORAGE=disk LOAD_CONTAINER_LOGGING=default LOAD_DIAGNOSTICS=1 \
+make -C backend test-load
+```
 
-## Reading results
+For a five-minute repeat, set both durations to `5m`. For a continuous five-hour
+run, use `LOAD_PROFILE=soak` and set both to `5h`. Without a checkpoint override,
+steady profiles pause for reconciliation every five minutes. Warmup, recovery
+and final checks take additional time. Other profiles/settings: [profile_test.go](profile_test.go)
+and [compose.yml](compose.yml).
 
-Each run writes `reports/<run>/report.json` and `resources.jsonl` with request
-results, flag reconciliation, checker progress and container resource usage.
+## Recorded runs - 2026-10-13
 
-- Check `generator_valid`: at least 95% of offered RPS delivered and scheduling
-  lag p99 <= 100 ms. Otherwise the requested load was not reproduced reliably.
-- Check `slo_passed`: all requests succeed and p99 <= 1 second. Stress permits
-  REST 429/503 without failing the suite, but records a failed SLO for that step.
-- Check `correctness_passed`: ordinary flag requests succeed, acknowledgements
-  and scores match the DB, checkers progress, WebSockets and recovery work.
-  Only the explicit rate-limit burst permits flag 429 responses.
+Intel i9-13900KF / 32 GB RAM, Windows + WSL2 (32 logical CPUs, 28 GB RAM limit).
+PostgreSQL on disk, diagnostics enabled. All rows are separate continuous
+**10000 REST RPS** stages using the configuration above.
 
-**A test exit of PASS alone does not confirm capacity.** `rejections` separates
-rate limits, admission capacity, deadlines and unclassified errors.
+| Duration | REST requests | Capacity 503 | REST p99 | Result |
+| --- | ---: | ---: | ---: | --- |
+| 15 min | 8,999,989 | 0 | 12.99 ms | PASS |
+| 5 min repeat | 3,000,000 | 0 | 16.17 ms | PASS |
+| 5 hours | 180,000,000 | 2,653 (0.001474%) | 11.18 ms | FAIL: zero-error criterion |
 
-## Comparing hosts
+All ordinary flag batches succeeded in all three runs. The five-hour run processed
+720,000 batches (p99 33.29 ms); all 2,041,676 accepted steals matched the DB.
+WebSocket observations and recovery passed. Final checker-history checks were
+skipped by the harness after the five-hour REST failure.
 
-Use the same source, profile, duration, storage, logging and diagnostics settings.
-The generator, checkers and services share host resources. Keep background work
-comparable; diagnostics also add overhead. Short runs locate bottlenecks; use
-disk-backed load and soak runs to validate sustained operation.
+Most 503s occurred in one short burst coinciding with host memory pressure:
+Windows had 221–404 MiB available and 99% CPU. Interactive use of the PC, including
+possible VS Code startup, may have contributed; an idle-host repeat is needed to
+isolate its impact. Five-hour REST success was **99.998526%**.
 
-On the shared Ryzen 7 8845HS / 32 GB host (2026-10-12), 5000 REST RPS with active
-checkers produced about 18% admission 503s at 97-100% CPU usage. Stopping workers
-and ticker removed those rejections, but also stopped new flag production and
-changed DB writes. CPU alone is therefore not a confirmed cause. DB lock waits
-and separate disk `WalSync` stalls remain unresolved; 10000 REST RPS and sustained
-production capacity have not passed validation. A tmpfs pass does not validate
-durable storage.
-
-When moving the current working tree, include `wahrwelt-kit/`: `backend/go.mod`
-temporarily references these local libraries.
+Reports contain `generator_valid`, `slo_passed`, latency, errors and flag reconciliation.
+`stress` allows REST 429/503, so test exit alone does not establish capacity.
+Results: [short runs](results/RESULTS-13900KF.txt),
+[five-hour results](results/20261013-112709-soak/RESULTS.txt),
+[five-hour report](results/20261013-112709-soak/latest-report.json).

@@ -69,7 +69,7 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		report.WebSockets, observerErr = watch.stop()
 		runErr = errors.Join(runErr, observerErr)
 		if os.Getenv("LOAD_DIAGNOSTICS") == "1" {
-			runErr = errors.Join(runErr, saveFlagLog(ctx, d, directory))
+			runErr = errors.Join(runErr, saveFlagLog(ctx, d, directory, time.Since(report.Started)))
 		}
 		after, countErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
 		if countErr == nil {

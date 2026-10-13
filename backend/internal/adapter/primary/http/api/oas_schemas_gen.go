@@ -4,6 +4,7 @@ package api
 
 import (
 	"io"
+	"net/http"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
@@ -1674,6 +1675,23 @@ func (*GetAdminTeamsOKApplicationJSON) getAdminTeamsRes() {}
 type GetClientCtftimeScoreboardOKApplicationJSON []CtftimeStanding
 
 func (*GetClientCtftimeScoreboardOKApplicationJSON) getClientCtftimeScoreboardRes() {}
+
+// GetScoreboardOKRawApplicationJSON represents raw HTTP response for GetScoreboard application/json.
+type GetScoreboardOKRawApplicationJSON struct {
+	Response *http.Response `json:"-"`
+}
+
+// GetResponse returns the value of Response.
+func (s *GetScoreboardOKRawApplicationJSON) GetResponse() *http.Response {
+	return s.Response
+}
+
+// SetResponse sets the value of Response.
+func (s *GetScoreboardOKRawApplicationJSON) SetResponse(val *http.Response) {
+	s.Response = val
+}
+
+func (*GetScoreboardOKRawApplicationJSON) getScoreboardRes() {}
 
 type Metrics struct {
 	Data io.Reader

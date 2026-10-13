@@ -24,7 +24,7 @@ type Traffic interface {
 
 func NewRouter(cfg config.Config, handler *httpv1.Handler, events http.Handler, monitor http.Handler, registry prometheus.Registerer, limiter middleware.RateLimiter, logger *slog.Logger, traffic ...Traffic) (http.Handler, error) {
 	const location = "httpadapter.NewRouter"
-	server, err := api.NewServer(handler, handler, api.WithErrorHandler(errorHandler(logger)))
+	server, err := api.NewServer(handler, handler, handler, api.WithErrorHandler(errorHandler(logger)))
 	if err != nil {
 		return nil, fmt.Errorf("%s - create API server: %w", location, err)
 	}

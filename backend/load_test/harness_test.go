@@ -11,6 +11,7 @@ import (
 )
 
 func TestProfiles(t *testing.T) {
+	t.Setenv("LOAD_REST_RPS", "")
 	t.Setenv("LOAD_WARMUP", "1s")
 	t.Setenv("LOAD_RECOVERY", "1s")
 	t.Setenv("LOAD_DURATION", "1s")
@@ -23,6 +24,11 @@ func TestProfiles(t *testing.T) {
 			}
 			if stages[0].Name != "warmup" || stages[len(stages)-1].Name != "recovery" {
 				t.Fatal("missing warmup or recovery")
+			}
+			if name == "smoke" || name == "load" || name == "soak" {
+				if stages[1].ReadRPS != 500 || stages[1].Overload {
+					t.Fatal("steady profile must default to 500 RPS with strict SLO checks")
+				}
 			}
 			if name == "endpoints" {
 				seen := map[string]bool{}
@@ -40,6 +46,7 @@ func TestProfiles(t *testing.T) {
 }
 
 func TestProfilesRejectInvalidSettings(t *testing.T) {
+	t.Setenv("LOAD_REST_RPS", "")
 	for _, raw := range []string{"0", "-1s", "garbage", "24h"} {
 		t.Run(raw, func(t *testing.T) {
 			t.Setenv("LOAD_DURATION", raw)
@@ -51,6 +58,55 @@ func TestProfilesRejectInvalidSettings(t *testing.T) {
 	t.Setenv("LOAD_PROFILE", "unknown")
 	if _, _, err := loadProfile(); err == nil {
 		t.Fatal("unknown profile accepted")
+	}
+}
+
+func TestSteadyProfilesRESTOverride(t *testing.T) {
+	t.Setenv("LOAD_CHECKPOINT_INTERVAL", "")
+	t.Setenv("LOAD_REST_RPS", "10000")
+	t.Setenv("LOAD_DURATION", "6m")
+	t.Setenv("LOAD_WARMUP", "2s")
+	t.Setenv("LOAD_RECOVERY", "3s")
+	for _, name := range []string{"smoke", "load", "soak"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("LOAD_PROFILE", name)
+			_, stages, err := loadProfile()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(stages) != 4 || stages[1].Duration != 5*time.Minute || stages[2].Duration != time.Minute {
+				t.Fatalf("expected six minutes split into two measurement stages: %+v", stages)
+			}
+			for _, s := range stages[1 : len(stages)-1] {
+				if s.ReadRPS != 10000 || s.FlagRPS != 40 || s.Overload {
+					t.Fatalf("10k steady measurement must preserve flags and strict SLO checks: %+v", s)
+				}
+			}
+			if stages[0].ReadRPS != 50 || stages[0].Duration != 2*time.Second || stages[3].ReadRPS != 100 || stages[3].Duration != 3*time.Second {
+				t.Fatal("REST override changed warmup or recovery")
+			}
+		})
+	}
+}
+
+func TestProfilesRejectInvalidRESTOverride(t *testing.T) {
+	t.Setenv("LOAD_PROFILE", "load")
+	for _, raw := range []string{"0", "-1", "garbage", "1.5", "100001", "999999999999999999999"} {
+		t.Run(raw, func(t *testing.T) {
+			t.Setenv("LOAD_REST_RPS", raw)
+			if _, _, err := loadProfile(); err == nil {
+				t.Fatal("invalid REST RPS accepted")
+			}
+		})
+	}
+	for _, name := range []string{"stress", "endpoints", "spike"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("LOAD_PROFILE", name)
+			t.Setenv("LOAD_REST_RPS", "10000")
+			if _, _, err := loadProfile(); err == nil {
+				t.Fatal("REST RPS override was silently ignored by a step profile")
+			}
+		})
 	}
 }
 

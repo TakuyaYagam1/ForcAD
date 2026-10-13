@@ -24,6 +24,7 @@ type Config struct {
 	DatabaseURL            string
 	DatabasePoolerAddr     string
 	DatabaseMaxConns       int32
+	DatabaseMinConns       int32
 	DatabaseTimeout        time.Duration
 	RedisAddr              string
 	RedisPassword          string
@@ -119,6 +120,7 @@ func Load(lookup LookupEnv) (Config, error) {
 	if poolErr != nil {
 		errs = append(errs, poolErr)
 	}
+	c.DatabaseMinConns = int32(integer("DATABASE_MIN_CONNS", 0, 0, int(c.DatabaseMaxConns)))
 	c.HTTPMaxInflight = integer("HTTP_MAX_INFLIGHT", 128, 1, 4096)
 	c.DatabaseTimeout = duration("DATABASE_TIMEOUT", 5*time.Second)
 	c.RedisDB = integer("REDIS_DB", 0, 0, 1024)

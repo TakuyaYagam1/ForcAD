@@ -3,6 +3,7 @@ set -euo pipefail
 umask 077
 run_load=0
 run_monitoring=0
+api_replicas=2
 
 case "${1:-}" in
     "") run_e2e=0 ;;
@@ -33,6 +34,11 @@ case "${1:-}" in
 esac
 
 if (( run_load )); then
+    api_replicas="${LOAD_API_REPLICAS:-2}"
+    if [[ ! "$api_replicas" =~ ^([1-9]|1[0-6])$ ]]; then
+        echo 'LOAD_API_REPLICAS must be an integer between 1 and 16.' >&2
+        exit 2
+    fi
     case "${LOAD_DATABASE_STORAGE:-disk}" in
         disk|memory) ;;
         *) echo 'LOAD_DATABASE_STORAGE must be disk or memory.' >&2; exit 2 ;;
@@ -115,7 +121,7 @@ unset FORCAD_NGINX_BIND PUBLIC_ORIGIN TRUSTED_PROXY_CIDRS CHECKER_JOB_GRACE \
     DATABASE_MAX_CONNS FORCAD_POSTGRES_MAX_CONNECTIONS \
     FORCAD_API_DATABASE_MAX_CONNS FORCAD_RECEIVER_DATABASE_MAX_CONNS \
     FORCAD_WORKER_DATABASE_MAX_CONNS FORCAD_TICKER_DATABASE_MAX_CONNS \
-    PGBOUNCER_API_CONNECTIONS PGBOUNCER_RECEIVER_CONNECTIONS \
+    PGBOUNCER_API_CONNECTIONS PGBOUNCER_API_MIN_CONNECTIONS PGBOUNCER_RECEIVER_CONNECTIONS \
     PGBOUNCER_WORKER_CONNECTIONS PGBOUNCER_TICKER_CONNECTIONS DATABASE_POOLER_ADDR \
     CHECKER_WORKFLOW_TIMEOUT FORCAD_WORKER_CONCURRENCY FORCAD_CHECKER_MEMORY_LIMIT_MB \
     FORCAD_CHECKER_OUTPUT_LIMIT_BYTES FLAG_RATE FLAG_BURST FORCAD_SERVICE_MEMORY \
@@ -180,7 +186,7 @@ export FORCAD_E2E_GID="$e2e_gid"
 
 compose_started=1
 if ! "${compose[@]}" up -d --build --wait --wait-timeout 180 \
-    --scale api=2 --scale receiver=2 --scale worker=2; then
+    --scale "api=$api_replicas" --scale receiver=2 --scale worker=2; then
     "${compose[@]}" ps -a >&2
     for container in $("${compose[@]}" ps -aq pgbouncer initializer); do
         docker inspect "$container" --format '{{.Name}} {{.State.Error}} {{if .State.Health}}{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}{{end}}' >&2

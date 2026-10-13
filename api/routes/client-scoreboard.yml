@@ -10,5 +10,8 @@ get:
       description: The same full scoreboard shape sent in init_scoreboard events.
       content:
         application/json:
+          # Pool the server encoder while keeping the JSON schema for Orval.
+          # If ogen Go clients are enabled later, this operation returns a raw response.
+          x-ogen-raw-response: true
           schema:
             "$ref": "../components/schemas.yml#/Scoreboard"

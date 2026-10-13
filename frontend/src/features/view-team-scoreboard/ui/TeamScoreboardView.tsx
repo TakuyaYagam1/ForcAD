@@ -1,23 +1,23 @@
-import { groupHistoryByRound } from "@/entities/team-scoreboard/model/history";
-import { useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, AlertCircle } from "lucide-react";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import type { Task } from "@/entities/task/model/types";
 import { fetchTeamStates } from "@/entities/team-scoreboard/api";
-import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { RankBadge } from "@/shared/ui/brand/RankBadge";
-import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
+import { groupHistoryByRound } from "@/entities/team-scoreboard/model/history";
 import { formatScore } from "@/shared/lib/formatScore";
 import { getCombinedSlaPercent } from "@/shared/lib/sla";
-import { StatCard } from "@/shared/ui/brand/StatCard";
-import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
-import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
-import { HeroArt } from "@/shared/ui/brand/PageHero";
-import type { Task } from "@/entities/task/model/types";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { normalizeUuid } from "@/shared/lib/uuid";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { HeroArt } from "@/shared/ui/brand/PageHero";
+import { RankBadge } from "@/shared/ui/brand/RankBadge";
+import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
+import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
+import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
+import { StatCard } from "@/shared/ui/brand/StatCard";
+import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 
 const EMPTY_TASKS: Task[] = [];
 
@@ -122,7 +122,7 @@ export function TeamScoreboardView() {
             {place !== undefined && place >= 0 ? (
               <RankBadge rank={place + 1} />
             ) : (
-              "—"
+              "-"
             )}
 
             <span>Место</span>
@@ -136,7 +136,7 @@ export function TeamScoreboardView() {
         <StatCard
           icon="podium"
           label="Место"
-          value={place !== undefined && place >= 0 ? place + 1 : "—"}
+          value={place !== undefined && place >= 0 ? place + 1 : "-"}
         />
 
         <StatCard
@@ -149,7 +149,13 @@ export function TeamScoreboardView() {
           icon="check"
           label="Доступность"
           value={
-            sla === null ? "—" : <>{formatScore(sla)}% <small>SLA</small></>
+            sla === null ? (
+              "-"
+            ) : (
+              <>
+                {formatScore(sla)}% <small>SLA</small>
+              </>
+            )
           }
         />
 

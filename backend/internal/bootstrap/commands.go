@@ -45,6 +45,11 @@ func commandConfig(path string) (config.Config, error) {
 		if key == "DATABASE_POOLER_ADDR" {
 			return "", true
 		}
+		// CLI operations use a separate pool and must not inherit an application
+		// minimum that can exceed the ticker-role connection limit used here.
+		if key == "DATABASE_MIN_CONNS" {
+			return "0", true
+		}
 		if key == "FORCAD_ROLE" {
 			return "ticker", true
 		}

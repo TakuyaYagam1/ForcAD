@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"net/http"
 )
 
 // Handler handles operations described by OpenAPI v3 specification.
@@ -188,12 +189,6 @@ type Handler interface {
 	//
 	// GET /api/http-receiver/metrics
 	GetReceiverMetrics(ctx context.Context) (Metrics, error)
-	// GetScoreboard implements getScoreboard operation.
-	//
-	// Used to initialize and resynchronize clients after event-stream reconnects.
-	//
-	// GET /api/client/scoreboard/
-	GetScoreboard(ctx context.Context) (*Scoreboard, error)
 	// OpenEventStream implements openEventStream operation.
 	//
 	// Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
@@ -227,22 +222,34 @@ type Handler interface {
 	UpdateAdminTeamTask(ctx context.Context, params UpdateAdminTeamTaskParams) (UpdateAdminTeamTaskRes, error)
 }
 
+// RawHandler handles raw response operations described by OpenAPI v3 specification.
+type RawHandler interface {
+	// GetScoreboard implements getScoreboard operation.
+	//
+	// Used to initialize and resynchronize clients after event-stream reconnects.
+	//
+	// GET /api/client/scoreboard/
+	GetScoreboard(ctx context.Context, w http.ResponseWriter) error
+}
+
 // Server implements http server based on OpenAPI v3 specification and
 // calls Handler to handle requests.
 type Server struct {
 	h   Handler
+	rh  RawHandler
 	sec SecurityHandler
 	baseServer
 }
 
 // NewServer creates new Server.
-func NewServer(h Handler, sec SecurityHandler, opts ...ServerOption) (*Server, error) {
+func NewServer(h Handler, rh RawHandler, sec SecurityHandler, opts ...ServerOption) (*Server, error) {
 	s, err := newServerConfig(opts...).baseServer()
 	if err != nil {
 		return nil, err
 	}
 	return &Server{
 		h:          h,
+		rh:         rh,
 		sec:        sec,
 		baseServer: s,
 	}, nil

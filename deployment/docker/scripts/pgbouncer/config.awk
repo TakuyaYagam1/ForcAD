@@ -35,12 +35,15 @@ BEGIN {
     database = quoted(value("POSTGRES_DB", "forcad"))
     port = number("POSTGRES_PORT", 5432)
     sizes["api"] = number("PGBOUNCER_API_CONNECTIONS", 32)
+    api_min = value("PGBOUNCER_API_MIN_CONNECTIONS", 0)
+    if (api_min !~ /^[0-9]+$/ || api_min+0 > sizes["api"]) fail("PGBOUNCER_API_MIN_CONNECTIONS must be between 0 and PGBOUNCER_API_CONNECTIONS")
     sizes["receiver"] = number("PGBOUNCER_RECEIVER_CONNECTIONS", 64)
     sizes["worker"] = number("PGBOUNCER_WORKER_CONNECTIONS", 32)
     sizes["ticker"] = number("PGBOUNCER_TICKER_CONNECTIONS", 8)
     print "[databases]" > config
     for (role in sizes) {
-        printf "forcad_%s = host=%s port=%s dbname=%s pool_size=%d max_db_connections=%d max_db_client_connections=256 connect_query='SET statement_timeout=5000; SET lock_timeout=2000; SET idle_in_transaction_session_timeout=10000'\n", role, host, port, database, sizes[role], sizes[role] > config
+        minimum = role == "api" ? sprintf(" min_pool_size=%d", api_min) : ""
+        printf "forcad_%s = host=%s port=%s dbname=%s pool_size=%d max_db_connections=%d%s max_db_client_connections=256 connect_query='SET statement_timeout=5000; SET lock_timeout=2000; SET idle_in_transaction_session_timeout=10000'\n", role, host, port, database, sizes[role], sizes[role], minimum > config
     }
     print "\n[pgbouncer]" > config
     print "listen_addr = 0.0.0.0\nlisten_port = 6432\nunix_socket_dir = /run/pgbouncer" > config

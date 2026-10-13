@@ -4,6 +4,7 @@ package api
 
 import (
 	"context"
+	"net/http"
 
 	ht "github.com/ogen-go/ogen/http"
 )
@@ -12,6 +13,7 @@ import (
 type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
+var _ RawHandler = UnimplementedHandler{}
 
 // AdminLogin implements adminLogin operation.
 //
@@ -288,8 +290,8 @@ func (UnimplementedHandler) GetReceiverMetrics(ctx context.Context) (r Metrics, 
 // Used to initialize and resynchronize clients after event-stream reconnects.
 //
 // GET /api/client/scoreboard/
-func (UnimplementedHandler) GetScoreboard(ctx context.Context) (r *Scoreboard, _ error) {
-	return r, ht.ErrNotImplemented
+func (UnimplementedHandler) GetScoreboard(ctx context.Context, w http.ResponseWriter) error {
+	return ht.ErrNotImplemented
 }
 
 // OpenEventStream implements openEventStream operation.

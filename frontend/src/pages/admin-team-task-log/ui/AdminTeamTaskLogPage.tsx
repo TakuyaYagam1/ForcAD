@@ -1,14 +1,14 @@
-import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
-import { AppShell } from "@/shared/ui/layout/AppShell";
+import { fetchTaskAdmin } from "@/entities/task/api/admin";
 import { fetchTeamTaskLog } from "@/entities/team-task/api";
 import { fetchTeamAdmin } from "@/entities/team/api/admin";
-import { fetchTaskAdmin } from "@/entities/task/api/admin";
 import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { formatScore } from "@/shared/lib/formatScore";
 import { normalizeUuid } from "@/shared/lib/uuid";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { AppShell } from "@/shared/ui/layout/AppShell";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
 
 export function AdminTeamTaskLogPage() {
   const { teamId: rawTeamId, taskId: rawTaskId } = useParams();
@@ -116,17 +116,17 @@ export function AdminTeamTaskLogPage() {
                       </td>
                       <td>
                         <pre className="log-message">
-                          {entry.public_message || "—"}
+                          {entry.public_message || "-"}
                         </pre>
                       </td>
                       <td>
                         <pre className="log-message">
-                          {entry.private_message || "—"}
+                          {entry.private_message || "-"}
                         </pre>
                       </td>
                       <td>
                         <pre className="log-message">
-                          {entry.command || "—"}
+                          {entry.command || "-"}
                         </pre>
                       </td>
                     </tr>

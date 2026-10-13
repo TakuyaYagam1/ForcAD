@@ -42,6 +42,44 @@ func TestDatabasePoolerKeepsCredentialsAndSeparatesRoles(t *testing.T) {
 	}
 }
 
+func TestDatabaseMinimumPoolSize(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		settings map[string]string
+		want     int32
+		invalid  bool
+	}{
+		{name: "default"},
+		{name: "zero", settings: map[string]string{"DATABASE_MIN_CONNS": "0"}},
+		{name: "partial", settings: map[string]string{"DATABASE_MIN_CONNS": "8"}, want: 8},
+		{name: "full", settings: map[string]string{"DATABASE_MIN_CONNS": "32"}, want: 32},
+		{name: "configured maximum", settings: map[string]string{"DATABASE_MAX_CONNS": "1000", "DATABASE_MIN_CONNS": "1000"}, want: 1000},
+		{name: "negative", settings: map[string]string{"DATABASE_MIN_CONNS": "-1"}, invalid: true},
+		{name: "above maximum", settings: map[string]string{"DATABASE_MIN_CONNS": "33"}, invalid: true},
+		{name: "role maximum", settings: map[string]string{"DATABASE_MAX_CONNS": "50", "FORCAD_RECEIVER_DATABASE_MAX_CONNS": "24", "DATABASE_MIN_CONNS": "25"}, invalid: true},
+		{name: "fraction", settings: map[string]string{"DATABASE_MIN_CONNS": "1.5"}, invalid: true},
+		{name: "malformed", settings: map[string]string{"DATABASE_MIN_CONNS": "invalid"}, invalid: true},
+		{name: "overflow", settings: map[string]string{"DATABASE_MIN_CONNS": "999999999999999999999"}, invalid: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			values := map[string]string{"FORCAD_ROLE": "receiver"}
+			for key, value := range test.settings {
+				values[key] = value
+			}
+			cfg, err := loadTest(values)
+			if test.invalid {
+				if err == nil || !strings.Contains(err.Error(), "DATABASE_MIN_CONNS") {
+					t.Fatalf("expected DATABASE_MIN_CONNS validation error, got %v", err)
+				}
+				return
+			}
+			if err != nil || cfg.DatabaseMinConns != test.want {
+				t.Fatalf("minimum connections = %d, want %d; error: %v", cfg.DatabaseMinConns, test.want, err)
+			}
+		})
+	}
+}
+
 func TestAdminCredentialsRequiredOnlyForAdminProcess(t *testing.T) {
 	if _, err := loadTest(nil); err == nil {
 		t.Fatal("admin API accepted empty credentials")

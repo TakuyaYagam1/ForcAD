@@ -1,5 +1,3 @@
-import type { FormEvent } from "react";
-import type { Task } from "@/entities/task/model/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,11 +10,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Task } from "@/entities/task/model/types";
 import {
   MAX_CHECKER_PATH_LENGTH,
   MAX_TASK_INTEGER_VALUE,
   MAX_TASK_NAME_LENGTH,
 } from "@/shared/lib/adminValidation";
+import type { FormEvent } from "react";
 
 type TaskFieldChange = <Field extends keyof Task>(
   field: Field,
@@ -96,7 +96,7 @@ export function TaskForm({
           <CardTitle className="text-sm text-slate-100">
             {isCreate
               ? "Новый сервис"
-              : `Сервис ${task.name} (${task.id ?? "—"})`}
+              : `Сервис ${task.name} (${task.id ?? "-"})`}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
             Редактируйте параметры чекера и сохраните изменения.
@@ -168,9 +168,7 @@ export function TaskForm({
               id="checker_type"
               maxLength={32}
               value={task.checker_type}
-              onChange={(event) =>
-                onChange("checker_type", event.target.value)
-              }
+              onChange={(event) => onChange("checker_type", event.target.value)}
             />
           </div>
 

@@ -1,19 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Search, WifiOff } from "lucide-react";
-import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
-import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import {
   ScoreboardTable,
-  type ScoreboardTeam,
   type ScoreboardTask,
+  type ScoreboardTeam,
   type ScoreboardTeamTask,
 } from "@/features/view-scoreboard/ui/ScoreboardTable";
+import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { PageHero } from "@/shared/ui/brand/PageHero";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, Search, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useScoreboardEntrance } from "../model/useScoreboardEntrance";
 import { useScoreboardViewport } from "../model/useScoreboardViewport";
 import "./ScoreboardWidget.css";
@@ -102,11 +102,11 @@ export function ScoreboardWidget({
             <div className="hero-metadata">
               <span>
                 <BrandIcon name="team" plain />
-                {teams.length || "—"} команд
+                {teams.length || "-"} команд
               </span>
               <span>
                 <BrandIcon name="terminal" plain />
-                {tasks.length || "—"} сервиса
+                {tasks.length || "-"} сервиса
               </span>
               <span>Attack-Defense</span>
             </div>

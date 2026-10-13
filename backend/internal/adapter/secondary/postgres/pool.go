@@ -19,7 +19,7 @@ func NewPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, func(), err
 		return nil, nil, fmt.Errorf("%s - parse PostgreSQL connection settings: invalid PostgreSQL connection settings", location)
 	}
 	settings.MaxConns = cfg.DatabaseMaxConns
-	settings.MinConns = 0
+	settings.MinConns = cfg.DatabaseMinConns
 	settings.MaxConnLifetime = 30 * time.Minute
 	settings.MaxConnLifetimeJitter = 5 * time.Minute
 	settings.MaxConnIdleTime = 5 * time.Minute

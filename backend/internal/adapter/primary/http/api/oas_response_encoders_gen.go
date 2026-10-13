@@ -906,17 +906,11 @@ func encodeGetReceiverMetricsResponse(response Metrics, w http.ResponseWriter, s
 	return nil
 }
 
-func encodeGetScoreboardResponse(response *Scoreboard, w http.ResponseWriter, span trace.Span) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(200)
-
-	e := new(jx.Encoder)
-	response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
+func encodeGetScoreboardResponse(response GetScoreboardRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
 	}
-
-	return nil
 }
 
 func encodeOpenEventStreamResponse(response *OpenEventStreamSwitchingProtocols, w http.ResponseWriter, span trace.Span) error {

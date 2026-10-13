@@ -47,6 +47,20 @@ func TestDatabaseCommandsBypassPooler(t *testing.T) {
 	}
 }
 
+func TestDatabaseCommandsDoNotInheritAPIPoolMinimum(t *testing.T) {
+	t.Setenv("FORCAD_ROLE", "api")
+	t.Setenv("FORCAD_API_DATABASE_MAX_CONNS", "32")
+	t.Setenv("FORCAD_TICKER_DATABASE_MAX_CONNS", "8")
+	t.Setenv("DATABASE_MIN_CONNS", "32")
+	cfg, err := commandConfig("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DatabaseMinConns != 0 || cfg.DatabaseMaxConns != 8 {
+		t.Fatalf("operator command inherited the API pool minimum: min=%d max=%d", cfg.DatabaseMinConns, cfg.DatabaseMaxConns)
+	}
+}
+
 func TestRunDatabaseCommandWrapsFlagHelp(t *testing.T) {
 	err := RunDatabaseCommand(context.Background(), "status", []string{"-h"}, io.Discard)
 	if !errors.Is(err, flag.ErrHelp) {

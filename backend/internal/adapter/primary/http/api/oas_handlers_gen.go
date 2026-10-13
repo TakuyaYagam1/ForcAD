@@ -4706,8 +4706,6 @@ func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w 
 	)
 
 	var rawBody []byte
-
-	var response *Scoreboard
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -4723,9 +4721,9 @@ func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w 
 		type (
 			Request  = struct{}
 			Params   = struct{}
-			Response = *Scoreboard
+			Response = struct{}
 		)
-		response, err = middleware.HookMiddleware[
+		_, err = middleware.HookMiddleware[
 			Request,
 			Params,
 			Response,
@@ -4734,24 +4732,16 @@ func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w 
 			mreq,
 			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetScoreboard(ctx)
+				err = s.rh.GetScoreboard(ctx, w)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.GetScoreboard(ctx)
+		err = s.rh.GetScoreboard(ctx, w)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
 		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
-
-	if err := encodeGetScoreboardResponse(response, w, span); err != nil {
-		defer recordError("EncodeResponse", err)
-		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
-			s.cfg.ErrorHandler(ctx, w, r, err)
-		}
 		return
 	}
 }

@@ -26,6 +26,10 @@ type attackReport struct {
 	P95MS          float64        `json:"p95_ms"`
 	P99MS          float64        `json:"p99_ms"`
 	LagP99MS       float64        `json:"generator_lag_p99_ms"`
+	LagP999MS      float64        `json:"generator_lag_p999_ms"`
+	LagMaxMS       float64        `json:"generator_lag_max_ms"`
+	MaxStarts1MS   uint64         `json:"generator_max_starts_fixed_1ms"`
+	MaxStarts10MS  uint64         `json:"generator_max_starts_fixed_10ms"`
 	GeneratorValid bool           `json:"generator_valid"`
 	SLOPassed      bool           `json:"slo_passed"`
 	Failures       uint64         `json:"failures"`
@@ -52,11 +56,16 @@ func attack(ctx context.Context, options attackOptions) attackReport {
 	defer stop()
 	var metrics vegeta.Metrics
 	var lagMetrics vegeta.LatencyMetrics
+	var maxLag time.Duration
+	starts := newStartDensity(options.duration)
 	report := attackReport{OfferedRPS: options.rps, Rejections: make(map[string]int)}
 	started := time.Now()
 	for result := range attacker.Attack(options.target, vegeta.Rate{Freq: options.rps, Per: time.Second}, options.duration, "load") {
-		lag := max(0, result.Timestamp.Sub(started)-time.Duration(float64(result.Seq+1)*float64(time.Second)/float64(options.rps)))
+		elapsed := result.Timestamp.Sub(started)
+		lag := max(0, elapsed-time.Duration(float64(result.Seq+1)*float64(time.Second)/float64(options.rps)))
 		lagMetrics.Add(lag)
+		maxLag = max(maxLag, lag)
+		starts.add(elapsed)
 		if reason := rejectionReason(result); reason != "" {
 			report.Rejections[reason]++
 		}
@@ -78,9 +87,44 @@ func attack(ctx context.Context, options attackOptions) attackReport {
 	report.P95MS, report.P99MS = milliseconds(metrics.Latencies.P95), milliseconds(metrics.Latencies.P99)
 	lagP99 := lagMetrics.Quantile(0.99)
 	report.LagP99MS = milliseconds(lagP99)
+	report.LagP999MS, report.LagMaxMS = milliseconds(lagMetrics.Quantile(0.999)), milliseconds(maxLag)
+	report.MaxStarts1MS, report.MaxStarts10MS = starts.peaks()
 	report.GeneratorValid = report.AchievedRPS >= minimumDelivery*float64(options.rps) && lagP99 <= generatorLagBudget && ctx.Err() == nil
 	report.SLOPassed = report.GeneratorValid && report.Failures == 0 && metrics.Success == 1 && metrics.Latencies.P99 <= latencyBudget
 	return report
+}
+
+// Count starts by Vegeta's timestamps, even when responses finish out of order.
+// Buckets are aligned to the attack start, not sliding windows or wire arrivals.
+// Allocation happens before measurement and costs about 4 KiB per scheduled second.
+type startDensity struct {
+	buckets []uint32
+}
+
+func newStartDensity(duration time.Duration) *startDensity {
+	return &startDensity{buckets: make([]uint32, int(duration/time.Millisecond)+1)}
+}
+
+func (d *startDensity) add(elapsed time.Duration) {
+	index := int(max(0, elapsed) / time.Millisecond)
+	if index >= len(d.buckets) {
+		// A worker may start the final request after the nominal stage duration.
+		d.buckets = append(d.buckets, make([]uint32, index-len(d.buckets)+1)...)
+	}
+	d.buckets[index]++
+}
+
+func (d *startDensity) peaks() (oneMS, tenMS uint64) {
+	var count uint64
+	for index, requests := range d.buckets {
+		if index%10 == 0 {
+			count = 0
+		}
+		oneMS = max(oneMS, uint64(requests))
+		count += uint64(requests)
+		tenMS = max(tenMS, count)
+	}
+	return oneMS, tenMS
 }
 
 // Record a fixed set of reasons, never arbitrary response bodies or credentials.

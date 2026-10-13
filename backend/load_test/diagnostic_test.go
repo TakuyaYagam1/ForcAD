@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -72,9 +73,15 @@ FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND (
 	}
 }
 
-func saveFlagLog(ctx context.Context, d *deployment, directory string) error {
+func flagLogTimeout(elapsed time.Duration) time.Duration {
+	return max(2*time.Minute, elapsed/10)
+}
+
+func saveFlagLog(ctx context.Context, d *deployment, directory string, elapsed time.Duration) error {
 	const location = "load.saveFlagLog"
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// A continuous high-rate run can produce millions of unrelated access lines.
+	// Stream them with bounded memory, scaling the final scan budget with the run.
+	ctx, cancel := context.WithTimeout(ctx, flagLogTimeout(elapsed))
 	defer cancel()
 	file, err := os.OpenFile(filepath.Join(directory, "flag.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
@@ -113,6 +120,19 @@ func saveFlagLog(ctx context.Context, d *deployment, directory string) error {
 
 func (o *observers) samplePool(ctx context.Context, d *deployment, directory string) {
 	const location = "load.observers.samplePool"
+	apiReplicas := 2
+	if raw := os.Getenv("LOAD_API_REPLICAS"); raw != "" {
+		var err error
+		apiReplicas, err = strconv.Atoi(raw)
+		if err != nil || apiReplicas < 1 || apiReplicas > 16 {
+			o.fail(fmt.Errorf("%s - LOAD_API_REPLICAS must be an integer between 1 and 16", location))
+			return
+		}
+	}
+	replicas := []struct{ role, index string }{{"receiver", "1"}, {"receiver", "2"}}
+	for index := 1; index <= apiReplicas; index++ {
+		replicas = append(replicas, struct{ role, index string }{"api", strconv.Itoa(index)})
+	}
 	file, err := os.OpenFile(filepath.Join(directory, "pool.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		o.fail(fmt.Errorf("%s - create samples: %w", location, err))
@@ -120,7 +140,7 @@ func (o *observers) samplePool(ctx context.Context, d *deployment, directory str
 	}
 	defer file.Close()
 	for ctx.Err() == nil {
-		for _, replica := range []struct{ role, index string }{{"receiver", "1"}, {"receiver", "2"}, {"api", "1"}, {"api", "2"}} {
+		for _, replica := range replicas {
 			data, err := d.command(ctx, "", "exec", "-T", "--index", replica.index, replica.role, "wget", "-qO-", "http://127.0.0.1:9090/metrics")
 			if err != nil {
 				if ctx.Err() == nil {

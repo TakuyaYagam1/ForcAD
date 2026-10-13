@@ -1,12 +1,12 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
-import { RankBadge } from "@/shared/ui/brand/RankBadge";
+import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { useLayoutEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "./ScoreboardTable.css";
-import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 
 export interface ScoreboardTeam {
   id: string;
@@ -159,7 +159,7 @@ export function ScoreboardTable({
       <div
         className="table-scroll"
         role="region"
-        aria-label="Рейтинг команд — таблица с горизонтальной прокруткой"
+        aria-label="Рейтинг команд - таблица с горизонтальной прокруткой"
         tabIndex={0}
       >
         <table className="scoreboard-table">

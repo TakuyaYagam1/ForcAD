@@ -1,15 +1,15 @@
+import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { PageHero } from "@/shared/ui/brand/PageHero";
+import { RankBadge } from "@/shared/ui/brand/RankBadge";
+import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
+import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { AppShell } from "@/shared/ui/layout/AppShell";
+import { ArrowUpRight, Search } from "lucide-react";
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, ArrowUpRight } from "lucide-react";
-import { AppShell } from "@/shared/ui/layout/AppShell";
-import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { PageHero } from "@/shared/ui/brand/PageHero";
-import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
-import { RankBadge } from "@/shared/ui/brand/RankBadge";
-import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
-import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import "./TeamsPage.css";
 
 function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
@@ -81,12 +81,12 @@ export function TeamsPage() {
         <PageHero
           compact
           title="Команды"
-          subtitle="За каждым результатом — своя команда."
+          subtitle="За каждым результатом - своя команда."
         >
           <div className="hero-metadata">
             <span>
               <BrandIcon name="team" />
-              Участников: {teams.length || "—"}
+              Участников: {teams.length || "-"}
             </span>
             <span>Профили и результаты</span>
           </div>

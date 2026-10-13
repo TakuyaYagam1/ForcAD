@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { formatScore } from "@/shared/lib/formatScore";
+import { useState } from "react";
 import { BrandIcon } from "./BrandIcon";
 
 interface ServiceValue {
@@ -31,7 +31,7 @@ export function ServiceCell({
 }) {
   const [open, setOpen] = useState(false);
   const meta = value ? STATUS_META_BY_CODE[value.status] : undefined;
-  const sla = value && value.checks > 0 ? `${formatScore(value.sla)}%` : "—";
+  const sla = value && value.checks > 0 ? `${formatScore(value.sla)}%` : "-";
   const trigger = (
     <button
       type="button"
@@ -47,7 +47,7 @@ export function ServiceCell({
             color: meta?.color ?? "#626b78",
           }}
         />
-        <span>{value ? formatScore(value.score) : "—"}</span>
+        <span>{value ? formatScore(value.score) : "-"}</span>
       </span>
       <span className="service-meta">
         <span>SLA {sla}</span>

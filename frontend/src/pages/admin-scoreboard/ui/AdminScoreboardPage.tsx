@@ -1,12 +1,12 @@
-import { AdminEntityLists } from "@/features/manage-entities/ui/AdminEntityLists";
-import { AppShell } from "@/shared/ui/layout/AppShell";
-import { ScoreboardWidget } from "@/widgets/scoreboard/ui/ScoreboardWidget";
 import { Button } from "@/components/ui/button";
 import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
-import { useNavigate } from "react-router-dom";
-import { Plus, LogOut } from "lucide-react";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { AdminEntityLists } from "@/features/manage-entities/ui/AdminEntityLists";
 import { GameControls } from "@/features/manage-game/ui/GameControls";
+import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { AppShell } from "@/shared/ui/layout/AppShell";
+import { ScoreboardWidget } from "@/widgets/scoreboard/ui/ScoreboardWidget";
+import { LogOut, Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function AdminScoreboardPage() {
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ export function AdminScoreboardPage() {
             <p className="eyebrow">Панель организатора</p>
             <h1>Управление соревнованием</h1>
             <p>
-              Выбери команду или сервис для редактирования, ячейку — для
+              Выбери команду или сервис для редактирования, ячейку - для
               просмотра лога.
             </p>
           </div>

@@ -1,5 +1,3 @@
-import type { FormEvent } from "react";
-import type { Team } from "@/entities/team/model/types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,8 +10,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Team } from "@/entities/team/model/types";
 import { MAX_TEAM_NAME_LENGTH } from "@/shared/lib/adminValidation";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import type { FormEvent } from "react";
 
 type TeamFieldChange = <Field extends keyof Team>(
   field: Field,
@@ -48,7 +48,7 @@ export function TeamForm({
           <CardTitle className="text-sm text-slate-100">
             {isCreate
               ? "Новая команда"
-              : `Команда ${team.name} (${team.id ?? "—"})`}
+              : `Команда ${team.name} (${team.id ?? "-"})`}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
             Измените поля и сохраните изменения.

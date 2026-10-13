@@ -16,6 +16,16 @@ x-fixture: &fixture
     retries: 20
 
 services:
+  api:
+    environment:
+      FORCAD_API_DATABASE_MAX_CONNS: "${LOAD_API_DATABASE_MAX_CONNS:-16}"
+      DATABASE_MIN_CONNS: "${LOAD_API_DATABASE_MIN_CONNS:-0}"
+      HTTP_MAX_INFLIGHT: "${LOAD_API_HTTP_MAX_INFLIGHT:-128}"
+      GOGC: "${LOAD_API_GOGC:-100}"
+  pgbouncer:
+    environment:
+      PGBOUNCER_API_CONNECTIONS: "${LOAD_PGBOUNCER_API_CONNECTIONS:-32}"
+      PGBOUNCER_API_MIN_CONNECTIONS: "${LOAD_PGBOUNCER_API_MIN_CONNECTIONS:-0}"
   notes:
     <<: *fixture
     command: [notes]
@@ -27,7 +37,7 @@ services:
     command: [jobs]
   worker:
     environment:
-      WORKER_CONCURRENCY: "8"
+      WORKER_CONCURRENCY: "${LOAD_WORKER_CONCURRENCY:-8}"
     depends_on:
       notes: {condition: service_healthy}
       vault: {condition: service_healthy}
