@@ -20,6 +20,7 @@ import (
 
 type scoreboardGame struct {
 	GameService
+
 	board domain.Scoreboard
 	err   error
 }

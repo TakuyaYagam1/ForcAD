@@ -9,8 +9,11 @@ import (
 
 func TestStartDensityOutOfOrderAndLateStarts(t *testing.T) {
 	density := newStartDensity(2 * time.Millisecond)
-	for _, elapsed := range []time.Duration{11000, 100, 9900, 1000, 1500, 900, 10001} {
-		density.add(elapsed * time.Microsecond)
+	for _, elapsed := range []time.Duration{
+		11 * time.Millisecond, 100 * time.Microsecond, 9900 * time.Microsecond,
+		time.Millisecond, 1500 * time.Microsecond, 900 * time.Microsecond, 10001 * time.Microsecond,
+	} {
+		density.add(elapsed)
 	}
 	oneMS, tenMS := density.peaks()
 	if oneMS != 2 || tenMS != 5 {
