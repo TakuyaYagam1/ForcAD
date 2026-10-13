@@ -37,6 +37,7 @@ test-load: ## Exercise 20 flag farms, checker rounds and reconnecting spectators
 	../backend/load_test/scripts/run.sh
 
 test-monitoring: ## Verify team metrics, Prometheus discovery and Grafana in an isolated stack.
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest discover -s ../backend/integration_test/scripts -p 'test_monitoring.py' -v
 	../backend/integration_test/scripts/test_deployment.sh --monitoring
 
 test-network: ## Check nftables and its exporter in a disposable network namespace.
