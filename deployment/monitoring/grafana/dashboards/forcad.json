@@ -26,7 +26,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "One row per team, identified by name and UUID. REST metrics sum across API and receiver replicas. Missing sources and ambiguous router addresses are N/A.",
+      "description": "One row per configured team, displayed by name. Unattributed traffic is included in the overall charts. Application metrics sum across API and receiver replicas. Missing sources and ambiguous router addresses are N/A.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -39,7 +39,17 @@
             },
             "inspect": false
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "N/A"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -60,7 +70,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "p99 REST API (s)"
+              "options": "p99 (s)"
             },
             "properties": [
               {
@@ -70,6 +80,40 @@
               {
                 "id": "decimals",
                 "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "regex",
+                    "options": {
+                      "pattern": "^(.*) \\[(?:[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}|unknown)\\]$",
+                      "result": {
+                        "text": "$1"
+                      }
+                    }
+                  }
+                ]
               }
             ]
           }
@@ -96,7 +140,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "label_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"REST API RPS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_flags_total{job=~\"forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Flags/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\",job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"HTTP errors/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((histogram_quantile(0.99, sum by (team_id, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"p99 REST API (s)\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (forcad_team_websocket_connections{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"WS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Outgoing Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_receive_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Incoming Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((((sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))))) + ((sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)))))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest)) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Packets/s\", \"__name__\", \".*\")",
+          "expr": "label_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"RPS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_flags_total{job=~\"forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Flags/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\",job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"HTTP errors/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((histogram_quantile(0.99, sum by (team_id, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"p99 (s)\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (forcad_team_websocket_connections{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"WS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Outgoing Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_receive_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Incoming Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((((sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))))) + ((sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)))))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\")), \"column\", \"Packets/s\", \"__name__\", \".*\")",
           "format": "table",
           "instant": true,
           "legendFormat": "{{team}} {{column}}",
@@ -124,24 +168,378 @@
               "team_ref": true
             },
             "indexByName": {
-              "Team": 0,
-              "REST API RPS": 1,
+              "team\\column": 0,
+              "RPS": 1,
               "Flags/s": 2,
               "HTTP errors/s": 3,
-              "p99 REST API (s)": 4,
+              "p99 (s)": 4,
               "WS": 5,
               "Outgoing Mbps": 6,
               "Incoming Mbps": 7,
               "Packets/s": 8
             },
             "renameByName": {
-              "team": "Team"
+              "team\\column": "Team"
             }
           }
         }
       ],
       "type": "table",
       "title": "Team overview"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "goroutines",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (job) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))",
+          "legendFormat": "{{job}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "RPS",
+      "description": "Completed REST requests at the backend, including rejected requests. WebSocket streams are excluded."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "goroutines",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "forcad_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)",
+          "legendFormat": "open {{instance}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "forcad_websocket_connection_limit{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)",
+          "legendFormat": "limit {{instance}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries",
+      "title": "WebSocket connections",
+      "description": "Open connections and configured capacity per API replica. One full replica can reject connections even if another has room."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "goroutines",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_database_connections_in_use and on (job, instance) (up == 1))",
+          "legendFormat": "in use",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(clamp_min(forcad_database_connections - forcad_database_connections_in_use, 0) and on (job, instance) (up == 1))",
+          "legendFormat": "idle",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_database_connections and on (job, instance) (up == 1))",
+          "legendFormat": "open",
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_database_connection_limit and on (job, instance) (up == 1))",
+          "legendFormat": "limit",
+          "range": true,
+          "refId": "D"
+        }
+      ],
+      "type": "timeseries",
+      "title": "PostgreSQL client connections",
+      "description": "Application pools: acquired, idle, total open and configured capacity across healthy replicas. These are PgBouncer client connections, not PostgreSQL server sessions."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "goroutines",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(clamp_min(forcad_redis_connections - forcad_redis_connections_idle, 0) and on (job, instance) (up == 1))",
+          "legendFormat": "in use",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_redis_connections_idle and on (job, instance) (up == 1))",
+          "legendFormat": "idle",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_redis_connections and on (job, instance) (up == 1))",
+          "legendFormat": "open",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Redis client connections",
+      "description": "Open and idle application-pool connections across healthy replicas. Redis server maxclients and dedicated Pub/Sub connections are not included."
     },
     {
       "datasource": {
@@ -183,10 +581,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 0,
-        "y": 12
+        "y": 28,
+        "w": 12,
+        "h": 8
       },
       "id": 2,
       "options": {
@@ -208,14 +606,86 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\"}[5m])) / sum by (team_id) (rate(forcad_team_http_requests_total[5m]))",
-          "legendFormat": "{{team_id}}",
+          "expr": "(100 * sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\"}[5m])) / sum by (team_id) (rate(forcad_team_http_requests_total[5m]))) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
+          "legendFormat": "{{team_name}}",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
       "title": "HTTP error ratio"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "goroutines",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 8
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.99, sum by (job, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))",
+          "legendFormat": "{{job}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "REST latency p99",
+      "description": "99th percentile of completed REST requests, excluding long-lived WebSocket streams."
     },
     {
       "datasource": {
@@ -257,10 +727,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
+        "x": 0,
+        "y": 36,
         "w": 12,
-        "x": 12,
-        "y": 12
+        "h": 8
       },
       "id": 3,
       "options": {
@@ -305,76 +775,6 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "seconds / second",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(forcad_database_acquire_wait_seconds_total[5m])",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Database acquisition wait"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
             "axisLabel": "connections / requests",
             "axisPlacement": "left",
             "drawStyle": "line",
@@ -397,10 +797,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
         "x": 12,
-        "y": 20
+        "y": 36,
+        "w": 12,
+        "h": 8
       },
       "id": 5,
       "options": {
@@ -456,6 +856,76 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
+            "axisLabel": "seconds / second",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(forcad_database_acquire_wait_seconds_total[5m])",
+          "legendFormat": "{{job}} {{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Database acquisition wait"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "goroutines",
             "axisPlacement": "left",
             "drawStyle": "line",
@@ -473,17 +943,18 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ops",
+          "min": 0
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 28
+        "x": 12,
+        "y": 44,
+        "w": 12,
+        "h": 8
       },
-      "id": 6,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [],
@@ -503,154 +974,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "go_goroutines",
-          "legendFormat": "{{job}} {{instance}}",
+          "expr": "sum by (verdict) (rate(forcad_team_flags_total{job=\"forcad_receiver\"}[1m]) and on (job, instance) (up{job=\"forcad_receiver\"} == 1))",
+          "legendFormat": "{{verdict}}",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "Go goroutines"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "bytes",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 28
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "go_memstats_heap_alloc_bytes",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Go heap allocation"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "cores",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 28
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(process_cpu_seconds_total[5m])",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Go process CPU"
+      "title": "Submitted flags/s",
+      "description": "Decoded flags by outcome. Accepted flags are committed to the database. Invalid values and duplicates are shown separately."
     }
   ],
   "refresh": "15s",
@@ -668,5 +1000,5 @@
   "timezone": "browser",
   "title": "ForcAD Monitoring",
   "uid": "forcad-monitoring",
-  "version": 1
+  "version": 2
 }

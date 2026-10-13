@@ -40,7 +40,6 @@ def main():
     prometheus, grafana, repo, project = sys.argv[1:]
     # The API checks leave one deactivated CRUD fixture in addition to both teams.
     expected_teams = 3
-    expected_rows = expected_teams + 1  # Unknown is a separate attribution row.
 
     def query(expression):
         response = get_json(prometheus + "/api/v1/query?" + urllib.parse.urlencode({"query": expression}))
@@ -81,6 +80,7 @@ def main():
     for dashboard in dashboards:
         loaded = get_json(grafana + "/api/dashboards/uid/" + dashboard["uid"], auth)
         assert loaded["dashboard"]["title"] == dashboard["title"], "Dashboard was not provisioned"
+        assert not loaded["meta"].get("folderUid"), "Dashboard must be in the Grafana root"
         for panel in dashboard["panels"]:
             for target in panel.get("targets", []):
                 expression = target.get("expr", "")
@@ -90,10 +90,11 @@ def main():
                     query(expression)
     table_query = dashboards[0]["panels"][0]["targets"][0]["expr"]
     table = query(table_query)
-    columns = {"REST API RPS", "Flags/s", "HTTP errors/s", "p99 REST API (s)",
+    columns = {"RPS", "Flags/s", "HTTP errors/s", "p99 (s)",
                "WS", "Outgoing Mbps", "Incoming Mbps", "Packets/s"}
-    assert len(table) == 8 * expected_rows, "Expected eight columns per team and Unknown"
+    assert len(table) == 8 * expected_teams, "Expected eight columns per configured team"
     assert {item["metric"]["column"] for item in table} == columns, "Table columns are missing"
+    assert all(item["metric"]["team"] != "Unknown [unknown]" for item in table), "Unattributed traffic must stay out of the team table"
     for item in table:
         if item["metric"]["column"] in {"Outgoing Mbps", "Incoming Mbps", "Packets/s"}:
                 assert item["value"][1] == "NaN", "Missing router data must be N/A, not zero"
@@ -111,7 +112,7 @@ def main():
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             cells = [item for item in query(table_query) if item["metric"]["column"] == column]
-            if len(cells) == expected_rows and all(item["value"][1] == "NaN" for item in cells):
+            if len(cells) == expected_teams and all(item["value"][1] == "NaN" for item in cells):
                 return
             time.sleep(1)
         raise AssertionError(column + " showed zero or stale data after loss of all sources")
@@ -120,7 +121,7 @@ def main():
     expect_unavailable("Flags/s")
     stop_test_role("api")
     expect_unavailable("WS")
-    expect_unavailable("REST API RPS")
+    expect_unavailable("RPS")
     print("Monitoring checks passed: replicas, team/flag/WS metrics, Grafana queries, all table columns and missing-source handling.")
 
 
