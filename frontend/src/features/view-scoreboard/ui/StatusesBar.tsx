@@ -1,5 +1,6 @@
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 
 export function StatusesBar({
@@ -9,6 +10,7 @@ export function StatusesBar({
   round?: number;
   roundStart?: number | null;
 }) {
+  const { t } = useTranslation("public");
   const roundTime = useScoreboardStore((state) => state.roundTime);
   const runtimeRound = useScoreboardStore((state) => state.runtimeRound);
   const currentRoundStart = useScoreboardStore(
@@ -57,12 +59,12 @@ export function StatusesBar({
       ? "-:-"
       : `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   return (
-    <section className="round-line" aria-label="Текущий раунд">
-      <span className="round-label">Линия раундов</span>
+    <section className="round-line" aria-label={t("scoreboard.round.current")}>
+      <span className="round-label">{t("scoreboard.round.timeline")}</span>
       <div
         className="round-track"
         role="progressbar"
-        aria-label="Время текущего раунда"
+        aria-label={t("scoreboard.round.time")}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.floor(progress)}
@@ -93,14 +95,14 @@ export function StatusesBar({
             aria-live="polite"
           >
             {phase === "finished"
-              ? "Игра завершилась"
+              ? t("scoreboard.round.finished")
               : phase === "paused"
-                ? "Пауза"
+                ? t("scoreboard.round.paused")
                 : phase === "running" && roundWaiting
-                  ? "Ожидание результатов проверок"
+                  ? t("scoreboard.round.waitingResults")
                   : phase === "unknown"
-                    ? "Статус недоступен"
-                    : "С начала раунда"}
+                    ? t("scoreboard.round.unavailable")
+                    : t("scoreboard.round.sinceStart")}
           </small>
         </div>
       </div>

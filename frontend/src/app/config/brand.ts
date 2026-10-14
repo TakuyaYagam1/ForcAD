@@ -1,3 +1,5 @@
+import { i18n } from "../../shared/i18n/index.ts";
+
 export interface BrandConfig {
   name: string;
   logo: string;
@@ -124,11 +126,15 @@ export function applyBrandConfig(): void {
     `${accentHue} ${accentSaturation}% 72%`,
   );
 
-  document.title = `${brand.name} - рейтинг команд`;
+  applyBrandMetadata();
+}
+
+export function applyBrandMetadata(): void {
+  document.title = i18n.t("shell:home", { brand: brand.name });
   document
     .querySelector<HTMLMetaElement>('meta[name="description"]')
     ?.setAttribute(
       "content",
-      `${brand.name}: рейтинг команд, состояния сервисов и результаты Attack-Defense игры.`,
+      i18n.t("shell:description", { brand: brand.name }),
     );
 }

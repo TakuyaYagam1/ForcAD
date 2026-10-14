@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { formatScore } from "@/shared/lib/formatScore";
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { BrandIcon } from "./BrandIcon";
 
@@ -29,6 +30,7 @@ export function ServiceCell({
   name: string;
   onClick?: () => void;
 }) {
+  const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const meta = value ? STATUS_META_BY_CODE[value.status] : undefined;
   const sla = value && value.checks > 0 ? `${formatScore(value.sla)}%` : "-";
@@ -37,7 +39,10 @@ export function ServiceCell({
       type="button"
       className="service-cell"
       onClick={onClick}
-      aria-label={`${name}: ${meta?.description ?? "ожидание данных"}. Подробнее`}
+      aria-label={t("service.ariaLabel", {
+        name,
+        description: meta?.description ?? t("service.waitingData"),
+      })}
     >
       <span className="service-score">
         <i
@@ -67,12 +72,12 @@ export function ServiceCell({
           <BrandIcon name="terminal" />
           <DialogTitle>{name}</DialogTitle>
           <DialogDescription>
-            {meta?.description ?? "Данные сервиса ещё не получены"}
+            {meta?.description ?? t("service.noData")}
           </DialogDescription>
         </DialogHeader>
         <div className="service-detail-grid">
           <div>
-            <span>Очки</span>
+            <span>{t("service.score")}</span>
             <strong>{formatScore(value?.score ?? 0)}</strong>
           </div>
           <div>
@@ -80,17 +85,17 @@ export function ServiceCell({
             <strong>{sla}</strong>
           </div>
           <div>
-            <span>Захвачено флагов</span>
-            <strong>+{value?.stolen ?? 0}</strong>
+            <span>{t("service.capturedFlags")}</span>
+            <strong>+{formatScore(value?.stolen ?? 0)}</strong>
           </div>
           <div>
-            <span>Потеряно флагов</span>
-            <strong>−{value?.lost ?? 0}</strong>
+            <span>{t("service.lostFlags")}</span>
+            <strong>-{formatScore(value?.lost ?? 0)}</strong>
           </div>
         </div>
         <div className="checker-message">
-          <span className="eyebrow">Ответ чекера</span>
-          <pre>{value?.message || "Нет сообщения"}</pre>
+          <span className="eyebrow">{t("service.checkerResponse")}</span>
+          <pre>{value?.message || t("service.noCheckerMessage")}</pre>
         </div>
       </DialogContent>
     </Dialog>

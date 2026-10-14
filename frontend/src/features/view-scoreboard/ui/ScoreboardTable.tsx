@@ -4,6 +4,8 @@ import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
+import { useTranslation } from "react-i18next";
+import { getLocale } from "@/shared/i18n";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ScoreboardTable.css";
@@ -54,14 +56,16 @@ export function ScoreboardTable({
   onTaskClick,
   onCellClick,
 }: ScoreboardTableProps) {
+  const { t } = useTranslation("public");
   const navigate = useNavigate();
   const frameRef = useRef<HTMLDivElement>(null);
   const rows = useRef(new Map<string, HTMLTableRowElement>());
   const previous = useRef(new Map<string, { rank: number; top: number }>());
 
-  const query = filter.trim().toLocaleLowerCase("ru-RU");
+  const locale = getLocale();
+  const query = filter.trim().toLocaleLowerCase(locale);
   const visible = teams.filter((team) =>
-    `${team.name} ${team.ip}`.toLocaleLowerCase("ru-RU").includes(query),
+    `${team.name} ${team.ip}`.toLocaleLowerCase(locale).includes(query),
   );
   const ranks = new Map(teams.map((team, index) => [team.id, index + 1]));
   useViewportAnimations(frameRef, visible.length > 0);
@@ -136,8 +140,8 @@ export function ScoreboardTable({
     return (
       <div className="empty-state">
         <BrandIcon name="podium" />
-        <h2>Ожидаем команды</h2>
-        <p>Рейтинг появится после подключения к серверу соревнования.</p>
+        <h2>{t("scoreboard.table.noTeamsTitle")}</h2>
+        <p>{t("scoreboard.table.noTeamsDescription")}</p>
       </div>
     );
 
@@ -145,8 +149,8 @@ export function ScoreboardTable({
     return (
       <div className="empty-state">
         <BrandIcon name="team" />
-        <h2>Команда не найдена</h2>
-        <p>Попробуй другое название или IP-адрес.</p>
+        <h2>{t("scoreboard.table.noMatchTitle")}</h2>
+        <p>{t("scoreboard.table.noMatchDescription")}</p>
       </div>
     );
 
@@ -159,24 +163,24 @@ export function ScoreboardTable({
       <div
         className="table-scroll"
         role="region"
-        aria-label="Рейтинг команд - таблица с горизонтальной прокруткой"
+        aria-label={t("scoreboard.table.regionLabel")}
         tabIndex={0}
       >
         <table className="scoreboard-table">
           <caption className="sr-only">
-            Текущий рейтинг команд, очки, состояние сервисов и SLA
+            {t("scoreboard.table.caption")}
           </caption>
 
           <thead>
             <tr>
               <th scope="col" className="place-column">
-                Место
+                {t("scoreboard.table.place")}
               </th>
               <th scope="col" className="team-column">
-                Команда
+                {t("scoreboard.table.team")}
               </th>
               <th scope="col" className="total-column">
-                Очки
+                {t("scoreboard.table.score")}
               </th>
 
               {tasks.map((task) => (

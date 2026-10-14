@@ -1,3 +1,6 @@
+import { useTranslation } from "react-i18next";
+
 export function TeamTaskLogWidget() {
-  return <div>TeamTaskLogWidget</div>;
+  const { t } = useTranslation("admin");
+  return <div>{t("widgets.teamTaskLog")}</div>;
 }

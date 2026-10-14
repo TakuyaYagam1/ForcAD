@@ -8,12 +8,17 @@ import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import { AppShell } from "@/shared/ui/layout/AppShell";
 import { ArrowUpRight, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getLocale } from "@/shared/i18n";
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import "./TeamsPage.css";
 
 function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
+  const { t } = useTranslation("public");
   const podium = rank >= 1 && rank <= 3;
+  const locale = getLocale();
+  const formattedRank = new Intl.NumberFormat(locale).format(rank);
 
   return (
     <Link
@@ -30,12 +35,14 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
           <div className="team-podium-copy">
             <h2>{team.name}</h2>
             <span className="team-ip">{team.ip}</span>
-            <span className="team-podium-place">{rank} место</span>
+            <span className="team-podium-place">
+              {t("teams.podiumPlace", { rank: formattedRank })}
+            </span>
           </div>
         </>
       ) : (
         <>
-          <span className="team-card-place">#{rank}</span>
+          <span className="team-card-place">#{formattedRank}</span>
           <div className="team-card-top">
             <TeamAvatar name={team.name} src={team.logo_path} />
             <div>
@@ -48,11 +55,11 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
 
       <div className="team-card-bottom">
         <div>
-          <small>Очки</small>
+          <small>{t("teams.score")}</small>
           <ScoreValue value={team.score ?? 0} />
         </div>
         <span className="text-link">
-          Профиль <ArrowUpRight size={16} />
+          {t("teams.profile")} <ArrowUpRight size={16} />
         </span>
       </div>
     </Link>
@@ -60,15 +67,17 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
 }
 
 export function TeamsPage() {
+  const { t } = useTranslation("public");
   const leadersRef = useRef<HTMLElement>(null);
   const teams = useScoreboardStore((state) => state.teams) ?? [];
   const [filter, setFilter] = useState("");
-  const query = filter.trim().toLocaleLowerCase("ru-RU");
+  const locale = getLocale();
+  const query = filter.trim().toLocaleLowerCase(locale);
 
   const filtered = teams
     .map((team, index) => ({ team, rank: index + 1 }))
     .filter(({ team }) =>
-      `${team.name} ${team.ip}`.toLocaleLowerCase("ru-RU").includes(query),
+      `${team.name} ${team.ip}`.toLocaleLowerCase(locale).includes(query),
     );
 
   const leaders = filtered.filter(({ rank }) => rank <= 3);
@@ -80,15 +89,22 @@ export function TeamsPage() {
       <div className="teams-page">
         <PageHero
           compact
-          title="Команды"
-          subtitle="За каждым результатом - своя команда."
+          title={t("teams.title")}
+          subtitle={t("teams.subtitle")}
         >
           <div className="hero-metadata">
             <span>
               <BrandIcon name="team" />
-              Участников: {teams.length || "-"}
+              {teams.length
+                ? t("teams.participantCount", {
+                    count: teams.length,
+                    formattedCount: new Intl.NumberFormat(locale).format(
+                      teams.length,
+                    ),
+                  })
+                : t("teams.participantCountEmpty")}
             </span>
-            <span>Профили и результаты</span>
+            <span>{t("teams.profilesAndResults")}</span>
           </div>
         </PageHero>
 
@@ -97,13 +113,13 @@ export function TeamsPage() {
             <Search size={17} />
             <input
               type="search"
-              aria-label="Поиск команды"
-              placeholder="Найти команду или IP…"
+              aria-label={t("teams.searchLabel")}
+              placeholder={t("teams.searchPlaceholder")}
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
             />
           </label>
-          <p className="events-caption">В порядке текущего рейтинга</p>
+          <p className="events-caption">{t("teams.currentRankingOrder")}</p>
         </div>
 
         {filtered.length ? (
@@ -118,9 +134,9 @@ export function TeamsPage() {
                 <div className="section-heading leaders-heading">
                   <h2 id="teams-leaders-title">
                     <BrandIcon name="podium" plain />
-                    Лидеры рейтинга
+                    {t("teams.leaders")}
                   </h2>
-                  <span className="leaders-caption">Топ-3</span>
+                  <span className="leaders-caption">{t("teams.topThree")}</span>
                 </div>
                 <div className="teams-podium">
                   {leaders.map(({ team, rank }) => (
@@ -131,12 +147,15 @@ export function TeamsPage() {
             )}
 
             {others.length > 0 && (
-              <section className="teams-roster" aria-label="Остальные команды">
+              <section
+                className="teams-roster"
+                aria-label={t("teams.rosterLabel")}
+              >
                 {leaders.length > 0 && (
                   <div className="section-heading">
                     <h2>
                       <BrandIcon name="team" plain />
-                      Остальные команды
+                      {t("teams.otherTeams")}
                     </h2>
                   </div>
                 )}
@@ -151,11 +170,13 @@ export function TeamsPage() {
         ) : (
           <div className="empty-state mt-5">
             <BrandIcon name="team" />
-            <h2>{query ? "Команда не найдена" : "Ожидаем участников"}</h2>
+            <h2>
+              {query ? t("teams.notFoundTitle") : t("teams.waitingTitle")}
+            </h2>
             <p>
               {query
-                ? "Попробуй другое название или IP-адрес."
-                : "Команды появятся после подключения к серверу соревнования."}
+                ? t("teams.notFoundDescription")
+                : t("teams.waitingDescription")}
             </p>
           </div>
         )}

@@ -8,25 +8,36 @@ import {
   updateTaskAdmin,
 } from "@/entities/task/api/admin";
 import { apiErrorMessage } from "@/shared/lib/apiError";
-import { validateTask } from "@/shared/lib/adminValidation";
+import {
+  formatTaskValidationIssue,
+  getTaskValidationIssue,
+} from "@/shared/lib/adminValidation";
+import type { TaskValidationIssue } from "@/shared/lib/adminValidation";
 import { queryClient } from "@/shared/lib/queryClient";
-import { AppShell } from "@/shared/ui/layout/AppShell";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { TaskForm } from "./TaskForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
+import { useTranslation } from "react-i18next";
+import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
+
+type TaskPageError =
+  | { kind: "invalidId" }
+  | { kind: "validation"; issue: TaskValidationIssue }
+  | { kind: "request"; operation: "load" | "save"; cause: unknown };
 
 interface TaskAdminPageProps {
   mode?: "create" | "edit";
 }
 
 export function TaskAdminPage({ mode }: TaskAdminPageProps) {
+  const { t } = useTranslation("admin");
   const { taskId: taskIdParam } = useParams<{ taskId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TaskPageError | null>(null);
 
   const isCreate = mode === "create" || !taskIdParam;
   const taskId = !isCreate ? (normalizeUuid(taskIdParam) ?? null) : null;
@@ -76,12 +87,12 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
             setLoadedKey(location.key);
           }
         } else if (!cancelled) {
-          setError("Некорректный ID таска");
+          setError({ kind: "invalidId" });
         }
       } catch (loadError: unknown) {
         console.error(loadError);
         if (!cancelled) {
-          setError(apiErrorMessage(loadError, "Ошибка загрузки данных"));
+          setError({ kind: "request", operation: "load", cause: loadError });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -108,9 +119,9 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
     event.preventDefault();
     if (!task || !canSave || saving) return;
 
-    const validationError = validateTask(task);
+    const validationError = getTaskValidationIssue(task);
     if (validationError) {
-      setError(validationError);
+      setError({ kind: "validation", issue: validationError });
       return;
     }
 
@@ -135,46 +146,60 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
       await queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
     } catch (saveError: unknown) {
       if (routeKey.current === submittedRouteKey) {
-        setError(apiErrorMessage(saveError, "Ошибка сохранения данных"));
+        setError({ kind: "request", operation: "save", cause: saveError });
       }
     } finally {
       if (routeKey.current === submittedRouteKey) setSaving(false);
     }
   };
 
+  const errorMessage = error === null
+    ? null
+    : error.kind === "invalidId"
+      ? t("task.invalidId")
+      : error.kind === "validation"
+        ? formatTaskValidationIssue(error.issue)
+        : error.operation === "load"
+          ? apiErrorMessage(error.cause, t("errors.loadData"))
+          : apiErrorMessage(error.cause, t("errors.saveData"));
+
   return (
-    <AppShell>
+    <AdminShell>
       <div className="admin-page">
         <div className="admin-heading">
           <div>
-            <p className="eyebrow">Панель организатора</p>
-            <h1>{isCreate ? "Создание сервиса" : "Редактирование сервиса"}</h1>
-            <p className="text-xs text-slate-400">
-              Параметры сервиса и запуска чекера.
-            </p>
+            <p className="eyebrow">{t("common.organizerPanel")}</p>
+            <h1>{isCreate ? t("task.createTitle") : t("task.editTitle")}</h1>
+            <p className="text-xs text-slate-400">{t("task.pageDescription")}</p>
           </div>
           <BrandIcon name="terminal" />
         </div>
 
         {loading ? (
-          <div className="text-sm text-slate-400">Загружаем данные…</div>
+          <div className="text-sm text-slate-400">{t("common.loadingData")}</div>
         ) : !task || !canSave ? (
           <div className="text-sm text-red-300">
-            {error ?? "Таск не найден"}
+            {errorMessage ?? t("task.notFound")}
           </div>
         ) : (
-          <TaskForm
-            task={task}
-            isCreate={isCreate}
-            saving={saving}
-            error={error}
-            canSave={canSave}
-            onChange={handleChange}
-            onSubmit={handleSubmit}
-            onCancel={() => navigate(-1)}
-          />
+          <>
+            {errorMessage && (
+              <div className="notice mb-4" role="alert">
+                {errorMessage}
+              </div>
+            )}
+            <TaskForm
+              task={task}
+              isCreate={isCreate}
+              saving={saving}
+              canSave={canSave}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              onCancel={() => navigate(-1)}
+            />
+          </>
         )}
       </div>
-    </AppShell>
+    </AdminShell>
   );
 }

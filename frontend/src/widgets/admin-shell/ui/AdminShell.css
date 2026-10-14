@@ -1,0 +1,8 @@
+.admin-shell__logout {
+  flex-shrink: 0;
+}
+
+.admin-shell__logout-error {
+  max-width: 80rem;
+  margin: 0 auto 1rem;
+}

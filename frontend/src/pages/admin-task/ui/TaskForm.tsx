@@ -17,6 +17,7 @@ import {
   MAX_TASK_NAME_LENGTH,
 } from "@/shared/lib/adminValidation";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 type TaskFieldChange = <Field extends keyof Task>(
   field: Field,
@@ -72,7 +73,6 @@ interface TaskFormProps {
   task: Task;
   isCreate: boolean;
   saving: boolean;
-  error: string | null;
   canSave: boolean;
   onChange: TaskFieldChange;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -83,35 +83,29 @@ export function TaskForm({
   task,
   isCreate,
   saving,
-  error,
   canSave,
   onChange,
   onSubmit,
   onCancel,
 }: TaskFormProps) {
+  const { t } = useTranslation("admin");
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} noValidate>
       <Card className="admin-form max-w-3xl !p-0">
         <CardHeader>
           <CardTitle className="text-sm text-slate-100">
             {isCreate
-              ? "Новый сервис"
-              : `Сервис ${task.name} (${task.id ?? "-"})`}
+              ? t("task.newTitle")
+              : t("task.existingTitle", { name: task.name, id: task.id ?? "-" })}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
-            Редактируйте параметры чекера и сохраните изменения.
+            {t("task.formDescription")}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          {error && (
-            <div className="notice md:col-span-2" role="alert">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-2">
-            <Label htmlFor="name">Название сервиса</Label>
+            <Label htmlFor="name">{t("task.name")}</Label>
             <Input
               disabled={saving}
               id="name"
@@ -123,7 +117,7 @@ export function TaskForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="checker">Путь к чекеру</Label>
+            <Label htmlFor="checker">{t("task.checkerPath")}</Label>
             <Input
               disabled={saving}
               id="checker"
@@ -137,7 +131,7 @@ export function TaskForm({
           <div className="grid grid-cols-3 gap-3 md:col-span-2">
             <TaskNumberField
               field="gets"
-              label="GET-проверки"
+              label={t("task.getChecks")}
               min={0}
               task={task}
               disabled={saving}
@@ -145,7 +139,7 @@ export function TaskForm({
             />
             <TaskNumberField
               field="puts"
-              label="PUT-проверки"
+              label={t("task.putChecks")}
               min={0}
               task={task}
               disabled={saving}
@@ -153,7 +147,7 @@ export function TaskForm({
             />
             <TaskNumberField
               field="places"
-              label="Места"
+              label={t("task.places")}
               min={1}
               task={task}
               disabled={saving}
@@ -162,7 +156,7 @@ export function TaskForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="checker_type">Тип чекера</Label>
+            <Label htmlFor="checker_type">{t("task.checkerType")}</Label>
             <Input
               disabled={saving}
               id="checker_type"
@@ -173,7 +167,7 @@ export function TaskForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="env_path">Файл окружения</Label>
+            <Label htmlFor="env_path">{t("task.environmentFile")}</Label>
             <Input
               disabled={saving}
               id="env_path"
@@ -185,7 +179,7 @@ export function TaskForm({
           <div className="grid grid-cols-3 gap-3 md:col-span-2">
             <TaskNumberField
               field="checker_timeout"
-              label="Таймаут, с"
+              label={t("task.timeout")}
               min={1}
               task={task}
               disabled={saving}
@@ -193,7 +187,7 @@ export function TaskForm({
             />
             <TaskNumberField
               field="get_period"
-              label="Период GET"
+              label={t("task.getPeriod")}
               min={1}
               task={task}
               disabled={saving}
@@ -201,7 +195,7 @@ export function TaskForm({
             />
             <TaskNumberField
               field="default_score"
-              label="Начальные очки"
+              label={t("task.initialScore")}
               min={0}
               task={task}
               disabled={saving}
@@ -215,7 +209,7 @@ export function TaskForm({
               checked={task.active}
               onCheckedChange={(value) => onChange("active", Boolean(value))}
             />
-            Сервис активен
+            {t("task.active")}
           </label>
         </CardContent>
 
@@ -227,10 +221,10 @@ export function TaskForm({
             disabled={saving}
             onClick={onCancel}
           >
-            Отмена
+            {t("common.cancel")}
           </Button>
           <Button type="submit" size="sm" disabled={saving || !canSave}>
-            {saving ? "Сохраняем…" : "Сохранить"}
+            {saving ? t("common.saving") : t("common.save")}
           </Button>
         </CardFooter>
       </Card>

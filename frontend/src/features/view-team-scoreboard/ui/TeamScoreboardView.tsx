@@ -18,10 +18,15 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { getLocale } from "@/shared/i18n";
 
 const EMPTY_TASKS: Task[] = [];
 
 export function TeamScoreboardView() {
+  const { t } = useTranslation("public");
+  const locale = getLocale();
+  const formatNumber = new Intl.NumberFormat(locale).format;
   const heroRef = useRef<HTMLDivElement>(null);
   const [expandedHistory, setExpandedHistory] = useState(false);
   const { teamId: rawTeamId } = useParams();
@@ -63,7 +68,7 @@ export function TeamScoreboardView() {
     return (
       <div className="notice">
         <AlertCircle size={16} />
-        Некорректный идентификатор команды.
+        {t("teamScoreboard.invalidId")}
       </div>
     );
   }
@@ -74,17 +79,20 @@ export function TeamScoreboardView() {
         <BrandIcon name="team" />
 
         <h2>
-          {teams === null ? "Ожидаем данные команды" : "Команда не найдена"}
+          {teams === null
+            ? t("teamScoreboard.waitingTitle")
+            : t("teamScoreboard.notFoundTitle")}
         </h2>
 
         <p>
           {teams === null
-            ? "Профиль появится после подключения к серверу."
-            : "Проверь ссылку или выбери команду в рейтинге."}
+            ? t("teamScoreboard.waitingDescription")
+            : t("teamScoreboard.notFoundDescription")}
         </p>
 
         <Link to="/" className="text-link mt-4">
-          <ArrowLeft size={14} />К рейтингу
+          <ArrowLeft size={14} />
+          {t("teamScoreboard.backToScoreboard")}
         </Link>
       </div>
     );
@@ -98,7 +106,8 @@ export function TeamScoreboardView() {
         data-viewport-animation="running"
       >
         <Link to="/" className="back-link">
-          <ArrowLeft size={18} />К рейтингу
+          <ArrowLeft size={18} />
+          {t("teamScoreboard.backToScoreboard")}
         </Link>
 
         <section className="team-header">
@@ -110,14 +119,16 @@ export function TeamScoreboardView() {
 
               <div className="team-header-meta">
                 <span>{team.ip}</span>
-                {!team.active && <span>Неактивна</span>}
+                {!team.active && <span>{t("teamScoreboard.inactive")}</span>}
               </div>
             </div>
           </div>
 
           <div
             className="team-current-rank"
-            aria-label={`Место в рейтинге: ${(place ?? -1) + 1}`}
+            aria-label={t("teamScoreboard.rankAriaLabel", {
+              rank: formatNumber((place ?? -1) + 1),
+            })}
           >
             {place !== undefined && place >= 0 ? (
               <RankBadge rank={place + 1} />
@@ -125,7 +136,7 @@ export function TeamScoreboardView() {
               "-"
             )}
 
-            <span>Место</span>
+            <span>{t("teamScoreboard.place")}</span>
           </div>
 
           <HeroArt />
@@ -135,19 +146,23 @@ export function TeamScoreboardView() {
       <div className="stats-grid">
         <StatCard
           icon="podium"
-          label="Место"
-          value={place !== undefined && place >= 0 ? place + 1 : "-"}
+          label={t("teamScoreboard.place")}
+          value={
+            place !== undefined && place >= 0
+              ? formatNumber(place + 1)
+              : "-"
+          }
         />
 
         <StatCard
           icon="score"
-          label="Очки"
+          label={t("teamScoreboard.score")}
           value={<ScoreValue value={team.score ?? 0} />}
         />
 
         <StatCard
           icon="check"
-          label="Доступность"
+          label={t("teamScoreboard.availability")}
           value={
             sla === null ? (
               "-"
@@ -161,11 +176,11 @@ export function TeamScoreboardView() {
 
         <StatCard
           icon="check"
-          label="Захвачено"
-          value={stolen}
+          label={t("teamScoreboard.captured")}
+          value={formatNumber(stolen)}
           detail={
             <>
-              Потеряно <b>{lost}</b>
+              {t("teamScoreboard.lost")} <b>{formatNumber(lost)}</b>
             </>
           }
         />
@@ -175,7 +190,7 @@ export function TeamScoreboardView() {
         <div className="team-content-main">
           <section className="team-panel services-panel">
             <div className="section-heading">
-              <h2>Состояние сервисов</h2>
+              <h2>{t("teamScoreboard.servicesTitle")}</h2>
             </div>
 
             <div className="services-grid">
@@ -209,7 +224,7 @@ export function TeamScoreboardView() {
 
           <section className="team-panel history-panel">
             <div className="section-heading">
-              <h2>История раундов</h2>
+              <h2>{t("teamScoreboard.historyTitle")}</h2>
 
               {history.length > 5 && (
                 <button
@@ -219,8 +234,10 @@ export function TeamScoreboardView() {
                   onClick={() => setExpandedHistory(!expandedHistory)}
                 >
                   {expandedHistory
-                    ? "Свернуть историю"
-                    : `Показать всю историю (${history.length})`}
+                    ? t("teamScoreboard.collapseHistory")
+                    : t("teamScoreboard.expandHistory", {
+                        formattedCount: formatNumber(history.length),
+                      })}
                 </button>
               )}
             </div>
@@ -228,13 +245,13 @@ export function TeamScoreboardView() {
             {historyQuery.isError && (
               <div className="notice" role="alert">
                 <AlertCircle size={15} />
-                Не удалось загрузить историю.
+                {t("teamScoreboard.historyLoadError")}
                 <button
                   type="button"
                   className="text-link"
                   onClick={() => void historyQuery.refetch()}
                 >
-                  Повторить
+                  {t("teamScoreboard.retry")}
                 </button>
               </div>
             )}
@@ -243,24 +260,24 @@ export function TeamScoreboardView() {
               <div
                 className="table-scroll"
                 role="region"
-                aria-label="История раундов команды"
+                aria-label={t("teamScoreboard.historyRegionLabel")}
                 tabIndex={0}
               >
                 <table className="scoreboard-table history-table">
                   <caption className="sr-only">
-                    История результатов команды по раундам
+                    {t("teamScoreboard.historyCaption")}
                   </caption>
 
                   <thead>
                     <tr>
-                      <th scope="col">Раунд</th>
+                      <th scope="col">{t("teamScoreboard.round")}</th>
 
                       <th
                         scope="col"
                         className="total-column"
-                        title="Исторические очки с учётом SLA"
+                        title={t("teamScoreboard.historicalScoreTitle")}
                       >
-                        Очки
+                        {t("teamScoreboard.score")}
                       </th>
 
                       {tasks.map((task) => (
@@ -274,9 +291,16 @@ export function TeamScoreboardView() {
                   <tbody>
                     {(expandedHistory ? history : history.slice(0, 5)).map(
                       (row, index) => {
+                        const formattedRound = formatNumber(row.round);
                         const roundLabel = row.incomplete
-                          ? `${row.round} · неполные данные`
-                          : String(row.round);
+                          ? t("teamScoreboard.incompleteRound", {
+                              round: formattedRound,
+                            })
+                          : formattedRound;
+                        const serviceRoundLabel = t(
+                          "teamScoreboard.roundForService",
+                          { round: roundLabel },
+                        );
 
                         return (
                           <tr
@@ -289,8 +313,8 @@ export function TeamScoreboardView() {
                               className="total-column"
                               title={
                                 row.incomplete
-                                  ? "Частичный итог: есть данные не всех сервисов"
-                                  : "Очки с учётом SLA"
+                                  ? t("teamScoreboard.partialScoreTitle")
+                                  : t("teamScoreboard.scoreWithSlaTitle")
                               }
                             >
                               {formatScore(row.score)}
@@ -299,7 +323,7 @@ export function TeamScoreboardView() {
                             {tasks.map((task) => (
                               <td key={task.id} className="history-value-cell">
                                 <ServiceCell
-                                  name={`${task.name} · раунд ${roundLabel}`}
+                                  name={`${task.name}, ${serviceRoundLabel}`}
                                   value={row.tasks.find(
                                     (value) => value.taskId === task.id,
                                   )}
@@ -318,8 +342,8 @@ export function TeamScoreboardView() {
                           className="quiet-empty text-center"
                         >
                           {historyQuery.isPending
-                            ? "Загружаем историю…"
-                            : "История раундов пока недоступна."}
+                            ? t("teamScoreboard.loadingHistory")
+                            : t("teamScoreboard.historyUnavailable")}
                         </td>
                       </tr>
                     )}
@@ -329,12 +353,15 @@ export function TeamScoreboardView() {
             </div>
 
             <p className="sr-only">
-              Суммарные очки в истории рассчитаны с учётом SLA.
+              {t("teamScoreboard.totalScoreNote")}
             </p>
           </section>
         </div>
 
-        <aside className="team-content-aside" aria-label="События команды">
+        <aside
+          className="team-content-aside"
+          aria-label={t("teamScoreboard.eventsLabel")}
+        >
           <RecentEvents teamId={teamId} />
         </aside>
       </div>

@@ -65,11 +65,12 @@ export function useScoreboardEntrance(
   enabled: boolean,
   filter: string,
   hasTeams: boolean,
+  locale: string,
 ) {
   const pageRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const startedAt = useRef(0);
-  const query = filter.trim().toLocaleLowerCase("ru-RU");
+  const query = filter.trim().toLocaleLowerCase(locale);
 
   useLayoutEffect(() => {
     if (!enabled || !pageRef.current) return;

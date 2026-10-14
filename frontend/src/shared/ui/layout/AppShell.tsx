@@ -1,14 +1,17 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import SideRays from "@/components/SideRays";
 import { usePageEntrance } from "@/shared/lib/usePageEntrance";
 import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
+import { LanguageSwitch } from "./LanguageSwitch";
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, headerActions }: { children: ReactNode; headerActions?: ReactNode }) {
+  const { t } = useTranslation("shell");
   const location = useLocation();
   const mainRef = usePageEntrance(location.pathname, location.key);
 
@@ -59,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <a href="#main-content" className="skip-link">
-        К содержимому
+        {t("skip")}
       </a>
 
       <header className="site-header">
@@ -67,41 +70,45 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             to="/"
             className="brand-lockup"
-            aria-label={`${brand.name} - рейтинг команд`}
+            aria-label={t("home", { brand: brand.name })}
           >
             <BrandLogo />
             <span>{brand.name}</span>
           </Link>
 
-          <nav className="main-nav" aria-label="Основная навигация">
+          <nav className="main-nav" aria-label={t("navigation")}>
             <NavLink to="/" end>
               <BrandIcon name="podium" plain />
-              Рейтинг
+              {t("scoreboard")}
             </NavLink>
             <NavLink to="/live">
               <BrandIcon name="activity" plain />
-              События
+              {t("events")}
             </NavLink>
             <NavLink to="/teams">
               <BrandIcon name="team" plain />
-              Команды
+              {t("teams")}
             </NavLink>
           </nav>
 
-          <div className="header-status">
-            {teams && !error && round > 0 && (
-              <span className="header-round">Раунд {round}</span>
-            )}
-            <span
-              className={`connection-dot ${error || (!connected && teams) ? "connection-dot--error" : teams ? "connection-dot--ready" : ""}`}
-            />
-            <span>
-              {error || (!connected && teams)
-                ? "Нет соединения"
-                : teams
-                  ? gameStatusLabel(phase)
-                  : "Подключение"}
-            </span>
+          <div className="header-tools">
+            <div className="header-status">
+              {teams && !error && round > 0 && (
+                <span className="header-round">{t("round", { round })}</span>
+              )}
+              <span
+                className={`connection-dot ${error || (!connected && teams) ? "connection-dot--error" : teams ? "connection-dot--ready" : ""}`}
+              />
+              <span>
+                {error || (!connected && teams)
+                  ? t("disconnected")
+                  : teams
+                    ? gameStatusLabel(phase)
+                    : t("connecting")}
+              </span>
+            </div>
+            {headerActions}
+            <LanguageSwitch />
           </div>
         </div>
       </header>
@@ -112,16 +119,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="mx-auto my-3 max-w-screen-xl rounded border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm text-amber-100"
             role="status"
           >
-            Игра приостановлена: новые флаги не принимаются и проверки не запускаются.
-            Уже запущенные проверки могут завершиться и обновить результаты.
+            {t("paused")}
           </div>
         )}
         {phase === "finished" && (
           <div className="notice mx-auto my-3 max-w-screen-xl" role="status">
-            Игра завершилась. Прием флагов закрыт.
+            {t("finished")}{" "}
             {resultsPending
-              ? " Ожидаем результаты последних проверок перед публикацией итогов."
-              : " Новые раунды и проверки не запускаются."}
+              ? t("pending")
+              : t("stopped")}
           </div>
         )}
         {children}
@@ -140,10 +146,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setMotion(!motion)}
             aria-pressed={motion}
-            title="Включить или отключить декоративные анимации"
+            title={t("animationsHint")}
           >
             <Sparkles size={14} />
-            Анимации {motion ? "вкл." : "выкл."}
+            {t("animations", { state: motion ? t("on") : t("off") })}
           </button>
         </div>
       </footer>

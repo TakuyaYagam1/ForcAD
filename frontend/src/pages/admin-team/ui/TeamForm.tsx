@@ -14,6 +14,7 @@ import type { Team } from "@/entities/team/model/types";
 import { MAX_TEAM_NAME_LENGTH } from "@/shared/lib/adminValidation";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import type { FormEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 type TeamFieldChange = <Field extends keyof Team>(
   field: Field,
@@ -24,7 +25,6 @@ interface TeamFormProps {
   team: Team;
   isCreate: boolean;
   saving: boolean;
-  error: string | null;
   canSave: boolean;
   onChange: TeamFieldChange;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -35,48 +35,42 @@ export function TeamForm({
   team,
   isCreate,
   saving,
-  error,
   canSave,
   onChange,
   onSubmit,
   onCancel,
 }: TeamFormProps) {
+  const { t } = useTranslation("admin");
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} noValidate>
       <Card className="admin-form max-w-3xl !p-0">
         <CardHeader>
           <CardTitle className="text-sm text-slate-100">
             {isCreate
-              ? "Новая команда"
-              : `Команда ${team.name} (${team.id ?? "-"})`}
+              ? t("team.newTitle")
+              : t("team.existingTitle", { name: team.name, id: team.id ?? "-" })}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
-            Измените поля и сохраните изменения.
+            {t("team.formDescription")}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div className="logo-preview md:col-span-2">
             <TeamAvatar
-              name={team.name || "Команда"}
+              name={team.name || t("common.team")}
               src={team.logo_path}
               size="large"
             />
             <p>
-              Так логотип будет выглядеть в профиле.
+              {t("team.logoPreview")}
               <br />
-              Укажи ссылку или путь к изображению в поле ниже.
+              {t("team.logoInstructions")}
             </p>
           </div>
 
-          {error && (
-            <div className="notice md:col-span-2" role="alert">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-2">
-            <Label htmlFor="name">Название команды</Label>
+            <Label htmlFor="name">{t("team.name")}</Label>
             <Input
               disabled={saving}
               id="name"
@@ -88,7 +82,7 @@ export function TeamForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ip">IP-адрес</Label>
+            <Label htmlFor="ip">{t("team.ip")}</Label>
             <Input
               disabled={saving}
               id="ip"
@@ -100,13 +94,13 @@ export function TeamForm({
 
           <div className="space-y-2">
             <Label htmlFor="token">
-              Токен команды{isCreate ? " (создаётся сервером)" : ""}
+              {t("team.token")}{isCreate ? ` ${t("team.serverCreatesToken")}` : ""}
             </Label>
             <Input
               disabled={saving}
               id="token"
               readOnly={isCreate}
-              placeholder={isCreate ? "Будет создан автоматически" : ""}
+              placeholder={isCreate ? t("team.tokenPlaceholder") : ""}
               maxLength={16}
               value={team.token}
               onChange={(event) => onChange("token", event.target.value)}
@@ -114,11 +108,11 @@ export function TeamForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="logo_path">Ссылка на логотип</Label>
+            <Label htmlFor="logo_path">{t("team.logoUrl")}</Label>
             <Input
               disabled={saving}
               id="logo_path"
-              placeholder="/team-logo.png или https://…"
+              placeholder={t("team.logoPlaceholder")}
               value={team.logo_path}
               onChange={(event) => onChange("logo_path", event.target.value)}
             />
@@ -133,7 +127,7 @@ export function TeamForm({
                   onChange("highlighted", Boolean(value))
                 }
               />
-              Выделить в рейтинге
+              {t("team.highlight")}
             </label>
 
             <label className="flex items-center gap-2 text-xs text-slate-200">
@@ -142,7 +136,7 @@ export function TeamForm({
                 checked={team.active}
                 onCheckedChange={(value) => onChange("active", Boolean(value))}
               />
-              Активна
+              {t("team.active")}
             </label>
           </div>
         </CardContent>
@@ -155,10 +149,10 @@ export function TeamForm({
             disabled={saving}
             onClick={onCancel}
           >
-            Отмена
+            {t("common.cancel")}
           </Button>
           <Button type="submit" size="sm" disabled={saving || !canSave}>
-            {saving ? "Сохраняем…" : "Сохранить"}
+            {saving ? t("common.saving") : t("common.save")}
           </Button>
         </CardFooter>
       </Card>

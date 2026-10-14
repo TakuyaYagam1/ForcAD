@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
+import { getLocale, i18n } from "../i18n/index.ts";
 
 export const MAX_TASK_INTEGER_VALUE = 2_147_483_647;
 export const MAX_TEAM_NAME_LENGTH = 255;
@@ -21,34 +22,54 @@ const TASK_INTEGER_FIELDS = [
   { field: "default_score", min: 0 },
 ] as const;
 
-export function validateTeam(
+type TaskIntegerField = (typeof TASK_INTEGER_FIELDS)[number]["field"];
+
+export type TeamValidationIssue =
+  | { kind: "nameLength" }
+  | { kind: "ip" }
+  | { kind: "token" }
+  | { kind: "logoLength" };
+
+export type TaskValidationIssue =
+  | { kind: "nameAndChecker" }
+  | { kind: "checkerType" }
+  | { kind: "environmentPath" }
+  | {
+      kind: "integerRange";
+      field: TaskIntegerField;
+      min: number;
+      max: typeof MAX_TASK_INTEGER_VALUE;
+    };
+
+export function getTeamValidationIssue(
   team: Omit<Team, "id">,
   creating = false,
-): string | null {
+): TeamValidationIssue | null {
   const name = team.name.trim();
   if (!name || name.length > MAX_TEAM_NAME_LENGTH)
-    return "Название команды: от 1 до 255 символов.";
+    return { kind: "nameLength" };
   if (!z.union([z.ipv4(), z.ipv6()]).safeParse(team.ip.trim()).success)
-    return "Укажите корректный IPv4 или IPv6 адрес.";
-  if (
-    !creating &&
-    !/^[0-9a-f]{16}$/.test(team.token)
-  )
-    return "Токен: ровно 16 символов 0-9 и a-f в нижнем регистре.";
-  if ((team.logo_path ?? "").length > 255)
-    return "Ссылка на логотип: максимум 255 символов.";
+    return { kind: "ip" };
+  if (!creating && !/^[0-9a-f]{16}$/.test(team.token))
+    return { kind: "token" };
+  if ((team.logo_path ?? "").length > 255) return { kind: "logoLength" };
   return null;
 }
-export function validateTask(task: Omit<Task, "id">): string | null {
+
+export function getTaskValidationIssue(
+  task: Omit<Task, "id">,
+): TaskValidationIssue | null {
   for (const { field, maxLength } of TASK_TEXT_FIELDS) {
     const value = task[field].trim();
-    if (!value || value.length > maxLength)
-      return "Название и путь чекера должны быть заполнены (максимум 255 и 1024 символа).";
+    if (!value || value.length > maxLength) return { kind: "nameAndChecker" };
   }
-  if (typeof task.checker_type !== "string" || task.checker_type.trim().length > 32)
-    return "Тип чекера: строка до 32 символов; может быть пустой.";
+  if (
+    typeof task.checker_type !== "string" ||
+    task.checker_type.trim().length > 32
+  )
+    return { kind: "checkerType" };
   if ((task.env_path ?? "").length > 1024)
-    return "Путь к окружению: максимум 1024 символов.";
+    return { kind: "environmentPath" };
   for (const { field, min } of TASK_INTEGER_FIELDS) {
     const value = task[field];
     if (
@@ -56,7 +77,72 @@ export function validateTask(task: Omit<Task, "id">): string | null {
       value < min ||
       value > MAX_TASK_INTEGER_VALUE
     )
-      return `${field}: целое число от ${min} до ${MAX_TASK_INTEGER_VALUE}.`;
+      return {
+        kind: "integerRange",
+        field,
+        min,
+        max: MAX_TASK_INTEGER_VALUE,
+      };
   }
   return null;
+}
+
+export function formatTeamValidationIssue(issue: TeamValidationIssue): string {
+  switch (issue.kind) {
+    case "nameLength":
+      return i18n.t("validation.team.nameLength", { ns: "admin" });
+    case "ip":
+      return i18n.t("validation.team.ip", { ns: "admin" });
+    case "token":
+      return i18n.t("validation.team.token", { ns: "admin" });
+    case "logoLength":
+      return i18n.t("validation.team.logoLength", { ns: "admin" });
+  }
+}
+
+export function formatTaskValidationIssue(issue: TaskValidationIssue): string {
+  switch (issue.kind) {
+    case "nameAndChecker":
+      return i18n.t("validation.task.nameAndChecker", { ns: "admin" });
+    case "checkerType":
+      return i18n.t("validation.task.checkerType", { ns: "admin" });
+    case "environmentPath":
+      return i18n.t("validation.task.environmentPath", { ns: "admin" });
+    case "integerRange": {
+      const numberFormat = new Intl.NumberFormat(getLocale());
+      const fields: Record<TaskIntegerField, string> = {
+        gets: i18n.t("validation.task.fields.gets", { ns: "admin" }),
+        puts: i18n.t("validation.task.fields.puts", { ns: "admin" }),
+        places: i18n.t("validation.task.fields.places", { ns: "admin" }),
+        checker_timeout: i18n.t("validation.task.fields.checker_timeout", {
+          ns: "admin",
+        }),
+        get_period: i18n.t("validation.task.fields.get_period", {
+          ns: "admin",
+        }),
+        default_score: i18n.t("validation.task.fields.default_score", {
+          ns: "admin",
+        }),
+      };
+      return i18n.t("validation.task.integerRange", {
+        ns: "admin",
+        field: fields[issue.field],
+        min: numberFormat.format(issue.min),
+        max: numberFormat.format(issue.max),
+      });
+    }
+  }
+}
+
+export function validateTeam(
+  team: Omit<Team, "id">,
+  creating = false,
+): string | null {
+  const issue = getTeamValidationIssue(team, creating);
+  return issue ? formatTeamValidationIssue(issue) : null;
+}
+
+export function validateTask(task: Omit<Task, "id">): string | null {
+  const issue = getTaskValidationIssue(task);
+  return issue ? formatTaskValidationIssue(issue) : null;
 }

@@ -102,6 +102,19 @@ not empty the shared queue: other worker replicas can continue consuming it.
 Public events are best effort; PostgreSQL remains the source of truth when a
 browser reconnects.
 
+## Frontend languages
+
+The public pages and admin panel support Russian and English. Russian is the
+default. The header's RU/EN switch updates the page without reloading and saves
+the choice in browser storage (`forcad-language`). Dates, scores, validation
+messages and accessibility labels follow the selected language. Team/service
+names and checker output remain as supplied by the server.
+
+Translations live in `frontend/src/shared/i18n/`: `shell`, `common`, `public`
+and `admin` namespaces. Keys are checked by TypeScript; tests check both
+languages for matching keys and interpolation variables. Changing language
+does not change API requests, game state or WebSocket subscriptions.
+
 ## Backend layout
 
 | Path under `backend/` | Responsibility |

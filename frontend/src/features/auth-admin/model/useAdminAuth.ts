@@ -4,8 +4,8 @@ import {
   adminLogout,
   getAdminSessionStatus,
 } from "@/shared/api/generated/endpoints";
-import { apiErrorMessage } from "@/shared/lib/apiError";
 import { isAxiosError } from "axios";
+
 export interface AdminLoginPayload {
   username: string;
   password: string;
@@ -13,11 +13,18 @@ export interface AdminLoginPayload {
 export interface AdminUser {
   username: string;
 }
+
+export type AdminAuthError =
+  | { kind: "invalidCredentials" }
+  | { kind: "loginFailed"; cause: unknown }
+  | { kind: "logoutFailed"; cause: unknown }
+  | { kind: "sessionCheckFailed"; cause: unknown };
+
 interface AuthState {
   isAuthChecked: boolean;
   isAuthenticated: boolean;
   user: AdminUser | null;
-  error: string | null;
+  error: AdminAuthError | null;
   login(payload: AdminLoginPayload): Promise<void>;
   logout(): Promise<void>;
   checkSession(): Promise<void>;
@@ -49,8 +56,8 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
           user: null,
           error:
             isAxiosError(error) && error.response?.status === 403
-              ? "Неверный логин или пароль"
-              : apiErrorMessage(error, "Не удалось войти"),
+              ? { kind: "invalidCredentials" }
+              : { kind: "loginFailed", cause: error },
         });
       throw error;
     }
@@ -69,12 +76,7 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
         });
     } catch (error) {
       if (revision === current)
-        set({
-          error: apiErrorMessage(
-            error,
-            "Не удалось завершить сессию. Повтори выход.",
-          ),
-        });
+        set({ error: { kind: "logoutFailed", cause: error } });
       throw error;
     }
   },
@@ -100,9 +102,7 @@ export const useAdminAuthStore = create<AuthState>((set) => ({
           isAuthenticated: false,
           isAuthChecked: true,
           user: null,
-          error: invalid
-            ? null
-            : apiErrorMessage(error, "Не удалось проверить сессию"),
+          error: invalid ? null : { kind: "sessionCheckFailed", cause: error },
         });
       }
     })().finally(() => {

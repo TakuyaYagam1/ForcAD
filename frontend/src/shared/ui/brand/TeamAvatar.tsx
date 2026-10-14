@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UsersRound } from "lucide-react";
 import { SERVER_URL } from "@/app/config";
+import { useTranslation } from "react-i18next";
 
 function resolveImageSource(src?: string) {
   if (!src) return undefined;
@@ -31,6 +32,7 @@ export function TeamAvatar({
   src?: string;
   size?: "small" | "normal" | "large";
 }) {
+  const { t } = useTranslation("common");
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   // Relative team logos are hosted by the same ForcAD server as the API.
   const imageSrc = resolveImageSource(src);
@@ -41,7 +43,7 @@ export function TeamAvatar({
       {showImage ? (
         <img
           src={imageSrc}
-          alt={`Логотип ${name}`}
+          alt={t("team.logoAlt", { name })}
           loading="lazy"
           onError={() => setFailedSrc(imageSrc ?? null)}
         />

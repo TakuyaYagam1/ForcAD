@@ -1231,11 +1231,15 @@
 }
 .admin-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-width: 13rem;
+  gap: 10px;
 }
 .admin-actions button {
-  font-size: 11px;
+  min-height: 36px;
+  justify-content: flex-start;
+  font-size: 14px;
 }
 .admin-form {
   padding: 26px;
@@ -1883,6 +1887,10 @@
   }
   .admin-heading h1 {
     font-size: 31px;
+  }
+  .admin-actions {
+    width: 100%;
+    min-width: 0;
   }
   .admin-form {
     padding: 20px 16px;

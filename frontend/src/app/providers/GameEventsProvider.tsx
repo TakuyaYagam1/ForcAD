@@ -68,7 +68,7 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
     };
     const onDisconnect = () => {
       useScoreboardStore.getState().setConnected(false);
-      useScoreboardStore.getState().setError("Соединение с сервером потеряно");
+      useScoreboardStore.getState().setError("connectionLost");
     };
     const onInit = ({ data }: { data: InitScoreboardPayload }) => {
       latestUpdate.current = null;

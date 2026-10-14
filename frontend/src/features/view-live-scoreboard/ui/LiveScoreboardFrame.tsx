@@ -4,36 +4,40 @@ import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { PageHero } from "@/shared/ui/brand/PageHero";
 import { EventItem } from "@/shared/ui/brand/RecentEvents";
+import { useTranslation } from "react-i18next";
+import { getLocale } from "@/shared/i18n";
 
 export function LiveScoreboardFrame() {
+  const { t } = useTranslation("public");
   const events = useLiveScoreboardStore((state) => state.events);
   const error = useLiveScoreboardStore((state) => state.error);
   const [filter, setFilter] = useState("");
-  const query = filter.trim().toLocaleLowerCase("ru-RU");
+  const locale = getLocale();
+  const query = filter.trim().toLocaleLowerCase(locale);
   const filtered = events.filter((event) =>
     `${event.attackerName} ${event.victimName} ${event.taskName}`
-      .toLocaleLowerCase("ru-RU")
+      .toLocaleLowerCase(locale)
       .includes(query),
   );
   return (
     <div className="w-full">
       <PageHero
         compact
-        title="События"
-        subtitle="Каждый захват флага меняет расстановку сил."
+        title={t("liveScoreboard.title")}
+        subtitle={t("liveScoreboard.subtitle")}
       >
         <div className="hero-metadata">
           <span>
             <BrandIcon name="activity" />
-            Захваты флагов
+            {t("liveScoreboard.flagCaptures")}
           </span>
-          <span>Последние события соревнования</span>
+          <span>{t("liveScoreboard.recentCompetitionEvents")}</span>
         </div>
       </PageHero>
       {error && (
         <div className="notice" role="status">
           <WifiOff size={16} />
-          Ожидаем восстановления соединения с лентой событий.
+          {t("liveScoreboard.reconnecting")}
         </div>
       )}
       <div className="events-toolbar">
@@ -41,14 +45,17 @@ export function LiveScoreboardFrame() {
           <Search size={17} />
           <input
             type="search"
-            aria-label="Найти событие по команде или сервису"
+            aria-label={t("liveScoreboard.searchLabel")}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Команда или сервис…"
+            placeholder={t("liveScoreboard.searchPlaceholder")}
           />
         </label>
         <p className="events-caption">
-          Событий в этой сессии: {events.length} · новые сверху
+          {t("liveScoreboard.eventCount", {
+            count: events.length,
+            formattedCount: new Intl.NumberFormat(locale).format(events.length),
+          })}
         </p>
       </div>
       {filtered.length ? (
@@ -60,17 +67,20 @@ export function LiveScoreboardFrame() {
       ) : (
         <div className="empty-state mt-5">
           <BrandIcon name="activity" />
-          <h2>{query ? "События не найдены" : "Пока тихо"}</h2>
+          <h2>
+            {query
+              ? t("liveScoreboard.notFoundTitle")
+              : t("liveScoreboard.quietTitle")}
+          </h2>
           <p>
             {query
-              ? "Попробуй другое название команды или сервиса."
-              : "Здесь появятся захваты флагов: атакующая команда, соперник, сервис и полученные очки."}
+              ? t("liveScoreboard.notFoundDescription")
+              : t("liveScoreboard.quietDescription")}
           </p>
         </div>
       )}
       <p className="table-hint">
-        Лента хранит до 100 последних событий, полученных во время открытой
-        сессии.
+        {t("liveScoreboard.historyHint")}
       </p>
     </div>
   );

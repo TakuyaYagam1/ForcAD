@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { fetchTeamsAdmin } from "@/entities/team/api/admin";
 import { fetchTasksAdmin } from "@/entities/task/api/admin";
 import { apiErrorMessage } from "@/shared/lib/apiError";
+import { useTranslation } from "react-i18next";
 
 export function AdminEntityLists() {
+  const { t } = useTranslation("admin");
   const teams = useQuery({
     queryKey: ["admin-teams"],
     queryFn: ({ signal }) => fetchTeamsAdmin(signal),
@@ -15,23 +17,24 @@ export function AdminEntityLists() {
     queryFn: ({ signal }) => fetchTasksAdmin(signal),
     refetchInterval: 10000,
   });
+  const sections = [
+    { title: t("entities.teamsTitle"), kind: "team", query: teams },
+    { title: t("entities.servicesTitle"), kind: "task", query: tasks },
+  ] as const;
   return (
     <div className="grid gap-4 md:grid-cols-2 my-6">
-      {[
-        { title: "Все команды", kind: "team", query: teams },
-        { title: "Все сервисы", kind: "task", query: tasks },
-      ].map(({ title, kind, query }) => (
+      {sections.map(({ title, kind, query }) => (
         <section className="admin-form p-5" key={kind}>
           <h2>{title}</h2>
           <p className="text-xs text-slate-400 mb-3">
-            Отключённые записи можно открыть и включить снова.
+            {t("entities.disabledDescription")}
           </p>
-          {query.isPending && <p>Загружаем…</p>}
+          {query.isPending && <p>{t("common.loading")}</p>}
           {query.error && (
             <div role="alert">
-              {apiErrorMessage(query.error, "Не удалось загрузить список")}{" "}
+              {apiErrorMessage(query.error, t("entities.loadError"))}{" "}
               <button type="button" onClick={() => void query.refetch()}>
-                Повторить
+                {t("common.retry")}
               </button>
             </div>
           )}
@@ -49,12 +52,12 @@ export function AdminEntityLists() {
                     item.active ? "text-emerald-300" : "text-slate-400"
                   }
                 >
-                  {item.active ? "Активна" : "Отключена"}
+                  {item.active ? t("common.active") : t("common.inactive")}
                 </span>
               </li>
             ))}
           </ul>
-          {query.data?.length === 0 && <p>Записей пока нет.</p>}
+          {query.data?.length === 0 && <p>{t("entities.empty")}</p>}
         </section>
       ))}
     </div>

@@ -8,25 +8,36 @@ import {
   updateTeamAdmin,
 } from "@/entities/team/api/admin";
 import { apiErrorMessage } from "@/shared/lib/apiError";
-import { validateTeam } from "@/shared/lib/adminValidation";
+import {
+  formatTeamValidationIssue,
+  getTeamValidationIssue,
+} from "@/shared/lib/adminValidation";
+import type { TeamValidationIssue } from "@/shared/lib/adminValidation";
 import { queryClient } from "@/shared/lib/queryClient";
-import { AppShell } from "@/shared/ui/layout/AppShell";
 import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { TeamForm } from "./TeamForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
+import { useTranslation } from "react-i18next";
+import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
+
+type TeamPageError =
+  | { kind: "invalidId" }
+  | { kind: "validation"; issue: TeamValidationIssue }
+  | { kind: "request"; operation: "load" | "save"; cause: unknown };
 
 interface TeamAdminPageProps {
   mode?: "create" | "edit";
 }
 
 export function TeamAdminPage({ mode }: TeamAdminPageProps) {
+  const { t } = useTranslation("admin");
   const { teamId: teamIdParam } = useParams<{ teamId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [team, setTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TeamPageError | null>(null);
 
   const isCreate = mode === "create" || !teamIdParam;
   const teamId = !isCreate ? (normalizeUuid(teamIdParam) ?? null) : null;
@@ -71,12 +82,12 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             setLoadedKey(location.key);
           }
         } else if (!cancelled) {
-          setError("Некорректный ID команды");
+          setError({ kind: "invalidId" });
         }
       } catch (loadError: unknown) {
         console.error(loadError);
         if (!cancelled) {
-          setError(apiErrorMessage(loadError, "Ошибка загрузки данных"));
+          setError({ kind: "request", operation: "load", cause: loadError });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -103,9 +114,9 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
     event.preventDefault();
     if (!team || !canSave || saving) return;
 
-    const validationError = validateTeam(team, isCreate);
+    const validationError = getTeamValidationIssue(team, isCreate);
     if (validationError) {
-      setError(validationError);
+      setError({ kind: "validation", issue: validationError });
       return;
     }
 
@@ -130,46 +141,60 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
       await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
     } catch (saveError: unknown) {
       if (routeKey.current === submittedRouteKey) {
-        setError(apiErrorMessage(saveError, "Ошибка сохранения данных"));
+        setError({ kind: "request", operation: "save", cause: saveError });
       }
     } finally {
       if (routeKey.current === submittedRouteKey) setSaving(false);
     }
   };
 
+  const errorMessage = error === null
+    ? null
+    : error.kind === "invalidId"
+      ? t("team.invalidId")
+      : error.kind === "validation"
+        ? formatTeamValidationIssue(error.issue)
+        : error.operation === "load"
+          ? apiErrorMessage(error.cause, t("errors.loadData"))
+          : apiErrorMessage(error.cause, t("errors.saveData"));
+
   return (
-    <AppShell>
+    <AdminShell>
       <div className="admin-page">
         <div className="admin-heading">
           <div>
-            <p className="eyebrow">Панель организатора</p>
-            <h1>{isCreate ? "Создание команды" : "Редактирование команды"}</h1>
-            <p className="text-xs text-slate-400">
-              Название, доступ и оформление команды.
-            </p>
+            <p className="eyebrow">{t("common.organizerPanel")}</p>
+            <h1>{isCreate ? t("team.createTitle") : t("team.editTitle")}</h1>
+            <p className="text-xs text-slate-400">{t("team.pageDescription")}</p>
           </div>
           <BrandIcon name="team" />
         </div>
 
         {loading ? (
-          <div className="text-sm text-slate-400">Загружаем данные…</div>
+          <div className="text-sm text-slate-400">{t("common.loadingData")}</div>
         ) : !team || !canSave ? (
           <div className="text-sm text-red-300">
-            {error ?? "Команда не найдена"}
+            {errorMessage ?? t("team.notFound")}
           </div>
         ) : (
-          <TeamForm
-            team={team}
-            isCreate={isCreate}
-            saving={saving}
-            error={error}
-            canSave={canSave}
-            onChange={handleChange}
-            onSubmit={handleSubmit}
-            onCancel={() => navigate(-1)}
-          />
+          <>
+            {errorMessage && (
+              <div className="notice mb-4" role="alert">
+                {errorMessage}
+              </div>
+            )}
+            <TeamForm
+              team={team}
+              isCreate={isCreate}
+              saving={saving}
+              canSave={canSave}
+              onChange={handleChange}
+              onSubmit={handleSubmit}
+              onCancel={() => navigate(-1)}
+            />
+          </>
         )}
       </div>
-    </AppShell>
+    </AdminShell>
   );
 }

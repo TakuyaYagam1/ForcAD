@@ -13,10 +13,13 @@ import { DEMO_MODE } from "./demo/mode";
 import type { ComponentType } from "react";
 
 import { queryClient } from "@/shared/lib/queryClient";
-import { applyBrandConfig } from "./config/brand";
+import { applyBrandConfig, applyBrandMetadata } from "./config/brand";
+import { i18n, i18nReady } from "@/shared/i18n";
 
 async function mountApp() {
+  await i18nReady;
   applyBrandConfig();
+  i18n.on("languageChanged", applyBrandMetadata);
   let DemoPanel: ComponentType<{ onDataChange: () => void }> | null = null;
   if (DEMO_MODE) {
     const { installDemoData } = await import("./demo/install");

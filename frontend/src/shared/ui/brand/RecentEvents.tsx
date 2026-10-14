@@ -1,5 +1,6 @@
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   useLiveScoreboardStore,
   type LiveEvent,
@@ -8,6 +9,7 @@ import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { BrandIcon } from "./BrandIcon";
 import { TeamAvatar } from "./TeamAvatar";
 import { formatScore } from "@/shared/lib/formatScore";
+import { getLocale } from "@/shared/i18n";
 
 export function EventItem({
   event,
@@ -16,6 +18,7 @@ export function EventItem({
   event: LiveEvent;
   compact?: boolean;
 }) {
+  const { t } = useTranslation("common");
   const teams = useScoreboardStore((state) => state.teams);
   const attacker = teams?.find((team) => team.id === event.attackerId);
   const victim = teams?.find((team) => team.id === event.victimId);
@@ -25,7 +28,7 @@ export function EventItem({
     return (
       <li className="event-item event-item--compact">
         <time dateTime={timestamp.toISOString()}>
-          {timestamp.toLocaleTimeString("ru-RU", {
+          {timestamp.toLocaleTimeString(getLocale(), {
             hour: "2-digit",
             minute: "2-digit",
           })}
@@ -33,7 +36,7 @@ export function EventItem({
         <div className="event-avatars">
           <Link
             to={`/team/${event.attackerId}`}
-            aria-label={`Команда ${event.attackerName}`}
+            aria-label={t("team.linkLabel", { name: event.attackerName })}
           >
             <TeamAvatar
               name={event.attackerName}
@@ -41,10 +44,10 @@ export function EventItem({
               size="small"
             />
           </Link>
-          <ArrowRight size={18} aria-label="захватила флаг у" />
+          <ArrowRight size={18} aria-label={t("events.capturedFrom")} />
           <Link
             to={`/team/${event.victimId}`}
-            aria-label={`Команда ${event.victimName}`}
+            aria-label={t("team.linkLabel", { name: event.victimName })}
           >
             <TeamAvatar
               name={event.victimName}
@@ -74,7 +77,7 @@ export function EventItem({
   return (
     <li className={`event-item ${compact ? "event-item--compact" : ""}`}>
       <time dateTime={new Date(event.ts).toISOString()}>
-        {new Date(event.ts).toLocaleTimeString("ru-RU", {
+        {new Date(event.ts).toLocaleTimeString(getLocale(), {
           hour: "2-digit",
           minute: "2-digit",
           second: compact ? undefined : "2-digit",
@@ -89,7 +92,7 @@ export function EventItem({
           />
           <span>{event.attackerName}</span>
         </Link>
-        <ArrowRight aria-label="захватила флаг у" size={16} />
+        <ArrowRight aria-label={t("events.capturedFrom")} size={16} />
         <Link to={`/team/${event.victimId}`}>
           <TeamAvatar
             name={event.victimName}
@@ -102,13 +105,14 @@ export function EventItem({
       <span className="event-service">{event.taskName}</span>
       <span className="event-gain">
         {event.delta >= 0 ? "+" : ""}
-        {formatScore(event.delta)} <small>очков</small>
+        {formatScore(event.delta)} <small>{t("events.points")}</small>
       </span>
     </li>
   );
 }
 
 export function RecentEvents({ teamId }: { teamId?: string }) {
+  const { t } = useTranslation("common");
   const events = useLiveScoreboardStore((state) => state.events);
   const selected = (
     teamId === undefined
@@ -124,10 +128,10 @@ export function RecentEvents({ teamId }: { teamId?: string }) {
       <div className="section-heading">
         <h2>
           <BrandIcon name="activity" plain />
-          {teamId === undefined ? "Последние события" : "События команды"}
+          {teamId === undefined ? t("events.latest") : t("events.team")}
         </h2>
         <Link to="/live" className="text-link">
-          Все события <ArrowUpRight size={15} />
+          {t("events.all")} <ArrowUpRight size={15} />
         </Link>
       </div>
       {selected.length ? (
@@ -138,7 +142,7 @@ export function RecentEvents({ teamId }: { teamId?: string }) {
         </ul>
       ) : (
         <p className="quiet-empty">
-          Захваты флагов появятся здесь по мере поступления событий.
+          {t("events.empty")}
         </p>
       )}
     </section>

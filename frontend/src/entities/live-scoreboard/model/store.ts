@@ -24,10 +24,10 @@ export interface FlagNotificationPayload {
 
 interface LiveScoreboardState {
   events: LiveEvent[];
-  error: string | null;
+  error: "connectionLost" | null;
 
   pushNotification: (payload: FlagNotificationPayload) => void;
-  setError: (error: string | null) => void;
+  setError: (error: "connectionLost" | null) => void;
   clear: () => void;
 }
 

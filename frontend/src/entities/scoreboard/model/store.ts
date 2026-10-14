@@ -25,6 +25,7 @@ export type ScoreboardTeam = ParticipantTeam & {
   token?: string;
   taskStats?: unknown;
 };
+type ScoreboardError = "connectionLost" | "stateUnavailable" | null;
 export interface InitScoreboardPayload {
   state: GameStatePayload | null;
   teams: ScoreboardTeam[];
@@ -40,7 +41,7 @@ interface ScoreboardState {
   teams: ScoreboardTeam[] | null;
   tasks: ParticipantTask[] | null;
   teamTasks: TeamTask[] | null;
-  error: string | null;
+  error: ScoreboardError;
   connected: boolean;
   phase: GameRuntimeStatus["phase"];
   roundWaiting: boolean;
@@ -55,7 +56,7 @@ interface ScoreboardState {
   pausedSeconds: number;
   runtimeRound: number | null;
   currentRoundStart: number | null;
-  setError(error: string | null): void;
+  setError(error: ScoreboardError): void;
   setConnected(connected: boolean): void;
   setRoundTime(roundTime: number | null): void;
   setRuntime(runtime: GameRuntimeStatus): void;
@@ -138,10 +139,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
         teamTasks,
         round: finiteNumber(state?.round),
         roundStart: state?.round_start ?? null,
-        error:
-          state === null
-            ? "Состояние игры пока недоступно. Ожидаем обновления сервера."
-            : null,
+        error: state === null ? "stateUnavailable" : null,
         ...(config?.round_time && config.round_time > 0
           ? { roundTime: config.round_time }
           : {}),

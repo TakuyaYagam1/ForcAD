@@ -11,7 +11,7 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
     const onError = () =>
       useLiveScoreboardStore
         .getState()
-        .setError("Соединение с лентой событий потеряно");
+        .setError("connectionLost");
     const onEvent = (
       payload: FlagNotificationPayload | { data: FlagNotificationPayload },
     ) => {

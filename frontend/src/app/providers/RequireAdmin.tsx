@@ -1,12 +1,15 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { type ReactNode, useEffect } from "react";
 import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
+import { AdminAuthErrorMessage } from "@/features/auth-admin/ui/AdminAuthErrorMessage";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   children: ReactNode;
 }
 
 export function RequireAdmin({ children }: Props) {
+  const { t } = useTranslation("admin");
   const location = useLocation();
   const error = useAdminAuthStore((s) => s.error);
   const isAuthenticated = useAdminAuthStore((s) => s.isAuthenticated);
@@ -22,7 +25,7 @@ export function RequireAdmin({ children }: Props) {
   if (!isAuthChecked) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-        Проверяем админ-сессию…
+        {t("common.checkingSession")}
       </div>
     );
   }
@@ -30,9 +33,9 @@ export function RequireAdmin({ children }: Props) {
   if (!isAuthenticated && error)
     return (
       <div className="notice" role="alert">
-        {error}
+        <AdminAuthErrorMessage error={error} />
         <button type="button" onClick={() => void checkSession()}>
-          Повторить
+          {t("common.retry")}
         </button>
       </div>
     );

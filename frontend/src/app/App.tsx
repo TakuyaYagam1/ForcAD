@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { RequireAdmin } from "./providers/RequireAdmin";
+import { useTranslation } from "react-i18next";
 
 const ScoreboardPage = lazy(() => import("@/pages/scoreboard/ui/ScoreboardPage")
   .then(({ ScoreboardPage }) => ({ default: ScoreboardPage })));
@@ -22,27 +23,29 @@ const AdminTeamTaskLogPage = lazy(() => import("@/pages/admin-team-task-log/ui/A
   .then(({ AdminTeamTaskLogPage }) => ({ default: AdminTeamTaskLogPage })));
 
 function RouteLoading() {
+  const { t } = useTranslation("shell");
   return (
     <main id="main-content" className="site-main">
       <div className="empty-state" role="status" aria-live="polite" aria-busy="true">
-        Загружаем раздел...
+        {t("loading")}
       </div>
     </main>
   );
 }
 
 function RouteErrorFallback() {
+  const { t } = useTranslation("shell");
   return (
     <main id="main-content" className="site-main">
       <section className="empty-state" role="alert">
-        <h2>Страница не загрузилась</h2>
-        <p>Проверь соединение и попробуй загрузить страницу снова.</p>
+        <h2>{t("loadFailed")}</h2>
+        <p>{t("loadHelp")}</p>
         <button
           className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-100 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
           type="button"
           onClick={() => window.location.reload()}
         >
-          Перезагрузить страницу
+          {t("reload")}
         </button>
       </section>
     </main>

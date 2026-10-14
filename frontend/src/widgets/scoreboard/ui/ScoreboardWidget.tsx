@@ -13,6 +13,8 @@ import { PageHero } from "@/shared/ui/brand/PageHero";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Search, WifiOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getLocale } from "@/shared/i18n";
 import { useEffect, useState } from "react";
 import { useScoreboardEntrance } from "../model/useScoreboardEntrance";
 import { useScoreboardViewport } from "../model/useScoreboardViewport";
@@ -31,6 +33,8 @@ export function ScoreboardWidget({
   onCellClick,
   admin = false,
 }: ScoreboardWidgetProps) {
+  const { t } = useTranslation("public");
+  const locale = getLocale();
   const teams = useScoreboardStore((state) => state.teams) ?? [];
   const tasks = useScoreboardStore((state) => state.tasks) ?? [];
   const teamTasks = useScoreboardStore((state) => state.teamTasks) ?? [];
@@ -69,6 +73,7 @@ export function ScoreboardWidget({
     !admin,
     appliedFilter,
     teams.length > 0,
+    locale,
   );
 
   useScoreboardViewport(!admin, pageRef, teams.length);
@@ -96,17 +101,31 @@ export function ScoreboardWidget({
       {!admin && (
         <div id="scoreboard-banner" hidden={!bannerVisible}>
           <PageHero
-            title="Рейтинг команд"
-            subtitle="Результаты команд и состояние сервисов по раундам."
+            title={t("scoreboard.title")}
+            subtitle={t("scoreboard.subtitle")}
           >
             <div className="hero-metadata">
               <span>
                 <BrandIcon name="team" plain />
-                {teams.length || "-"} команд
+                {teams.length
+                  ? t("scoreboard.teamCount", {
+                      count: teams.length,
+                      formattedCount: new Intl.NumberFormat(locale).format(
+                        teams.length,
+                      ),
+                    })
+                  : t("scoreboard.teamCountEmpty")}
               </span>
               <span>
                 <BrandIcon name="terminal" plain />
-                {tasks.length || "-"} сервиса
+                {tasks.length
+                  ? t("scoreboard.serviceCount", {
+                      count: tasks.length,
+                      formattedCount: new Intl.NumberFormat(locale).format(
+                        tasks.length,
+                      ),
+                    })
+                  : t("scoreboard.serviceCountEmpty")}
               </span>
               <span>Attack-Defense</span>
             </div>
@@ -117,8 +136,9 @@ export function ScoreboardWidget({
       {error && (
         <div className="notice" role="status">
           <WifiOff size={16} />
-          Соединение с сервером потеряно. Повторное подключение выполняется
-          автоматически.
+          {error === "stateUnavailable"
+            ? t("scoreboard.stateUnavailable")
+            : t("scoreboard.connectionLost")}
         </div>
       )}
 
@@ -129,14 +149,17 @@ export function ScoreboardWidget({
           <Search size={17} />
           <input
             type="search"
-            aria-label="Найти команду по названию или IP"
-            placeholder="Найти команду или IP…"
+            aria-label={t("scoreboard.searchLabel")}
+            placeholder={t("scoreboard.searchPlaceholder")}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
           />
         </label>
 
-        <div className="status-legend" aria-label="Состояния сервисов">
+        <div
+          className="status-legend"
+          aria-label={t("scoreboard.serviceStates")}
+        >
           {SCOREBOARD_STATUSES.map((status) => (
             <span key={status.code} title={status.description}>
               <i
@@ -151,8 +174,16 @@ export function ScoreboardWidget({
           <button
             type="button"
             className="banner-toggle"
-            aria-label={bannerVisible ? "Скрыть баннер" : "Показать баннер"}
-            title={bannerVisible ? "Скрыть баннер" : "Показать баннер"}
+            aria-label={
+              bannerVisible
+                ? t("scoreboard.hideBanner")
+                : t("scoreboard.showBanner")
+            }
+            title={
+              bannerVisible
+                ? t("scoreboard.hideBanner")
+                : t("scoreboard.showBanner")
+            }
             aria-expanded={bannerVisible}
             aria-controls="scoreboard-banner"
             onClick={toggleBanner}
@@ -179,8 +210,8 @@ export function ScoreboardWidget({
       </div>
 
       <div className="table-hint">
-        <span>Нажми на команду или сервис, чтобы открыть подробности</span>
-        <span>+ захваченные / − потерянные флаги</span>
+        <span>{t("scoreboard.tableHint")}</span>
+        <span>{t("scoreboard.flagsHint")}</span>
       </div>
 
       {!admin && <RecentEvents />}
