@@ -21,7 +21,9 @@ class WorkerRuntimeTest(unittest.TestCase):
         self.assertEqual(os.getuid(), 10001)
         self.assertEqual(sys.prefix, "/opt/checkers")
         self.assertTrue(callable(checklib.BaseChecker))
-        self.assertEqual(requests.Request("GET", "http://localhost/").prepare().method, "GET")
+        self.assertEqual(
+            requests.Request("GET", "http://localhost/").prepare().method, "GET"
+        )
         context = ssl.create_default_context(cafile=certifi.where())
         self.assertGreater(context.cert_store_stats()["x509_ca"], 0)
 
@@ -50,7 +52,8 @@ else:
 """
         subprocess.run(
             ["prlimit", f"--as={128 << 20}", "--", sys.executable, "-c", source],
-            check=True, timeout=10,
+            check=True,
+            timeout=10,
         )
 
 

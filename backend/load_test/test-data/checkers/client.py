@@ -10,7 +10,11 @@ def request(base, path, body=None, token=None):
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = token
-    req = urllib.request.Request(base + path, data=json.dumps(body).encode() if body is not None else None, headers=headers)
+    req = urllib.request.Request(
+        base + path,
+        data=json.dumps(body).encode() if body is not None else None,
+        headers=headers,
+    )
     try:
         with urllib.request.urlopen(req, timeout=2) as response:
             return response.status, json.load(response)

@@ -1,4 +1,5 @@
 """Regression checks for asynchronously scraped flag counters."""
+
 import unittest
 from unittest.mock import Mock, patch
 

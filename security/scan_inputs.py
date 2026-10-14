@@ -18,8 +18,11 @@ REPORTS = ("gitleaks-files.json", "gitleaks-history.json", "gitleaks-version.txt
 
 def _git(root, *args):
     return subprocess.run(
-        ["git", "-C", str(root), *args], stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL, timeout=TIMEOUT, check=False,
+        ["git", "-C", str(root), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        timeout=TIMEOUT,
+        check=False,
     )
 
 
@@ -93,20 +96,39 @@ def _copy_inputs(root, destination):
 
 def _run(scanner, args, *, cwd, stdout=subprocess.DEVNULL):
     try:
-        return subprocess.run(
-            [scanner, *args], cwd=cwd, stdout=stdout, stderr=subprocess.DEVNULL,
-            timeout=TIMEOUT, check=False,
-        ).returncode == 0
+        return (
+            subprocess.run(
+                [scanner, *args],
+                cwd=cwd,
+                stdout=stdout,
+                stderr=subprocess.DEVNULL,
+                timeout=TIMEOUT,
+                check=False,
+            ).returncode
+            == 0
+        )
     except (OSError, subprocess.TimeoutExpired):
         return False
 
 
 def _scan(scanner, command, config, report, path, *, cwd, options=()):
-    return _run(scanner, [
-        command, "--config", str(config), "--redact=100",
-        "--ignore-gitleaks-allow", "--no-banner", "--no-color", *options,
-        "--report-format=json", f"--report-path={report}", str(path),
-    ], cwd=cwd)
+    return _run(
+        scanner,
+        [
+            command,
+            "--config",
+            str(config),
+            "--redact=100",
+            "--ignore-gitleaks-allow",
+            "--no-banner",
+            "--no-color",
+            *options,
+            "--report-format=json",
+            f"--report-path={report}",
+            str(path),
+        ],
+        cwd=cwd,
+    )
 
 
 def _valid_report(path):
@@ -153,13 +175,23 @@ def run_scan(root, scanner, config, reports, cache):
             os.chmod(scan_root, 0o700)
             _copy_inputs(root, scan_root)
             current_ok = _scan(
-                executable, "dir", config, files_path, ".", cwd=scan_root,
+                executable,
+                "dir",
+                config,
+                files_path,
+                ".",
+                cwd=scan_root,
             )
     except (OSError, subprocess.TimeoutExpired):
         print("error: current-input scan could not be prepared", file=sys.stderr)
         current_ok = False
     history_ok = _scan(
-        executable, "git", config, history_path, root, cwd=root,
+        executable,
+        "git",
+        config,
+        history_path,
+        root,
+        cwd=root,
         options=("--log-opts=--all",),
     )
     if not current_ok or not history_ok:
@@ -190,7 +222,11 @@ def main():
         args = parser.parse_args()
         try:
             return run_scan(
-                args.root, args.scanner, args.config, args.reports, args.cache,
+                args.root,
+                args.scanner,
+                args.config,
+                args.reports,
+                args.cache,
             )
         except (OSError, subprocess.TimeoutExpired):
             print("error: Gitleaks check failed", file=sys.stderr)

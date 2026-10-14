@@ -1,4 +1,5 @@
 """Exercise public reads and administrator CRUD through the deployed proxy."""
+
 import json
 import re
 import uuid
@@ -12,19 +13,40 @@ def expect(request, path, status=200, data=None, method="GET", **options):
 
 def check_public(request, team_id):
     paths = (
-        "/api/client/teams/", "/api/client/tasks/", "/api/client/config/",
-        "/api/client/attack_data/", "/api/client/ctftime/",
-        "/api/client/status/", "/api/client/scoreboard/",
+        "/api/client/teams/",
+        "/api/client/tasks/",
+        "/api/client/config/",
+        "/api/client/attack_data/",
+        "/api/client/ctftime/",
+        "/api/client/status/",
+        "/api/client/scoreboard/",
         f"/api/client/teams/{team_id}/",
     )
     for path in paths:
         payload = expect(request, path)
         serialized = json.dumps(payload)
-        for private_field in ("token", "private_message", "private_flag_data", "command", "checker"):
-            assert f'"{private_field}":' not in serialized, f"{path} exposes {private_field}"
-    for path in ("/api/client/health/", "/api/admin/health/", "/api/events/health/", "/flags/health/"):
+        for private_field in (
+            "token",
+            "private_message",
+            "private_flag_data",
+            "command",
+            "checker",
+        ):
+            assert f'"{private_field}":' not in serialized, (
+                f"{path} exposes {private_field}"
+            )
+    for path in (
+        "/api/client/health/",
+        "/api/admin/health/",
+        "/api/events/health/",
+        "/flags/health/",
+    ):
         assert expect(request, path) == {"status": "ok"}
-    for path in ("/api/client/metrics", "/api/admin/metrics", "/api/http-receiver/metrics"):
+    for path in (
+        "/api/client/metrics",
+        "/api/admin/metrics",
+        "/api/http-receiver/metrics",
+    ):
         assert request(path)[0] == 404, f"{path} exposed publicly"
     expect(request, "/api/client/teams/not-a-uuid/", 400)
 
@@ -54,24 +76,52 @@ def check_admin(request):
         expect(request, f"/api/admin/teamtasks/{uuid.uuid4()}/", 404, method=method)
     expect(request, "/api/admin/game/start_final/", 400, {}, "POST")
     expect(request, "/api/admin/game/finish/", 400, {}, "POST")
-    expect(request, "/api/admin/game/start_final/", 409, {"confirm": True, "generation": -1}, "POST")
-    expect(request, "/api/admin/game/start_practice/", 403, {}, "POST",
-           extra_headers={"Origin": "https://untrusted.example"})
+    expect(
+        request,
+        "/api/admin/game/start_final/",
+        409,
+        {"confirm": True, "generation": -1},
+        "POST",
+    )
+    expect(
+        request,
+        "/api/admin/game/start_practice/",
+        403,
+        {},
+        "POST",
+        extra_headers={"Origin": "https://untrusted.example"},
+    )
 
 
 def check_team(request, existing):
     collection = "/api/admin/teams/"
     expect(request, collection, 400, {"name": "invalid", "ip": "not-an-ip"}, "POST")
-    expect(request, collection, 400, {"name": "invalid", "ip": "192.0.2.3", "logo_path": "../private"}, "POST")
-    created = expect(request, collection, 201, {"name": "acceptance", "ip": "192.0.2.3", "token": "ignored"}, "POST")
+    expect(
+        request,
+        collection,
+        400,
+        {"name": "invalid", "ip": "192.0.2.3", "logo_path": "../private"},
+        "POST",
+    )
+    created = expect(
+        request,
+        collection,
+        201,
+        {"name": "acceptance", "ip": "192.0.2.3", "token": "ignored"},
+        "POST",
+    )
     team_id = str(uuid.UUID(created["id"]))
-    assert re.fullmatch(r"[0-9a-f]{16}", created["token"]), "server did not generate a team token"
+    assert re.fullmatch(r"[0-9a-f]{16}", created["token"]), (
+        "server did not generate a team token"
+    )
     path = f"{collection}{team_id}/"
     assert expect(request, path) == created
     updated = {**created, "name": "acceptance updated", "highlighted": True}
     assert expect(request, path, data=updated, method="PUT")["name"] == updated["name"]
     expect(request, path, 409, {**updated, "token": existing["token"]}, "PUT")
-    assert expect(request, path)["token"] == created["token"], "failed update changed token"
+    assert expect(request, path)["token"] == created["token"], (
+        "failed update changed token"
+    )
     expect(request, path, method="DELETE")
     assert not expect(request, path)["active"], "delete did not deactivate the team"
     assert all(team["id"] != team_id for team in expect(request, "/api/client/teams/"))
@@ -84,9 +134,18 @@ def check_team(request, existing):
 
 def check_task(request, existing):
     collection = "/api/admin/tasks/"
-    data = {**existing, "name": "acceptance", "default_score": int(existing["default_score"])}
+    data = {
+        **existing,
+        "name": "acceptance",
+        "default_score": int(existing["default_score"]),
+    }
     data.pop("id")
-    for invalid in ({"places": 0}, {"puts": -1}, {"checker_timeout": 0}, {"default_score": 1.5}):
+    for invalid in (
+        {"places": 0},
+        {"puts": -1},
+        {"checker_timeout": 0},
+        {"default_score": 1.5},
+    ):
         expect(request, collection, 400, {**data, **invalid}, "POST")
     created = expect(request, collection, 201, data, "POST")
     task_id = str(uuid.UUID(created["id"]))
@@ -110,5 +169,12 @@ def check_flag_input(request, token):
     for data in ({"flag": "invalid"}, ["A" * 33], ["A" * 32] * 101):
         expect(request, "/flags", 400, data, "PUT", token=token)
     expect(request, "/flags", 413, ["A" * 40000], "PUT", token=token)
-    expect(request, "/flags", 415, [], "PUT", token=token,
-           extra_headers={"Content-Type": "text/plain"})
+    expect(
+        request,
+        "/flags",
+        415,
+        [],
+        "PUT",
+        token=token,
+        extra_headers={"Content-Type": "text/plain"},
+    )

@@ -42,7 +42,11 @@ def convert_refs(value):
     if isinstance(value, dict):
         result = {}
         for key, child in value.items():
-            if key == "$ref" and isinstance(child, str) and child.startswith("#/schemas/"):
+            if (
+                key == "$ref"
+                and isinstance(child, str)
+                and child.startswith("#/schemas/")
+            ):
                 result[key] = child.replace("#/schemas/", "#/")
             elif key == "mapping" and isinstance(child, dict):
                 result[key] = {
@@ -70,7 +74,9 @@ def merge_schemas(schema_dir=SCHEMAS_DIR, output=SCHEMAS_FILE):
 
     for path in sources:
         content = yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
-        if not isinstance(content, dict) or not isinstance(content.get("schemas"), dict):
+        if not isinstance(content, dict) or not isinstance(
+            content.get("schemas"), dict
+        ):
             raise ValueError(f"{path} must contain a top-level schemas mapping")
 
         for name, schema in content["schemas"].items():

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check APIs and state through a synthetic production Compose deployment."""
+
 import base64
 import http.client
 import http.cookiejar
@@ -15,16 +16,30 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from check_api import check_admin, check_flag_input, check_public, check_unauthorized, expect
+from check_api import (
+    check_admin,
+    check_flag_input,
+    check_public,
+    check_unauthorized,
+    expect,
+)
 
 root, project, origin = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
-if not project.startswith("forcad-deployment-") or not root.name.startswith("forcad-deployment."):
+if not project.startswith("forcad-deployment-") or not root.name.startswith(
+    "forcad-deployment."
+):
     raise SystemExit("Expected an isolated deployment fixture")
 compose = [
-    "docker", "compose", "--project-name", project,
-    "--project-directory", str(root / "deployment/docker"),
-    "-f", str(root / "deployment/docker/compose.yml"),
-    "-f", str(Path(__file__).resolve().parents[3] / "deployment/docker/compose.e2e.yml"),
+    "docker",
+    "compose",
+    "--project-name",
+    project,
+    "--project-directory",
+    str(root / "deployment/docker"),
+    "-f",
+    str(root / "deployment/docker/compose.yml"),
+    "-f",
+    str(Path(__file__).resolve().parents[3] / "deployment/docker/compose.e2e.yml"),
 ]
 runtime_env_setting = os.environ.get("FORCAD_E2E_ADMIN_ENV_FILE")
 runtime_env = Path(runtime_env_setting) if runtime_env_setting else root / "runtime.env"
@@ -38,7 +53,9 @@ credentials = {
     if line and not line.startswith("#")
     for key, value in [line.split("=", 1)]
 }
-client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+client = urllib.request.build_opener(
+    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+)
 ACCEPTANCE_API_RPS = 25
 ACCEPTANCE_API_INTERVAL = 1 / ACCEPTANCE_API_RPS
 last_api_request_at = None
@@ -77,8 +94,13 @@ def request(path, data=None, method="GET", token=None, extra_headers=None):
 
 def query(sql):
     result = subprocess.run(
-        compose + [
-            "exec", "-T", "postgres", "sh", "-ec",
+        compose
+        + [
+            "exec",
+            "-T",
+            "postgres",
+            "sh",
+            "-ec",
             'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1',
         ],
         input=sql,
@@ -115,10 +137,19 @@ existing_flag_ids = set(query("SELECT id FROM Flags;").splitlines())
 assert request("/")[0] == 200, "frontend unavailable"
 check_public(request, team_two_id)
 check_unauthorized(request, team_two_id)
-expect(request, "/api/admin/login/", 403, {"username": "invalid", "password": "invalid"}, "POST")
+expect(
+    request,
+    "/api/admin/login/",
+    403,
+    {"username": "invalid", "password": "invalid"},
+    "POST",
+)
 status, _ = request(
     "/api/admin/login/",
-    {"username": credentials["ADMIN_USERNAME"], "password": credentials["ADMIN_PASSWORD"]},
+    {
+        "username": credentials["ADMIN_USERNAME"],
+        "password": credentials["ADMIN_PASSWORD"],
+    },
     "POST",
 )
 assert status == 200, "admin login failed"
@@ -134,7 +165,9 @@ status, _ = request(
 assert status == 200, "final did not start"
 check_flag_input(request, credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])
 expect(request, "/api/admin/game/pause/", data={}, method="POST")
-expect(request, "/flags", 503, [], "PUT", token=credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])
+expect(
+    request, "/flags", 503, [], "PUT", token=credentials["FORCAD_E2E_TEAM_ONE_TOKEN"]
+)
 expect(request, "/api/admin/game/resume/", data={}, method="POST")
 
 flag = ""
@@ -154,15 +187,26 @@ assert len(flag) == 32, "Python checker did not persist a flag"
 status, body = request(
     "/flags", [flag] * 100, "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"]
 )
-assert status == 200 and body.count(b"Flag accepted!") == 1 and body.count(b"Flag already stolen") == 99, "batch verdicts incorrect"
+assert (
+    status == 200
+    and body.count(b"Flag accepted!") == 1
+    and body.count(b"Flag already stolen") == 99
+), "batch verdicts incorrect"
 assert query("SELECT count(*) FROM StolenFlags;") == "1", "duplicate scoring"
-expect(request, "/flags/", data=[flag], method="PUT", token=credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])
+expect(
+    request,
+    "/flags/",
+    data=[flag],
+    method="PUT",
+    token=credentials["FORCAD_E2E_TEAM_ONE_TOKEN"],
+)
 assert query("SELECT count(*) FROM StolenFlags;") == "1", "retry scored a flag twice"
 
 address = urllib.parse.urlsplit(origin)
 connection = http.client.HTTPConnection(address.hostname, address.port, timeout=5)
 connection.request(
-    "GET", "/api/events/ws",
+    "GET",
+    "/api/events/ws",
     headers={
         "Connection": "Upgrade",
         "Upgrade": "websocket",
@@ -181,7 +225,11 @@ status, _ = request(
     "POST",
 )
 assert status == 200, "final did not finish"
-assert request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410, "finished game accepts flags"
+assert (
+    request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410
+), "finished game accepts flags"
 expect(request, "/api/admin/logout/", data={}, method="POST")
 expect(request, "/api/admin/status/", 403)
-print("Deployment checks passed: public reads, admin CRUD/auth/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics.")
+print(
+    "Deployment checks passed: public reads, admin CRUD/auth/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics."
+)

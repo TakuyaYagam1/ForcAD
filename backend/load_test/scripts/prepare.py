@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Write a synthetic game configuration into the isolated deployment."""
+
 from pathlib import Path
 import sys
 

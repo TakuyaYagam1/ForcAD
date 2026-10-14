@@ -1,4 +1,5 @@
 """Local load fixtures; team IPs are isolated namespaces, not remote targets."""
+
 import importlib
 from contextlib import contextmanager
 import json
@@ -45,7 +46,9 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("body too large")
                 body = json.loads(self.rfile.read(length)) if length else {}
                 with connect() as db:
-                    status, response = self.server.service.handle(db, team, self.command, path, body, self.headers)
+                    status, response = self.server.service.handle(
+                        db, team, self.command, path, body, self.headers
+                    )
         except (ValueError, KeyError, TypeError):
             status, response = 400, {"error": "invalid request"}
         except sqlite3.Error as exc:

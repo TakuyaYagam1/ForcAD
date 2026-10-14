@@ -18,21 +18,30 @@ def handle(db, team, method, path, body, headers):
         return 201, {"name": body["name"]}
     if method == "POST" and path == "login":
         password = hashlib.sha256(body["password"].encode()).hexdigest()
-        user = db.execute("SELECT name FROM users WHERE team=? AND name=? AND password=?",
-                          (team, body["name"], password)).fetchone()
+        user = db.execute(
+            "SELECT name FROM users WHERE team=? AND name=? AND password=?",
+            (team, body["name"], password),
+        ).fetchone()
         if not user:
             return 403, {"error": "invalid credentials"}
         token = secrets.token_hex(16)
         db.execute("INSERT INTO sessions VALUES(?,?,?)", (team, token, user["name"]))
         return 200, {"token": token}
-    user = db.execute("SELECT name FROM sessions WHERE team=? AND token=?",
-                      (team, headers.get("Authorization", ""))).fetchone()
+    user = db.execute(
+        "SELECT name FROM sessions WHERE team=? AND token=?",
+        (team, headers.get("Authorization", "")),
+    ).fetchone()
     if not user:
         return 403, {"error": "authentication required"}
     if method == "POST" and path == "records":
         key = secrets.token_hex(16)
-        db.execute("INSERT INTO records VALUES(?,?,?,?)", (team, user["name"], key, body["body"]))
+        db.execute(
+            "INSERT INTO records VALUES(?,?,?,?)",
+            (team, user["name"], key, body["body"]),
+        )
         return 201, {"id": key}
-    row = db.execute("SELECT body FROM records WHERE team=? AND owner=? AND id=?",
-                     (team, user["name"], path.removeprefix("records/"))).fetchone()
+    row = db.execute(
+        "SELECT body FROM records WHERE team=? AND owner=? AND id=?",
+        (team, user["name"], path.removeprefix("records/")),
+    ).fetchone()
     return (200, dict(row)) if row else (404, {"error": "not found"})
