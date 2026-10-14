@@ -29,6 +29,10 @@ The Go worker replaces Celery. Python remains in the worker image for checker
 programs. Admin and public APIs share the `api` service. Events also run there;
 there is no separate Socket.IO service or Flower dashboard.
 
+The optional monitoring overlay adds Prometheus and Grafana. Application metrics
+describe ForcAD; router counters and a passive Zeek sensor describe game traffic.
+See [Monitoring](MONITORING.md) and the [network layout](../infrastracture/README.md).
+
 ## Request and job flow
 
 ```mermaid

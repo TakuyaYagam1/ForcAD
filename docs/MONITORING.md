@@ -1,55 +1,163 @@
 # Monitoring
 
-Set `GRAFANA_ADMIN_PASSWORD`, then start the full stack with `./control.sh monitoring up -d`. The full `up` applies the overlay's metrics listener bind to running API and receiver containers; it preserves existing Compose volumes. Grafana uses the `admin` account and does not reuse ForcAD credentials. The dashboard UID is `forcad-monitoring`. Grafana and Prometheus bind to `127.0.0.1:3000` and `127.0.0.1:9090`; set `FORCAD_GRAFANA_PORT` or `FORCAD_PROMETHEUS_PORT` to an empty value to request a random host port.
+[Documentation index](../README.md#documentation)
 
-Prometheus discovers every API, receiver, worker, and ticker replica through Docker DNS A records on port 9090. Metrics are served at `/metrics` on the internal Compose network without authentication. The separate `/drain` endpoint still uses `ControlToken`. No Docker socket or mandatory exporter is used. Prometheus retains at most 15 days or 4 GB of data.
+## Start
 
-The dashboard is in Grafana's root. Its table and team legends display names; expand a team row to see its UUID and configured vulnbox IP. Unattributed traffic, including localhost spectators, appears in overall charts as `Unknown`, not as a team row. Its eight metric columns are RPS, flags/s, HTTP 4xx/5xx errors/s, p99 REST API latency, WebSocket connections, outgoing Mbps, incoming Mbps, and packets/s. RPS includes REST endpoints such as flags, status, and attack data; it excludes static assets and requests rejected by Nginx. Application counters sum across API and receiver replicas. If those source roles are unavailable, their values are N/A rather than zeros. Missing p99 samples and router data are also shown as N/A.
-
-Four dashboards live in the root, with links that preserve the selected time range:
-
-| Dashboard | Contents |
-| --- | --- |
-| ForcAD | Team table, accepted/rejected/duplicate flags for the period, submission outcomes and accepted flags/s by team |
-| Traffic | RPS, WS connections and new connections/s by team, WS limits, router Mbps and packets/s, top source IPs to vulnboxes |
-| Errors | HTTP codes/routes, error ratio by team, p99, WS event drops, database cancellations and Redis timeouts |
-| Infrastructure | Database/Redis client connections, pool utilization, pending requests and acquisition waits |
-
-The main dashboard keeps UID `forcad-monitoring`; the others use `forcad-traffic`, `forcad-errors` and `forcad-infrastructure`. Flag totals use Prometheus `increase`: estimates for the selected period across game sessions, not authoritative game scores. Rejected totals exclude duplicates, shown separately. Rounds and checker SLA are not currently exported as metrics.
-
-Database counts describe application pools connected to PgBouncer, not PostgreSQL server sessions. Redis counts describe application pools, not server `maxclients` or dedicated Pub/Sub connections. Traffic shows successful WS upgrades; it does not identify every attack or include requests rejected by Nginx. Go runtime metrics remain available in Prometheus for profiling.
-
-Default database limits belong to three separate layers:
-
-| Layer | Connections |
-| --- | --- |
-| Application pools | 168 total: API 4 x 16, receiver 2 x 32, worker 2 x 16, ticker 8 |
-| PgBouncer server pools | 136 total: API 32, receiver 64, worker 32, ticker 8 |
-| PostgreSQL | `max_connections=500`, configurable with `FORCAD_POSTGRES_MAX_CONNECTIONS` |
-
-The `Application DB connections` panel shows the first layer, summed over healthy replicas. Raising PostgreSQL's limit does not enlarge the other pools. Server connections, PgBouncer queue waits, Redis server limits, Nginx rejections and checker backlog are not currently collected. WS slots are limited per API process, without a per-team quota. Application disappearance has no dedicated alert yet; do not treat an empty chart as proof that the service is healthy.
-
-Router monitoring needs one exporter on the organizer's Linux router, with `nft` and permission to read counters. Nothing is installed on the teams' vulnboxes. On the ForcAD host, export only the public network inventory:
+Set `GRAFANA_ADMIN_PASSWORD` in `deployment/docker/.env` or the environment:
 
 ```sh
-./control.sh network-config > config/runtime/network.json
-./control.sh network-rules --config config/runtime/network.json > config/runtime/network.nft
+./control.sh monitoring up -d
 ```
 
-Copy the `forcad` binary, `network.json` and `network.nft` to the router. Review the generated rules, validate with `sudo nft -c -f network.nft`, then apply with `sudo nft -f network.nft`. Only the new `inet forcad_monitoring` table is created. Repeated application fails instead of duplicating counters. Existing filtering rules remain in effect. Run the exporter as a supervised process:
+Run the full overlay so API, receiver, worker and ticker expose metrics too.
+Containers may be recreated; volumes are preserved. Grafana uses `admin` and the
+configured password, independently of the ForcAD login. The setting initializes
+new Grafana storage; changing it does not reset an existing account's password.
+
+Keep the overlay when recreating or scaling services:
 
 ```sh
-sudo ./forcad network-metrics --config network.json --listen ROUTER_PRIVATE_IP:9109
+./control.sh monitoring up -d --build
+./control.sh monitoring up -d --no-recreate --no-deps --scale worker=3 worker
 ```
 
-Allow only Prometheus to reach that private listener. Add `- targets: ["router.private:9109"]` to `deployment/monitoring/file_sd/routers.yml`; leave the file as `[]` until deployed. Do not add team labels to targets: each exporter reports all teams. Never copy the full game config or database credentials to the router.
+Plain `start`, `scale` and `compose up` do not include it and can create replicas
+whose metrics are unreachable. For the network demo, always use its `demo.sh` wrapper.
 
-Backend team metadata refreshes every 15 seconds. Configure VPN/farm networks through team `traffic_cidrs` in [CONFIGURATION.md](CONFIGURATION.md). Changes require restaging the config and restarting API/receiver. Router inventory does not auto-refresh: regenerate it, replace only the monitoring table with the reviewed rules, and restart the exporter. A fingerprint mismatch reports a scrape failure instead of attributing old counters to new teams.
+| Endpoint | Default URL |
+| --- | --- |
+| Grafana | <http://127.0.0.1:3000/> |
+| Prometheus targets | <http://127.0.0.1:9090/targets> |
+| Prometheus alerts | <http://127.0.0.1:9090/alerts> |
 
-Network rates count forwarded IPv4/IPv6 traffic matching these networks. They include packets reaching the monitoring hook, even if a later firewall rule drops them. The source-IP counters run after router filtering and before postrouting SNAT. They identify the original source IP and destination vulnbox IP for forwarded packets to configured team IPs. The Traffic dashboard shows the 50 busiest source/vulnbox pairs by packets/s over five minutes. The two dynamic nftables sets expire entries after 15 minutes and cap each IP family at 4096 pairs; a full set cannot attribute additional pairs. Local router traffic, L2 traffic bypassing it, and offloaded flows may be invisible. Shared NAT addresses cannot distinguish teams; duplicate team IPs display N/A for network rates. Monitor each traffic path once to avoid counting the same packet on several exporters. See the [nftables reference](https://netfilter.org/projects/nftables/manpage.html) for table and counter semantics.
+Both bind to localhost. For remote access, forward ports over SSH:
 
-The FSP final network keeps participant WG addresses through the VPN server and SNATs only on the router's vulnbox-facing interfaces. Install this exporter on that router to see participant `10.200.0.0/24` addresses before SNAT. The current demo uses two container IPs in place of WG peers. The expanded team row shows the team's vulnbox address, while the Traffic source table shows the attacking peer's address. Neither view contains WG configs or private keys. Router Nginx and traffic to the ForcAD board need separate ingress metrics; these vulnbox counters do not measure them.
+```sh
+ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 USER@FORCAD_HOST
+```
 
-Prometheus alerts cover saturated DB/Redis pools, HTTP error ratio, WebSocket slots at 90%, slow-client drops, stale backend inventory, router counter and source-IP scrape failures, and configured router targets. An empty router target list creates no router-down alert. Alerts are visible in Prometheus; no Alertmanager is configured. Image tags are pinned to Prometheus v3.15.0 and Grafana v13.2.2, verified against the [Prometheus releases](https://github.com/prometheus/prometheus/releases) and [Grafana releases](https://github.com/grafana/grafana/releases) on 2026-10-12.
+Override ports with `FORCAD_GRAFANA_PORT` and `FORCAD_PROMETHEUS_PORT`; an empty
+value requests a random host port. Prometheus scrapes replicas through Docker
+DNS every 15 seconds and retains up to 15 days or 4 GB. Internal `/metrics`
+endpoints have no authentication; keep them private. `/drain` still requires
+`ControlToken`.
 
-Run `make -C deployment test-monitoring` for the isolated Grafana/Prometheus checks and `make -C deployment test-network` for the nftables exporter checks. The latter grants NET_ADMIN only inside a disposable container with its own network namespace.
+## Dashboards
+
+| Dashboard | Use |
+| --- | --- |
+| ForcAD | Per-team board RPS, flags, errors, latency, WS and router traffic |
+| Traffic | Selected-team totals for board traffic; router packets/bytes and top source IPs |
+| Game traffic | Source team -> target team activity, HTTP/WS, TCP/UDP and capture health |
+| Errors | Recent HTTP errors by route, error ratio, latency, WS drops and pool errors |
+| Infrastructure | Current pools by component, busiest DB pool, Redis waits and per-replica details |
+
+The main UID is `forcad-monitoring`; others are `forcad-traffic`,
+`forcad-game-traffic`, `forcad-errors` and `forcad-infrastructure`.
+Links preserve the time range. All sections start expanded. Table heights are
+fixed; long tables use pagination. Short graph legends do not use value tables.
+
+**Board metrics:** RPS covers backend requests, including flags, but excludes
+static assets and Nginx rejections. WS counts successful upgrades. `Unknown`
+means no team attribution. Expand a team row for UUID/IP. Missing sources or
+latency samples show N/A. Flag totals use Prometheus `increase`, span game
+sessions and are estimates, not authoritative scores. Duplicates are separate
+from other rejections.
+
+**Infrastructure and Errors:** select Component, then Replica. Series aggregate
+into `api`, `receiver`, `worker` and `ticker`; maximum DB utilization uses the
+busiest replica. The Errors Team filter affects HTTP panels only. Pool counts
+are application connections, not PostgreSQL sessions or Redis server clients.
+For capacity defaults, see [Operations](OPERATIONS.md#resource-limits).
+
+## Router counters
+
+Follow the [ForcAD](../infrastracture/forcad/README.md#monitoring) and
+[router](../infrastracture/router/README.md#network-metrics) guides to export the
+public inventory, install counters and enable the exporter on private TCP/9109.
+No agent is installed on vulnboxes. The VPN must preserve peer IPs; the router
+accounts for traffic before game SNAT.
+
+Add only installed targets to `deployment/monitoring/file_sd/routers.yml`.
+Leave `[]` when unused. Do not add team labels: each exporter reports all teams.
+The router receives public IP/CIDR inventory, never game credentials.
+
+Team metadata refreshes every 15 seconds. Attribution networks come from YAML
+`traffic_cidrs` at backend startup: run setup and restart API/receiver after edits.
+Router inventory is separate: regenerate JSON/rules together, replace only the
+monitoring table and restart the exporter. A fingerprint mismatch fails collection.
+See [Configuration](CONFIGURATION.md#teams).
+
+Counter scope:
+
+- Team totals count forwarded IPv4/IPv6 packets matching configured networks,
+  including those a later firewall rule may drop.
+- Source/vulnbox pairs count packets after router filtering, before SNAT.
+  Traffic shows the 50 busiest pairs over five minutes. These count packet
+  direction, not who initiated a connection.
+- Pair sets expire after 15 minutes and hold 4096 entries per IP family. New
+  pairs may be absent when full.
+- Local-router, bypassed or offloaded traffic may be invisible. Shared NAT IPs
+  cannot separate teams; duplicate vulnbox IPs produce N/A team rates.
+
+Capture each path once. Router counters do not measure HTTP requests or WS.
+
+## Game traffic
+
+Install the [Zeek sensor](../infrastracture/router/README.md#game-httpws-metrics)
+and add its private TCP/9911 endpoint to
+`deployment/monitoring/file_sd/game-sensors.yml`. Restart existing Prometheus
+when adding jobs or rules; target-file updates are discovered automatically.
+
+Zeek passively captures both directions on the router's VPN interface before
+filtering and SNAT. Exact participant IPs identify source teams; vulnbox IPs
+identify targets. Board, checker and admin traffic are excluded. No proxy or
+nginx exporter is required. Unique vulnbox IPs are needed to join team names;
+otherwise IP labels remain visible.
+
+Start with **Active directions - last minute**. Sort by RPS, packets/s, bandwidth
+or connections. Click a team name in a row to select that direction. Source and
+Target filters accept one team or All; **All teams** clears both. Graphs show
+selection totals. Inactive directions disappear; unavailable measurements stay
+N/A. A team accessing its own box appears on both sides and is not evidence of
+an attack.
+
+| Metric | Counts |
+| --- | --- |
+| HTTP RPS | Parsed plaintext HTTP/1 requests, including upgrades |
+| Open WS | Observed HTTP 101 upgrades until TCP close/reset or five idle minutes |
+| New TCP flows | Observed flows, including incomplete handshakes |
+| Established TCP | Observed established connections |
+| New UDP flows | Flows with a 60-second idle timeout, not application requests |
+
+TLS, HTTP/2 and WS message counts are not covered. Captured traffic may be
+blocked later. Restarts reset counters and lose existing session state; packet
+loss, stream gaps, offloads or asymmetric routing can undercount. No traffic
+logs, URLs, headers or bodies are stored.
+
+Failed/stale sensors are omitted from game panels, so multiple sensors can yield
+partial totals. Check capture status, heartbeat, drops and gaps before interpreting
+traffic. High rates guide investigation; they do not prove a rules violation.
+
+## Alerts and checks
+
+Rules cover DB/Redis pool saturation, HTTP errors, WS capacity/drops, stale
+inventory, router collection failures and sensor health. An empty router/sensor
+target list has no down alert. Alerts stay in Prometheus: no Alertmanager or
+automatic bans are configured.
+
+Not collected: checker backlog/SLA/rounds, PostgreSQL sessions, PgBouncer queues,
+Redis server limits and Nginx rejections. Backend disappearance has no dedicated
+alert; an empty graph does not establish health.
+
+```sh
+make -C deployment test-monitoring
+make -C deployment test-network
+make -C infrastracture test-game
+make -C infrastracture test-dashboards
+```
+
+These use isolated containers. Try the [local demo](../deployment/demo/README.md)
+for real two-team WireGuard traffic. Router capacity, NIC offloads and Debian
+boot order still require staging checks on the intended hosts.

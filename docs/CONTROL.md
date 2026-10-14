@@ -42,6 +42,9 @@ deployment. `start` starts containers; use the admin panel to start a practice
 or final session and to finish it. See [OPERATIONS.md](./OPERATIONS.md) for reset
 storage restrictions, updates and resource budgets.
 
+`start`, `scale` and `compose` do not include monitoring automatically. Once
+enabled, use [monitoring commands](MONITORING.md#start) for recreation/scaling.
+
 ## Examples
 
 ```sh

@@ -8,8 +8,9 @@ project guides.
 Use the Go version declared in [backend/go.mod](../backend/go.mod). CI uses Node
 26.8.2 and Python 3.14.8 ([test workflow](../.github/workflows/tests.yml)); pnpm
 12.11.2 is declared in the [API](../api/package.json) and
-[frontend](../frontend/package.json) manifests. Python is used by API code
-generation, not by the backend runtime.
+[frontend](../frontend/package.json) manifests. Python supports code generation,
+test tools and checkers; the backend runtime is Go. Infrastructure generators
+support Python 3.11+ for Debian 12/13.
 GNU Make is required. Docker with the Compose plugin is required for integration
 and deployment checks.
 
@@ -104,6 +105,11 @@ Reserved team-task CRUD methods are checked for their documented 404 response.
 `make -C deployment test-monitoring` also checks the Grafana dashboard, replica
 discovery and N/A values after source failure. `make -C deployment test-network`
 checks generated nftables rules and the exporter in a disposable container.
+
+Network firewalls, the Zeek sensor and all dashboard queries have separate
+[infrastructure checks](../infrastracture/README.md#verification). The
+[network demo](../deployment/demo/README.md) runs real two-team WireGuard traffic;
+it is separate from Vite's in-memory demo and the backend load suite.
 
 For local security checks and their exact coverage, see [security/README.md](../security/README.md).
 

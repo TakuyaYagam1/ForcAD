@@ -53,6 +53,20 @@ are included.
 Container recreation preserves PostgreSQL game data. Importing a
 previous Python installation's database is not supported automatically.
 
+## Monitoring
+
+After starting ForcAD, set `GRAFANA_ADMIN_PASSWORD` in `deployment/docker/.env`, then run:
+
+```bash
+./control.sh monitoring up -d
+```
+
+Open [Grafana](http://127.0.0.1:3000/) and log in as `admin` with that password.
+This enables ForcAD application metrics. For team-to-team game traffic, also
+install the router counters and Zeek sensor using the
+[infrastructure guide](infrastracture/forcad/README.md#monitoring).
+See [Monitoring](docs/MONITORING.md) for dashboards, remote access and coverage.
+
 ## Documentation
 
 | Guide | Contents |
@@ -60,7 +74,9 @@ previous Python installation's database is not supported automatically.
 | [Configuration](docs/CONFIGURATION.md) | Rounds, scheduling, teams, tokens and service settings |
 | [Control CLI](docs/CONTROL.md) | Operator commands, options and compatibility with the old CLI |
 | [Operations](docs/OPERATIONS.md) | Updates, scaling, resource limits, diagnostics and resets |
-| [Monitoring](docs/MONITORING.md) | Grafana team traffic, Prometheus and optional router counters |
+| [Monitoring](docs/MONITORING.md) | ForcAD metrics, game traffic, dashboards and collection limits |
+| [Infrastructure](infrastracture/README.md) | Network diagram, config generation and Debian VPN/router/ForcAD setup |
+| [Local demo](deployment/demo/README.md) | Two teams, real WireGuard, router ACLs/SNAT and game traffic graphs |
 | [Checkers](docs/CHECKERS.md) | CHECK/PUT/GET arguments, output and exit codes |
 | [Architecture](docs/ARCHITECTURE.md) | Process roles, data flow and backend layout |
 | [Development](docs/DEVELOPMENT.md) | Dependencies, code generation and tests |
@@ -76,6 +92,7 @@ previous Python installation's database is not supported automatically.
 | `backend/` | Go application, SQL, backend Dockerfile and integration tests |
 | `frontend/` | React application, frontend Dockerfile and browser tests |
 | `deployment/` | Compose, nginx and container helper scripts |
+| `infrastracture/` | A/D network diagram, host config templates, generators and deployment guides |
 | `config/` | Game configuration example and private deployment configuration |
 | `checkers/` | Organizer-supplied checker programs and dependencies |
 | `public/` | Public branding and optional team logos |

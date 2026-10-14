@@ -7,7 +7,7 @@ test containers and volumes are removed on exit.
 ## Workload
 
 20 teams, three fixture services, six REST routes, active Python checkers and
-20 WebSocket clients. Flag traffic: 40 batches/s × 100 values, including duplicates.
+20 WebSocket clients. Flag traffic: 40 batches/s x 100 values, including duplicates.
 Two receivers and two workers with eight checker slots each share the host with
 the application, database and generator.
 
@@ -56,7 +56,7 @@ WebSocket observations and recovery passed. Final checker-history checks were
 skipped by the harness after the five-hour REST failure.
 
 Most 503s occurred in one short burst coinciding with host memory pressure:
-Windows had 221–404 MiB available and 99% CPU. Interactive use of the PC, including
+Windows had 221-404 MiB available and 99% CPU. Interactive use of the PC, including
 possible VS Code startup, may have contributed; an idle-host repeat is needed to
 isolate its impact. Five-hour REST success was **99.998526%**.
 

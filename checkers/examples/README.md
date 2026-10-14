@@ -2,8 +2,8 @@
 
 Copy the complete `note/` directory into `checkers/<service>/` and adapt its API
 calls to your service. The example uses Python's standard library; no additional
-dependencies are needed. A matching notes server is a test fixture, not a
-competition service included in the deployment.
+dependencies are needed. A matching notes fixture is available in the
+[local network demo](../../deployment/demo/README.md); replace it for a competition.
 
 | File | Responsibility |
 | --- | --- |

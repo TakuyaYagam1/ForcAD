@@ -12,6 +12,12 @@ The complete command reference is in [CONTROL.md](./CONTROL.md).
 Use `./control.sh pause` and `./control.sh resume` to control the game clock and
 flag acceptance without stopping containers.
 
+With monitoring enabled, use `./control.sh monitoring` instead of
+`./control.sh compose` for updates and scaling, and for stopping the full stack.
+Plain `start`/`scale` do not include the monitoring overlay. See
+[Monitoring](MONITORING.md#start) for commands. For the network demo, use
+[demo.sh](../deployment/demo/README.md#manage).
+
 ```bash
 cp -n config/config.yml.example config/config.yml
 # Edit config/config.yml and add executable checkers under checkers/.
@@ -87,7 +93,9 @@ add per-role overrides for workers, pass the worker's `WORKER_CONCURRENCY` and
   --api-replicas 4 --receiver-replicas 3 --worker-replicas 3 --ticker-replicas 1
 ```
 
-The command reports configured ceilings, not throughput or reserved RAM. Compose
+## Resource limits
+
+`runtime-capacity` reports configured ceilings, not throughput or reserved RAM. Compose
 allows 256 HTTP requests in flight per API and 128 per receiver: 1024 API slots
 and 256 receiver slots with the default replicas. Override these per-replica
 limits with `FORCAD_API_HTTP_MAX_INFLIGHT` and `FORCAD_RECEIVER_HTTP_MAX_INFLIGHT`
