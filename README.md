@@ -1,8 +1,5 @@
 # ForcAD
 
-Attack-Defence CTF platform with a Go backend, a React scoreboard and admin panel,
-and support for executable checkers, including Python checkers.
-
 ![ForcAD](public/ForcAD.png)
 
 ## Start a game
@@ -15,10 +12,15 @@ Run from the repository root, using a fresh database for the first installation:
 
 ```bash
 cp -n config/config.yml.example config/config.yml
+cp -n frontend/.env.example deployment/docker/.env
 ```
 
 Edit `config/config.yml`: set a future final start time, team IPs and service
-settings. Install your executable checkers under `checkers/` and list their Python
+settings. `deployment/docker/.env` contains the public frontend name, logo and
+colors; edit it for your event or keep the ForcAD defaults. `control.sh` passes
+this directory to Compose, which loads its `.env` for the image build.
+
+Install your executable checkers under `checkers/` and list their Python
 dependencies in `checkers/requirements.txt`. The configuration points to the
 [reference checker](checkers/examples/README.md); adapt it to your service before
 starting a game. Then run:
@@ -43,7 +45,9 @@ initialization does not overwrite the game stored in PostgreSQL.
 ```
 
 `./control.sh --help` lists the operator commands. The launcher builds the Go
-binary using Go's build cache and resolves paths from its own location.
+binary using Go's build cache and resolves paths from its own location. It
+downloads any missing Go dependencies automatically; a separate `go mod download`
+step is unnecessary.
 Use `./control.sh compose ...` (or `rd`) so generated external-storage settings
 are included.
 Container recreation preserves PostgreSQL game data. Importing a

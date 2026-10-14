@@ -1,8 +1,13 @@
 # Branding
 
-Set `VITE_BRAND_*` values in `frontend/.env.local` for Vite or as build
-arguments when building the frontend image. Vite compiles these values into the
-bundle; changing nginx runtime environment variables does not change the brand.
+For `./control.sh start`, copy `frontend/.env.example` to
+`deployment/docker/.env` and edit its `VITE_BRAND_*` values. Compose loads that
+file from its project directory and passes the values as image build arguments.
+Keep the example values to use the default ForcAD brand.
+
+For local Vite development, use `frontend/.env.local`. Vite compiles these values
+into the bundle; changing nginx runtime environment variables does not change
+the brand. Rebuild the frontend image after changing the Compose `.env`.
 
 - `VITE_BRAND_NAME` sets the name shown in the header, footer, login page, and
   browser title.
