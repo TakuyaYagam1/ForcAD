@@ -1,0 +1,75 @@
+groups:
+  - name: forcad-game
+    rules:
+      - record: forcad:game_sensor_ready
+        expr: |
+          (up{job="forcad_game_sensor"} == 1)
+          and on (job, instance)
+          (time() - forcad_game_sync_timestamp_seconds < 45)
+
+      - record: forcad:game_source_info
+        expr: |
+          max by (source_team_ip, source_team_name) (
+            label_replace(label_replace(
+              forcad:team_info:latest and on (team_ip) forcad:team_network_info:unique,
+              "source_team_ip", "$1", "team_ip", "(.+)"),
+              "source_team_name", "$1", "team_name", "(.*)")
+          )
+
+      - record: forcad:game_peer_info
+        expr: |
+          max by (source_ip, source_team_ip) (
+            forcad_game_peer_info and on (job, instance) forcad:game_sensor_ready
+          )
+          and on (source_ip)
+          count by (source_ip) (
+            max by (source_ip, source_team_ip) (
+              forcad_game_peer_info and on (job, instance) forcad:game_sensor_ready
+            )
+          ) == 1
+
+      - record: forcad:game_target_info
+        expr: |
+          max by (team_ip, target_team_name) (
+            label_replace(
+              forcad:team_info:latest and on (team_ip) forcad:team_network_info:unique,
+              "target_team_name", "$1", "team_name", "(.*)")
+          )
+
+      - alert: ForcadGameSensorDown
+        expr: up{job="forcad_game_sensor"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Game traffic sensor is unreachable
+          description: "Sensor {{ $labels.instance }} is unavailable. Game HTTP/WS data is incomplete."
+
+      - alert: ForcadGameSensorStale
+        expr: |
+          (up{job="forcad_game_sensor"} == 1)
+          unless on (job, instance) forcad:game_sensor_ready
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Game traffic sensor main loop is stale
+          description: "Sensor {{ $labels.instance }} serves HTTP but its analysis heartbeat is missing or stale."
+
+      - alert: ForcadGameCaptureDrops
+        expr: rate(forcad_game_capture_dropped_packets_total[1m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Game traffic capture is losing packets
+          description: "Sensor {{ $labels.instance }} reports capture drops. HTTP/WS counts may be too low."
+
+      - alert: ForcadGameStreamGaps
+        expr: sum by (instance) (rate(forcad_game_stream_gaps_total[1m])) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Game TCP streams have gaps
+          description: "Sensor {{ $labels.instance }} cannot reconstruct some streams. Check capture loss and asymmetric routing."

@@ -51,3 +51,11 @@ scrape_configs:
       - files:
           - /etc/prometheus/file_sd/routers.yml
         refresh_interval: 15s
+
+  - job_name: forcad_game_sensor
+    metrics_path: /metrics
+    scrape_interval: 15s
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/file_sd/game-sensors.yml
+        refresh_interval: 15s

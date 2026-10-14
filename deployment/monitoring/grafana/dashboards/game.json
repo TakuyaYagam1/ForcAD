@@ -1,0 +1,1285 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "All teams",
+      "url": "/d/forcad-game-traffic?var-source=All&var-target=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "ForcAD dashboards",
+      "tags": [
+        "forcad"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "version": 2,
+  "description": "Team-to-team game traffic. Sort active directions by load; select a pair for totals and history.",
+  "uid": "forcad-game-traffic",
+  "title": "ForcAD - Game traffic",
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad:game_sensor_ready or on (job, instance) (0 * up{job=\"forcad_game_sensor\"}))",
+          "legendFormat": "Capture status",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Capture status",
+      "description": "Configured sensors only. No targets means the sensor is not installed."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 45
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(time() - forcad_game_sync_timestamp_seconds)",
+          "legendFormat": "Heartbeat age",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Heartbeat age",
+      "description": "A heartbeat older than 45 seconds excludes the sensor from game panels."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_capture_dropped_packets_total[1m]))",
+          "legendFormat": "Capture drops/s",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Capture drops/s",
+      "description": "System capture drops; nonzero values can mean incomplete counts."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_stream_gaps_total[1m]))",
+          "legendFormat": "Stream gaps/s",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Stream gaps/s",
+      "description": "Missing TCP stream data, including capture loss or unseen directions."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect this direction",
+                    "url": "/d/forcad-game-traffic?var-source=${__data.fields[\"Source IP\"]}&var-target=${__data.fields[\"Target IP\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect this direction",
+                    "url": "/d/forcad-game-traffic?var-source=${__data.fields[\"Source IP\"]}&var-target=${__data.fields[\"Target IP\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP RPS"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bandwidth"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "New TCP/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "cps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WS"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TCP"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 12
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": true,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "HTTP RPS",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"HTTP RPS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"WS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"TCP\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"New TCP/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"Packets/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"Bandwidth\", \"__name__\", \".*\")",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Active directions - last minute",
+      "description": "Click a team name to select the pair; sort columns by load. Inactive pairs are hidden; missing metrics show N/A. Same-team rows mean own-box access. High load alone does not prove a violation.",
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "column",
+            "emptyValue": "null",
+            "rowField": "direction",
+            "valueField": "Value"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "direction\\column",
+            "format": "regexp",
+            "regExp": "/^(?<Source>.*) \\[(?<SourceIP>[0-9.]+)\\] -> (?<Target>.*) \\[(?<TargetIP>[0-9.]+)\\]$/"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "direction\\column": true
+            },
+            "indexByName": {
+              "Source": 0,
+              "Target": 1,
+              "HTTP RPS": 2,
+              "WS": 3,
+              "TCP": 4,
+              "New TCP/s": 5,
+              "Packets/s": 6,
+              "Bandwidth": 7,
+              "SourceIP": 8,
+              "TargetIP": 9
+            },
+            "renameByName": {
+              "SourceIP": "Source IP",
+              "TargetIP": "Target IP"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Selected traffic: ${source:text} -> ${target:text}",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 24,
+        "h": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "HTTP requests/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Game HTTP requests/s",
+      "description": "Observed plaintext HTTP/1 requests for the selection, including upgrades. All -> All is the game total."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "WebSockets",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Open game WebSockets",
+      "description": "Observed WS upgrades until TCP close/reset or five idle minutes, summed for the selection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 25,
+        "w": 12,
+        "h": 8
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))",
+          "legendFormat": "Packets/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "VPN -> vulnbox packets/s",
+      "description": "Selected VPN peer -> vulnbox packets after router filtering, before SNAT; includes non-game ports."
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Connection and bandwidth details",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 33,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 12,
+        "h": 8
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP connections",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Established TCP connections",
+      "description": "Observed established TCP connections until close/reset or five idle minutes, summed for the selection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 34,
+        "w": 12,
+        "h": 8
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})))",
+          "legendFormat": "Bandwidth",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "VPN -> vulnbox bandwidth",
+      "description": "Selected VPN peer -> vulnbox bandwidth after router filtering, before SNAT; includes non-game ports."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP flows/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "New TCP flows/s",
+      "description": "Observed new TCP flows for the selection, including incomplete handshakes."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 42,
+        "w": 12,
+        "h": 8
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "UDP flows/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "New UDP flows/s",
+      "description": "Observed new UDP flows for the selection; 60-second idle timeout. Not application request rate."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 8
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_websocket_upgrades_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "WebSocket upgrades/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "New WebSocket connections/s",
+      "description": "Observed HTTP 101 upgrades to WebSocket for the selection."
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "label": "Source team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Target team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  }
+}

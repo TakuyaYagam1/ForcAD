@@ -40,3 +40,11 @@ targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^backend/internal/usecase/auth/service_test\.go$''']
 regexes = ['''^(0123456789abcdef){4}$''']
+
+[[allowlists]]
+description = "Public WebSocket handshake nonce in synthetic packet fixture"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^infrastracture/tests/game_trace\.py$''']
+regexes = ['''^dGhlIHNhbXBsZSBub25jZQ==$''']

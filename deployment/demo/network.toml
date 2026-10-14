@@ -1,0 +1,25 @@
+# Docker demo uses the same addressing and firewall renderer as the hosts.
+teams = 2
+members_per_team = 1
+admins = 1
+game_tcp_ports = [8080, 8081, 9001]
+game_udp_ports = [9000]
+management_tcp_ports = [22]
+dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+[router]
+wan_interface = "eth0"
+wan_address = "172.30.241.2/24"
+wan_gateway = "172.30.241.1"
+vpn_interface = "eth1"
+forcad_interface = "eth2"
+team_trunk = "eth3"
+
+[vpn]
+interface = "eth0"
+endpoint = "172.30.241.2"
+participant_port = 56767
+admin_port = 56768
+
+[forcad]
+interface = "eth1"

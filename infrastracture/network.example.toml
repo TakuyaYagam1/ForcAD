@@ -1,0 +1,28 @@
+# Copy to network.toml and edit before rendering. This file contains no keys.
+# Internal addressing follows the documented topology; see README.md.
+teams = 20
+members_per_team = 5
+admins = 1
+
+# Replace these example ports with the ports of your actual game services.
+game_tcp_ports = [8080, 8081]
+game_udp_ports = []
+management_tcp_ports = [22]
+dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+[router]
+wan_interface = "eth0"
+wan_address = "203.0.113.10/24"
+wan_gateway = "203.0.113.1"
+vpn_interface = "eth1"
+forcad_interface = "eth2"
+team_trunk = "eth3"
+
+[vpn]
+interface = "eth0"
+endpoint = "vpn.example.org"
+participant_port = 56767
+admin_port = 56768
+
+[forcad]
+interface = "eth0"

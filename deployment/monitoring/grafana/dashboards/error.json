@@ -17,9 +17,17 @@
   },
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [
+    {
+      "type": "link",
+      "title": "Reset filters",
+      "url": "/d/forcad-errors?var-team=All&var-component=All&var-instance=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
     {
       "type": "dashboards",
       "title": "ForcAD dashboards",
@@ -33,6 +41,128 @@
     }
   ],
   "panels": [
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Recent HTTP errors by route - ${team:text}",
+      "description": "Top 50 nonzero board error rates over five minutes, by status, route and component.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(topk(50, sum by (job, status, route) (rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..|5..\"}[5m]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) > 0), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "enablePagination": true,
+        "sortBy": [
+          {
+            "displayName": "Errors/s",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "N/A",
+          "custom": {
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Errors/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Component"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "job": true
+            },
+            "indexByName": {
+              "component": 0,
+              "status": 1,
+              "route": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "component": "Component",
+              "status": "Status",
+              "route": "Route",
+              "Value": "Errors/s"
+            }
+          }
+        }
+      ]
+    },
     {
       "datasource": {
         "type": "prometheus",
@@ -50,8 +180,8 @@
             "axisLabel": "errors/s",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -71,9 +201,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 9,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 1,
       "options": {
@@ -84,8 +214,8 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -95,15 +225,26 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (status, route) (rate(forcad_team_http_requests_total{status=~\"4..|5..\",job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))",
-          "legendFormat": "{{status}} {{route}}",
+          "expr": "(sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))))",
+          "legendFormat": "4xx",
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"5..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))))",
+          "legendFormat": "5xx",
+          "range": true,
+          "refId": "B"
         }
       ],
       "type": "timeseries",
-      "title": "HTTP errors/s",
-      "description": "Backend responses grouped by status and route. Proxy-level failures require Nginx monitoring."
+      "title": "Board HTTP errors/s - ${team:text}",
+      "description": "Board backend errors grouped into 4xx and 5xx. Nginx rejections are excluded."
     },
     {
       "datasource": {
@@ -122,8 +263,8 @@
             "axisLabel": "percent",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -140,15 +281,16 @@
               }
             ]
           },
-          "unit": "percent"
+          "unit": "percent",
+          "min": 0
         },
         "overrides": []
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 9,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 2,
       "options": {
@@ -159,8 +301,8 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -170,14 +312,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(100 * sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\"}[5m])) / sum by (team_id) (rate(forcad_team_http_requests_total[5m]))) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "{{team_name}}",
+          "expr": "100 * (sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..|5..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)))) / sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+          "legendFormat": "HTTP error ratio",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "HTTP error ratio"
+      "title": "Board HTTP error ratio - ${team:text}",
+      "description": "Errors / requests across selected teams and healthy replicas. No requests means no ratio."
     },
     {
       "datasource": {
@@ -196,8 +339,8 @@
             "axisLabel": "seconds",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -217,9 +360,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 18,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 3,
       "options": {
@@ -230,8 +373,8 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -241,15 +384,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (job, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))",
-          "legendFormat": "{{job}}",
+          "expr": "label_replace((histogram_quantile(0.99, sum by (job, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "p99",
-      "description": "99th percentile of completed REST requests, excluding long-lived WebSocket streams."
+      "title": "Board HTTP p99 - ${team:text}",
+      "description": "p99 from combined histograms per component, for selected teams and healthy replicas."
     },
     {
       "datasource": {
@@ -268,8 +411,8 @@
             "axisLabel": "events/s",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -289,9 +432,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 18,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 4,
       "options": {
@@ -302,8 +445,8 @@
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -313,7 +456,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(forcad_websocket_slow_client_drops_total{job=\"forcad_api\"}[1m]) and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "expr": "sum(rate(forcad_websocket_slow_client_drops_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "slow client",
           "range": true,
           "refId": "A"
@@ -324,15 +467,28 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(forcad_websocket_notification_drops_total{job=\"forcad_api\"}[1m]) and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "expr": "sum(rate(forcad_websocket_notification_drops_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "activity notification",
           "range": true,
           "refId": "B"
         }
       ],
       "type": "timeseries",
-      "title": "WebSocket delivery drops/s",
-      "description": "Dropped subscriber deliveries and optional activity notifications. These are event drops, not counts of disconnected sockets."
+      "title": "WebSocket delivery drops/s - selected replicas",
+      "description": "Drops across selected API replicas. The Team filter does not apply."
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Database and Redis errors by component",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 24,
+        "h": 1
+      }
     },
     {
       "datasource": {
@@ -351,8 +507,8 @@
             "axisLabel": "cancellations/s",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -372,9 +528,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 28,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 5,
       "options": {
@@ -396,15 +552,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(forcad_database_acquire_canceled_total[1m])",
-          "legendFormat": "{{job}} {{instance}}",
+          "expr": "label_replace(sum by (job) (rate(forcad_database_acquire_canceled_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
       "title": "Database acquisition cancellations/s",
-      "description": "Canceled requests for an application database-pool connection."
+      "description": "Cancellations across healthy selected replicas, by component. The Team filter does not apply."
     },
     {
       "datasource": {
@@ -423,8 +579,8 @@
             "axisLabel": "timeouts/s",
             "axisPlacement": "left",
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
+            "fillOpacity": 5,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -444,9 +600,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 28,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 6,
       "options": {
@@ -468,15 +624,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(forcad_redis_pool_timeouts_total[1m])",
-          "legendFormat": "{{job}} {{instance}}",
+          "expr": "label_replace(sum by (job) (rate(forcad_redis_pool_timeouts_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
       "title": "Redis timeouts/s",
-      "description": "Application Redis-pool timeouts."
+      "description": "Timeouts across healthy selected replicas, by component. The Team filter does not apply."
     }
   ],
   "refresh": "15s",
@@ -485,15 +641,91 @@
     "forcad"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "team",
+        "label": "Team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(forcad:team_info:latest)",
+          "refId": "team"
+        },
+        "definition": "query_result(forcad:team_info:latest)",
+        "regex": "/team_id=\"(?<value>[^\"]+)\"|team_name=\"(?<text>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "component",
+        "label": "Component",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+          "refId": "component"
+        },
+        "definition": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+        "regex": "/component=\"(?<text>[^\"]+)\"|job=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "instance",
+        "label": "Replica",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+          "refId": "instance"
+        },
+        "definition": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+        "regex": "/instance=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timezone": "browser",
   "title": "Errors",
   "uid": "forcad-errors",
-  "version": 1,
-  "description": "HTTP errors, latency, dropped events and storage-pool failures."
+  "version": 2,
+  "description": "Board HTTP errors and latency. Team filters affect HTTP panels; pool and WS delivery errors use component/replica filters."
 }

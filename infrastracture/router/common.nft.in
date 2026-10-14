@@ -1,0 +1,109 @@
+#!/usr/sbin/nft -f
+# Rendered from network.toml. This transaction replaces only our own tables.
+@@DEFINITIONS@@
+
+add table inet forcad_router
+delete table inet forcad_router
+add table ip forcad_nat
+delete table ip forcad_nat
+
+table inet forcad_router {
+    chain check_source {
+        meta nfproto ipv6 counter drop
+@@SOURCE_CHECKS@@
+        iifname != $team_ifs ip saddr $team_nets counter drop
+        iifname $vpn_if ip saddr != { $vpn_ip, $attack_net, $admin_net } counter drop
+        iifname != $vpn_if ip saddr { $vpn_ip, $attack_net, $admin_net } counter drop
+        iifname $forcad_if ip saddr != $forcad_ip counter drop
+        iifname != $forcad_if ip saddr $forcad_ip counter drop
+    }
+
+    chain input {
+        type filter hook input priority -10; policy drop;
+        iifname "lo" accept
+        jump check_source
+        ct state invalid counter drop
+        iifname $vpn_if ip saddr $admin_net counter accept
+        iifname $forcad_if ip saddr $forcad_ip tcp dport { 9109, 9911 } counter accept
+        iifname $vpn_if ip saddr $attack_net icmp type echo-request counter accept
+        iifname $vpn_if ip saddr $attack_net counter drop
+        ct state established,related counter accept
+        icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } counter accept
+    }
+
+    # Recheck the original connection tuple for both requests and replies.
+    # This keeps existing connections subject to mode and ACL changes.
+    chain allowed_flow {
+        ct direction original counter accept
+        ct direction reply ct state established,related counter accept
+    }
+
+    chain game_access {
+@@GAME_PORTS@@
+        ct original protocol icmp jump allowed_flow
+        counter drop
+    }
+
+    chain phase_rules {
+    }
+
+    chain wan_access {
+        ct original ip daddr $non_public_nets counter drop
+        oifname $wan_if ct direction original counter accept
+        iifname $wan_if ct direction reply ct state established,related counter accept
+        counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority -10; policy drop;
+        jump check_source
+        ct state invalid counter drop
+
+        # Admin access is independent of the game phase.
+        iifname $vpn_if ip saddr $admin_net counter accept
+        oifname $vpn_if ip daddr $admin_net ct direction reply ct state established,related counter accept
+
+        # Direct relays and connections initiated by vulnboxes into internal
+        # networks stay blocked even when conntrack contains an old flow.
+        iifname $team_ifs oifname $team_ifs counter drop
+        ct original ip saddr $vulnboxes ct original ip daddr $non_public_nets counter drop
+
+        jump phase_rules
+
+        # Preserve PMTU and other diagnostics for tracked connections.
+        ct state related meta l4proto icmp icmp type { destination-unreachable, time-exceeded, parameter-problem } counter accept
+
+        # Participants can use the board, but not its private services.
+        ct original ip saddr $attack_net ct original ip daddr $forcad_ip meta l4proto tcp ct original proto-dst 80 jump allowed_flow
+
+        # Team ownership is checked before the source address is translated.
+@@OWN_MANAGEMENT@@
+
+        ct original ip saddr { $attack_net, $forcad_ip } ct original ip daddr $vulnboxes jump game_access
+
+        # Only the configured public WireGuard ports are forwarded from WAN.
+        iifname $wan_if oifname $vpn_if ip daddr $vpn_ip ct status dnat udp dport $wg_ports counter accept
+        iifname $vpn_if oifname $wan_if ip saddr $vpn_ip ct status dnat ct direction reply meta l4proto udp ct original proto-dst $wg_ports ct state established,related counter accept
+
+        ct original ip saddr $vulnboxes jump wan_access
+        ct original ip saddr { $forcad_ip, $vpn_ip } jump wan_access
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}
+
+table ip forcad_nat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+        iifname $wan_if ip daddr $wan_ip udp dport $wg_ports dnat to $vpn_ip
+    }
+
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+@@SNAT@@
+        oifname $wan_if ip saddr $vulnboxes masquerade
+        oifname $wan_if ip saddr { $forcad_ip, $vpn_ip, $admin_net } masquerade
+    }
+}

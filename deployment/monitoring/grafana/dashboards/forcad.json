@@ -38,7 +38,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Expand a team to see its configured IP and UUID. Rates are aggregated across healthy API and receiver replicas. Router gaps and missing sources show N/A.",
+      "description": "Expand a team for IP and UUID. Rates sum healthy API/receiver replicas. Missing sources show N/A.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -340,7 +340,7 @@
       ],
       "type": "stat",
       "title": "Accepted (period)",
-      "description": "Observed submissions over the selected time range. Prometheus estimates interval totals from counters; includes every game session in this range."
+      "description": "Estimated accepted flags over the selected period, across game sessions; not the game score."
     },
     {
       "datasource": {
@@ -397,7 +397,7 @@
       ],
       "type": "stat",
       "title": "Rejected (period)",
-      "description": "Observed submissions over the selected time range. Prometheus estimates interval totals from counters; includes every game session in this range."
+      "description": "Estimated rejected flags over the selected period, excluding duplicates, across game sessions."
     },
     {
       "datasource": {
@@ -454,7 +454,7 @@
       ],
       "type": "stat",
       "title": "Duplicates (period)",
-      "description": "Observed submissions over the selected time range. Prometheus estimates interval totals from counters; includes every game session in this range."
+      "description": "Estimated duplicate submissions over the selected period, across game sessions."
     },
     {
       "datasource": {
@@ -598,7 +598,7 @@
       ],
       "type": "timeseries",
       "title": "Accepted flags/s",
-      "description": "Committed flags by team. Names come from the team inventory."
+      "description": "Committed flags by team."
     }
   ],
   "refresh": "15s",

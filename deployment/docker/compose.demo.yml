@@ -8,22 +8,46 @@ x-demo: &demo
   read_only: true
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]
-  pids_limit: 64
-  mem_reservation: 128m
+  pids_limit: 128
+  mem_limit: 256m
   restart: on-failure
+  logging:
+    driver: local
+    options: {max-size: "5m", max-file: "2"}
 
-x-team: &team
+x-network: &network
   <<: *demo
   user: "0:0"
-  command: [team]
-  cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
-  tmpfs: ["/data:uid=10001,gid=10001,mode=0700,size=64m"]
+  cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP, DAC_OVERRIDE]
   sysctls:
     net.ipv4.conf.all.accept_redirects: "0"
+    net.ipv4.conf.default.accept_redirects: "0"
+    net.ipv4.conf.all.send_redirects: "0"
+    net.ipv4.conf.default.send_redirects: "0"
+    net.ipv4.conf.all.rp_filter: "2"
+    net.ipv4.conf.default.rp_filter: "2"
+    net.ipv4.ping_group_range: "0 10001"
+    net.ipv6.conf.all.disable_ipv6: "1"
+
+x-team: &team
+  <<: *network
+  command: [team]
+  cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP, DAC_OVERRIDE, CHOWN]
   depends_on:
     demo-router: {condition: service_healthy}
   healthcheck:
     test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+    interval: 5s
+    timeout: 3s
+    retries: 12
+
+x-player: &player
+  <<: *network
+  command: [player]
+  depends_on:
+    demo-vpn: {condition: service_healthy}
+  healthcheck:
+    test: [CMD-SHELL, "ping -c 1 -W 2 10.0.1.1 >/dev/null"]
     interval: 5s
     timeout: 3s
     retries: 12
@@ -35,72 +59,216 @@ services:
   receiver:
     environment:
       TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+
+  # These processes share the ForcAD host namespace. Only its setup container
+  # receives NET_ADMIN; the application and collectors keep their normal caps.
   nginx:
-    ports: !override
-      - "127.0.0.1:8080:8080"
-    networks:
-      default: {ipv4_address: 172.30.240.10}
+    ports: !reset []
+    networks: !reset {}
+    network_mode: service:demo-forcad
+    depends_on:
+      demo-forcad: {condition: service_healthy}
+  worker:
+    network_mode: service:demo-forcad
+    deploy:
+      replicas: 1
+    environment:
+      METRICS_ADDR: "0.0.0.0:9091"
+    depends_on:
+      demo-forcad: {condition: service_healthy}
   prometheus:
+    ports: !reset []
+    network_mode: service:demo-forcad
     volumes:
-      - ../demo/routers.yml:/etc/prometheus/file_sd/routers.yml:ro
-  demo-router:
-    <<: *demo
-    user: "0:0"
-    command: [router]
-    cap_add: [NET_ADMIN]
-    sysctls:
-      net.ipv4.ip_forward: "1"
-      net.ipv4.conf.all.send_redirects: "0"
+      - ../../config/runtime/demo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../config/runtime/demo/forcad/routers.yml:/etc/prometheus/file_sd/routers.yml:ro
+      - ../../config/runtime/demo/forcad/game-sensors.yml:/etc/prometheus/file_sd/game-sensors.yml:ro
+    depends_on:
+      demo-forcad: {condition: service_healthy}
+
+  demo-forcad:
+    <<: *network
+    command: [forcad]
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
     networks:
       default:
-        ipv4_address: 172.30.240.254
-        driver_opts:
-          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.send_redirects=0
-    volumes:
-      - ../../config/runtime/demo-network.json:/app/network.json:ro
+        ipv4_address: 172.30.240.10
+        interface_name: eth0
+        gw_priority: 1
+        aliases: [nginx, prometheus, worker]
+      demo-forcad:
+        ipv4_address: 10.0.2.10
+        interface_name: eth1
+    depends_on:
+      demo-router: {condition: service_healthy}
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
+      test: [CMD-SHELL, "ip route get 10.101.0.2 | grep -q 'via 10.0.2.1'"]
       interval: 5s
       timeout: 3s
       retries: 12
+
+  demo-router:
+    <<: *network
+    command: [router]
+    cap_add: [NET_ADMIN, DAC_OVERRIDE]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.send_redirects: "0"
+      net.ipv4.conf.default.send_redirects: "0"
+      net.ipv4.conf.all.rp_filter: "2"
+      net.ipv4.conf.default.rp_filter: "2"
+      net.ipv6.conf.all.disable_ipv6: "1"
+    networks:
+      demo-wan: {ipv4_address: 172.30.241.2, interface_name: eth0, gw_priority: 1}
+      demo-transit: {ipv4_address: 10.0.1.1, interface_name: eth1}
+      demo-forcad: {ipv4_address: 10.0.2.1, interface_name: eth2}
+      demo-team1: {ipv4_address: 10.101.0.1, interface_name: eth3.101}
+      demo-team2: {ipv4_address: 10.102.0.1, interface_name: eth3.102}
+    volumes:
+      - ../../config/runtime/demo/router:/etc/forcad/router:ro
+      - ../../config/runtime/demo/network.json:/etc/forcad/network.json:ro
+      - ../../config/runtime/demo/phase:/etc/forcad/phase:ro
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://10.0.2.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  demo-vpn:
+    <<: *network
+    command: [vpn]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.rp_filter: "2"
+      net.ipv4.conf.default.rp_filter: "2"
+      net.ipv6.conf.all.disable_ipv6: "1"
+    networks:
+      demo-transit: {ipv4_address: 10.0.1.2, interface_name: eth0}
+    volumes:
+      - ../../config/runtime/demo/vpn:/etc/forcad/vpn:ro
+      - ../../config/runtime/demo/wireguard/server:/app/keys:ro
+    depends_on:
+      demo-router: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "ip link show wg-attack >/dev/null && ip link show wg-admin >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  demo-player1:
+    <<: *player
+    networks:
+      demo-wan: {ipv4_address: 172.30.241.11, interface_name: eth0}
+    volumes:
+      - ../../config/runtime/demo/wireguard/participants/team-01/member-01.conf:/app/keys/wg0.conf:ro
+  demo-player2:
+    <<: *player
+    networks:
+      demo-wan: {ipv4_address: 172.30.241.12, interface_name: eth0}
+    volumes:
+      - ../../config/runtime/demo/wireguard/participants/team-02/member-01.conf:/app/keys/wg0.conf:ro
+  demo-admin:
+    <<: *player
+    networks:
+      demo-wan: {ipv4_address: 172.30.241.13, interface_name: eth0}
+    volumes:
+      - ../../config/runtime/demo/wireguard/admins/admin-01.conf:/app/keys/wg0.conf:ro
+
   demo-team1:
     <<: *team
     environment:
-      DEMO_PEER: 172.30.240.12
+      DEMO_GATEWAY: 10.101.0.1
+    volumes:
+      - demo-team1-data:/data
+      - ../../config/runtime/demo/seeds/team1:/app/seed:ro
     networks:
-      default:
-        ipv4_address: 172.30.240.11
-        driver_opts:
-          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.accept_redirects=0
+      demo-team1: {ipv4_address: 10.101.0.2, interface_name: eth0}
   demo-team2:
     <<: *team
     environment:
-      DEMO_PEER: 172.30.240.11
+      DEMO_GATEWAY: 10.102.0.1
+    volumes:
+      - demo-team2-data:/data
+      - ../../config/runtime/demo/seeds/team2:/app/seed:ro
     networks:
-      default:
-        ipv4_address: 172.30.240.12
-        driver_opts:
-          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.accept_redirects=0
+      demo-team2: {ipv4_address: 10.102.0.2, interface_name: eth0}
+
+  demo-sensor:
+    image: zeek/zeek@sha256:70733f4e540ba1608e37e00c6a93d009f79734262c9ec2ba09d90aa9abc16de5 # 9.0.0
+    user: "0:0"
+    network_mode: service:demo-router
+    working_dir: /app
+    entrypoint:
+      - /usr/bin/setpriv
+      - --reuid=10001
+      - --regid=10001
+      - --clear-groups
+      - --bounding-set=-all,+net_raw
+      - --inh-caps=+net_raw
+      - --ambient-caps=+net_raw
+      - zeek
+    command:
+      - -b
+      # Veth sends replies before checksum offload completes. This option is
+      # specific to the Docker fixture; host sensor settings remain unchanged.
+      - -C
+      - -i
+      - eth1
+      - -f
+      - "ip and net 10.200.0.0/24 and (host 10.101.0.2 or host 10.102.0.2)"
+      - /app/game-metrics.zeek
+      - /app/game-inventory.zeek
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_RAW, SETUID, SETGID, SETPCAP]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/app:uid=10001,gid=10001,mode=0755,size=16m"]
+    volumes:
+      - ../../config/runtime/demo/router/game-metrics.zeek:/app/game-metrics.zeek:ro
+      - ../../config/runtime/demo/router/game-inventory.zeek:/app/game-inventory.zeek:ro
+    mem_limit: 1g
+    cpus: 1
+    pids_limit: 128
+    restart: on-failure
+    logging:
+      driver: local
+      options: {max-size: "5m", max-file: "2"}
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import time,urllib.request; data=urllib.request.urlopen('http://10.0.2.1:9911/metrics',timeout=2).read().decode(); stamp=next(float(line.split()[-1]) for line in data.splitlines() if line.startswith('forcad_game_sync_timestamp_seconds')); assert time.time()-stamp < 45"
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    depends_on:
+      demo-router: {condition: service_healthy}
+
   demo-farm1:
     <<: *demo
     command: [traffic]
     user: "10001:10001"
-    network_mode: service:demo-team1
+    network_mode: service:demo-player1
     env_file: ../../config/runtime/demo-team1.env
     depends_on:
-      demo-team1: {condition: service_healthy}
+      demo-player1: {condition: service_healthy}
       demo-team2: {condition: service_healthy}
       nginx: {condition: service_started}
+      demo-sensor: {condition: service_healthy}
   demo-farm2:
     <<: *demo
     command: [traffic]
     user: "10001:10001"
-    network_mode: service:demo-team2
+    network_mode: service:demo-player2
     env_file: ../../config/runtime/demo-team2.env
     depends_on:
+      demo-player2: {condition: service_healthy}
       demo-team1: {condition: service_healthy}
-      demo-team2: {condition: service_healthy}
       nginx: {condition: service_started}
+      demo-sensor: {condition: service_healthy}
 
 networks:
   default:
@@ -108,3 +276,27 @@ networks:
       config:
         - subnet: 172.30.240.0/24
           ip_range: 172.30.240.128/26
+  demo-wan:
+    ipam:
+      config: [{subnet: 172.30.241.0/24, gateway: 172.30.241.1}]
+  # Docker reserves a bridge gateway, so this transit uses /29 instead of /30.
+  demo-transit:
+    internal: true
+    ipam:
+      config: [{subnet: 10.0.1.0/29, gateway: 10.0.1.6}]
+  demo-forcad:
+    internal: true
+    ipam:
+      config: [{subnet: 10.0.2.0/24, gateway: 10.0.2.254}]
+  demo-team1:
+    internal: true
+    ipam:
+      config: [{subnet: 10.101.0.0/24, gateway: 10.101.0.254}]
+  demo-team2:
+    internal: true
+    ipam:
+      config: [{subnet: 10.102.0.0/24, gateway: 10.102.0.254}]
+
+volumes:
+  demo-team1-data: {}
+  demo-team2-data: {}

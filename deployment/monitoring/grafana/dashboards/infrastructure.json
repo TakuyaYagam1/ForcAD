@@ -17,9 +17,17 @@
   },
   "editable": false,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [
+    {
+      "type": "link",
+      "title": "All components",
+      "url": "/d/forcad-infrastructure?var-component=All&var-instance=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
     {
       "type": "dashboards",
       "title": "ForcAD dashboards",
@@ -33,6 +41,715 @@
     }
   ],
   "panels": [
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Unreachable replicas",
+      "description": "Unreachable scrape targets within the current filters. Missing data stays N/A.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 0)",
+          "legendFormat": "Unreachable replicas",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Highest DB pool usage",
+      "description": "Busiest healthy DB pool within the current filters. Missing data stays N/A.",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+          "legendFormat": "Highest DB pool usage",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Redis waiting requests",
+      "description": "Pending Redis pool requests within the current filters. Missing data stays N/A.",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+          "legendFormat": "Redis waiting requests",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "stat",
+      "title": "Healthy replicas",
+      "description": "Healthy scrape targets within the current filters. Missing data stays N/A.",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 1)",
+          "legendFormat": "Healthy replicas",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Components - current pools",
+      "description": "Click a component, then choose Replica. Counts sum healthy replicas; Max DB pool % uses the busiest pool. DB counts are PgBouncer clients, not PostgreSQL sessions.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (component) (label_replace((sum by (job) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Healthy\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB in use\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB open\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB capacity\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((max by (job) ((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Max DB pool %\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis open\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis idle\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis waiting\", \"__name__\", \".*\")",
+          "refId": "A",
+          "format": "table",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Max DB pool %",
+            "desc": true
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Component"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect component",
+                    "url": "/d/forcad-infrastructure?var-component=forcad_${__data.fields[\"Component\"]}&var-instance=All&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max DB pool %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "column",
+            "emptyValue": "null",
+            "rowField": "component",
+            "valueField": "Value"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "component\\column": 0,
+              "Healthy": 1,
+              "DB in use": 2,
+              "DB open": 3,
+              "DB capacity": 4,
+              "Max DB pool %": 5,
+              "Redis open": 6,
+              "Redis idle": 7,
+              "Redis waiting": 8
+            },
+            "renameByName": {
+              "component\\column": "Component"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Pool pressure: ${component:text} / ${instance:text}",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "percent",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 12,
+        "h": 9
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((max by (job) ((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Highest DB pool usage per component",
+      "description": "Busiest healthy selected replica per component."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "requests",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 11,
+        "w": 12,
+        "h": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((sum by (job) (forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Redis waiting requests",
+      "description": "Requests waiting for an application Redis-pool connection."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "wait seconds / second",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:s/s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 9
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((sum by (job) (rate(forcad_database_acquire_wait_seconds_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "DB pool wait time",
+      "description": "Total concurrent wait time per second, by component; not per-request latency. Select Replica to isolate one process."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "wait seconds / second",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "suffix:s/s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 9
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace((sum by (job) (rate(forcad_redis_pool_wait_seconds_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+          "legendFormat": "{{component}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Redis pool wait time",
+      "description": "Total concurrent wait time per second, by component; not per-request latency. Select Replica to isolate one process."
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Connection count history",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      }
+    },
     {
       "datasource": {
         "type": "prometheus",
@@ -71,9 +788,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 30,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 1,
       "options": {
@@ -95,7 +812,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(forcad_database_connections_in_use and on (job, instance) (up == 1))",
+          "expr": "sum(forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "in use",
           "range": true,
           "refId": "A"
@@ -106,7 +823,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(clamp_min(forcad_database_connections - forcad_database_connections_in_use, 0) and on (job, instance) (up == 1))",
+          "expr": "sum(clamp_min(forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} - forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 0) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "idle",
           "range": true,
           "refId": "B"
@@ -117,7 +834,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(forcad_database_connections and on (job, instance) (up == 1))",
+          "expr": "sum(forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "open",
           "range": true,
           "refId": "C"
@@ -128,15 +845,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(forcad_database_connection_limit and on (job, instance) (up == 1))",
+          "expr": "sum(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "pool capacity",
           "range": true,
           "refId": "D"
         }
       ],
       "type": "timeseries",
-      "title": "Application DB connections",
-      "description": "Application pools: acquired, idle, total open and configured capacity across healthy replicas. These are PgBouncer client connections, not PostgreSQL server sessions."
+      "title": "Application DB connections - selected replicas",
+      "description": "In-use, idle, open and capacity across healthy selected pools. These are PgBouncer client connections."
     },
     {
       "datasource": {
@@ -176,9 +893,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 30,
         "w": 12,
-        "h": 6
+        "h": 9
       },
       "id": 2,
       "options": {
@@ -200,7 +917,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(clamp_min(forcad_redis_connections - forcad_redis_connections_idle, 0) and on (job, instance) (up == 1))",
+          "expr": "sum(clamp_min(forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} - forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 0) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "in use",
           "range": true,
           "refId": "A"
@@ -211,7 +928,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(forcad_redis_connections_idle and on (job, instance) (up == 1))",
+          "expr": "sum(forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "idle",
           "range": true,
           "refId": "B"
@@ -222,304 +939,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(forcad_redis_connections and on (job, instance) (up == 1))",
+          "expr": "sum(forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
           "legendFormat": "open",
           "range": true,
           "refId": "C"
         }
       ],
       "type": "timeseries",
-      "title": "Redis client connections",
-      "description": "Open and idle application-pool connections across healthy replicas. Redis server maxclients and dedicated Pub/Sub connections are not included."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "percent",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 6,
-        "w": 12,
-        "h": 6
-      },
-      "id": 3,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "100 * forcad_database_connections_in_use / clamp_min(forcad_database_connection_limit, 1)",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Database pool utilization"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "seconds / second",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 6,
-        "w": 12,
-        "h": 6
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(forcad_database_acquire_wait_seconds_total[5m])",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Database acquisition wait",
-      "description": "Accumulated pool wait time per second, across concurrent callers. This is not per-request latency."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "requests",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 12,
-        "w": 12,
-        "h": 6
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "forcad_redis_pool_pending_requests",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Redis pending requests",
-      "description": "Requests waiting for an application Redis-pool connection."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "seconds / second",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 1,
-            "showPoints": "never"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 12,
-        "w": 12,
-        "h": 6
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "rate(forcad_redis_pool_wait_seconds_total[1m])",
-          "legendFormat": "{{job}} {{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "type": "timeseries",
-      "title": "Redis acquisition wait",
-      "description": "Accumulated pool wait time per second, across concurrent callers. This is not per-request latency."
+      "title": "Redis client connections - selected replicas",
+      "description": "Open/idle application pools. Excludes Redis server limits and dedicated Pub/Sub connections."
     }
   ],
   "refresh": "15s",
@@ -528,15 +956,66 @@
     "forcad"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "component",
+        "label": "Component",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+          "refId": "component"
+        },
+        "definition": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+        "regex": "/component=\"(?<text>[^\"]+)\"|job=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "instance",
+        "label": "Replica",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+          "refId": "instance"
+        },
+        "definition": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+        "regex": "/instance=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timezone": "browser",
   "title": "Infrastructure",
   "uid": "forcad-infrastructure",
-  "version": 1,
-  "description": "Application database and Redis connection pools, capacity and waiting."
+  "version": 2,
+  "description": "Application pools by component. Select Component and Replica to inspect one process."
 }

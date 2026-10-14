@@ -51,7 +51,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -73,7 +73,7 @@
         "x": 0,
         "y": 0,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 1,
       "options": {
@@ -95,15 +95,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "{{team_name}}",
+          "expr": "sum(sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Selected teams",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "RPS",
-      "description": "Completed backend requests by team. Unknown includes unmatched source addresses. Requests rejected before reaching the backend are not included."
+      "title": "ForcAD RPS - ${team:text}",
+      "description": "Board/API/receiver requests for selected teams. All shows their combined total. Excludes game services."
     },
     {
       "datasource": {
@@ -123,7 +123,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -145,7 +145,7 @@
         "x": 12,
         "y": 0,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 2,
       "options": {
@@ -167,15 +167,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (team_id) (forcad_team_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "{{team_name}}",
+          "expr": "sum(sum by (team_id) (forcad_team_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Selected teams",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "WebSocket connections by team",
-      "description": "Established connections summed across healthy API replicas; Unknown includes localhost spectators."
+      "title": "ForcAD WebSocket connections by team - ${team:text}",
+      "description": "Open board WebSockets for selected teams. All shows their combined total."
     },
     {
       "datasource": {
@@ -195,7 +195,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -215,9 +215,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 6,
+        "y": 8,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 3,
       "options": {
@@ -239,15 +239,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (team_id) (rate(forcad_team_websocket_upgrades_total{job=\"forcad_api\"}[1m]) and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "{{team_name}}",
+          "expr": "sum(sum by (team_id) (rate(forcad_team_websocket_upgrades_total{job=\"forcad_api\"}[1m]) and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Selected teams",
           "range": true,
           "refId": "A"
         }
       ],
       "type": "timeseries",
-      "title": "New WebSocket connections/s",
-      "description": "Successful upgrades by team. Failed handshake attempts are not counted here."
+      "title": "ForcAD New WebSocket connections/s - ${team:text}",
+      "description": "New board WebSocket upgrades for selected teams. All shows their combined rate."
     },
     {
       "datasource": {
@@ -267,7 +267,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -287,9 +287,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 6,
+        "y": 8,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 4,
       "options": {
@@ -311,8 +311,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "forcad_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)",
-          "legendFormat": "open {{instance}}",
+          "expr": "sum(forcad_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "legendFormat": "Open",
           "range": true,
           "refId": "A"
         },
@@ -322,15 +322,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "forcad_websocket_connection_limit{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)",
-          "legendFormat": "limit {{instance}}",
+          "expr": "sum(forcad_websocket_connection_limit{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "legendFormat": "Capacity",
           "range": true,
           "refId": "B"
         }
       ],
       "type": "timeseries",
-      "title": "WebSocket connections",
-      "description": "Open connections and configured capacity per API replica. One full replica can reject connections even if another has room."
+      "title": "ForcAD WebSocket capacity - all API replicas",
+      "description": "Open board WS and capacity across all healthy API replicas; independent of the Team filter."
     },
     {
       "datasource": {
@@ -350,7 +350,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -370,9 +370,9 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 16,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 5,
       "options": {
@@ -394,8 +394,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "out {{team_name}}",
+          "expr": "sum((8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Outgoing",
           "range": true,
           "refId": "A"
         },
@@ -405,15 +405,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "(8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_receive_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "in {{team_name}}",
+          "expr": "sum((8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_receive_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Incoming",
           "range": true,
           "refId": "B"
         }
       ],
       "type": "timeseries",
-      "title": "Network traffic",
-      "description": "Forwarded traffic through the configured router. Shared or ambiguous team addresses are excluded."
+      "title": "Network traffic - ${team:text}",
+      "description": "Forwarded bytes for selected team networks, by direction. Ambiguous team IPs are excluded."
     },
     {
       "datasource": {
@@ -433,7 +433,7 @@
             "axisPlacement": "left",
             "drawStyle": "line",
             "fillOpacity": 10,
-            "lineWidth": 1,
+            "lineWidth": 2,
             "showPoints": "never"
           },
           "mappings": [],
@@ -453,9 +453,9 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 16,
         "w": 12,
-        "h": 6
+        "h": 8
       },
       "id": 6,
       "options": {
@@ -477,8 +477,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (team_ip) (rate(forcad_team_network_transmit_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "out {{team_name}}",
+          "expr": "sum(sum by (team_ip) (rate(forcad_team_network_transmit_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Outgoing",
           "range": true,
           "refId": "A"
         },
@@ -488,15 +488,15 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (team_ip) (rate(forcad_team_network_receive_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
-          "legendFormat": "in {{team_name}}",
+          "expr": "sum(sum by (team_ip) (rate(forcad_team_network_receive_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Incoming",
           "range": true,
           "refId": "B"
         }
       ],
       "type": "timeseries",
-      "title": "Packets/s",
-      "description": "Forwarded packets by direction and team, observed by the configured router."
+      "title": "Packets/s - ${team:text}",
+      "description": "Forwarded packets for selected team networks, by direction."
     },
     {
       "datasource": {
@@ -564,7 +564,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 18,
+        "y": 24,
         "w": 24,
         "h": 10
       },
@@ -575,7 +575,7 @@
           "show": false
         },
         "showHeader": true,
-        "enablePagination": false,
+        "enablePagination": true,
         "sortBy": [
           {
             "displayName": "Packets/s",
@@ -590,7 +590,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "topk(50, sum by (source_ip, team_ip) (rate(forcad_network_source_packets_total{job=\"forcad_router\"}[5m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_name) max by (team_ip, team_name) (forcad:team_info:latest{team_id!=\"__unknown__\"}))",
+          "expr": "topk(50, ( sum by (source_ip, team_ip) (rate(forcad_network_source_packets_total{job=\"forcad_router\"}[5m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_name) max by (team_ip, team_name) (forcad:team_info:latest{team_id!=\"__unknown__\",team_id=~\"${team}\"})) > 0)",
           "format": "table",
           "instant": true,
           "range": false,
@@ -620,8 +620,8 @@
         }
       ],
       "type": "table",
-      "title": "Top sources to vulnboxes",
-      "description": "Forwarded packets by original source IP and destination vulnbox, measured on the router after filtering and before SNAT. Shows the 50 most active pairs over five minutes. Empty until the source-aware router exporter is deployed."
+      "title": "Top sources to selected vulnboxes",
+      "description": "Top 50 original source/vulnbox pairs over five minutes, after router filtering and before SNAT. Requires the router exporter."
     }
   ],
   "refresh": "15s",
@@ -630,15 +630,41 @@
     "forcad"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "name": "team",
+        "label": "Team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(forcad:team_info:latest)",
+          "refId": "team"
+        },
+        "definition": "query_result(forcad:team_info:latest)",
+        "regex": "/team_id=\"(?<value>[^\"]+)\"|team_name=\"(?<text>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timezone": "browser",
   "title": "Traffic",
   "uid": "forcad-traffic",
-  "version": 1,
-  "description": "Team request rates, WebSocket activity and router traffic for investigating load and denial of service."
+  "version": 2,
+  "description": "Selected-team board traffic and router counters. Game HTTP/WS is on the Game traffic dashboard."
 }

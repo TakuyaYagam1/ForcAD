@@ -1,0 +1,13 @@
+[Unit]
+Description=ForcAD network counters
+Requires=forcad-router-firewall.service
+After=forcad-router-firewall.service
+Before=network-metrics.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/forcad/monitoring/network.nft
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

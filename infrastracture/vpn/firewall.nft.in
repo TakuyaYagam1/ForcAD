@@ -1,0 +1,50 @@
+#!/usr/sbin/nft -f
+# The router owns game access and NAT. VPN peer addresses remain unchanged.
+@@DEFINITIONS@@
+
+add table inet forcad_vpn
+delete table inet forcad_vpn
+
+table inet forcad_vpn {
+    chain check_source {
+        meta nfproto ipv6 counter drop
+        iifname "wg-attack" ip saddr != $attack_net counter drop
+        iifname "wg-admin" ip saddr != $admin_net counter drop
+        iifname != "wg-attack" ip saddr $attack_net counter drop
+        iifname != "wg-admin" ip saddr $admin_net counter drop
+    }
+
+    chain participant_groups {
+@@GROUPS@@
+        counter drop
+    }
+
+    chain input {
+        type filter hook input priority -10; policy drop;
+        iifname "lo" accept
+        jump check_source
+        ct state invalid counter drop
+        iifname "wg-admin" ip saddr $admin_net counter accept
+        iifname "wg-attack" counter drop
+        ct state established,related counter accept
+        iifname $transit_if ip saddr 10.0.1.1 counter accept
+        iifname $transit_if udp dport $wg_ports counter accept
+        iifname $transit_if icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } counter accept
+    }
+
+    chain forward {
+        type filter hook forward priority -10; policy drop;
+        jump check_source
+        ct state invalid counter drop
+        iifname "wg-admin" ip saddr $admin_net counter accept
+        oifname "wg-admin" ip daddr $admin_net ct direction reply ct state established,related counter accept
+        iifname "wg-attack" ip daddr $admin_net counter drop
+        iifname "wg-attack" oifname "wg-attack" jump participant_groups
+        iifname "wg-attack" oifname $transit_if counter accept
+        iifname $transit_if oifname "wg-attack" ip daddr $attack_net ct direction reply ct state established,related counter accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}

@@ -1,0 +1,33 @@
+[Unit]
+Description=ForcAD passive game traffic metrics
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=forcad-sensor
+Group=forcad-sensor
+RuntimeDirectory=forcad-sensor
+WorkingDirectory=/run/forcad-sensor
+ExecStart=/opt/zeek/bin/zeek -b -i @@INTERFACE@@ -f "@@FILTER@@" /etc/forcad/monitoring/game-metrics.zeek /etc/forcad/monitoring/game-inventory.zeek
+Restart=on-failure
+RestartSec=10
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_PACKET AF_NETLINK
+MemoryMax=1G
+CPUQuota=100%
+Nice=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

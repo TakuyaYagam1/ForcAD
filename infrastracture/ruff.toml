@@ -1,0 +1,5 @@
+# Debian 12 provides Python 3.11, including the standard-library tomllib module.
+target-version = "py311"
+
+[lint]
+extend-select = ["I", "EXE001", "PLR1704", "PLW1510"]

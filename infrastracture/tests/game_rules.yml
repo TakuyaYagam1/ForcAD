@@ -1,0 +1,85 @@
+rule_files:
+  - /work/rules/game.yml
+evaluation_interval: 15s
+fuzzy_compare: true
+tests:
+  - name: absent sensor is not reported as down
+    interval: 15s
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ForcadGameSensorDown
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: ForcadGameSensorStale
+        exp_alerts: []
+
+  - name: healthy sensor attributes source and destination independently
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_http_requests_total{job="forcad_game_sensor",instance="router",source_team_ip="10.101.0.2",team_ip="10.102.0.2"}'
+        values: "0+30x12"
+      - series: 'forcad:team_info:latest{team_id="a",team_ip="10.101.0.2",team_name="Alpha"}'
+        values: "1x12"
+      - series: 'forcad:team_info:latest{team_id="b",team_ip="10.102.0.2",team_name="Beta"}'
+        values: "1x12"
+      - series: 'forcad:team_network_info:unique{team_id="a",team_ip="10.101.0.2"}'
+        values: "1x12"
+      - series: 'forcad:team_network_info:unique{team_id="b",team_ip="10.102.0.2"}'
+        values: "1x12"
+      - series: 'forcad_game_peer_info{job="forcad_game_sensor",instance="router",source_ip="10.200.0.2",source_team_ip="10.101.0.2"}'
+        values: "1x12"
+      - series: 'up{job="forcad_router",instance="nftables"}'
+        values: "1x12"
+      - series: 'forcad_network_source_scrape_success{job="forcad_router",instance="nftables"}'
+        values: "1x12"
+      - series: 'forcad_network_source_packets_total{job="forcad_router",instance="nftables",source_ip="10.200.0.2",team_ip="10.102.0.2"}'
+        values: "0+150x12"
+    promql_expr_test:
+      - expr: |
+          sum by (source_team_ip, team_ip) (
+            rate(forcad_game_http_requests_total[1m]) and on (job, instance) forcad:game_sensor_ready
+          ) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info
+            * on (team_ip) group_left (target_team_name) forcad:game_target_info
+        eval_time: 3m
+        exp_samples:
+          - labels: '{source_team_ip="10.101.0.2",team_ip="10.102.0.2",source_team_name="Alpha",target_team_name="Beta"}'
+            value: 2
+      - expr: |
+          sum by (source_team_ip, team_ip) (
+            (rate(forcad_network_source_packets_total{job="forcad_router"}[1m])
+              and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1))
+            * on (source_ip) group_left (source_team_ip) forcad:game_peer_info
+          )
+        eval_time: 3m
+        exp_samples:
+          - labels: '{source_team_ip="10.101.0.2",team_ip="10.102.0.2"}'
+            value: 10
+
+  - name: stale analysis cannot produce apparently current rates
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0x12"
+      - series: 'forcad_game_http_requests_total{job="forcad_game_sensor",instance="router",source_team_ip="10.101.0.2",team_ip="10.102.0.2"}'
+        values: "0+30x12"
+    promql_expr_test:
+      - expr: sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total[1m]) and on (job, instance) forcad:game_sensor_ready)
+        eval_time: 3m
+        exp_samples: []
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ForcadGameSensorStale
+        exp_alerts:
+          - exp_labels:
+              job: forcad_game_sensor
+              instance: router
+              severity: warning
+            exp_annotations:
+              summary: Game traffic sensor main loop is stale
+              description: Sensor router serves HTTP but its analysis heartbeat is missing or stale.

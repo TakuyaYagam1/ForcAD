@@ -1,0 +1,25 @@
+[Unit]
+Description=ForcAD router network metrics
+Requires=forcad-router-firewall.service network-rules.service
+After=forcad-router-firewall.service network-rules.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/forcad network-metrics --config /etc/forcad/monitoring/network.json --listen 10.0.2.1:9109
+Restart=on-failure
+RestartSec=3
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_NETLINK
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
