@@ -39,6 +39,19 @@ credentials = {
     for key, value in [line.split("=", 1)]
 }
 client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+ACCEPTANCE_API_RPS = 25
+ACCEPTANCE_API_INTERVAL = 1 / ACCEPTANCE_API_RPS
+last_api_request_at = None
+
+
+def pace_api_request():
+    global last_api_request_at
+    now = time.monotonic()
+    if last_api_request_at is not None:
+        delay = ACCEPTANCE_API_INTERVAL - (now - last_api_request_at)
+        if delay > 0:
+            time.sleep(delay)
+    last_api_request_at = time.monotonic()
 
 
 def request(path, data=None, method="GET", token=None, extra_headers=None):
@@ -52,6 +65,8 @@ def request(path, data=None, method="GET", token=None, extra_headers=None):
         method=method,
         headers=headers,
     )
+    if path.startswith("/api/"):
+        pace_api_request()
     try:
         response = client.open(req, timeout=5)
     except urllib.error.HTTPError as exc:
