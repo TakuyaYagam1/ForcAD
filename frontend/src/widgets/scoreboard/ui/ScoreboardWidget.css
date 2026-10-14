@@ -24,9 +24,48 @@
     min-width: 36px;
     min-height: 36px;
   }
+
+  .scoreboard-page--compact .round-line {
+    flex-wrap: wrap;
+  }
+
+  .scoreboard-page--compact .round-label,
+  .scoreboard-page--compact .round-timer small {
+    font-size: 0.75rem;
+  }
+
+  .scoreboard-page--compact .search-field input,
+  .scoreboard-page--compact .team-name,
+  .scoreboard-page--compact .service-score {
+    font-size: 1rem;
+  }
+
+  .scoreboard-page--compact .status-legend,
+  .scoreboard-page--compact .scoreboard-table th,
+  .scoreboard-page--compact .team-ip,
+  .scoreboard-page--compact .service-meta,
+  .scoreboard-page--compact .flag-count {
+    font-size: 0.875rem;
+  }
+
+  .scoreboard-page--compact .status-legend {
+    flex-wrap: wrap;
+  }
+
+  .scoreboard-page--compact .status-legend span {
+    white-space: nowrap;
+  }
 }
 
 @media (min-width: 901px) {
+  .brand-app:has(.scoreboard-page--compact) {
+    --scoreboard-label-size: clamp(0.875rem, 0.7rem + 0.25vw, 1.125rem);
+    --scoreboard-text-size: clamp(1rem, 0.75rem + 0.4vw, 1.375rem);
+    --scoreboard-team-size: clamp(1.125rem, 0.5rem + 1vw, 2rem);
+    --scoreboard-value-size: clamp(1.375rem, 0.5rem + 1.25vw, 2.5rem);
+    --scoreboard-place-width: clamp(4rem, 4vw, 6rem);
+  }
+
   .brand-app:has(> .site-main > .scoreboard-page:not(.scoreboard-page--admin)) {
     display: flex;
     flex-direction: column;
@@ -86,7 +125,7 @@
   }
 
   .brand-app:has(.scoreboard-page--compact) .header-inner {
-    min-height: 48px;
+    min-height: 56px;
     padding: 0 24px;
     gap: 24px;
   }
@@ -101,7 +140,7 @@
   }
 
   .brand-app:has(.scoreboard-page--compact) .brand-lockup span {
-    font-size: 20px;
+    font-size: clamp(1.375rem, 1rem + 0.5vw, 1.75rem);
   }
 
   .brand-app:has(.scoreboard-page--compact) .brand-lockup b {
@@ -113,7 +152,7 @@
   }
 
   .brand-app:has(.scoreboard-page--compact) .main-nav a {
-    font-size: 14px;
+    font-size: var(--scoreboard-text-size);
     gap: 8px;
   }
 
@@ -123,12 +162,12 @@
   }
 
   .brand-app:has(.scoreboard-page--compact) .header-round {
-    font-size: 14px;
+    font-size: var(--scoreboard-text-size);
     margin-right: 8px;
   }
 
   .brand-app:has(.scoreboard-page--compact) .header-status {
-    font-size: 10px;
+    font-size: var(--scoreboard-label-size);
   }
 
   .brand-app:has(.scoreboard-page--compact) .site-main {
@@ -138,6 +177,11 @@
   .brand-app:has(.scoreboard-page--compact) .site-footer {
     margin: 0 24px;
     padding: 6px 0;
+    font-size: var(--scoreboard-label-size);
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .language-switch button {
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .page-hero {
@@ -157,11 +201,11 @@
   }
 
   .scoreboard-page--compact .hero-subtitle {
-    font-size: 16px;
+    font-size: var(--scoreboard-text-size);
   }
 
   .scoreboard-page--compact .hero-metadata {
-    font-size: 10px;
+    font-size: var(--scoreboard-label-size);
     margin-top: 4px;
     gap: 16px;
   }
@@ -182,13 +226,13 @@
 
   .scoreboard-page--compact .round-line {
     margin: 0 -24px;
-    min-height: 32px;
+    min-height: 48px;
     padding: 0 24px;
     gap: 24px;
   }
 
   .scoreboard-page--compact .round-label {
-    font-size: 10px;
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .round-timer {
@@ -196,11 +240,11 @@
   }
 
   .scoreboard-page--compact .round-timer strong {
-    font-size: 20px;
+    font-size: var(--scoreboard-team-size);
   }
 
   .scoreboard-page--compact .round-timer small {
-    font-size: 8px;
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .round-timer .brand-icon {
@@ -209,19 +253,20 @@
   }
 
   .scoreboard-page--compact .scoreboard-toolbar {
-    min-height: 32px;
-    padding: 2px 0;
-    gap: 16px;
+    min-height: 44px;
+    padding: 4px 0;
+    gap: 8px 16px;
+    flex-wrap: wrap;
   }
 
   .scoreboard-page--compact .search-field {
-    height: 28px;
-    width: 280px;
+    height: 36px;
+    width: clamp(16rem, 20vw, 24rem);
     padding: 0 10px;
   }
 
   .scoreboard-page--compact .search-field input {
-    font-size: 12px;
+    font-size: var(--scoreboard-text-size);
   }
 
   .scoreboard-page--compact .search-field svg {
@@ -230,13 +275,18 @@
   }
 
   .scoreboard-page--compact .status-legend {
-    font-size: 10px;
+    font-size: var(--scoreboard-label-size);
     gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .scoreboard-page--compact .status-legend span {
+    white-space: nowrap;
   }
 
   .scoreboard-page--compact .status-dot {
-    width: 8px;
-    height: 8px;
+    width: 0.65em;
+    height: 0.65em;
   }
 
   .scoreboard-page--compact .scoreboard-table {
@@ -244,8 +294,8 @@
   }
 
   .scoreboard-page--compact .scoreboard-table th {
-    font-size: 11px;
-    padding: 2px 8px;
+    font-size: var(--scoreboard-label-size);
+    padding: 6px 8px;
   }
 
   .scoreboard-page--compact .scoreboard-table td {
@@ -254,13 +304,13 @@
   }
 
   .scoreboard-page--compact .place-column {
-    width: 60px;
-    min-width: 60px;
+    width: var(--scoreboard-place-width);
+    min-width: var(--scoreboard-place-width);
   }
 
   .scoreboard-page--compact .team-column {
-    left: 60px;
-    min-width: 285px;
+    left: var(--scoreboard-place-width);
+    min-width: 20rem;
     width: 26%;
   }
 
@@ -278,27 +328,27 @@
   }
 
   .scoreboard-page--compact .team-name {
-    font-size: clamp(14px, calc(var(--scoreboard-row-height, 32px) * 0.48), 18px);
+    font-size: clamp(1rem, calc(var(--scoreboard-row-height, 32px) * 0.48), var(--scoreboard-team-size));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .scoreboard-page--compact .team-ip {
-    font-size: 11px;
+    font-size: var(--scoreboard-label-size);
     margin-top: 0;
     flex-shrink: 0;
   }
 
   .scoreboard-page--compact .team-identity .team-avatar {
-    width: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
-    height: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
+    width: clamp(1.5rem, calc(var(--scoreboard-row-height, 32px) - 4px), 3rem);
+    height: clamp(1.5rem, calc(var(--scoreboard-row-height, 32px) - 4px), 3rem);
   }
 
   .scoreboard-page--compact .scoreboard-table .rank-number.rank-badge {
-    width: 48px;
-    height: clamp(20px, calc(var(--scoreboard-row-height, 32px) - 4px), 36px);
-    font-size: clamp(18px, calc(var(--scoreboard-row-height, 32px) * 0.65), 26px);
+    width: calc(var(--scoreboard-place-width) - 1rem);
+    height: clamp(1.5rem, calc(var(--scoreboard-row-height, 32px) - 4px), 3rem);
+    font-size: clamp(1.125rem, calc(var(--scoreboard-row-height, 32px) * 0.65), var(--scoreboard-value-size));
     line-height: 1;
   }
 
@@ -307,7 +357,7 @@
   }
 
   .scoreboard-page--compact .score-value {
-    font-size: clamp(14px, calc(var(--scoreboard-row-height, 32px) * 0.5), 20px);
+    font-size: clamp(1.125rem, calc(var(--scoreboard-row-height, 32px) * 0.55), var(--scoreboard-value-size));
   }
 
   .scoreboard-page--compact .service-cell {
@@ -319,24 +369,24 @@
   }
 
   .scoreboard-page--compact .service-score {
-    font-size: clamp(12px, calc(var(--scoreboard-row-height, 32px) * 0.4), 16px);
+    font-size: clamp(1rem, calc(var(--scoreboard-row-height, 32px) * 0.45), var(--scoreboard-team-size));
     gap: 6px;
   }
 
   .scoreboard-page--compact .service-meta {
     flex: 1;
     padding-left: 0;
-    font-size: 10px;
+    font-size: var(--scoreboard-label-size);
     gap: 8px;
   }
 
   .scoreboard-page--compact .flag-count {
-    font-size: 11px;
+    font-size: var(--scoreboard-label-size);
     gap: 4px;
   }
 
   .scoreboard-page--compact .recent-events .section-heading h2 {
-    font-size: 12px;
+    font-size: var(--scoreboard-text-size);
   }
 
   .scoreboard-page--compact .recent-events .section-heading .brand-icon {
@@ -345,17 +395,22 @@
   }
 
   .scoreboard-page--compact .recent-events .text-link {
-    font-size: 11px;
+    font-size: var(--scoreboard-label-size);
+  }
+
+  .scoreboard-page--compact .recent-events .quiet-empty,
+  .scoreboard-page--compact .table-hint {
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .recent-events .event-item--compact {
-    grid-template-columns: 36px 96px minmax(0, 1fr);
+    grid-template-columns: 4rem 96px minmax(0, 1fr);
     gap: 8px;
     padding: 0 12px;
   }
 
   .scoreboard-page--compact .event-item--compact time {
-    font-size: 11px;
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .event-avatars .team-avatar {
@@ -366,12 +421,28 @@
   .scoreboard-page--compact .event-names,
   .scoreboard-page--compact .event-item--compact .event-service,
   .scoreboard-page--compact .event-item--compact .event-gain {
-    font-size: 12px;
+    font-size: var(--scoreboard-text-size);
     line-height: 1.2;
   }
 
   .scoreboard-page--compact .event-details {
     margin-top: 2px;
     gap: 14px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .brand-app:has(.scoreboard-page--compact) .header-inner {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 24px;
+    padding-top: 8px;
+  }
+
+  .brand-app:has(.scoreboard-page--compact) .main-nav {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: center;
+    min-height: 44px;
   }
 }
