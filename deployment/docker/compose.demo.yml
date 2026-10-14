@@ -1,0 +1,110 @@
+x-demo: &demo
+  image: forcad-demo:local
+  build:
+    context: ../..
+    dockerfile: deployment/demo/Dockerfile
+    additional_contexts:
+      app: service:api
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 64
+  mem_reservation: 128m
+  restart: on-failure
+
+x-team: &team
+  <<: *demo
+  user: "0:0"
+  command: [team]
+  cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP]
+  tmpfs: ["/data:uid=10001,gid=10001,mode=0700,size=64m"]
+  sysctls:
+    net.ipv4.conf.all.accept_redirects: "0"
+  depends_on:
+    demo-router: {condition: service_healthy}
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+    interval: 5s
+    timeout: 3s
+    retries: 12
+
+services:
+  api:
+    environment:
+      TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+  receiver:
+    environment:
+      TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+  nginx:
+    ports: !override
+      - "127.0.0.1:8080:8080"
+    networks:
+      default: {ipv4_address: 172.30.240.10}
+  prometheus:
+    volumes:
+      - ../demo/routers.yml:/etc/prometheus/file_sd/routers.yml:ro
+  demo-router:
+    <<: *demo
+    user: "0:0"
+    command: [router]
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.send_redirects: "0"
+    networks:
+      default:
+        ipv4_address: 172.30.240.254
+        driver_opts:
+          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.send_redirects=0
+    volumes:
+      - ../../config/runtime/demo-network.json:/app/network.json:ro
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- http://127.0.0.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  demo-team1:
+    <<: *team
+    environment:
+      DEMO_PEER: 172.30.240.12
+    networks:
+      default:
+        ipv4_address: 172.30.240.11
+        driver_opts:
+          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.accept_redirects=0
+  demo-team2:
+    <<: *team
+    environment:
+      DEMO_PEER: 172.30.240.11
+    networks:
+      default:
+        ipv4_address: 172.30.240.12
+        driver_opts:
+          com.docker.network.endpoint.sysctls: net.ipv4.conf.IFNAME.accept_redirects=0
+  demo-farm1:
+    <<: *demo
+    command: [traffic]
+    user: "10001:10001"
+    network_mode: service:demo-team1
+    env_file: ../../config/runtime/demo-team1.env
+    depends_on:
+      demo-team1: {condition: service_healthy}
+      demo-team2: {condition: service_healthy}
+      nginx: {condition: service_started}
+  demo-farm2:
+    <<: *demo
+    command: [traffic]
+    user: "10001:10001"
+    network_mode: service:demo-team2
+    env_file: ../../config/runtime/demo-team2.env
+    depends_on:
+      demo-team1: {condition: service_healthy}
+      demo-team2: {condition: service_healthy}
+      nginx: {condition: service_started}
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.240.0/24
+          ip_range: 172.30.240.128/26
