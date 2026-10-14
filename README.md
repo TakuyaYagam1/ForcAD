@@ -3,6 +3,8 @@
 Attack-Defence CTF platform with a Go backend, a React scoreboard and admin panel,
 and support for executable checkers, including Python checkers.
 
+![ForcAD](public/ForcAD.png)
+
 ## Start a game
 
 Install Go matching [backend/go.mod](backend/go.mod), GNU Make, and Docker with a

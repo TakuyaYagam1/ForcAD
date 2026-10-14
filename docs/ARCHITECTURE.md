@@ -12,7 +12,7 @@ The [default Compose file](../deployment/docker/compose.yml) starts:
 
 | Service | Replicas | Responsibility |
 | --- | --- | --- |
-| `api` | 2 | Public and admin REST endpoints; native WebSocket events |
+| `api` | 4 | Public and admin REST endpoints; native WebSocket events |
 | `receiver` | 2 | Flag submission at `/flags` and per-flag results |
 | `worker` | 2 | RabbitMQ consumption and external checker execution |
 | `ticker` | 1 | Round scheduling, job publication and expired-job recovery |
