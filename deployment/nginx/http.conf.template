@@ -14,6 +14,8 @@ map $uri $team_logo_csp {
     ~*\.svg$ "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 }
 
+limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=50r/s;
+
 resolver ${DNS_RESOLVER} valid=10s ipv6=off;
 resolver_timeout 5s;
 
@@ -81,9 +83,18 @@ server {
     }
 
     location /api/ {
+        limit_req zone=api_per_ip burst=60 nodelay;
+        limit_req_status 429;
+        error_page 429 = @api_rate_limit;
+
         proxy_pass http://api_backend;
         include proxy_params;
         include /etc/nginx/api_limits.conf;
+    }
+
+    location @api_rate_limit {
+        add_header Retry-After "2" always;
+        return 429;
     }
 
     location ^~ /socket.io {

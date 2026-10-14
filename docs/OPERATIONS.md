@@ -63,6 +63,12 @@ Use `--rounds 0` to remove the limit. The change preserves game state and does
 not resume or reset a session. Editing `game.rounds` in YAML affects initial
 game setup only.
 
+Nginx allows 50 REST API requests per second per source IP, with a burst of 60.
+When that budget is exhausted, it returns `429` with `Retry-After: 2` (seconds).
+The WebSocket endpoint and `/flags` have separate admission rules; this REST
+limit does not apply to them. Configure trusted proxies correctly so the limit
+uses the client's IP rather than the proxy's IP.
+
 The Compose defaults are four API, two receiver and two worker replicas, plus one
 ticker. Scale services with Compose, for example:
 
