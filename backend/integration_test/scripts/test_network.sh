@@ -37,6 +37,7 @@ if nft -f /work/network.nft >/dev/null 2>&1; then
     echo 'Repeated rule installation unexpectedly succeeded.' >&2
     exit 1
 fi
+nft add element inet forcad_monitoring sources_v4 '{ 10.200.0.2 . 192.0.2.1 counter packets 12 bytes 1234 }'
 /work/forcad network-metrics --config /work/network.json >/tmp/exporter.log 2>&1 &
 exporter=$!
 trap 'kill "$exporter" 2>/dev/null || true; wait "$exporter" 2>/dev/null || true' EXIT
@@ -45,12 +46,19 @@ for attempt in $(seq 1 30); do
     sleep 0.1
 done
 grep -qx 'forcad_network_scrape_success 1' /tmp/metrics
+grep -qx 'forcad_network_source_scrape_success 1' /tmp/metrics
+grep -qx 'forcad_network_source_bytes_total{source_ip="10.200.0.2",team_ip="192.0.2.1"} 1234' /tmp/metrics
+grep -qx 'forcad_network_source_packets_total{source_ip="10.200.0.2",team_ip="192.0.2.1"} 12' /tmp/metrics
 test "$(grep -c '^forcad_team_network_.*_total{' /tmp/metrics)" -eq 8
 nft delete table inet forcad_monitoring
 wget -qO /tmp/metrics http://127.0.0.1:9109/metrics
 grep -qx 'forcad_network_scrape_success 0' /tmp/metrics
 if grep -q '^forcad_team_network_' /tmp/metrics; then
     echo 'Exporter fabricated counters after the table disappeared.' >&2
+    exit 1
+fi
+if grep -q '^forcad_network_source_.*_total{' /tmp/metrics; then
+    echo 'Exporter fabricated source counters after the table disappeared.' >&2
     exit 1
 fi
 echo 'Network checks passed: nft rules, repeat refusal, real counters and missing-table handling.'

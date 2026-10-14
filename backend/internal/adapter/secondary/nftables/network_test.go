@@ -69,6 +69,11 @@ func TestRenderRulesSupportsBothFamiliesAndRefusesRepeatedApply(t *testing.T) {
 	}
 	for _, expected := range []string{
 		"type filter hook forward priority -10; policy accept;",
+		"type filter hook forward priority -9; policy accept;",
+		"add set inet forcad_monitoring sources_v4",
+		"add set inet forcad_monitoring sources_v6",
+		"ip daddr 192.0.2.10 update @sources_v4 { ip saddr . ip daddr counter }",
+		"ip6 daddr 2001:db8::10 update @sources_v6 { ip6 saddr . ip6 daddr counter }",
 		"ip daddr 192.0.2.0/24 counter name " + counterName("192.0.2.10", "rx"),
 		"ip saddr 192.0.2.0/24 counter name " + counterName("192.0.2.10", "tx"),
 		"ip6 daddr 2001:db8:1::/64 counter name " + counterName("2001:db8::10", "rx"),
@@ -368,6 +373,54 @@ type counterListerFunc func(context.Context) ([]byte, error)
 
 func (function counterListerFunc) ListCounters(ctx context.Context) ([]byte, error) {
 	return function(ctx)
+}
+
+func (counterListerFunc) ListSources(context.Context) ([]byte, error) {
+	return nil, errors.New("source fixture unavailable")
+}
+
+func TestParseNftSources(t *testing.T) {
+	inventory := singleTeamInventory()
+	fingerprint, err := inventoryFingerprint(inventory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := func(name, addressType string, elements []any) map[string]any {
+		return map[string]any{"set": map[string]any{
+			"family": "inet", "table": tableName, "name": name,
+			"comment": inventoryComment(fingerprint), "type": []string{addressType, addressType},
+			"elem": elements,
+		}}
+	}
+	element := map[string]any{"elem": map[string]any{
+		"val":     map[string]any{"concat": []string{"10.200.0.2", "192.0.2.10"}},
+		"counter": map[string]any{"packets": 12, "bytes": 1234},
+	}}
+	response := map[string]any{"nftables": []any{
+		map[string]any{"metainfo": map[string]any{}},
+		set("sources_v4", "ipv4_addr", []any{element}),
+		set("sources_v6", "ipv6_addr", nil),
+	}}
+	data, err := json.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	samples, complete, err := parseNftSources(data, inventory)
+	if err != nil || !complete || len(samples) != 1 || samples[0].sourceIP != "10.200.0.2" || samples[0].value.bytes != 1234 {
+		t.Fatalf("source counters were not decoded: %+v, complete=%t, error=%v", samples, complete, err)
+	}
+	unknown := map[string]any{"elem": map[string]any{
+		"val":     map[string]any{"concat": []string{"10.200.0.2", "192.0.2.99"}},
+		"counter": map[string]any{"packets": 1, "bytes": 1},
+	}}
+	response["nftables"] = []any{set("sources_v4", "ipv4_addr", []any{unknown}), set("sources_v6", "ipv6_addr", nil)}
+	data, err = json.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := parseNftSources(data, inventory); err == nil {
+		t.Fatal("accepted an unconfigured destination team")
+	}
 }
 
 func TestParseNftCountersRejectsOversizedPayload(t *testing.T) {

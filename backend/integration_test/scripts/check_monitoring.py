@@ -73,11 +73,12 @@ def main():
     assert not query("forcad_team_network_receive_bytes_total"), "Missing router metrics were fabricated"
     assert query("sum(forcad_team_websocket_upgrades_total)"), "WebSocket upgrade was not observed"
 
-    dashboard_paths = list((Path(repo) / "deployment/monitoring").rglob("*.json"))
-    dashboards = [json.loads(path.read_text()) for path in dashboard_paths if "panels" in json.loads(path.read_text())]
-    assert dashboards, "No provisioned dashboard"
+    dashboard_paths = (Path(repo) / "deployment/monitoring/grafana/dashboards").glob("*.json")
+    dashboards = {document["uid"]: document for path in dashboard_paths
+                  if "panels" in (document := json.loads(path.read_text()))}
+    assert set(dashboards) == {"forcad-monitoring", "forcad-traffic", "forcad-errors", "forcad-infrastructure"}, "Monitoring dashboards are missing"
     auth = "admin:" + os.environ["GRAFANA_ADMIN_PASSWORD"]
-    for dashboard in dashboards:
+    for dashboard in dashboards.values():
         loaded = get_json(grafana + "/api/dashboards/uid/" + dashboard["uid"], auth)
         assert loaded["dashboard"]["title"] == dashboard["title"], "Dashboard was not provisioned"
         assert not loaded["meta"].get("folderUid"), "Dashboard must be in the Grafana root"
@@ -86,9 +87,11 @@ def main():
                 expression = target.get("expr", "")
                 if expression:
                     expression = expression.replace("$__rate_interval", "1m").replace("$__interval", "15s")
+                    expression = expression.replace("$__range", "1h")
                     expression = expression.replace("${team:regex}", ".*").replace("$team", ".*")
                     query(expression)
-    table_query = dashboards[0]["panels"][0]["targets"][0]["expr"]
+    game_dashboard = dashboards["forcad-monitoring"]
+    table_query = next(panel for panel in game_dashboard["panels"] if panel["type"] == "table")["targets"][0]["expr"]
     table = query(table_query)
     columns = {"RPS", "Flags/s", "HTTP errors/s", "p99 (s)",
                "WS", "Outgoing Mbps", "Incoming Mbps", "Packets/s"}

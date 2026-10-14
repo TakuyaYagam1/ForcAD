@@ -106,6 +106,15 @@ groups:
           summary: Router network counter scrape failed
           description: "The router exporter at {{ $labels.instance }} could not read or parse its network counters."
 
+      - alert: ForcadNetworkSourceScrapeFailed
+        expr: forcad_network_source_scrape_success == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Router source-IP counter scrape failed
+          description: "The router exporter at {{ $labels.instance }} could not read or parse pre-NAT source counters."
+
       - alert: ForcadRouterExporterDown
         expr: up{job="forcad_router"} == 0
         for: 5m

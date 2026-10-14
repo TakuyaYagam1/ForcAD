@@ -14,6 +14,7 @@ import (
 
 const (
 	maxCounterOutputBytes = 1 << 20
+	maxSourceOutputBytes  = 2 << 20
 	nftCommandTimeout     = 3 * time.Second
 )
 
@@ -27,9 +28,10 @@ type counterLabel struct {
 	direction string
 }
 
-// CounterLister reads the named counters used by the network exporter.
+// CounterLister reads named and per-source counters used by the network exporter.
 type CounterLister interface {
 	ListCounters(ctx context.Context) ([]byte, error)
+	ListSources(ctx context.Context) ([]byte, error)
 }
 
 // ExecCounterLister runs the fixed, read-only nft counter query.
@@ -37,16 +39,28 @@ type ExecCounterLister struct{}
 
 // ListCounters returns bounded JSON from the monitoring table.
 func (ExecCounterLister) ListCounters(ctx context.Context) ([]byte, error) {
-	const location = "nftables.ExecCounterLister.ListCounters"
+	return runNftQuery(ctx, maxCounterOutputBytes, false)
+}
+
+// ListSources returns bounded JSON for the active source-IP counters.
+func (ExecCounterLister) ListSources(ctx context.Context) ([]byte, error) {
+	return runNftQuery(ctx, maxSourceOutputBytes, true)
+}
+
+func runNftQuery(ctx context.Context, maxBytes int, sources bool) ([]byte, error) {
+	const location = "nftables.runNftQuery"
 	bounded, cancel := context.WithTimeout(ctx, nftCommandTimeout)
 	defer cancel()
-	output := limitedOutput{limit: maxCounterOutputBytes, cancel: cancel}
+	output := limitedOutput{limit: maxBytes, cancel: cancel}
 	command := exec.CommandContext(bounded, "nft", "-j", "list", "counters", "table", "inet", tableName)
+	if sources {
+		command = exec.CommandContext(bounded, "nft", "-j", "list", "sets", "table", "inet", tableName)
+	}
 	command.Stdout = &output
 	command.Stderr = io.Discard
 	if err := command.Run(); err != nil {
 		if output.exceeded {
-			return nil, fmt.Errorf("%s - nft output exceeds 1 MiB", location)
+			return nil, fmt.Errorf("%s - nft output exceeds %d bytes", location, maxBytes)
 		}
 		if bounded.Err() != nil {
 			return nil, fmt.Errorf("%s - nft query canceled or timed out: %w", location, bounded.Err())
