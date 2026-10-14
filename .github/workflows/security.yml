@@ -68,7 +68,7 @@ jobs:
               --mount "type=bind,src=$RUNNER_TEMP/forcad-security/reports,dst=/reports,readonly" \
               --env HOME=/tmp \
               ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
-              convert --format table --table-mode summary --scanners vuln,misconfig \
+              convert --format table --scanners vuln,misconfig \
               /reports/trivy-filesystem.json || scan_status=1
           else
             echo "Trivy did not create a report." >&2

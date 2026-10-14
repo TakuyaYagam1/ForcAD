@@ -11,3 +11,13 @@ misconfigurations:
       and NET_ADMIN to install counters in its disposable network namespace.
       test_network.sh uses --network none and never mounts the host network.
       This image is not part of the production deployment.
+  - id: AVD-DS-0002
+    paths:
+      - infrastracture/tests/Dockerfile
+    expired_at: 2027-01-10
+    statement: >-
+      Owner: project maintainers. This firewall test fixture needs root to read
+      private rendered configs and NET_ADMIN/NET_RAW to configure links and
+      send test packets. run_network.py uses disposable --network none
+      containers, drops all other capabilities and mounts inputs read-only.
+      It has no host network or Docker socket access and is not deployed.
