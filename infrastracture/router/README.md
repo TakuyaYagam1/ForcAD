@@ -78,7 +78,7 @@ sudo systemctl enable --now network-metrics.service
 
 - `network-rules.service` creates the counter table once per boot. Do not apply
   `network.nft` manually first or restart this unit to reload counters.
-- `network-metrics.service` reads counters and serves `10.0.2.1:9109`. Restarting
+- `network-metrics.service` reads counters and serves `10.183.2.1:9109`. Restarting
   this process does not reset counters.
 - Only ForcAD and admins can reach the listener. `nft` must be in PATH.
 

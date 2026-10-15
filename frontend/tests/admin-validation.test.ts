@@ -8,7 +8,7 @@ import {
 
 const team = {
   name: "Team",
-  ip: "10.101.0.2",
+  ip: "10.183.101.2",
   token: "0123456789abcdef",
   logo_path: "",
   highlighted: false,

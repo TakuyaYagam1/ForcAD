@@ -11,8 +11,9 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-ATTACK_NET = ipaddress.IPv4Network("10.200.0.0/24")
-ADMIN_NET = ipaddress.IPv4Network("10.201.0.0/24")
+INTERNAL_NET = ipaddress.IPv4Network("10.183.0.0/16")
+ATTACK_NET = ipaddress.IPv4Network("10.183.200.0/24")
+ADMIN_NET = ipaddress.IPv4Network("10.183.201.0/24")
 NON_PUBLIC = (
     "0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, "
     "172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, "
@@ -121,13 +122,13 @@ def load_config(path):
     ):
         raise ValueError("WAN address and gateway must be host addresses")
     if (
-        wan.network.overlaps(ipaddress.IPv4Network("10.0.0.0/8"))
+        wan.network.overlaps(INTERNAL_NET)
         or wan.ip.is_loopback
         or wan.ip.is_multicast
         or wan.ip.is_unspecified
     ):
         raise ValueError(
-            "WAN must not overlap the internal 10.0.0.0/8 layout or use a special host address"
+            "WAN must not overlap the internal 10.183.0.0/16 layout or use a special host address"
         )
     endpoint = config["vpn"]["endpoint"]
     if not isinstance(endpoint, str) or len(endpoint) > 253:
@@ -158,7 +159,7 @@ def teams(config):
     for number in range(1, config["teams"] + 1):
         vlan = 100 + number
         group = subnets[number - 1]
-        peers = [str(ip) for ip in group.hosts() if str(ip) != "10.200.0.1"][
+        peers = [str(ip) for ip in group.hosts() if str(ip) != "10.183.200.1"][
             : config["members_per_team"]
         ]
         result.append(
@@ -167,9 +168,9 @@ def teams(config):
                 "name": f"team-{number:02}",
                 "vlan": vlan,
                 "interface": f"{config['router']['team_trunk']}.{vlan}",
-                "network": f"10.{vlan}.0.0/24",
-                "gateway": f"10.{vlan}.0.1",
-                "vulnbox": f"10.{vlan}.0.2",
+                "network": f"10.183.{vlan}.0/24",
+                "gateway": f"10.183.{vlan}.1",
+                "vulnbox": f"10.183.{vlan}.2",
                 "vpn_cidr": str(group),
                 "peers": peers,
             }
@@ -210,9 +211,9 @@ def router_rules(config):
         "wan_if": json.dumps(router["wan_interface"]),
         "wan_ip": str(ipaddress.IPv4Interface(router["wan_address"]).ip),
         "vpn_if": json.dumps(router["vpn_interface"]),
-        "vpn_ip": "10.0.1.2",
+        "vpn_ip": "10.183.1.2",
         "forcad_if": json.dumps(router["forcad_interface"]),
-        "forcad_ip": "10.0.2.10",
+        "forcad_ip": "10.183.2.10",
         "attack_net": str(ATTACK_NET),
         "admin_net": str(ADMIN_NET),
         "wg_ports": nft_set(
@@ -272,9 +273,9 @@ def interfaces(config, role):
     if role != "router":
         name = config[role]["interface"]
         address, gateway = (
-            ("10.0.1.2/30", "10.0.1.1")
+            ("10.183.1.2/30", "10.183.1.1")
             if role == "vpn"
-            else ("10.0.2.10/24", "10.0.2.1")
+            else ("10.183.2.10/24", "10.183.2.1")
         )
         return (
             header
@@ -292,13 +293,13 @@ iface {router["wan_interface"]} inet static
 
 auto {router["vpn_interface"]}
 iface {router["vpn_interface"]} inet static
-    address 10.0.1.1/30
-    up ip route replace {ATTACK_NET} via 10.0.1.2 dev {router["vpn_interface"]}
-    up ip route replace {ADMIN_NET} via 10.0.1.2 dev {router["vpn_interface"]}
+    address 10.183.1.1/30
+    up ip route replace {ATTACK_NET} via 10.183.1.2 dev {router["vpn_interface"]}
+    up ip route replace {ADMIN_NET} via 10.183.1.2 dev {router["vpn_interface"]}
 
 auto {router["forcad_interface"]}
 iface {router["forcad_interface"]} inet static
-    address 10.0.2.1/24
+    address 10.183.2.1/24
 
 auto {router["team_trunk"]}
 iface {router["team_trunk"]} inet manual
@@ -353,7 +354,7 @@ def game_metrics(config):
             f"redef Forcad::peers = {{\n{peer_map}\n}};\n"
             f"redef Forcad::vulnboxes = {{ {targets} }};\n"
             f"redef Forcad::game_ports = {{ {ports} }};\n"
-            'redef Telemetry::metrics_address = "10.0.2.1";\n'
+            'redef Telemetry::metrics_address = "10.183.2.1";\n'
             "redef Telemetry::metrics_port = 9911/tcp;\n"
             'redef Telemetry::metrics_endpoint_name = "router";\n'
         ),
@@ -362,7 +363,7 @@ def game_metrics(config):
             INTERFACE=config["router"]["vpn_interface"],
             FILTER=capture_filter,
         ),
-        "forcad/game-sensors.yml": '- targets: ["10.0.2.1:9911"]\n',
+        "forcad/game-sensors.yml": '- targets: ["10.183.2.1:9911"]\n',
     }
 
 
@@ -423,11 +424,11 @@ net.ipv6.conf.default.disable_ipv6=1
     files[
         "forcad/environment.env"
     ] = """# Merge into deployment/docker/.env; do not replace existing branding settings.
-FORCAD_NGINX_BIND=10.0.2.10
-PUBLIC_ORIGIN=http://10.0.2.10
+FORCAD_NGINX_BIND=10.183.2.10
+PUBLIC_ORIGIN=http://10.183.2.10
 PUBLIC_SCHEME=http
 """
-    files["forcad/routers.yml"] = '- targets: ["10.0.2.1:9109"]\n'
+    files["forcad/routers.yml"] = '- targets: ["10.183.2.1:9109"]\n'
     files.update(game_metrics(config))
     files["teams.json"] = json.dumps(teams(config), indent=2) + "\n"
     return files

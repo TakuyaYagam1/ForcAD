@@ -1,6 +1,6 @@
 # ForcAD host
 
-Debian 12/13 at `10.0.2.10/24`, gateway `10.0.2.1`. Merge generated
+Debian 12/13 at `10.183.2.10/24`, gateway `10.183.2.1`. Merge generated
 `infrastracture/runtime/forcad/interfaces` into ifupdown config from the console. Use resolvconf
 or configure DNS separately; preserve management access.
 
@@ -20,7 +20,7 @@ cp -n frontend/.env.example deployment/docker/.env
    IPs and `traffic_cidrs`; set names, services, checkers and start time. Preserve
    existing tokens and identities.
 2. Merge `infrastracture/runtime/forcad/environment.env` into `deployment/docker/.env`. It binds
-   nginx and the public origin to `http://10.0.2.10`. Preserve other settings.
+   nginx and the public origin to `http://10.183.2.10`. Preserve other settings.
 3. Install executable checkers under `checkers/` and configure their dependencies.
 
 ```sh
@@ -29,11 +29,11 @@ cp -n frontend/.env.example deployment/docker/.env
 ./control.sh status
 ```
 
-Players reach `http://10.0.2.10/` through VPN. Admin credentials are in
+Players reach `http://10.183.2.10/` through VPN. Admin credentials are in
 `config/runtime/admin.env`. After initialization, editing YAML does not update
 the live PostgreSQL game; use [Operations](../../docs/OPERATIONS.md).
 
-Checkers must originate from `10.0.2.10`. Normal Docker bridge networking does
+Checkers must originate from `10.183.2.10`. Normal Docker bridge networking does
 this through host NAT; extra checker hosts require router policy changes.
 
 ## Monitoring
@@ -53,8 +53,8 @@ team tokens, admin credentials or database secrets to the router.
 Verify from ForcAD:
 
 ```sh
-curl --fail http://10.0.2.1:9109/metrics
-curl --fail http://10.0.2.1:9911/metrics
+curl --fail http://10.183.2.1:9109/metrics
+curl --fail http://10.183.2.1:9911/metrics
 ```
 
 Merge generated `infrastracture/runtime/forcad/routers.yml` and `game-sensors.yml`
@@ -73,7 +73,7 @@ Keep the monitoring overlay for later updates/scaling. See
 Grafana/Prometheus listen on localhost. From an admin VPN workstation:
 
 ```sh
-ssh -L 3000:127.0.0.1:3000 USER@10.0.2.10
+ssh -L 3000:127.0.0.1:3000 USER@10.183.2.10
 ```
 
 Open `http://localhost:3000/`; replace `USER` with the host's SSH account.

@@ -1,5 +1,5 @@
 # Copy to network.toml and edit before rendering. This file contains no keys.
-# Internal addressing follows the documented topology; see README.md.
+# Team N uses 10.183.(100+N).0/24, gateway .1, vulnbox .2; see README.md.
 teams = 20
 members_per_team = 5
 admins = 1

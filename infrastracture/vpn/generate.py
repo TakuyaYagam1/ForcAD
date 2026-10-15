@@ -40,7 +40,7 @@ Address = {address}/32
 PublicKey = {public}
 PresharedKey = {psk}
 Endpoint = {endpoint}:{port}
-AllowedIPs = 10.0.0.0/8
+AllowedIPs = 10.183.0.0/16
 PersistentKeepalive = 25
 """
 
@@ -81,7 +81,7 @@ def generate(config, output):
                 )
             )
     for number in range(1, config["admins"] + 1):
-        name, address = f"admin-{number:02}", f"10.201.0.{number + 1}"
+        name, address = f"admin-{number:02}", f"10.183.201.{number + 1}"
         private, public = keypair()
         psk = wg("genpsk")
         admin_peers.append((name, address, public, psk))
@@ -94,10 +94,10 @@ def generate(config, output):
             config["vpn"]["admin_port"],
         )
     files["server/wg-attack.conf"] = server(
-        attack_private, "10.200.0.1", config["vpn"]["participant_port"], attack_peers
+        attack_private, "10.183.200.1", config["vpn"]["participant_port"], attack_peers
     )
     files["server/wg-admin.conf"] = server(
-        admin_private, "10.201.0.1", config["vpn"]["admin_port"], admin_peers
+        admin_private, "10.183.201.1", config["vpn"]["admin_port"], admin_peers
     )
     files["assignments.csv"] = manifest.getvalue()
     write_bundle(output, files)

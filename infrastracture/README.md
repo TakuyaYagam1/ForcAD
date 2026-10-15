@@ -29,11 +29,18 @@ files 0600. Distribute only each recipient's own VPN config.
 | VPN | [VPN setup](vpn/README.md) | `runtime/vpn/`, `runtime/wireguard/server/` |
 | ForcAD | [ForcAD setup](forcad/README.md) | `runtime/forcad/` |
 
-The IPv4 address plan is fixed: VPN transit `10.0.1.0/30`, ForcAD `10.0.2.0/24`,
-team N at `10.(100+N).0.2/24`, participant VPN `10.200.0.0/24`, admin VPN
-`10.201.0.0/24`. Supported: 1-32 teams, 1-5 peers per team, 1-253 admins.
+All internal networks use `10.183.0.0/16`: VPN transit `10.183.1.0/30`, ForcAD
+`10.183.2.0/24`, team N at `10.183.(100+N).2/24` with gateway `.1`, participant VPN
+`10.183.200.0/24`, admin VPN `10.183.201.0/24`.
+Supported: 1-32 teams, 1-5 peers per team, 1-253 admins.
 Each team gets a /29 VPN group; each peer has a unique /32. Participant `.1` is
 reserved for the VPN server.
+
+When migrating an existing installation, update router/VPN interfaces and rules,
+vulnbox addresses and gateways, ForcAD team IPs and `traffic_cidrs`, monitoring
+targets and sensor inventory together. Update WireGuard addresses and AllowedIPs
+on both servers and clients, keeping all keys. Use console access and retain the
+old configs for rollback. Clients route `10.183.0.0/16`, not the whole `10.0.0.0/8`.
 
 ## Access policy
 
@@ -66,8 +73,8 @@ policy and telemetry. Changing the team count does not update this illustration.
 
 ```mermaid
 flowchart TB
-    Teams["Team workstations / attack hosts<br/>Participant VPN: 10.200.0.0/24"]
-    Admins["Organizer workstations<br/>Admin VPN: 10.201.0.0/24"]
+    Teams["Team workstations / attack hosts<br/>Participant VPN: 10.183.200.0/24"]
+    Admins["Organizer workstations<br/>Admin VPN: 10.183.201.0/24"]
     Internet(("Internet"))
 
     Teams ---|"WireGuard UDP/56767"| Internet
@@ -76,10 +83,10 @@ flowchart TB
     subgraph Router["Machine: Router / Firewall"]
         direction TB
 
-        R_ETH0["eth0 - WAN<br/>Public IP<br/>DNAT UDP/56767 and UDP/56768<br/>to the same ports on 10.0.1.2"]
-        R_ETH1["eth1 - 10.0.1.1/30<br/>Routes: 10.200.0.0/24 and 10.201.0.0/24<br/>via 10.0.1.2"]
-        R_ETH2["eth2 - 10.0.2.1/24"]
-        R_ETH3["eth3 - 802.1Q trunk<br/>VLANs 101-120<br/>Gateways: 10.101.0.1 - 10.120.0.1"]
+        R_ETH0["eth0 - WAN<br/>Public IP<br/>DNAT UDP/56767 and UDP/56768<br/>to the same ports on 10.183.1.2"]
+        R_ETH1["eth1 - 10.183.1.1/30<br/>Routes: 10.183.200.0/24 and 10.183.201.0/24<br/>via 10.183.1.2"]
+        R_ETH2["eth2 - 10.183.2.1/24"]
+        R_ETH3["eth3 - 802.1Q trunk<br/>VLANs 101-120<br/>Gateways: 10.183.101.1 - 10.183.120.1"]
 
         Routing["Routing / nftables<br/>Shared rules: common.nft<br/>Load game.nft OR pre-game.nft<br/>Source validation per interface"]
 
@@ -107,7 +114,7 @@ flowchart TB
     subgraph WGServer["Machine: WireGuard Server"]
         direction TB
 
-        WG_ETH0["eth0 - 10.0.1.2/30<br/>Default gateway: 10.0.1.1"]
+        WG_ETH0["eth0 - 10.183.1.2/30<br/>Default gateway: 10.183.1.1"]
         WireGuard["WireGuard<br/>wg-attack: UDP/56767<br/>wg-admin: UDP/56768<br/>Unique peer IPs enforced by AllowedIPs<br/>Original peer addresses preserved"]
         WGFirewall["nftables: vpn/firewall.nft<br/>Source validation on VPN interfaces<br/>Participant /29 groups isolated<br/>Participants cannot access the admin VPN<br/>No SNAT on the VPN server"]
 
@@ -115,12 +122,12 @@ flowchart TB
         WGFirewall -.->|"VPN input / forwarding policy"| WireGuard
     end
 
-    R_ETH1 ---|"10.0.1.0/30"| WG_ETH0
+    R_ETH1 ---|"10.183.1.0/30"| WG_ETH0
 
     subgraph ForcadHost["Machine: ForcAD / Checkers / Monitoring"]
         direction TB
 
-        C_ETH0["eth0 - 10.0.2.10/24<br/>Default gateway: 10.0.2.1"]
+        C_ETH0["eth0 - 10.183.2.10/24<br/>Default gateway: 10.183.2.1"]
         ForcAD["ForcAD<br/>Scoreboard / API / flag receiver"]
         Checkers["Checkers<br/>Service availability and flag checks"]
         Prometheus["Prometheus<br/>Private monitoring endpoints"]
@@ -134,7 +141,7 @@ flowchart TB
         Prometheus -.->|"Dashboard queries"| Grafana
     end
 
-    R_ETH2 ---|"10.0.2.0/24"| C_ETH0
+    R_ETH2 ---|"10.183.2.0/24"| C_ETH0
     Observe -.->|"Router metrics scraped by Prometheus"| Prometheus
 
     Sensor -.->|"Game metrics on private TCP/9911"| Prometheus
@@ -146,13 +153,13 @@ flowchart TB
     subgraph Vulnboxes["Team Vulnboxes"]
         direction LR
 
-        V01["vulnbox-01<br/>eth0 - untagged<br/>10.101.0.2/24<br/>Gateway: 10.101.0.1"]
-        V02["vulnbox-02<br/>eth0 - untagged<br/>10.102.0.2/24<br/>Gateway: 10.102.0.1"]
-        V03["vulnbox-03<br/>eth0 - untagged<br/>10.103.0.2/24<br/>Gateway: 10.103.0.1"]
-        V04_17["vulnbox-04 ... vulnbox-17<br/>eth0 - untagged<br/>10.1NN.0.2/24<br/>Gateway: 10.1NN.0.1"]
-        V18["vulnbox-18<br/>eth0 - untagged<br/>10.118.0.2/24<br/>Gateway: 10.118.0.1"]
-        V19["vulnbox-19<br/>eth0 - untagged<br/>10.119.0.2/24<br/>Gateway: 10.119.0.1"]
-        V20["vulnbox-20<br/>eth0 - untagged<br/>10.120.0.2/24<br/>Gateway: 10.120.0.1"]
+        V01["vulnbox-01<br/>eth0 - untagged<br/>10.183.101.2/24<br/>Gateway: 10.183.101.1"]
+        V02["vulnbox-02<br/>eth0 - untagged<br/>10.183.102.2/24<br/>Gateway: 10.183.102.1"]
+        V03["vulnbox-03<br/>eth0 - untagged<br/>10.183.103.2/24<br/>Gateway: 10.183.103.1"]
+        V04_17["vulnbox-04 ... vulnbox-17<br/>eth0 - untagged<br/>10.183.1NN.2/24<br/>Gateway: 10.183.1NN.1"]
+        V18["vulnbox-18<br/>eth0 - untagged<br/>10.183.118.2/24<br/>Gateway: 10.183.118.1"]
+        V19["vulnbox-19<br/>eth0 - untagged<br/>10.183.119.2/24<br/>Gateway: 10.183.119.1"]
+        V20["vulnbox-20<br/>eth0 - untagged<br/>10.183.120.2/24<br/>Gateway: 10.183.120.1"]
     end
 
     Bridge ---|"Access VLAN 101"| V01

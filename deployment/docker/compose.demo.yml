@@ -47,7 +47,7 @@ x-player: &player
   depends_on:
     demo-vpn: {condition: service_healthy}
   healthcheck:
-    test: [CMD-SHELL, "ping -c 1 -W 2 10.0.1.1 >/dev/null"]
+    test: [CMD-SHELL, "ping -c 1 -W 2 10.183.1.1 >/dev/null"]
     interval: 5s
     timeout: 3s
     retries: 12
@@ -99,12 +99,12 @@ services:
         gw_priority: 1
         aliases: [nginx, prometheus, worker]
       demo-forcad:
-        ipv4_address: 10.0.2.10
+        ipv4_address: 10.183.2.10
         interface_name: eth1
     depends_on:
       demo-router: {condition: service_healthy}
     healthcheck:
-      test: [CMD-SHELL, "ip route get 10.101.0.2 | grep -q 'via 10.0.2.1'"]
+      test: [CMD-SHELL, "ip route get 10.183.101.2 | grep -q 'via 10.183.2.1'"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -122,16 +122,16 @@ services:
       net.ipv6.conf.all.disable_ipv6: "1"
     networks:
       demo-wan: {ipv4_address: 172.30.241.2, interface_name: eth0, gw_priority: 1}
-      demo-transit: {ipv4_address: 10.0.1.1, interface_name: eth1}
-      demo-forcad: {ipv4_address: 10.0.2.1, interface_name: eth2}
-      demo-team1: {ipv4_address: 10.101.0.1, interface_name: eth3.101}
-      demo-team2: {ipv4_address: 10.102.0.1, interface_name: eth3.102}
+      demo-transit: {ipv4_address: 10.183.1.1, interface_name: eth1}
+      demo-forcad: {ipv4_address: 10.183.2.1, interface_name: eth2}
+      demo-team1: {ipv4_address: 10.183.101.1, interface_name: eth3.101}
+      demo-team2: {ipv4_address: 10.183.102.1, interface_name: eth3.102}
     volumes:
       - ../../config/runtime/demo/router:/etc/forcad/router:ro
       - ../../config/runtime/demo/network.json:/etc/forcad/network.json:ro
       - ../../config/runtime/demo/phase:/etc/forcad/phase:ro
     healthcheck:
-      test: [CMD-SHELL, "wget -qO- http://10.0.2.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
+      test: [CMD-SHELL, "wget -qO- http://10.183.2.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -145,7 +145,7 @@ services:
       net.ipv4.conf.default.rp_filter: "2"
       net.ipv6.conf.all.disable_ipv6: "1"
     networks:
-      demo-transit: {ipv4_address: 10.0.1.2, interface_name: eth0}
+      demo-transit: {ipv4_address: 10.183.1.2, interface_name: eth0}
     volumes:
       - ../../config/runtime/demo/vpn:/etc/forcad/vpn:ro
       - ../../config/runtime/demo/wireguard/server:/app/keys:ro
@@ -179,21 +179,21 @@ services:
   demo-team1:
     <<: *team
     environment:
-      DEMO_GATEWAY: 10.101.0.1
+      DEMO_GATEWAY: 10.183.101.1
     volumes:
       - demo-team1-data:/data
       - ../../config/runtime/demo/seeds/team1:/app/seed:ro
     networks:
-      demo-team1: {ipv4_address: 10.101.0.2, interface_name: eth0}
+      demo-team1: {ipv4_address: 10.183.101.2, interface_name: eth0}
   demo-team2:
     <<: *team
     environment:
-      DEMO_GATEWAY: 10.102.0.1
+      DEMO_GATEWAY: 10.183.102.1
     volumes:
       - demo-team2-data:/data
       - ../../config/runtime/demo/seeds/team2:/app/seed:ro
     networks:
-      demo-team2: {ipv4_address: 10.102.0.2, interface_name: eth0}
+      demo-team2: {ipv4_address: 10.183.102.2, interface_name: eth0}
 
   demo-sensor:
     image: zeek/zeek@sha256:70733f4e540ba1608e37e00c6a93d009f79734262c9ec2ba09d90aa9abc16de5 # 9.0.0
@@ -217,7 +217,7 @@ services:
       - -i
       - eth1
       - -f
-      - "ip and net 10.200.0.0/24 and (host 10.101.0.2 or host 10.102.0.2)"
+      - "ip and net 10.183.200.0/24 and (host 10.183.101.2 or host 10.183.102.2)"
       - /app/game-metrics.zeek
       - /app/game-inventory.zeek
     read_only: true
@@ -240,7 +240,7 @@ services:
         - CMD
         - python3
         - -c
-        - "import time,urllib.request; data=urllib.request.urlopen('http://10.0.2.1:9911/metrics',timeout=2).read().decode(); stamp=next(float(line.split()[-1]) for line in data.splitlines() if line.startswith('forcad_game_sync_timestamp_seconds')); assert time.time()-stamp < 45"
+        - "import time,urllib.request; data=urllib.request.urlopen('http://10.183.2.1:9911/metrics',timeout=2).read().decode(); stamp=next(float(line.split()[-1]) for line in data.splitlines() if line.startswith('forcad_game_sync_timestamp_seconds')); assert time.time()-stamp < 45"
       interval: 5s
       timeout: 3s
       retries: 12
@@ -283,19 +283,19 @@ networks:
   demo-transit:
     internal: true
     ipam:
-      config: [{subnet: 10.0.1.0/29, gateway: 10.0.1.6}]
+      config: [{subnet: 10.183.1.0/29, gateway: 10.183.1.6}]
   demo-forcad:
     internal: true
     ipam:
-      config: [{subnet: 10.0.2.0/24, gateway: 10.0.2.254}]
+      config: [{subnet: 10.183.2.0/24, gateway: 10.183.2.254}]
   demo-team1:
     internal: true
     ipam:
-      config: [{subnet: 10.101.0.0/24, gateway: 10.101.0.254}]
+      config: [{subnet: 10.183.101.0/24, gateway: 10.183.101.254}]
   demo-team2:
     internal: true
     ipam:
-      config: [{subnet: 10.102.0.0/24, gateway: 10.102.0.254}]
+      config: [{subnet: 10.183.102.0/24, gateway: 10.183.102.254}]
 
 volumes:
   demo-team1-data: {}

@@ -27,7 +27,7 @@ table inet forcad_vpn {
         iifname "wg-admin" ip saddr $admin_net counter accept
         iifname "wg-attack" counter drop
         ct state established,related counter accept
-        iifname $transit_if ip saddr 10.0.1.1 counter accept
+        iifname $transit_if ip saddr 10.183.1.1 counter accept
         iifname $transit_if udp dport $wg_ports counter accept
         iifname $transit_if icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } counter accept
     }

@@ -119,8 +119,8 @@ def build_cases(dashboard):
     add("forcad:game_sensor_ready", sensor)
     add("forcad_network_source_scrape_success", router)
     for source in range(1, 21):
-        source_ip = f"10.{100 + source}.0.2"
-        peer = f"10.200.0.{source * 8 - 6}"
+        source_ip = f"10.183.{100 + source}.2"
+        peer = f"10.183.200.{source * 8 - 6}"
         add(
             "forcad:game_source_info",
             {"source_team_ip": source_ip, "source_team_name": f"Team {source:02}"},
@@ -135,7 +135,7 @@ def build_cases(dashboard):
         )
         add("forcad:game_peer_info", {"source_ip": peer, "source_team_ip": source_ip})
         for target in range(1, 21):
-            target_ip = f"10.{100 + target}.0.2"
+            target_ip = f"10.183.{100 + target}.2"
             labels = sensor | {"source_team_ip": source_ip, "team_ip": target_ip}
             active = int(source != target)
             # One hot pair; another carries only non-HTTP network traffic.
@@ -160,18 +160,18 @@ def build_cases(dashboard):
         return check(expr, [{"labels": "{}", "value": value}])
 
     overview = expression(11)
-    named_pair = "Team 01 [10.101.0.2] -> Team 02 [10.102.0.2]"
+    named_pair = "Team 01 [10.183.101.2] -> Team 02 [10.183.102.2]"
     tests = [
         scalar(expression(5), 398),
-        scalar(expression(5, "10.101.0.2"), 38),
-        scalar(expression(5, target="10.102.0.2"), 38),
-        scalar(expression(5, "10.101.0.2", "10.102.0.2"), 20),
-        scalar(expression(5, "10.102.0.2", "10.101.0.2"), 1),
+        scalar(expression(5, "10.183.101.2"), 38),
+        scalar(expression(5, target="10.183.102.2"), 38),
+        scalar(expression(5, "10.183.101.2", "10.183.102.2"), 20),
+        scalar(expression(5, "10.183.102.2", "10.183.101.2"), 1),
         scalar(f"count({overview})", 380 * 6),
-        scalar(f"count({expression(11, '10.101.0.2')})", 19 * 6),
-        check(expression(11, "10.101.0.2", "10.101.0.2"), []),
+        scalar(f"count({expression(11, '10.183.101.2')})", 19 * 6),
+        check(expression(11, "10.183.101.2", "10.183.101.2"), []),
         check(
-            expression(11, "10.101.0.2", "10.102.0.2"),
+            expression(11, "10.183.101.2", "10.183.102.2"),
             [
                 {
                     "labels": "{"

@@ -22,7 +22,7 @@ try:
             ) as response:
                 metrics = response.read().decode()
             assert "forcad_game_http_requests_total{" in metrics
-            assert 'source_team_ip="10.101.0.2"' in metrics
+            assert 'source_team_ip="10.183.101.2"' in metrics
             heartbeat = next(
                 line
                 for line in metrics.splitlines()

@@ -53,8 +53,8 @@ def unprivileged(*command):
 def main():
     role = sys.argv[1]
     if role == "router":
-        for subnet in ("10.200.0.0/24", "10.201.0.0/24"):
-            run("ip", "route", "replace", subnet, "via", "10.0.1.2", "dev", "eth1")
+        for subnet in ("10.183.200.0/24", "10.183.201.0/24"):
+            run("ip", "route", "replace", subnet, "via", "10.183.1.2", "dev", "eth1")
         phase = Path("/etc/forcad/phase").read_text().strip()
         if phase not in {"game", "pre-game"}:
             raise ValueError("Unknown demo network phase")
@@ -76,18 +76,18 @@ def main():
                 "--config",
                 "/etc/forcad/network.json",
                 "--listen",
-                "10.0.2.1:9109",
+                "10.183.2.1:9109",
             ],
         )
     elif role == "vpn":
         run("nft", "-f", "/etc/forcad/vpn/firewall.nft")
-        run("ip", "route", "replace", "default", "via", "10.0.1.1")
+        run("ip", "route", "replace", "default", "via", "10.183.1.1")
         wireguard("wg-attack", "/app/keys/wg-attack.conf")
         wireguard("wg-admin", "/app/keys/wg-admin.conf")
         unprivileged("sleep", "infinity")
     elif role == "player":
         wireguard("wg0", "/app/keys/wg0.conf")
-        run("ip", "route", "replace", "10.0.0.0/8", "dev", "wg0")
+        run("ip", "route", "replace", "10.183.0.0/16", "dev", "wg0")
         unprivileged("sleep", "infinity")
     elif role == "team":
         run("ip", "route", "replace", "default", "via", os.environ["DEMO_GATEWAY"])
@@ -97,7 +97,16 @@ def main():
             os.chown("/data/note.db", 10001, 10001)
         unprivileged("python", "service.py")
     elif role == "forcad":
-        run("ip", "route", "replace", "10.0.0.0/8", "via", "10.0.2.1", "dev", "eth1")
+        run(
+            "ip",
+            "route",
+            "replace",
+            "10.183.0.0/16",
+            "via",
+            "10.183.2.1",
+            "dev",
+            "eth1",
+        )
         # Nginx listens unprivileged on 8080; participants use board TCP/80.
         run(
             "nft",
@@ -105,7 +114,7 @@ def main():
             "-",
             input=(
                 "table ip demo_board {\n chain input {\n type nat hook prerouting priority dstnat;\n"
-                'iifname "eth1" ip daddr 10.0.2.10 tcp dport 80 redirect to :8080\n }\n}\n'
+                'iifname "eth1" ip daddr 10.183.2.10 tcp dport 80 redirect to :8080\n }\n}\n'
             ),
             text=True,
         )

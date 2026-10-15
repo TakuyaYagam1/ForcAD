@@ -11,9 +11,9 @@ flowchart LR
     A[Admin] -->|Admin WireGuard| R
     R -->|UDP forwarding| VPN[VPN server]
     VPN -->|Original peer IP| R
-    R -->|SNAT to 10.101.0.1| V1[Vulnbox 1: 10.101.0.2]
-    R -->|SNAT to 10.102.0.1| V2[Vulnbox 2: 10.102.0.2]
-    F[ForcAD / checker: 10.0.2.10] --> R
+    R -->|SNAT to 10.183.101.1| V1[Vulnbox 1: 10.183.101.2]
+    R -->|SNAT to 10.183.102.1| V2[Vulnbox 2: 10.183.102.2]
+    F[ForcAD / checker: 10.183.2.10] --> R
     R -.->|nftables counters| M[Prometheus]
     R -.->|Passive capture before SNAT| Z[Zeek]
     Z -.->|HTTP / WS / TCP / UDP metrics| M
@@ -32,12 +32,12 @@ exactly two teams:
 ```yaml
 teams:
   - name: Team 1
-    ip: 10.101.0.2
-    traffic_cidrs: [10.101.0.2/32, 10.200.0.0/29]
+    ip: 10.183.101.2
+    traffic_cidrs: [10.183.101.2/32, 10.183.200.0/29]
     token: null
   - name: Team 2
-    ip: 10.102.0.2
-    traffic_cidrs: [10.102.0.2/32, 10.200.0.8/29]
+    ip: 10.183.102.2
+    traffic_cidrs: [10.183.102.2/32, 10.183.200.8/29]
     token: null
 ```
 
@@ -108,9 +108,11 @@ bash deployment/docker/scripts/demo.sh down
 `down` preserves database, notes and monitoring data. Secrets are ignored by Git
 and excluded from image layers and command arguments.
 
-Old demo IPs `172.30.240.11` and `.12` migrate automatically. The script saves
-`config/config_backup_demo_network.yml` and updates matching database records,
-retaining names, tokens, scores and session state. Other inventories are refused.
+Old demo pairs `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` migrate
+automatically. The script saves `config/config_backup_demo_network.yml` and updates matching database records,
+retaining names, tokens, scores and session state. Existing VPN configs move to
+`10.183.200.0/24` and `10.183.201.0/24` without changing keys; the old bundle stays
+in `config/runtime/demo/wireguard-before-network/`. Other inventories are refused.
 Before replacing old ephemeral notes containers, save their SQLite database if
 needed. `config/runtime/demo/seeds/team1/note.db` and `team2/note.db` seed empty
 notes volumes once; later starts use persistent volumes.

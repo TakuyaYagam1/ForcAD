@@ -76,7 +76,12 @@ class Trace:
 
 class TCP:
     def __init__(
-        self, trace, source="10.200.0.2", target="10.102.0.2", port=8080, handshake=True
+        self,
+        trace,
+        source="10.183.200.2",
+        target="10.183.102.2",
+        port=8080,
+        handshake=True,
     ):
         self.trace, self.source, self.target, self.port = trace, source, target, port
         self.sport = 20000 + len(trace.frames)
@@ -163,7 +168,7 @@ def fixture():
     upgrade = b"GET /ws HTTP/1.1\r\nHost: game\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n"
     switched = b"HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
     for reset in (False, True):
-        ws = TCP(trace, source="10.200.0.3", port=8081)
+        ws = TCP(trace, source="10.183.200.3", port=8081)
         ws.data(upgrade)
         ws.data(switched, reply=True)
         if reset:
@@ -179,20 +184,20 @@ def fixture():
     pending.seq -= 1
     pending.send(flags=2)
     for reply in (False, False, True):
-        args = ("10.200.0.2", "10.102.0.2", 30000, 31337)
+        args = ("10.183.200.2", "10.183.102.2", 30000, 31337)
         if reply:
             args = (args[1], args[0], args[3], args[2])
         trace.packet(*args, data=b"udp", udp=True)
 
-    reverse = TCP(trace, source="10.200.0.9", target="10.101.0.2")
+    reverse = TCP(trace, source="10.183.200.9", target="10.183.101.2")
     reverse.data(request)
     reverse.data(response, reply=True)
     reverse.close()
     for options in (
-        {"source": "10.200.0.250"},
-        {"source": "10.201.0.2"},
-        {"source": "10.101.0.2"},
-        {"target": "10.0.2.10"},
+        {"source": "10.183.200.250"},
+        {"source": "10.183.201.2"},
+        {"source": "10.183.101.2"},
+        {"target": "10.183.2.10"},
         {"port": 22},
     ):
         ignored = TCP(trace, **options)

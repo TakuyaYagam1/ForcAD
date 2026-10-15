@@ -10,7 +10,7 @@ from collections import deque
 
 from websocket import connect, ping
 
-BOARD = "http://10.0.2.10"
+BOARD = "http://10.183.2.10"
 PEER = "http://" + os.environ["DEMO_PEER"] + ":8080"
 TOKEN = os.environ["DEMO_TOKEN"]
 INTERVAL_SECONDS = 1

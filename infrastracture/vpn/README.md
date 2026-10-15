@@ -1,7 +1,7 @@
 # VPN server
 
 Debian 12/13 with `wireguard-tools`, `nftables`, `iproute2`, `ifupdown` and
-`resolvconf`. Address: `10.0.1.2/30`, gateway: `10.0.1.1`. The router forwards
+`resolvconf`. Address: `10.183.1.2/30`, gateway: `10.183.1.1`. The router forwards
 UDP/56767 and UDP/56768 and routes both VPN networks through this host.
 
 ## Generate keys
@@ -16,7 +16,7 @@ Output: `infrastracture/runtime/wireguard/` with `server/`,
 `participants/team-NN/`, `admins/` and public `assignments.csv`.
 
 Each peer has its own key, preshared key and server-side `/32` AllowedIPs.
-Clients route only `10.0.0.0/8` through VPN; check for conflicts with their local
+Clients route only `10.183.0.0/16` through VPN; check for conflicts with their local
 networks. Public Internet uses their normal connection.
 
 Generate once for a new deployment. Existing output is refused; generating into

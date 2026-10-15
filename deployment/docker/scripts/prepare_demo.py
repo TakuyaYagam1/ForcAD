@@ -4,6 +4,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import sys
 from pathlib import Path
 
@@ -14,8 +15,27 @@ sys.path.insert(0, str(ROOT / "infrastracture"))
 import render
 from vpn.generate import generate
 
-OLD_IPS = ["172.30.240.11", "172.30.240.12"]
-NEW_IPS = ["10.101.0.2", "10.102.0.2"]
+OLD_IPS = (["172.30.240.11", "172.30.240.12"], ["10.101.0.2", "10.102.0.2"])
+
+
+def migrate_wireguard(output):
+    """Renumber existing demo peers without rotating keys."""
+    wireguard = output / "wireguard"
+    updates = {}
+    for path in [*wireguard.rglob("*.conf"), wireguard / "assignments.csv"]:
+        original = path.read_text()
+        content = re.sub(r"\b10\.(200|201)\.0\.", r"10.183.\1.", original)
+        content = content.replace(
+            "AllowedIPs = 10.0.0.0/8", "AllowedIPs = 10.183.0.0/16"
+        )
+        if content != original:
+            updates[path] = content
+    if updates:
+        backup = output / "wireguard-before-network"
+        if not backup.exists():
+            shutil.copytree(wireguard, backup)
+        for path, content in updates.items():
+            path.write_text(content)
 
 
 def main():
@@ -23,13 +43,14 @@ def main():
     config = root / "config/config.yml"
     document = yaml.safe_load(config.read_text())
     teams = sorted(document["teams"], key=lambda team: team["ip"])
-    if [team["ip"] for team in teams] not in (OLD_IPS, NEW_IPS):
-        raise SystemExit(
-            "Demo requires exactly two demo teams. See deployment/demo/README.md"
-        )
     network_path = root / "deployment/demo/network.toml"
     network = render.load_config(network_path)
     inventory = render.teams(network)
+    new_ips = [team["vulnbox"] for team in inventory]
+    if [team["ip"] for team in teams] not in (*OLD_IPS, new_ips):
+        raise SystemExit(
+            "Demo requires exactly two demo teams. See deployment/demo/README.md"
+        )
     changed = False
     for index, team in enumerate(teams):
         if team.get("token") is None:
@@ -41,9 +62,9 @@ def main():
             changed = True
         if not re.fullmatch(r"[0-9a-f]{16}", team["token"]):
             raise SystemExit("Expected a 16-character hexadecimal team token")
-        cidrs = [NEW_IPS[index] + "/32", inventory[index]["vpn_cidr"]]
-        if team["ip"] != NEW_IPS[index] or team.get("traffic_cidrs") != cidrs:
-            team.update(ip=NEW_IPS[index], traffic_cidrs=cidrs)
+        cidrs = [new_ips[index] + "/32", inventory[index]["vpn_cidr"]]
+        if team["ip"] != new_ips[index] or team.get("traffic_cidrs") != cidrs:
+            team.update(ip=new_ips[index], traffic_cidrs=cidrs)
             changed = True
     runtime = root / "config/runtime"
     runtime.mkdir(mode=0o700, exist_ok=True)
@@ -86,6 +107,8 @@ def main():
             path.write_text(content)
     if not (output / "wireguard").exists():
         generate(network, output / "wireguard")
+    else:
+        migrate_wireguard(output)
     for number in (1, 2):
         (output / "seeds" / f"team{number}").mkdir(
             parents=True, exist_ok=True, mode=0o700

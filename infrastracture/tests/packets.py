@@ -202,16 +202,16 @@ def apply(role, mode):
 def router():
     net = Network()
     net.link("wan", "eth0", "203.0.113.10/24", ["203.0.113.1"])
-    net.link("vpn", "eth1", "10.0.1.1/30", ["10.0.1.2"])
-    net.link("board", "eth2", "10.0.2.1/24", ["10.0.2.10"])
-    net.link("a", "eth3.101", "10.101.0.1/24", ["10.101.0.2"])
-    net.link("b", "eth3.102", "10.102.0.1/24", ["10.102.0.2"])
+    net.link("vpn", "eth1", "10.183.1.1/30", ["10.183.1.2"])
+    net.link("board", "eth2", "10.183.2.1/24", ["10.183.2.10"])
+    net.link("a", "eth3.101", "10.183.101.1/24", ["10.183.101.2"])
+    net.link("b", "eth3.102", "10.183.102.1/24", ["10.183.102.2"])
     command("ip", "route", "add", "default", "via", "203.0.113.1")
-    for prefix in ("10.200.0.0/24", "10.201.0.0/24"):
-        command("ip", "route", "add", prefix, "via", "10.0.1.2")
+    for prefix in ("10.183.200.0/24", "10.183.201.0/24"):
+        command("ip", "route", "add", prefix, "via", "10.183.1.2")
     apply("router", "game")
-    player, admin = "10.200.0.2", "10.201.0.2"
-    box_a, box_b, gateway = "10.101.0.2", "10.102.0.2", "10.102.0.1"
+    player, admin = "10.183.200.2", "10.183.201.2"
+    box_a, box_b, gateway = "10.183.101.2", "10.183.102.2", "10.183.102.1"
     # Full TCP handshake verifies reverse NAT and established-flow handling.
     first = net.probe(
         "vpn", "b", player, box_b, source_port=40000, translated_source=gateway
@@ -239,7 +239,7 @@ def router():
         ack=201,
         translated_source=gateway,
     )
-    net.probe("board", "b", "10.0.2.10", box_b, translated_source=gateway)
+    net.probe("board", "b", "10.183.2.10", box_b, translated_source=gateway)
     ssh = net.probe(
         "vpn",
         "a",
@@ -247,13 +247,13 @@ def router():
         box_a,
         port=22,
         source_port=41000,
-        translated_source="10.101.0.1",
+        translated_source="10.183.101.1",
     )
     net.probe(
         "a",
         "vpn",
         box_a,
-        "10.101.0.1",
+        "10.183.101.1",
         port=ssh["source_port"],
         source_port=22,
         flags=18,
@@ -271,20 +271,20 @@ def router():
         flags=16,
         sequence=101,
         ack=201,
-        translated_source="10.101.0.1",
+        translated_source="10.183.101.1",
     )
     net.probe("vpn", "b", player, box_b, port=22, allowed=False)
     net.probe("vpn", "b", admin, box_b, port=22, translated_source=gateway)
     net.probe("vpn", "b", player, box_b, port=9000, udp=True, translated_source=gateway)
     net.probe("vpn", "b", player, box_b, port=9001, udp=True, allowed=False)
-    net.probe("vpn", "board", player, "10.0.2.10", port=80)
-    net.probe("vpn", "board", player, "10.0.2.10", port=8080, allowed=False)
+    net.probe("vpn", "board", player, "10.183.2.10", port=80)
+    net.probe("vpn", "board", player, "10.183.2.10", port=8080, allowed=False)
     net.probe("a", "b", box_a, box_b, allowed=False)
-    net.probe("a", "board", box_a, "10.0.2.10", port=80, allowed=False)
+    net.probe("a", "board", box_a, "10.183.2.10", port=80, allowed=False)
     net.probe("a", "vpn", box_a, player, allowed=False)
     net.probe("a", "wan", box_a, "1.1.1.1", port=443, translated_source="203.0.113.10")
     net.probe("a", "wan", box_b, "1.1.1.1", port=443, allowed=False)
-    net.probe("a", "board", admin, "10.0.2.10", port=22, allowed=False)
+    net.probe("a", "board", admin, "10.183.2.10", port=22, allowed=False)
     net.probe("wan", "a", "1.1.1.1", box_a, allowed=False)
     net.probe(
         "wan",
@@ -293,7 +293,7 @@ def router():
         "203.0.113.10",
         port=56767,
         udp=True,
-        translated_destination="10.0.1.2",
+        translated_destination="10.183.1.2",
     )
     net.probe(
         "wan",
@@ -302,7 +302,7 @@ def router():
         "203.0.113.10",
         port=56768,
         udp=True,
-        translated_destination="10.0.1.2",
+        translated_destination="10.183.1.2",
     )
     net.probe(
         "wan", "vpn", "1.1.1.1", "203.0.113.10", port=56769, udp=True, allowed=False
@@ -360,7 +360,7 @@ def router():
         "a",
         "vpn",
         box_a,
-        "10.101.0.1",
+        "10.183.101.1",
         port=ssh["source_port"],
         source_port=22,
         flags=16,
@@ -373,7 +373,7 @@ def router():
     net.probe("vpn", "b", player, box_b, port=9000, udp=True, allowed=False)
     net.probe("vpn", "b", player, box_b, icmp_type=13, icmp_id=42000, allowed=False)
     net.probe("vpn", "a", player, box_a, icmp_type=13, allowed=False)
-    for link, box, box_gateway in (("a", box_a, "10.101.0.1"), ("b", box_b, gateway)):
+    for link, box, box_gateway in (("a", box_a, "10.183.101.1"), ("b", box_b, gateway)):
         ping = net.probe(
             "vpn", link, player, box, icmp_type=8, translated_source=box_gateway
         )
@@ -386,30 +386,30 @@ def router():
             icmp_id=ping["icmp_id"],
             translated_destination=player,
         )
-    net.probe("board", "b", "10.0.2.10", box_b, translated_source=gateway)
+    net.probe("board", "b", "10.183.2.10", box_b, translated_source=gateway)
     net.probe("vpn", "b", admin, box_b, port=22, translated_source=gateway)
-    net.probe("vpn", "a", admin, box_a, port=4444, translated_source="10.101.0.1")
+    net.probe("vpn", "a", admin, box_a, port=4444, translated_source="10.183.101.1")
     net.probe("vpn", "b", admin, box_b, port=9001, udp=True, translated_source=gateway)
     net.probe("vpn", "b", admin, box_b, icmp_type=13, translated_source=gateway)
-    net.probe("vpn", "board", player, "10.0.2.10", port=80)
+    net.probe("vpn", "board", player, "10.183.2.10", port=80)
     apply("router", "game")
     net.probe("vpn", "b", player, box_b, translated_source=gateway)
-    net.probe("vpn", "a", player, box_a, port=22, translated_source="10.101.0.1")
+    net.probe("vpn", "a", player, box_a, port=22, translated_source="10.183.101.1")
 
 
 def vpn():
     net = Network()
-    net.link("transit", "eth0", "10.0.1.2/30", ["10.0.1.1"])
+    net.link("transit", "eth0", "10.183.1.2/30", ["10.183.1.1"])
     net.link(
         "players",
         "wg-attack",
-        "10.200.0.1/24",
-        ["10.200.0.2", "10.200.0.3", "10.200.0.9"],
+        "10.183.200.1/24",
+        ["10.183.200.2", "10.183.200.3", "10.183.200.9"],
     )
-    net.link("admins", "wg-admin", "10.201.0.1/24", ["10.201.0.2"])
-    command("ip", "route", "add", "default", "via", "10.0.1.1")
+    net.link("admins", "wg-admin", "10.183.201.1/24", ["10.183.201.2"])
+    command("ip", "route", "add", "default", "via", "10.183.1.1")
     apply("vpn", "firewall")
-    player, admin, box = "10.200.0.2", "10.201.0.2", "10.102.0.2"
+    player, admin, box = "10.183.200.2", "10.183.201.2", "10.183.102.2"
     net.probe("players", "transit", player, box, source_port=40000)
     net.probe(
         "transit",
@@ -422,8 +422,8 @@ def vpn():
         sequence=200,
         ack=101,
     )
-    net.probe("players", "players", player, "10.200.0.3")
-    net.probe("players", "players", player, "10.200.0.9", allowed=False)
+    net.probe("players", "players", player, "10.183.200.3")
+    net.probe("players", "players", player, "10.183.200.9", allowed=False)
     net.probe("players", "admins", player, admin, allowed=False)
     net.probe("players", "transit", admin, box, allowed=False)
     net.probe("transit", "players", box, player, port=22, allowed=False)

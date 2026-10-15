@@ -118,52 +118,62 @@ def wait_for(description, predicate, seconds=75):
     raise AssertionError("Timed out: " + description)
 
 
+def check_routes():
+    for client in ("demo-player1", "demo-player2", "demo-admin"):
+        game = execute(client, "ip", "route", "get", "10.183.102.2").stdout
+        local = execute(client, "ip", "route", "get", "10.0.2.15").stdout
+        assert "dev wg0" in game, game
+        assert "dev wg0" not in local, local
+        passed(client + " routes only the game prefix through WireGuard")
+
+
 def main():
+    check_routes()
     original = (ROOT / "config/runtime/demo/phase").read_text().strip()
     assert original in {"game", "pre-game"}
     filtering = False
     try:
         phase("game")
         for player, target, gateway in (
-            ("demo-player1", "10.101.0.2", "10.101.0.1"),
-            ("demo-player1", "10.102.0.2", "10.102.0.1"),
-            ("demo-player2", "10.101.0.2", "10.101.0.1"),
-            ("demo-admin", "10.102.0.2", "10.102.0.1"),
-            ("demo-forcad", "10.102.0.2", "10.102.0.1"),
+            ("demo-player1", "10.183.101.2", "10.183.101.1"),
+            ("demo-player1", "10.183.102.2", "10.183.102.1"),
+            ("demo-player2", "10.183.101.2", "10.183.101.1"),
+            ("demo-admin", "10.183.102.2", "10.183.102.1"),
+            ("demo-forcad", "10.183.102.2", "10.183.102.1"),
         ):
             probe(player, target, peer=gateway)
-        probe("demo-player1", "10.102.0.2", "ws", 8081)
-        probe("demo-player1", "10.102.0.2", "tcp", 9001)
-        probe("demo-player1", "10.102.0.2", "udp", 9000)
-        probe("demo-player1", "10.101.0.2", "tcp", 22)
-        probe("demo-player1", "10.102.0.2", "tcp", 22, allowed=False)
-        probe("demo-player2", "10.101.0.2", "tcp", 22, allowed=False)
-        probe("demo-admin", "10.102.0.2", "tcp", 22)
-        probe("demo-player1", "10.0.2.10", port=80, path="/api/client/teams/")
+        probe("demo-player1", "10.183.102.2", "ws", 8081)
+        probe("demo-player1", "10.183.102.2", "tcp", 9001)
+        probe("demo-player1", "10.183.102.2", "udp", 9000)
+        probe("demo-player1", "10.183.101.2", "tcp", 22)
+        probe("demo-player1", "10.183.102.2", "tcp", 22, allowed=False)
+        probe("demo-player2", "10.183.101.2", "tcp", 22, allowed=False)
+        probe("demo-admin", "10.183.102.2", "tcp", 22)
+        probe("demo-player1", "10.183.2.10", port=80, path="/api/client/teams/")
         for host, port in (
-            ("10.0.2.10", 9090),
-            ("10.0.2.1", 9109),
-            ("10.0.2.1", 9911),
-            ("10.0.1.2", 22),
+            ("10.183.2.10", 9090),
+            ("10.183.2.1", 9109),
+            ("10.183.2.1", 9911),
+            ("10.183.1.2", 22),
         ):
             probe("demo-player1", host, "tcp", port, allowed=False)
-        probe("demo-team1", "10.102.0.2", allowed=False)
-        probe("demo-team2", "10.101.0.2", allowed=False)
+        probe("demo-team1", "10.183.102.2", allowed=False)
+        probe("demo-team2", "10.183.101.2", allowed=False)
         result = execute(
-            "demo-player1", "ping", "-c", "1", "-W", "1", "10.200.0.9", check=False
+            "demo-player1", "ping", "-c", "1", "-W", "1", "10.183.200.9", check=False
         )
         assert result.returncode == 1, result.stderr
         passed("VPN peers from different teams are isolated")
 
         phase("pre-game")
-        for target in ("10.101.0.2", "10.102.0.2"):
+        for target in ("10.183.101.2", "10.183.102.2"):
             execute("demo-player1", "ping", "-c", "1", "-W", "2", target)
             passed("pre-game ping " + target)
             probe("demo-player1", target, allowed=False)
             probe("demo-player1", target, "tcp", 22, allowed=False)
-        probe("demo-admin", "10.102.0.2", "tcp", 22)
-        probe("demo-forcad", "10.102.0.2", peer="10.102.0.1")
-        probe("demo-player1", "10.0.2.10", port=80, path="/api/client/teams/")
+        probe("demo-admin", "10.183.102.2", "tcp", 22)
+        probe("demo-forcad", "10.183.102.2", peer="10.183.102.1")
+        probe("demo-player1", "10.183.2.10", port=80, path="/api/client/teams/")
         phase("game")
 
         existing = execute(
@@ -189,11 +199,11 @@ def main():
             ),
         )
         filtering = True
-        probe("demo-player1", "10.102.0.2", "tcp", 9001, allowed=False)
-        probe("demo-player1", "10.102.0.2", peer="10.102.0.1")
+        probe("demo-player1", "10.183.102.2", "tcp", 9001, allowed=False)
+        probe("demo-player1", "10.183.102.2", peer="10.183.102.1")
         execute("demo-team2", "nft", "delete", "table", "inet", "demo_filter_test")
         filtering = False
-        probe("demo-player1", "10.102.0.2", "tcp", 9001)
+        probe("demo-player1", "10.183.102.2", "tcp", 9001)
         passed("vulnbox filtering is controlled independently by the team")
 
         wait_for(
@@ -211,8 +221,8 @@ def main():
                 )
                 > 0
                 for source, target in (
-                    ("10.101.0.2", "10.102.0.2"),
-                    ("10.102.0.2", "10.101.0.2"),
+                    ("10.183.101.2", "10.183.102.2"),
+                    ("10.183.102.2", "10.183.101.2"),
                 )
             ),
         )
@@ -224,8 +234,8 @@ def main():
                 )
                 >= 1
                 for source, target in (
-                    ("10.101.0.2", "10.102.0.2"),
-                    ("10.102.0.2", "10.101.0.2"),
+                    ("10.183.101.2", "10.183.102.2"),
+                    ("10.183.102.2", "10.183.101.2"),
                 )
             ),
         )
@@ -253,13 +263,14 @@ def main():
             "sum by (source_team_ip, team_ip) (rate(forcad_network_source_packets_total[1m]) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info)"
         )
         assert any(
-            row["metric"] == {"source_team_ip": "10.101.0.2", "team_ip": "10.102.0.2"}
+            row["metric"]
+            == {"source_team_ip": "10.183.101.2", "team_ip": "10.183.102.2"}
             and float(row["value"][1]) > 0
             for row in pairs
         ), pairs
         passed("dashboard queries and VPN source -> team packet attribution")
 
-        selector = '{source_team_ip="10.101.0.2",team_ip="10.102.0.2"}'
+        selector = '{source_team_ip="10.183.101.2",team_ip="10.183.102.2"}'
         before = value("forcad_game_http_requests_total" + selector)
         before_ws = value("forcad_game_websocket_connections" + selector)
         load = subprocess.Popen(

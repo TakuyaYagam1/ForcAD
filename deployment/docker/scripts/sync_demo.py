@@ -68,6 +68,8 @@ def main():
             "172.30.240.12",
             "10.101.0.2",
             "10.102.0.2",
+            "10.183.101.2",
+            "10.183.102.2",
         }:
             raise SystemExit("Existing team address is not part of the demo")
         if current["ip"] != team["ip"]:

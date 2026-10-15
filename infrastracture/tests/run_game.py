@@ -55,7 +55,7 @@ def main():
         for name, content in render.game_metrics(config).items():
             if name.endswith(".zeek"):
                 # Offline tests do not bind to a host-specific management address.
-                content = content.replace('"10.0.2.1"', '"127.0.0.1"')
+                content = content.replace('"10.183.2.1"', '"127.0.0.1"')
                 (work / Path(name).name).write_text(content)
         fixture().write(work / "game.pcap")
         (work / "check.zeek").write_text("""event net_done(t: time) {
@@ -96,7 +96,7 @@ event zeek_done() {
                 snapshots[phase] = json.loads(document)
         assert set(snapshots) == {"SNAPSHOT", "FINAL"}, result.stdout + result.stderr
 
-        def metric(phase, name, source="10.101.0.2", target="10.102.0.2"):
+        def metric(phase, name, source="10.183.101.2", target="10.183.102.2"):
             for item in snapshots[phase]:
                 labels = dict(
                     zip(item["label_names"], item["label_values"], strict=True)
@@ -126,7 +126,9 @@ event zeek_done() {
                 metric("SNAPSHOT", name),
                 value,
             )
-        assert metric("FINAL", "http_requests_total", "10.102.0.2", "10.101.0.2") == 1
+        assert (
+            metric("FINAL", "http_requests_total", "10.183.102.2", "10.183.101.2") == 1
+        )
         for name in ("websocket_connections", "tcp_connections", "udp_flows_active"):
             assert metric("FINAL", name) == 0, (name, metric("FINAL", name))
         assert not result.stderr, result.stderr

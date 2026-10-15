@@ -26,7 +26,7 @@ class RenderTests(unittest.TestCase):
         peers = [ip for team in allocated for ip in team["peers"]]
         self.assertEqual(len(peers), 160)
         self.assertEqual(len(set(peers)), 160)
-        self.assertNotIn("10.200.0.1", peers)
+        self.assertNotIn("10.183.200.1", peers)
         for team in allocated:
             subnet = ipaddress.ip_network(team["vpn_cidr"])
             self.assertTrue(
@@ -46,7 +46,8 @@ class RenderTests(unittest.TestCase):
             example.replace("game_udp_ports = []", "game_udp_ports = [53, 53]"),
             example.replace("admin_port = 56768", "admin_port = 56767"),
             example.replace('203.0.113.1"', '203.0.114.1"'),
-            example.replace("203.0.113.10/24", "10.0.1.10/24"),
+            example.replace("203.0.113.", "10.183.1."),
+            example.replace("203.0.113.", "10.183.200."),
             example.replace("vpn.example.org", "vpn.example.org:51820"),
             example.replace("teams = 20", "teams = 20\nteamz = 20"),
         ]
@@ -57,6 +58,37 @@ class RenderTests(unittest.TestCase):
                     path.write_text(text)
                     with self.assertRaises(ValueError):
                         render.load_config(path)
+
+    def test_team_networks_are_disjoint_inside_the_game_prefix(self):
+        self.config["teams"] = 32
+        allocated = render.teams(self.config)
+        networks = [ipaddress.ip_network(team["network"]) for team in allocated]
+        self.assertEqual(str(networks[0]), "10.183.101.0/24")
+        self.assertEqual(str(networks[-1]), "10.183.132.0/24")
+        networks += [
+            render.ATTACK_NET,
+            render.ADMIN_NET,
+            ipaddress.ip_network("10.183.1.0/30"),
+            ipaddress.ip_network("10.183.2.0/24"),
+        ]
+        for index, network in enumerate(networks):
+            self.assertTrue(network.subnet_of(render.INTERNAL_NET))
+            self.assertFalse(
+                any(network.overlaps(other) for other in networks[index + 1 :])
+            )
+        for team in allocated:
+            network = ipaddress.ip_network(team["network"])
+            self.assertEqual(team["gateway"], str(network[1]))
+            self.assertEqual(team["vulnbox"], str(network[2]))
+
+    def test_wan_can_use_a_nonoverlapping_private_network(self):
+        example = (ROOT / "network.example.toml").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "network.toml"
+            path.write_text(example.replace("203.0.113.", "10.0.2."))
+            self.assertEqual(
+                render.load_config(path)["router"]["wan_address"], "10.0.2.10/24"
+            )
 
     def test_output_is_private_and_never_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -84,8 +116,8 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("PresharedKey", content)
         self.assertNotIn("flush ruleset", content)
         self.assertIn("meta l4proto udp ct original proto-dst { 31337 }", content)
-        self.assertIn("10.200.0.0/29", files["forcad/teams.yml"])
-        self.assertIn("10.101.0.2/32", files["forcad/teams.yml"])
+        self.assertIn("10.183.200.0/29", files["forcad/teams.yml"])
+        self.assertIn("10.183.101.2/32", files["forcad/teams.yml"])
 
     @unittest.skipUnless(shutil.which("wg"), "wireguard-tools is required")
     def test_new_wireguard_bundle_has_distinct_keys_and_exact_peer_addresses(self):
@@ -108,7 +140,8 @@ class RenderTests(unittest.TestCase):
                 self.assertEqual(len(public), 44)
                 self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
                 if path.parent.name != "server":
-                    self.assertIn("AllowedIPs = 10.0.0.0/8", content)
+                    self.assertIn("AllowedIPs = 10.183.0.0/16", content)
+                    self.assertNotIn("AllowedIPs = 10.0.0.0/8", content)
                     matching_server = (
                         "wg-admin.conf"
                         if path.parent.name == "admins"
@@ -123,7 +156,12 @@ class RenderTests(unittest.TestCase):
                 "Private keys must be distinct",
             )
             server = (output / "server/wg-attack.conf").read_text()
-            for address in ["10.200.0.2", "10.200.0.3", "10.200.0.9", "10.200.0.10"]:
+            for address in [
+                "10.183.200.2",
+                "10.183.200.3",
+                "10.183.200.9",
+                "10.183.200.10",
+            ]:
                 self.assertIn(f"AllowedIPs = {address}/32\n", server)
             self.assertNotIn("PostUp", server)
             self.assertNotIn("PreUp", server)
