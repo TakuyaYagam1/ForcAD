@@ -296,6 +296,8 @@ iface {router["vpn_interface"]} inet static
     address 10.183.1.1/30
     up ip route replace {ATTACK_NET} via 10.183.1.2 dev {router["vpn_interface"]}
     up ip route replace {ADMIN_NET} via 10.183.1.2 dev {router["vpn_interface"]}
+    down ip route del {ATTACK_NET} via 10.183.1.2 dev {router["vpn_interface"]} || true
+    down ip route del {ADMIN_NET} via 10.183.1.2 dev {router["vpn_interface"]} || true
 
 auto {router["forcad_interface"]}
 iface {router["forcad_interface"]} inet static

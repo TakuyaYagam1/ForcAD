@@ -94,9 +94,10 @@ Install Zeek 9.0 using the [official Debian package instructions](https://docs.z
 Check `/opt/zeek/bin/zeek --version`; adjust the unit's binary path if needed.
 The scripts are tested with Zeek 9.0.0.
 
-The sensor captures both directions on the VPN-facing interface (`eth1` by
-default), before filtering and SNAT. Do not also capture `any`, the trunk, or run
-ZeekControl on that path: duplicate capture double-counts traffic.
+The sensor captures both directions on the configured VPN-facing interface
+(`ens20` in the example), before filtering and SNAT. Do not also capture `any`,
+the trunk, or run ZeekControl on that path: duplicate capture double-counts
+traffic.
 
 From the generated router directory, create the account once and install:
 

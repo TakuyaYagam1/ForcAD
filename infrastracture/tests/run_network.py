@@ -38,6 +38,13 @@ def main():
             bundle = scratch / "bundle"
             config = render.load_config(ROOT / "network.example.toml")
             config.update(teams=2, game_udp_ports=[9000])
+            config["router"].update(
+                wan_interface="eth0",
+                vpn_interface="eth1",
+                forcad_interface="eth2",
+                team_trunk="eth3",
+            )
+            config["vpn"]["interface"] = "eth0"
             render.write_bundle(bundle, render.render(config))
             for role in ("router", "vpn"):
                 cid = scratch / f"{role}.cid"

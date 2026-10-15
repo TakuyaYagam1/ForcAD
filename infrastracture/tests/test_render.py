@@ -36,8 +36,10 @@ class RenderTests(unittest.TestCase):
     def test_rejects_invalid_and_injectable_config(self):
         example = (ROOT / "network.example.toml").read_text()
         bad_inputs = [
-            example.replace('wan_interface = "eth0"', 'wan_interface = "eth0; reboot"'),
-            example.replace('team_trunk = "eth3"', 'team_trunk = "eth0"'),
+            example.replace(
+                'wan_interface = "ens19"', 'wan_interface = "ens19; reboot"'
+            ),
+            example.replace('team_trunk = "ens21"', 'team_trunk = "ens19"'),
             example.replace("teams = 20", "teams = 33"),
             example.replace("teams = 20", "teams = true"),
             example.replace("members_per_team = 5", "members_per_team = 6"),
@@ -118,6 +120,14 @@ class RenderTests(unittest.TestCase):
         self.assertIn("meta l4proto udp ct original proto-dst { 31337 }", content)
         self.assertIn("10.183.200.0/29", files["forcad/teams.yml"])
         self.assertIn("10.183.101.2/32", files["forcad/teams.yml"])
+        self.assertIn(
+            "down ip route del 10.183.200.0/24 via 10.183.1.2 dev ens20 || true",
+            files["router/interfaces"],
+        )
+        self.assertIn(
+            "down ip route del 10.183.201.0/24 via 10.183.1.2 dev ens20 || true",
+            files["router/interfaces"],
+        )
 
     @unittest.skipUnless(shutil.which("wg"), "wireguard-tools is required")
     def test_new_wireguard_bundle_has_distinct_keys_and_exact_peer_addresses(self):

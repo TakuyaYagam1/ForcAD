@@ -63,8 +63,8 @@ through external hosts or team-controlled connections.
 
 ## Network diagram
 
-Default: 20 teams. The router uses tagged `eth3.101` through `eth3.120`
-subinterfaces; NIC names are configurable. The switch must enforce one access
+Default: 20 teams. The diagram uses generic `eth` labels; the example config
+uses `ens19` through `ens22`. The switch must enforce one access
 VLAN per guest and a trunk on the router port. Guests must have no bypass path.
 
 VPN rules live on the VPN server. The router loads `game.nft` or `pre-game.nft`,

@@ -11,18 +11,18 @@ management_tcp_ports = [22]
 dns_servers = ["1.1.1.1", "8.8.8.8"]
 
 [router]
-wan_interface = "eth0"
+wan_interface = "ens19"
 wan_address = "203.0.113.10/24"
 wan_gateway = "203.0.113.1"
-vpn_interface = "eth1"
-forcad_interface = "eth2"
-team_trunk = "eth3"
+vpn_interface = "ens20"
+forcad_interface = "ens22"
+team_trunk = "ens21"
 
 [vpn]
-interface = "eth0"
+interface = "ens19"
 endpoint = "vpn.example.org"
 participant_port = 56767
 admin_port = 56768
 
 [forcad]
-interface = "eth0"
+interface = "ens19"
