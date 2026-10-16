@@ -1,11 +1,11 @@
 """Local load fixtures; team IPs are isolated namespaces, not remote targets."""
 
 import importlib
-from contextlib import contextmanager
 import json
 import re
 import sqlite3
 import sys
+from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 

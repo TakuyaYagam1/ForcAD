@@ -6,7 +6,6 @@ from pathlib import Path
 
 import yaml
 
-
 API_DIR = Path(__file__).resolve().parents[1]
 SCHEMAS_DIR = API_DIR / "components" / "schemas"
 SCHEMAS_FILE = API_DIR / "components" / "schemas.yml"
@@ -77,7 +76,7 @@ def merge_schemas(schema_dir=SCHEMAS_DIR, output=SCHEMAS_FILE):
         if not isinstance(content, dict) or not isinstance(
             content.get("schemas"), dict
         ):
-            raise ValueError(f"{path} must contain a top-level schemas mapping")
+            raise TypeError(f"{path} must contain a top-level schemas mapping")
 
         for name, schema in content["schemas"].items():
             if name in merged:

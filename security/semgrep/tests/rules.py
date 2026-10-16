@@ -3,11 +3,11 @@ import ast
 import json
 import pickle
 import subprocess
+from subprocess import run
 
 import httpx
 import requests
 import yaml
-from subprocess import run
 from yaml import CSafeLoader, SafeLoader
 
 
@@ -15,11 +15,11 @@ def dynamic_code(source):
     # ruleid: forcad-python-dynamic-execution
     eval(source)
     # ruleid: forcad-python-dynamic-execution
-    exec(source)
+    exec(source)  # noqa: S102 - intentional insecure fixture for Semgrep
     # ok: forcad-python-dynamic-execution
     ast.literal_eval(source)
     # ok: forcad-python-dynamic-execution
-    redis.eval(source)
+    redis.eval(source)  # noqa: F821 - intentional unresolved receiver fixture
     # ok: forcad-python-dynamic-execution
     json.loads(source)
 
@@ -45,11 +45,11 @@ def processes(command):
     # ruleid: forcad-python-subprocess-shell
     subprocess.run(command, shell=True, check=True)
     # ruleid: forcad-python-subprocess-shell
-    run(command, shell=True)
+    run(command, shell=True)  # noqa: PLW1510 - intentional Semgrep fixture
     # ok: forcad-python-subprocess-shell
     subprocess.run(["tool", command], check=True)
     # ok: forcad-python-subprocess-shell
-    subprocess.run(["tool", command], shell=False)
+    subprocess.run(["tool", command], shell=False)  # noqa: PLW1510 - fixture
 
 
 def http_clients(url):

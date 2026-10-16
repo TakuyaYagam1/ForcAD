@@ -5,12 +5,12 @@ import argparse
 import errno
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 TIMEOUT = 300
 REPORTS = ("gitleaks-files.json", "gitleaks-history.json", "gitleaks-version.txt")

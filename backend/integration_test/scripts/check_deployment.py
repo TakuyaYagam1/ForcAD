@@ -6,15 +6,15 @@ import http.client
 import http.cookiejar
 import json
 import os
-from pathlib import Path
 import secrets
 import subprocess
 import sys
 import time
-import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
+from pathlib import Path
 
 from check_api import (
     check_admin,

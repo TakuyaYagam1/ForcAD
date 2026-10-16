@@ -1,12 +1,11 @@
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import TestCase
-
 
 PROJECT = Path(__file__).resolve().parents[2]
 SCRIPT = PROJECT / "security" / "scan_inputs.py"

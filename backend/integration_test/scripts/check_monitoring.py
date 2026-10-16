@@ -4,13 +4,13 @@
 import base64
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 
 def get_json(url, auth=None):
@@ -64,17 +64,18 @@ def main():
                 if item["scrapeUrl"].endswith(":9090/metrics")
                 and item["labels"].get("job") != "prometheus"
             ]
-            if len(application) >= 7 and all(
-                item["health"] == "up" for item in application
-            ):
-                if (
+            if (
+                len(application) >= 7
+                and all(item["health"] == "up" for item in application)
+                and (
                     query('sum(forcad_team_flags_total{verdict="accepted"})')
                     and query("forcad:team_info:latest")
                     and len(query('forcad:team_info:latest{team_id!="__unknown__"}'))
                     == expected_teams
                     and query("sum(forcad_team_websocket_upgrades_total)")
-                ):
-                    break
+                )
+            ):
+                break
         except (urllib.error.URLError, TimeoutError):
             pass
         time.sleep(1)
