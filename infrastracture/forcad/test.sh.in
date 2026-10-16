@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+target=@@INSTALL_PATH@@
+[[ -f "$target/.forcad-fresh-install" ]] || { echo "No managed installation found at $target" >&2; exit 1; }
+"$target/backend/bin/forcad" control --project-root "$target" validate --full
+bash "$bundle_dir/host/test.sh" --live

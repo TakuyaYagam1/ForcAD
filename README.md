@@ -98,7 +98,13 @@ See [Monitoring](docs/MONITORING.md) for dashboards, remote access and coverage.
 | `public/` | Public branding and optional team logos |
 | `scripts/`, `security/` | Development tools and verification commands |
 
-For a development checkout, run `make -C backend sync` and `make -C frontend sync`.
+From the repository root, prepare a development checkout with:
+
+```sh
+make -C backend sync
+make -C frontend sync
+```
+
 Each component has its own `build`, `lint` and `test` targets. Deployment checks
 live in `deployment/Makefile` and use isolated test deployments; see
 [Development](docs/DEVELOPMENT.md#tests) for their scope.

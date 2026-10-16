@@ -1,0 +1,9 @@
+The generated install.sh applies the ForcAD host files and starts the game.
+It does not restart networking. If the staged interfaces file differs from the
+live setup, review and apply it from the host console before relying on it.
+
+After the installer succeeds, check the deployment with:
+
+```sh
+bash test.sh
+```

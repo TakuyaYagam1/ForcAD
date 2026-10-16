@@ -56,7 +56,7 @@ node_modules/
 
 /.version
 /config/runtime/
-/infrastracture/network.toml
+/infrastracture/settings.toml
 /infrastracture/runtime/
 /config/config_backup*.yml
 /release

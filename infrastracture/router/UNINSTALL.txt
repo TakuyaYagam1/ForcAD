@@ -1,0 +1,35 @@
+# Uninstall router
+
+Run from the transferred bundle at the host console. Preview the default
+managed uninstall, then restore the original files and recorded live state:
+
+```sh
+bash uninstall.sh --dry-run
+bash uninstall.sh
+```
+
+The live baseline is stored privately at
+`/var/backups/forcad/router/live.json`. A successful uninstall removes it and
+keeps transaction backups. It restores only state owned by the router
+installation. It does not remove packages or accounts.
+
+For an install staged with `--files-only`, use file-only uninstall:
+
+```sh
+bash uninstall.sh --files-only --dry-run
+bash uninstall.sh --files-only
+```
+
+File-only uninstall is refused while `live.json` exists. It restores staged
+files only. If you applied live changes manually after a file-only install,
+restore those changes from the host console before removing the files. They
+were not recorded for automatic rollback.
+
+If an owned file has drifted, review the diff before using `--force`; it saves
+the current files before restoration. Legacy manifests without a verified
+rollback link fail closed and require manual review of their backups.
+
+Do not stop or disable a pre-existing firewall service, delete `/etc/nftables.conf`,
+or remove tables by name to work around a preflight refusal. Never flush the
+whole ruleset. A refusal means the current owner must be reviewed before
+continuing.

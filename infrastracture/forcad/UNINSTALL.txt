@@ -1,0 +1,11 @@
+Use the generated root-level uninstaller:
+
+```sh
+bash uninstall.sh --confirm
+```
+
+It permanently deletes the game, database, Compose volumes and managed checkout.
+It restores host files, removes the backup created by this install, purges
+packages installed by the bootstrap, and removes its Docker apt source if the
+source and signing key are unchanged. Packages and files that existed before
+installation are kept.

@@ -1,5 +1,5 @@
 #!/usr/sbin/nft -f
-# Rendered from network.toml. This transaction replaces only our own tables.
+# Rendered from settings.toml. This transaction replaces only our own tables.
 @@DEFINITIONS@@
 
 add table inet forcad_router

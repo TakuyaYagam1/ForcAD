@@ -1,0 +1,22 @@
+# Uninstall VPN host
+
+Run from the transferred `vpn/` directory at the host console:
+
+```sh
+bash uninstall.sh --dry-run
+bash uninstall.sh
+```
+
+The normal uninstall stops and disables the WireGuard tunnels and ForcAD
+firewall, removes only `inet forcad_vpn`, restores the original interface,
+sysctl and service state, and restores files from before the first install.
+Backups remain in `/var/backups/forcad/vpn/`.
+
+If an owned file changed, uninstall stops before making changes. Review the
+diff, then use `bash uninstall.sh --force` to preserve the current files in a
+backup and restore the original state. Do not use `--force` to bypass an
+unrecognized change without reviewing the saved runtime snapshot first.
+
+Installations made by an older file-only installer have no runtime recovery
+record. Their files can be restored, but any manually applied network,
+firewall, sysctl or tunnel state must be reverted separately.

@@ -1,0 +1,45 @@
+Router live application
+
+Use these manual steps only after `bash install.sh --files-only`. The default
+`bash install.sh` applies and tracks live state for you. If files are staged,
+you can run the default command from the transferred bundle instead of applying
+them manually.
+
+Keep console access open while applying network or firewall changes. Manual
+changes after a file-only install are not recorded in `live.json`; restore them
+yourself before a file-only uninstall.
+
+Reload systemd units and apply sysctls:
+
+sudo systemctl daemon-reload
+sudo sysctl -p /etc/sysctl.d/90-forcad-router.conf
+
+Enable and load the router firewall:
+
+sudo systemctl enable --now forcad-router-firewall.service
+sudo systemctl reload forcad-router-firewall.service
+
+Apply the installed interfaces through ifupdown from the console if live
+addresses or routes differ. A restart can interrupt remote access:
+
+sudo systemctl restart networking
+
+If installed with `--network-metrics`, start its services:
+
+sudo systemctl enable --now network-rules.service
+sudo systemctl enable --now network-metrics.service
+
+If installed with `--game-metrics`, start the sensor:
+
+sudo systemctl enable --now game-metrics.service
+
+The `forcad-sensor` account and Zeek 9 must already be installed. The installer
+checks for them but does not create the account or install packages.
+
+Check the resulting live state:
+
+bash test.sh --live
+
+For managed rollback, use the default `bash uninstall.sh`. Manual live changes
+are not covered by file-only uninstall. See `UNINSTALL.txt` before removing a
+file-only installation.

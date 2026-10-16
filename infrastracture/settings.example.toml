@@ -1,0 +1,124 @@
+# Copy to settings.toml and replace example values with the deployment values.
+# Use 1-32 teams and 1-5 members per team. admins sets the wg-admin peer count.
+admins = 1
+# Public game ports allowed through the router to team networks.
+game_tcp_ports = [8080, 8081]
+game_udp_ports = []
+# SSH and other management ports allowed from team networks to vulnboxes.
+management_tcp_ports = [22]
+# DNS servers assigned to team networks.
+dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+# Address plan. Replace ranges that overlap your host LAN, WAN or another
+# network. The router uses .1 on the transit, ForcAD and team subnets; the VPN
+# server uses .1 in each VPN range. Transit peer and team vulnboxes use .2.
+[network]
+router_vpn = "10.183.1.0/30"
+forcad = "10.183.2.0/24"
+participant_vpn = "10.183.200.0/24"
+admin_vpn = "10.183.201.0/24"
+# Teams get consecutive /24 subnets starting here, in the listed team order.
+team_network_base = "10.183.101.0/24"
+team_vlan_start = 101
+
+# Interface names as seen on the router host.
+[router]
+# WAN address and gateway on the router's Internet-facing interface.
+wan_interface = "ens19"
+# Documentation-only TEST-NET value; replace with the real WAN address.
+wan_address = "203.0.113.10/24"
+wan_gateway = "203.0.113.1"
+# Point-to-point link from router to VPN host, then router to ForcAD host.
+vpn_interface = "ens20"
+forcad_interface = "ens22"
+# VLAN trunk carrying team networks.
+team_trunk = "ens21"
+
+# Endpoint must be the public DNS name or IP forwarded by the router to the VPN
+# host; do not add a port. The two ports below are UDP server listen ports.
+[vpn]
+# Router-facing interface on the VPN host.
+interface = "ens20"
+# Placeholder only; replace with the public DNS name or IP of your router.
+endpoint = "vpn.example.org"
+participant_port = 56767
+admin_port = 56768
+
+# Interface on the ForcAD host. install_path must not already exist.
+[forcad]
+interface = "ens19"
+# The first-install script clones this repository revision.
+repository_url = "https://github.com/TakuyaYagam1/ForcAD.git"
+revision = "main"
+install_path = "/opt/forcad"
+
+# These entries are the teams created in ForcAD. Their order determines team
+# numbers and their address/VLAN allocation from the network section.
+# Set logo = "" when a team has no logo.
+[teams]
+members_per_team = 5
+
+[[teams.entries]]
+name = "danosito's ai farm"
+# Logo path relative to public/teams/.
+logo = "danosito.jpg"
+highlighted = false
+
+[[teams.entries]]
+name = "pod egidoy"
+# Logo path relative to public/teams/.
+logo = "egida.png"
+highlighted = true
+
+# Branding assets are relative to public/brand/. public_host is the address
+# assigned to the ForcAD host inside network.forcad.
+[env]
+# Example address only. Set the actual address assigned to the ForcAD host.
+public_host = "10.183.2.10"
+public_scheme = "http"
+# Name shown in the ForcAD UI.
+brand_name = "ForcAD"
+# Logo path relative to public/brand/.
+brand_logo = "forcad-mark.svg"
+# Hex colors in #RRGGBB format.
+brand_primary = "#5B8DEF"
+brand_accent = "#38B7B0"
+# Generate and start the Prometheus/Grafana overlay.
+monitoring = true
+# Enable only when the corresponding router exporter or Zeek sensor is set up.
+router_metrics = false
+game_metrics = false
+
+# Values written to the generated ForcAD config.yml.
+[game]
+mode = "classic"
+# Durations and intervals are in seconds; start_time uses the configured timezone.
+round_time = 60
+rounds = 300
+start_time = "2027-01-01 12:00:00"
+timezone = "Europe/Moscow"
+default_score = 2500
+flag_lifetime = 5
+game_hardness = 10.0
+inflation = true
+volga_attacks_mode = false
+checkers_path = "/checkers/"
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+# Task entries are added to config.yml. checker is relative to the repository's
+# checkers/ directory; checker assets are copied into the fresh installation.
+[tasks]
+# checker_timeout is seconds per action. puts/gets are action counts;
+# places is the number of flag locations. Periods are in seconds.
+[[tasks.entries]]
+name = "example_service"
+checker = "examples/note/checker.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 2
+gets = 2
+places = 2
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60

@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+target=@@INSTALL_PATH@@
+if [[ "$EUID" -ne 0 ]]; then exec sudo -- bash "$0" "$@"; fi
+if [[ $# -ne 1 || "$1" != "--confirm" ]]; then
+    echo "Usage: bash uninstall.sh --confirm" >&2
+    echo "This permanently removes the deployment, database and Compose volumes." >&2
+    exit 2
+fi
+[[ -d "$target" && ! -L "$target" ]] || { echo "No safe managed installation found at $target" >&2; exit 1; }
+cursor="$(dirname -- "$target")"
+while [[ "$cursor" != / ]]; do
+    [[ ! -L "$cursor" ]] || { echo "Refusing symlinked install parent: $cursor" >&2; exit 1; }
+    cursor="$(dirname -- "$cursor")"
+done
+[[ -f "$target/.forcad-fresh-install" && ! -L "$target/.forcad-fresh-install" ]] || { echo "No managed installation marker found at $target" >&2; exit 1; }
+grep -Fqx @@INSTALL_MARKER@@ "$target/.forcad-fresh-install" || { echo "Install marker does not match this bundle" >&2; exit 1; }
+packages_file="$target/.forcad-managed-packages"
+[[ -f "$packages_file" && ! -L "$packages_file" ]] || { echo "Managed package manifest is missing or unsafe" >&2; exit 1; }
+expected_packages_sha="$(sed -n 's/^packages_sha256=//p' "$target/.forcad-fresh-install")"
+[[ "$expected_packages_sha" =~ ^[a-f0-9]{64}$ && "$(sha256sum "$packages_file" | cut -d ' ' -f 1)" == "$expected_packages_sha" ]] || { echo "Managed package manifest checksum mismatch" >&2; exit 1; }
+mapfile -t packages < "$packages_file"
+for package in "${packages[@]}"; do
+    [[ "$package" =~ ^[a-zA-Z0-9.+:~_-]+$ ]] || { echo "Invalid package in managed manifest: $package" >&2; exit 1; }
+done
+host_backup=
+[[ -f "$target/.forcad-host-backup" && ! -L "$target/.forcad-host-backup" ]] || { echo "Host backup marker is missing or unsafe" >&2; exit 1; }
+host_backup="$(<"$target/.forcad-host-backup")"
+[[ "$host_backup" =~ ^[0-9]{8}-[0-9]{6}-[a-zA-Z0-9_-]+$ ]] || { echo "Invalid host backup marker" >&2; exit 1; }
+docker_active=inactive
+docker_enabled=disabled
+[[ -f "$target/.forcad-docker-state" && ! -L "$target/.forcad-docker-state" ]] || { echo "Docker service state marker is missing or unsafe" >&2; exit 1; }
+mapfile -t docker_state < "$target/.forcad-docker-state"
+[[ ${#docker_state[@]} -eq 2 ]] || { echo "Invalid Docker service state marker" >&2; exit 1; }
+docker_active="${docker_state[0]}"
+docker_enabled="${docker_state[1]}"
+[[ "$docker_active" =~ ^(active|inactive|failed|unknown)$ && "$docker_enabled" =~ ^(enabled|enabled-runtime|disabled|masked|masked-runtime|static|indirect|alias|generated|unknown)$ ]] || { echo "Invalid Docker service state marker" >&2; exit 1; }
+docker_repo_owned=false
+if [[ -f "$target/.forcad-docker.sources" && ! -L "$target/.forcad-docker.sources" && -f "$target/.forcad-docker-key.sha256" && ! -L "$target/.forcad-docker-key.sha256" ]]; then
+    docker_repo_owned=true
+fi
+(cd "$target" && ./control.sh down -v --remove-orphans)
+host_uninstall_output="$(bash "$bundle_dir/host/uninstall.sh" --force)"
+printf '%s\n' "$host_uninstall_output"
+uninstall_backup="$(sed -n 's/^Current files saved: \/var\/backups\/forcad\/forcad\/uninstall-//p' <<< "$host_uninstall_output")"
+if [[ -n "$uninstall_backup" ]]; then
+    [[ "$uninstall_backup" =~ ^[0-9]{8}-[0-9]{6}-[a-zA-Z0-9_-]+$ ]] || { echo "Invalid uninstall backup marker" >&2; exit 1; }
+fi
+if ! printf '%s\n' "${packages[@]}" | grep -Eq '^(docker-ce|docker.io)(:[A-Za-z0-9_-]+)?$'; then
+    case "$docker_enabled" in
+        enabled) systemctl enable docker ;;
+        disabled) systemctl disable docker ;;
+        masked) systemctl mask docker ;;
+        masked-runtime) systemctl mask --runtime docker ;;
+    esac
+    if [[ "$docker_active" == active ]]; then systemctl start docker; else systemctl stop docker || true; fi
+fi
+if [[ "$docker_repo_owned" == true ]]; then
+    if [[ -f /etc/apt/sources.list.d/docker.sources && ! -L /etc/apt/sources.list.d/docker.sources && -f /etc/apt/keyrings/docker.asc && ! -L /etc/apt/keyrings/docker.asc ]] \
+        && cmp -s "$target/.forcad-docker.sources" /etc/apt/sources.list.d/docker.sources \
+        && [[ "$(sha256sum /etc/apt/keyrings/docker.asc 2>/dev/null | cut -d ' ' -f 1)" == "$(<"$target/.forcad-docker-key.sha256")" ]]; then
+        rm -- /etc/apt/sources.list.d/docker.sources /etc/apt/keyrings/docker.asc
+        rmdir --ignore-fail-on-non-empty /etc/apt/keyrings
+    else
+        echo "Preserved changed Docker apt repository files."
+    fi
+fi
+if (( ${#packages[@]} > 0 )); then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get purge -y -- "${packages[@]}"
+fi
+if [[ -n "$host_backup" ]]; then
+    backup_dir="/var/backups/forcad/forcad/install-$host_backup"
+    [[ -d "$backup_dir" && ! -L "$backup_dir" && -f "$backup_dir/files.json" ]] && rm -rf -- "$backup_dir"
+fi
+if [[ -n "$uninstall_backup" ]]; then
+    backup_dir="/var/backups/forcad/forcad/uninstall-$uninstall_backup"
+    [[ -d "$backup_dir" && ! -L "$backup_dir" && -f "$backup_dir/files.json" ]] && rm -rf -- "$backup_dir"
+fi
+rmdir --ignore-fail-on-non-empty /var/backups/forcad/forcad
+rm -rf -- "$target"
+echo "Removed ForcAD, its Docker volumes, install-owned packages and apt repository files."

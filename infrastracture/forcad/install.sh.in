@@ -1,0 +1,188 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+target=@@INSTALL_PATH@@
+repo=@@REPOSITORY_URL@@
+revision=@@REVISION@@
+created=false
+host_installed=false
+toolchain_tmp=
+go_dir=
+packages_before=
+docker_repo_created=false
+docker_was_active=inactive
+docker_was_enabled=disabled
+
+if [[ "$EUID" -ne 0 ]]; then
+    exec sudo -- bash "$0" "$@"
+fi
+if [[ $# -ne 0 ]]; then
+    echo "Usage: bash install.sh" >&2
+    exit 2
+fi
+if [[ -e "$target" || -L "$target" ]]; then
+    echo "Refusing to overwrite existing path: $target" >&2
+    exit 1
+fi
+parent="$(dirname -- "$target")"
+cursor="$parent"
+while [[ "$cursor" != / ]]; do
+    [[ ! -L "$cursor" ]] || { echo "Refusing symlinked install parent: $cursor" >&2; exit 1; }
+    cursor="$(dirname -- "$cursor")"
+done
+mkdir -p -- "$parent"
+
+install_dependencies() {
+    . /etc/os-release
+    [[ "${ID:-}" == debian && "${VERSION_ID%%.*}" =~ ^(12|13)$ ]] || {
+        echo "Automatic dependency installation supports Debian 12 and 13." >&2
+        exit 1
+    }
+    export DEBIAN_FRONTEND=noninteractive
+    packages_before="$(mktemp)"
+    dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' | awk '$1 == "installed" {print $2}' | sort -u > "$packages_before"
+    apt-get update
+    apt-get install -y ca-certificates curl git make openssl python3 python3-yaml ifupdown iproute2 iputils-ping tar
+
+    if ! command -v docker >/dev/null; then
+        for package in docker.io docker-compose docker-doc docker-buildx podman-docker containerd runc; do
+            if dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null | grep -qx installed; then
+                echo "Conflicting container package is installed: $package. Remove or configure it manually first." >&2
+                exit 1
+            fi
+        done
+        if [[ ! -f /etc/apt/keyrings/docker.asc && ! -f /etc/apt/sources.list.d/docker.sources ]]; then
+            docker_repo_created=true
+            install -m 0755 -d /etc/apt/keyrings
+            curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+            chmod a+r /etc/apt/keyrings/docker.asc
+            arch="$(dpkg --print-architecture)"
+            printf 'Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: %s\nComponents: stable\nArchitectures: %s\nSigned-By: /etc/apt/keyrings/docker.asc\n' "$VERSION_CODENAME" "$arch" > /etc/apt/sources.list.d/docker.sources
+        elif [[ ! -f /etc/apt/keyrings/docker.asc || -L /etc/apt/keyrings/docker.asc || ! -f /etc/apt/sources.list.d/docker.sources || -L /etc/apt/sources.list.d/docker.sources ]]; then
+            echo "Partial Docker apt repository configuration exists; review it manually." >&2
+            exit 1
+        elif ! grep -Fqx 'URIs: https://download.docker.com/linux/debian' /etc/apt/sources.list.d/docker.sources || ! grep -Fqx 'Signed-By: /etc/apt/keyrings/docker.asc' /etc/apt/sources.list.d/docker.sources; then
+            echo "Existing Docker apt source does not match the official repository; review it manually." >&2
+            exit 1
+        fi
+        apt-get update
+        apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    elif ! docker compose version >/dev/null 2>&1; then
+        if [[ -f /etc/apt/sources.list.d/docker.sources ]] && grep -Fqx 'URIs: https://download.docker.com/linux/debian' /etc/apt/sources.list.d/docker.sources; then
+            apt-get install -y docker-compose-plugin
+        else
+            echo "Docker is installed without Compose v2 and has no verified Docker apt source." >&2
+            exit 1
+        fi
+    fi
+    docker_was_active="$(systemctl is-active docker 2>/dev/null || true)"
+    docker_was_enabled="$(systemctl is-enabled docker 2>/dev/null || true)"
+    systemctl enable --now docker
+
+    if [[ -n "$(docker ps -aq --filter label=com.docker.compose.project=forcad)" || -n "$(docker volume ls -q --filter label=com.docker.compose.project=forcad)" ]]; then
+        echo "Docker already has a ForcAD project or volume; refusing to reuse it." >&2
+        exit 1
+    fi
+
+    go_dir=/opt/forcad-toolchain/go1.27.2
+    if [[ -x "$go_dir/bin/go" ]]; then
+        [[ "$($go_dir/bin/go version)" == *"go1.27.2"* ]] || { echo "Unexpected Go toolchain at $go_dir" >&2; exit 1; }
+    elif command -v go >/dev/null && [[ "$(go version)" == *"go1.27.2"* ]]; then
+        go_dir="$(dirname -- "$(dirname -- "$(command -v go)")")"
+    else
+        arch="$(dpkg --print-architecture)"
+        case "$arch" in
+            amd64) go_arch=amd64; go_sum=ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 ;;
+            arm64) go_arch=arm64; go_sum=94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8 ;;
+            *) echo "Go 1.27.2 is pinned for amd64 and arm64; unsupported architecture: $arch" >&2; exit 1 ;;
+        esac
+        tmp="$(mktemp -d)"
+        curl --fail --silent --show-error --location "https://go.dev/dl/go1.27.2.linux-$go_arch.tar.gz" -o "$tmp/go.tar.gz"
+        printf '%s  %s\n' "$go_sum" "$tmp/go.tar.gz" | sha256sum --check --status || { echo "Go archive checksum mismatch" >&2; exit 1; }
+        tar -C "$tmp" -xzf "$tmp/go.tar.gz"
+        toolchain_tmp="$tmp"
+        go_dir="$tmp/go"
+    fi
+    export PATH="$go_dir/bin:$PATH"
+    command -v git >/dev/null
+    command -v make >/dev/null
+    command -v python3 >/dev/null
+    docker compose version >/dev/null
+}
+
+rollback() {
+    status=$?
+    if (( status != 0 )); then
+        if [[ "$created" == true && -f "$target/control.sh" ]]; then
+            (cd "$target" && ./control.sh down -v --remove-orphans) || true
+        fi
+        if [[ "$host_installed" == true ]]; then
+            bash "$bundle_dir/host/uninstall.sh" --force || true
+        fi
+        if [[ "$created" == true ]]; then
+            rm -rf -- "$target"
+        fi
+        if [[ -n "$toolchain_tmp" ]]; then rm -rf -- "$toolchain_tmp"; fi
+        if [[ -n "$packages_before" ]]; then rm -f -- "$packages_before"; fi
+        echo "Fresh installation failed; temporary deployment state was removed." >&2
+    fi
+    exit "$status"
+}
+trap rollback EXIT
+
+install_dependencies
+git clone --depth 1 --branch "$revision" --single-branch "$repo" "$target"
+created=true
+dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' | awk '$1 == "installed" {print $2}' | sort -u > "$target/.forcad-current-packages"
+comm -13 "$packages_before" "$target/.forcad-current-packages" > "$target/.forcad-managed-packages"
+rm -f -- "$target/.forcad-current-packages" "$packages_before"
+packages_before=
+if [[ -n "$toolchain_tmp" ]]; then
+    install -d -m 0755 "$target/.toolchain"
+    mv "$toolchain_tmp/go" "$target/.toolchain/go1.27.2"
+    rm -rf -- "$toolchain_tmp"
+    toolchain_tmp=
+    go_dir="$target/.toolchain/go1.27.2"
+fi
+export PATH="$go_dir/bin:$PATH"
+install -m 0600 "$bundle_dir/config.yml" "$target/config/config.yml"
+install -m 0600 "$bundle_dir/environment.env" "$target/deployment/docker/.env"
+if [[ -d "$bundle_dir/public" ]]; then
+    cp -a "$bundle_dir/public/." "$target/public/"
+fi
+if [[ -d "$bundle_dir/checkers" ]]; then
+    cp -a "$bundle_dir/checkers/." "$target/checkers/"
+fi
+if [[ @@MONITORING@@ == true ]]; then
+    command -v openssl >/dev/null || { echo "openssl is required to create the Grafana password" >&2; exit 1; }
+    printf 'GRAFANA_ADMIN_PASSWORD="%s"\n' "$(openssl rand -hex 32)" >> "$target/deployment/docker/.env"
+fi
+chmod 0600 "$target/config/config.yml" "$target/deployment/docker/.env"
+package_sha="$(sha256sum "$target/.forcad-managed-packages" | cut -d ' ' -f 1)"
+printf '%s\npackages_sha256=%s\n' "$repo $revision" "$package_sha" > "$target/.forcad-fresh-install"
+if [[ "$docker_repo_created" == true ]]; then
+    cp -- /etc/apt/sources.list.d/docker.sources "$target/.forcad-docker.sources"
+    sha256sum /etc/apt/keyrings/docker.asc | cut -d ' ' -f 1 > "$target/.forcad-docker-key.sha256"
+fi
+printf '%s\n%s\n' "$docker_was_active" "$docker_was_enabled" > "$target/.forcad-docker-state"
+chmod 0600 "$target/.forcad-fresh-install" "$target/.forcad-managed-packages" "$target/.forcad-docker-state"
+
+cd "$target"
+./control.sh setup
+./control.sh validate --full
+host_install_output="$(bash "$bundle_dir/host/install.sh" --repo "$target" @@METRICS_OPTIONS@@)"
+host_installed=true
+printf '%s\n' "$host_install_output"
+host_backup="$(sed -n 's/^Installed [0-9][0-9]* files\. Backup: \/var\/backups\/forcad\/forcad\/install-//p' <<< "$host_install_output")"
+[[ -n "$host_backup" && "$host_backup" != */* ]] || { echo "Could not identify the host backup created during install" >&2; exit 1; }
+printf '%s\n' "$host_backup" > "$target/.forcad-host-backup"
+if [[ @@MONITORING@@ == true ]]; then
+    ./control.sh monitoring up -d
+else
+    ./control.sh start
+fi
+bash "$bundle_dir/test.sh"
+trap - EXIT
+echo "Fresh ForcAD installation is ready at $target."
+echo "Admin credentials: $target/config/runtime/admin.env"

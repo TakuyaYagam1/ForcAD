@@ -13,6 +13,8 @@ from game_trace import fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from helpers import small_config
+
 import render
 
 IMAGE = "zeek/zeek@sha256:70733f4e540ba1608e37e00c6a93d009f79734262c9ec2ba09d90aa9abc16de5"  # 9.0.0
@@ -48,14 +50,15 @@ def main():
     )
     if image.returncode:
         subprocess.run(["docker", "pull", IMAGE], check=True, timeout=180)
-    config = render.load_config(ROOT / "network.example.toml")
-    config.update(teams=2, members_per_team=2, game_udp_ports=[31337])
+    config = small_config(render.load_config(ROOT / "settings.example.toml"))
+    config["game_udp_ports"] = [31337]
     with tempfile.TemporaryDirectory(prefix="forcad-game-") as directory:
         work = Path(directory)
         for name, content in render.game_metrics(config).items():
             if name.endswith(".zeek"):
                 # Offline tests do not bind to a host-specific management address.
-                content = content.replace('"10.183.2.1"', '"127.0.0.1"')
+                metrics_address = render.network_layout(config)["forcad_router"]
+                content = content.replace(f'"{metrics_address}"', '"127.0.0.1"')
                 (work / Path(name).name).write_text(content)
         fixture().write(work / "game.pcap")
         (work / "check.zeek").write_text("""event net_done(t: time) {

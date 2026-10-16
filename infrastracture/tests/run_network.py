@@ -8,6 +8,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from helpers import small_config
+
 import render
 
 
@@ -36,8 +38,9 @@ def main():
         with tempfile.TemporaryDirectory(prefix="forcad-network-") as directory:
             scratch = Path(directory)
             bundle = scratch / "bundle"
-            config = render.load_config(ROOT / "network.example.toml")
-            config.update(teams=2, game_udp_ports=[9000])
+            config = render.load_config(ROOT / "settings.example.toml")
+            small_config(config)
+            config["game_udp_ports"] = [9000]
             config["router"].update(
                 wan_interface="eth0",
                 vpn_interface="eth1",
@@ -46,7 +49,7 @@ def main():
             )
             config["vpn"]["interface"] = "eth0"
             render.write_bundle(bundle, render.render(config))
-            for role in ("router", "vpn"):
+            for role in ("router", "vpn", "install"):
                 cid = scratch / f"{role}.cid"
                 try:
                     run(
@@ -63,18 +66,28 @@ def main():
                         "NET_ADMIN",
                         "--cap-add",
                         "NET_RAW",
+                        *(["--cap-add", "CHOWN"] if role == "install" else []),
                         "--sysctl",
                         "net.ipv4.ip_forward=1",
                         "--sysctl",
                         "net.ipv4.conf.all.rp_filter=2",
                         "--sysctl",
                         "net.ipv4.conf.default.rp_filter=2",
+                        *(
+                            [
+                                "--mount",
+                                f"type=bind,src={bundle},dst=/etc/forcad,readonly",
+                            ]
+                            if role != "install"
+                            else []
+                        ),
                         "--mount",
-                        f"type=bind,src={bundle},dst=/etc/forcad,readonly",
-                        "--mount",
-                        f"type=bind,src={ROOT},dst=/source,readonly",
+                        f"type=bind,src={ROOT.parent},dst=/source,readonly",
+                        *(["--entrypoint", "python3"] if role == "install" else []),
                         image,
-                        role,
+                        "/source/infrastracture/tests/check_install.py"
+                        if role == "install"
+                        else role,
                         timeout=90,
                     )
                 finally:

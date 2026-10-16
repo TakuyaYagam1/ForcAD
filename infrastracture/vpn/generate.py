@@ -9,7 +9,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from render import ROOT, load_config, teams, write_bundle
+from render import (
+    ROOT,
+    create_archives,
+    load_config,
+    network_layout,
+    teams,
+    write_bundle,
+)
 
 
 def wg(command, value=None):
@@ -25,13 +32,13 @@ def keypair():
 
 
 def server(private, address, port, peers):
-    content = f"[Interface]\nPrivateKey = {private}\nAddress = {address}/24\nListenPort = {port}\n"
+    content = f"[Interface]\nPrivateKey = {private}\nAddress = {address}\nListenPort = {port}\n"
     for name, peer_address, public, psk in peers:
         content += f"\n# {name}\n[Peer]\nPublicKey = {public}\nPresharedKey = {psk}\nAllowedIPs = {peer_address}/32\n"
     return content
 
 
-def client(private, address, public, psk, endpoint, port):
+def client(private, address, public, psk, endpoint, port, allowed_ips):
     return f"""[Interface]
 PrivateKey = {private}
 Address = {address}/32
@@ -40,7 +47,7 @@ Address = {address}/32
 PublicKey = {public}
 PresharedKey = {psk}
 Endpoint = {endpoint}:{port}
-AllowedIPs = 10.183.0.0/16
+AllowedIPs = {allowed_ips}
 PersistentKeepalive = 25
 """
 
@@ -51,6 +58,8 @@ def generate(config, output):
         raise FileExistsError(output)
     attack_private, attack_public = keypair()
     admin_private, admin_public = keypair()
+    layout = network_layout(config)
+    allowed_ips = ", ".join(str(network) for network in layout["allowed_networks"])
     attack_peers, admin_peers, files = [], [], {}
     manifest = io.StringIO()
     rows = csv.writer(manifest)
@@ -69,6 +78,7 @@ def generate(config, output):
                 psk,
                 config["vpn"]["endpoint"],
                 config["vpn"]["participant_port"],
+                allowed_ips,
             )
             rows.writerow(
                 (
@@ -81,7 +91,8 @@ def generate(config, output):
                 )
             )
     for number in range(1, config["admins"] + 1):
-        name, address = f"admin-{number:02}", f"10.183.201.{number + 1}"
+        name = f"admin-{number:02}"
+        address = layout["admin_vpn"].network_address + number + 1
         private, public = keypair()
         psk = wg("genpsk")
         admin_peers.append((name, address, public, psk))
@@ -92,20 +103,28 @@ def generate(config, output):
             psk,
             config["vpn"]["endpoint"],
             config["vpn"]["admin_port"],
+            allowed_ips,
         )
     files["server/wg-attack.conf"] = server(
-        attack_private, "10.183.200.1", config["vpn"]["participant_port"], attack_peers
+        attack_private,
+        f"{layout['participant_server']}/{layout['participant_vpn'].prefixlen}",
+        config["vpn"]["participant_port"],
+        attack_peers,
     )
     files["server/wg-admin.conf"] = server(
-        admin_private, "10.183.201.1", config["vpn"]["admin_port"], admin_peers
+        admin_private,
+        f"{layout['admin_server']}/{layout['admin_vpn'].prefixlen}",
+        config["vpn"]["admin_port"],
+        admin_peers,
     )
     files["assignments.csv"] = manifest.getvalue()
     write_bundle(output, files)
+    create_archives(output.parent, roles=("vpn",), wireguard_server=output / "server")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=ROOT / "network.toml")
+    parser.add_argument("--config", type=Path, default=ROOT / "settings.toml")
     parser.add_argument("--output", type=Path, default=ROOT / "runtime/wireguard")
     args = parser.parse_args()
     try:
