@@ -80,7 +80,7 @@ cleanup() {
     trap - EXIT INT TERM
     if (( compose_started )); then
         if (( result != 0 )); then
-            "${compose[@]}" logs --tail 40 initializer pgbouncer api receiver ticker >&2 || true
+            "${compose[@]}" logs --tail 40 initializer pgbouncer api receiver ticker worker rabbitmq >&2 || true
             if (( run_monitoring )); then
                 "${compose[@]}" logs --tail 40 prometheus grafana >&2 || true
             fi

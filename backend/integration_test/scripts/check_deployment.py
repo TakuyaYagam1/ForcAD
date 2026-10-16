@@ -171,7 +171,12 @@ expect(
 expect(request, "/api/admin/game/resume/", data={}, method="POST")
 
 flag = ""
-for _ in range(40):
+round_time = int(query("SELECT round_time FROM GameConfig WHERE id=1;"))
+checker_timeout = int(
+    query("SELECT COALESCE(MAX(checker_timeout), 10) FROM Tasks WHERE active;")
+)
+flag_deadline = time.monotonic() + round_time + checker_timeout + 15
+while time.monotonic() < flag_deadline:
     new_flags = [
         row.split("|", 1)
         for row in query(
@@ -182,8 +187,12 @@ for _ in range(40):
     if new_flags:
         flag = new_flags[0][1]
         break
-    time.sleep(0.25)
-assert len(flag) == 32, "Python checker did not persist a flag"
+    time.sleep(min(0.5, max(0, flag_deadline - time.monotonic())))
+if len(flag) != 32:
+    wait_seconds = round_time + checker_timeout + 15
+    raise AssertionError(
+        f"Python checker did not persist a flag within {wait_seconds} seconds"
+    )
 status, body = request(
     "/flags", [flag] * 100, "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"]
 )
