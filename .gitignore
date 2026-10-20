@@ -35,6 +35,8 @@ checkers/*
 
 node_modules/
 /front/dist/
+/front-vue/dist/
+/front.zip
 /frontend/dist/
 /backend/dist/
 /backend/bin/
