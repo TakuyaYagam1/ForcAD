@@ -238,9 +238,8 @@ class BundleBase(FileOperations):
                 run("systemctl", "is-active", "--quiet", unit + ".service")
             else:
                 name = "routers.yml" if port == 9109 else "game-sensors.yml"
-                groups = read_yaml(
-                    Path(self.options["repo"]) / "deployment/monitoring/file_sd" / name
-                )
+                discovery = Path(self.options["repo"]) / "deployment/monitoring/file_sd"
+                groups = read_yaml(discovery / name)
                 if not any(
                     f"{self.config['checks']['metrics_address']}:{port}"
                     in group.get("targets", [])

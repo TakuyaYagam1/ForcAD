@@ -1,111 +1,177 @@
 # Infrastructure
 
-Deploy ForcAD on separate Debian 12/13 router, VPN and game hosts. Team
-vulnboxes connect to the router through one VLAN per team. No hypervisor is
-required.
+Generate settings and installation bundles for three dedicated Debian 12/13
+hosts: a router, a WireGuard server and ForcAD. Team vulnboxes connect to the
+router through one VLAN per team. Any hypervisor or physical hosts can be used.
 
-## Generate bundles
+`settings.toml` -> `render.py` -> host configs and archives -> host installers.
+The renderer runs locally; only the installers change the destination hosts.
 
-Run on a workstation from this directory. Copy the example settings, edit
-`settings.toml`, then render the host configs:
+## Configure
+
+On a workstation with Python 3.11+, run from the repository root:
 
 ```sh
+cd infrastracture
 cp -n settings.example.toml settings.toml
-python3 render.py
+# Edit settings.toml before continuing.
 ```
 
-The TOML sets network ranges, interfaces, game rules, tasks, teams, branding and
-monitoring. Replace the example ranges with subnets that do not overlap your WAN,
-host LAN or other networks. `render.py` creates host bundles and `config.yml`;
-it does not change host settings. Review the output before use.
-Existing output is never overwritten. Use `--output runtime/revision` for a
-separate render.
+[`settings.example.toml`](settings.example.toml) documents each field. Replace
+example addresses, interfaces, endpoint and game settings with your own:
 
-The render creates `runtime/router.tar.gz`, `runtime/vpn.tar.gz` and
-`runtime/forcad.tar.gz`. Generate WireGuard keys before installing the VPN;
-that step refreshes `vpn.tar.gz` with the required server configs. Output
-directories use mode `0700`; files and archives use `0600`.
+| Section | Controls |
+| --- | --- |
+| Top level | Admin VPN peers, game and management ports, DNS servers |
+| `[network]` | Transit, ForcAD and VPN subnets, first team subnet and VLAN ID |
+| `[router]` | WAN address and gateway, VPN/ForcAD links, team VLAN trunk |
+| `[vpn]` | Host interface, public endpoint without a port, two UDP ports |
+| `[forcad]` | Host interface, repository URL, branch or tag, unused install path |
+| `[teams]` | Members per team; `[[teams.entries]]` lists names, logos and highlighting |
+| `[env]` | ForcAD host address, public scheme, frontend branding, monitoring |
+| `[game]` | Mode, rounds, timing, scores and flag lifetime |
+| `[tasks]` | `[[tasks.entries]]` lists checkers, timeouts and action counts |
 
-Generate WireGuard keys once for a new deployment:
+Team order determines consecutive `/24` networks and VLAN IDs. Each team also
+gets a `/29` participant VPN block. The router takes the first usable address
+in each transit, ForcAD and team subnet; the VPN transit interface and team
+vulnboxes take the second. WireGuard interfaces take the first usable address
+in their VPN ranges. `env.public_host` is the ForcAD host's IPv4 address inside
+`network.forcad`. Overlapping networks are rejected.
+
+Place team logos under `public/teams/`, the brand logo under `public/brand/`
+and checkers under `checkers/` in the repository. Settings paths are relative
+to those directories. Use an empty team logo when none is available. The bundle
+copies selected logos, each selected checker's directory and shared checker
+requirements. See [game configuration](../docs/CONFIGURATION.md) for field
+semantics, including optional extra availability checks.
+
+## Render and generate keys
+
+From `infrastracture/`:
 
 ```sh
+python3 render.py
 python3 vpn/generate.py
 ```
 
-This requires local `wireguard-tools`, refuses an existing output directory,
-and refreshes `vpn.tar.gz` with the two server configs. Client configs remain
-under `runtime/wireguard/`; distribute each only to its owner. Keep server keys
-when changing network settings.
+The second command requires local `wireguard-tools`. It generates keys once
+for a new deployment and adds server configs to `vpn.tar.gz`. `render.py`
+creates no keys and does not clone or install ForcAD.
 
-`settings.toml` and `runtime/` are ignored by Git. Never commit them.
+| Output under `runtime/` | Contents |
+| --- | --- |
+| `settings.toml`, `teams.json` | Input snapshot and calculated team addresses/VLANs |
+| `router/` | Interfaces, routes, sysctl, firewall modes, systemd units and sensor configs |
+| `vpn/` | Interfaces, routes, sysctl, firewall and service configs |
+| `forcad/` | Complete `config.yml`, environment, checkers, logos and monitoring targets |
+| `router.tar.gz`, `vpn.tar.gz`, `forcad.tar.gz` | Transfer bundles for the respective hosts |
+| `wireguard/` | Server configs, individual client configs and `assignments.csv` |
 
-## Install
+Each host bundle includes `install.sh`, `test.sh`, `uninstall.sh`, `APPLY.txt`
+and `UNINSTALL.txt`. The VPN archive includes only server keys under `server/`;
+client configs stay in `wireguard/`. Send each client config only to its owner.
+Directories use mode `0700`, files and archives `0600`. Keep `settings.toml`,
+`runtime/` and keys private; these local paths are ignored by Git.
 
-Install in this order: router, VPN host, then ForcAD host. Keep console access
-for router and VPN installation because network changes can disconnect SSH.
-Each host bundle contains `install.sh`, `test.sh` and `uninstall.sh`.
+## Install and check
 
-Copy the matching archive to its host, extract it into a new directory, then
-run `bash install.sh` from that directory. Install all three hosts before
-running `bash test.sh` on each one. The ForcAD installer also runs its test
-before reporting success.
+Prepare the hosts' interfaces and VLAN connections to match the settings.
+Router and VPN require packages listed in their guides; ForcAD installs its
+own prerequisites. Use clean, dedicated hosts. ForcAD requires an unused install
+path and no existing ForcAD Docker project or volumes.
 
-Router and VPN installers require Debian 12/13 and their listed system tools;
-they do not install OS packages. They check for conflicting network and
-firewall state, save the original host state, then apply their settings.
-Resolve a preflight refusal with the current owner of that configuration.
+Install the router first, then VPN, then ForcAD. Copy each archive to its host
+and extract it into a separate directory. For example, on the ForcAD host:
 
-The ForcAD installer is only for a fresh deployment on a clean, dedicated host:
-the configured install path and ForcAD Docker project must be unused. It installs
-prerequisites, clones the configured revision and installs the rendered config
-and assets. It does not update an existing game. Host network changes are staged;
-review `host/APPLY.txt` and apply them from the console if needed.
+```sh
+mkdir forcad
+tar -xzf forcad.tar.gz -C forcad
+cd forcad
+sudo bash install.sh
+sudo bash test.sh
+```
 
-For rollback, run `bash uninstall.sh --dry-run` first. Router and VPN uninstall
-restore their recorded original state. ForcAD uninstall requires
-`bash uninstall.sh --confirm` and permanently removes its database and Compose
-volumes.
+Archives contain files at their root, without an enclosing directory. Use
+`router` or `vpn` in this example for the other hosts. Run as root or use `sudo`.
+Keep console access for network changes.
+
+| Host | What `install.sh` does |
+| --- | --- |
+| [Router](router/README.md) | Saves original state, installs files, applies interfaces, routes, sysctl and firewall; starts selected exporters |
+| [VPN](vpn/README.md) | Saves original state, installs server keys, applies networking, sysctl and firewall; starts `wg-attack` and `wg-admin` |
+| [ForcAD](forcad/README.md) | Installs dependencies, clones the configured branch/tag, installs config/assets, initializes and starts the game and selected monitoring |
+
+Router and VPN support `--files-only` to stage files without applying them.
+ForcAD stages its interfaces file without restarting networking: its live
+address and gateway must already match the settings. Follow the generated
+`APPLY.txt` if manual network changes are needed. The ForcAD installer is for
+first installation, not updates; the cloned revision must support the selected
+game settings. Setup creates team tokens and admin credentials.
+
+After all hosts are reachable, run `sudo bash test.sh` in each bundle. ForcAD
+also runs its test during installation. Tests check installed files, syntax and
+role-specific live services, routes and connectivity. Test VPN handshakes with
+an actual client, team isolation, game/pre-game access, real checkers and load
+separately. For Internet VPN access, forward both configured UDP ports through
+any upstream NAT to the router; its generated rules forward them to the VPN.
 
 ## Monitoring
 
-Set `monitoring = true` in `[env]` to start Grafana and Prometheus with ForcAD
-metrics. Set `router_metrics = true` to add the router exporter target and
-`game_metrics = true` to add the Zeek sensor target. These flags configure
-ForcAD scraping; the corresponding router components must also be installed.
+In `[env]`, `monitoring = true` starts Prometheus and Grafana with ForcAD metrics.
+`router_metrics = true` and `game_metrics = true` add router exporter and Zeek
+targets. Those flags configure scraping; install the matching router components
+separately with `--network-metrics` and `--game-metrics`.
 
-For router network metrics, export `network.json`, `network.nft` and the
-compatible `forcad` binary from the ForcAD host, place them beside the router
-bundle, and install with `--network-metrics`. Game metrics require Zeek 9+ and
-the `forcad-sensor` account on the router; install with `--game-metrics`.
-See the [router guide](router/README.md) and [ForcAD guide](forcad/README.md).
+Network metrics need an inventory, nftables rules and a compatible ForcAD binary.
+Game metrics need Zeek 9+ and the sensor account. Complete the base installation,
+then follow the [router guide](router/README.md#network-metrics) to enable them.
+Grafana and Prometheus bind to localhost; see the
+[monitoring guide](../docs/MONITORING.md) for access and metric details.
 
-Grafana and Prometheus bind to localhost. Use the [monitoring guide](../docs/MONITORING.md)
-for SSH access and metric details.
+## Change settings or remove an installation
 
-`[network]` in `settings.toml` defines the router-VPN link, ForcAD subnet,
-participant and admin VPN ranges, plus the first team subnet and VLAN ID. Each
-team gets the next `/24`. The router uses the first host in the transit, ForcAD
-and team subnets. The VPN server uses the first host in its ranges; the VPN host
-and team vulnboxes use the second where applicable. Set `env.public_host` to the
-ForcAD host's address inside its configured subnet. The router provides team
-gateways and applies game or pre-game firewall rules.
-Pre-game mode allows participant ping to vulnboxes; game mode allows configured
-game ports and management access to the participant's own box. The VPN
-preserves peer addresses. Client routes are generated from the configured
-subnets; overlapping ranges are rejected.
-
-## Checks
-
-From this directory:
+The renderer refuses to overwrite output. To inspect changed settings:
 
 ```sh
-make test
-make test-network
-make test-game
-make test-dashboards
+python3 render.py --config settings.toml --output runtime/revision
 ```
 
-`make test` runs unit tests. The other targets need Docker and use disposable
-containers. These checks do not establish production capacity. Before an
-event, verify VLAN isolation, reboot persistence, real checkers and expected
-load on the intended hosts.
+This creates new configs and archives, not an update to a running game. Review
+the differences before applying them. Preserve existing WireGuard keys and
+check peer addresses against the new allocation; do not regenerate identities
+just to change firewall settings. See the [VPN guide](vpn/README.md).
+
+Router and VPN removal restores the recorded original files and live state:
+
+```sh
+sudo bash uninstall.sh --dry-run
+sudo bash uninstall.sh
+```
+
+It only manages files recorded by the installer, including restoration of
+files that existed before it ran. Manually copied files are not removed.
+ForcAD uses a separate destructive removal command:
+
+```sh
+sudo bash uninstall.sh --confirm
+```
+
+This removes the managed checkout, database and Compose volumes, restores host
+files and removes packages installed by its bootstrap. Read the bundle's
+`UNINSTALL.txt` before removal. These scripts do not remove other deployments.
+
+## Generator tests
+
+From the repository root:
+
+```sh
+make -C infrastracture test
+make -C infrastracture test-network
+make -C infrastracture test-game
+make -C infrastracture test-dashboards
+```
+
+The first target runs unit tests. The others require Docker and use disposable
+containers. Validate reboot persistence and capacity on the intended hosts
+before an event.

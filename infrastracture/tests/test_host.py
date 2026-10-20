@@ -1,6 +1,5 @@
 import base64
 import copy
-import importlib.util
 import json
 import stat
 import tempfile
@@ -12,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 from helpers import checks, common, files, small_config, source_bundle
 
 import render
+from forcad import host as forcad_host
+from hostlib import base as host_base
 
 
 class HostTests(unittest.TestCase):
@@ -197,8 +198,7 @@ class HostTests(unittest.TestCase):
                 "PUBLIC_SCHEME=http\nPUBLIC_SCHEME=https\n", {"PUBLIC_SCHEME": "http"}
             )
 
-    @unittest.skipUnless(importlib.util.find_spec("yaml"), "python3-yaml required")
-    def test_forcad_stages_discovery_without_touching_live_targets(self):
+    def test_forcad_applies_monitoring_targets_and_restores_them_on_uninstall(self):
         repo = "/srv/ForcAD"
         self.write(repo + "/control.sh", "#!/bin/sh\n")
         document = {
@@ -207,38 +207,74 @@ class HostTests(unittest.TestCase):
                 for team in render.teams(self.config)
             ]
         }
-        self.write(repo + "/config/config.yml", json.dumps(document))
+        original_config = json.dumps(document)
+        self.write(repo + "/config/config.yml", original_config)
         env = self.write(
             repo + "/deployment/docker/.env", "GRAFANA_ADMIN_PASSWORD=keep\n"
         )
-        targets = self.write(
+        original_router_targets = (
+            '[{"targets":["other:9109"],"labels":{"site":"keep"}}]'
+        )
+        router_targets = self.write(
             repo + "/deployment/monitoring/file_sd/routers.yml",
-            '[{"targets":["other:9109"]}]',
+            original_router_targets,
+        )
+        original_sensor_targets = '[{"targets":["sensor:9911"]}]'
+        sensor_targets = self.write(
+            repo + "/deployment/monitoring/file_sd/game-sensors.yml",
+            original_sensor_targets,
         )
         installer = self.make("forcad")
-        installer.plan(repo=repo, network_metrics=True)
-        installer.install()
-        self.assertEqual(targets.read_text(), '[{"targets":["other:9109"]}]')
-        self.assertIn("GRAFANA_ADMIN_PASSWORD=keep", env.read_text())
-        self.assertIn(
-            "10.183.2.1:9109",
-            (self.root / "srv/ForcAD/config/runtime/network/routers.yml").read_text(),
+        existing_router_groups = [
+            {"targets": ["other:9109"], "labels": {"site": "keep"}}
+        ]
+        expected_router_groups = copy.deepcopy(existing_router_groups) + [
+            {"targets": ["10.183.2.1:9109"]}
+        ]
+        with (
+            patch.object(
+                forcad_host,
+                "read_yaml",
+                side_effect=[
+                    document,
+                    existing_router_groups,
+                    [{"targets": ["sensor:9911"]}],
+                ],
+            ),
+            patch.object(
+                forcad_host,
+                "dump_yaml",
+                side_effect=lambda value: json.dumps(value).encode(),
+            ),
+        ):
+            installer.plan(repo=repo, network_metrics=True, game_metrics=True)
+            installer.install()
+
+        self.assertEqual(
+            json.loads(router_targets.read_text()),
+            expected_router_groups,
         )
+        self.assertEqual(
+            json.loads(sensor_targets.read_text()),
+            [{"targets": ["sensor:9911"]}, {"targets": ["10.183.2.1:9911"]}],
+        )
+        self.assertIn("GRAFANA_ADMIN_PASSWORD=keep", env.read_text())
         self.assertTrue(
             all(
                 team["token"] == "keep"
-                for team in common.read_yaml(
-                    self.root / "srv/ForcAD/config/config.yml"
+                for team in json.loads(
+                    (self.root / "srv/ForcAD/config/config.yml").read_text()
                 )["teams"]
             )
         )
         installer.uninstall()
         self.assertEqual(
             (self.root / "srv/ForcAD/config/config.yml").read_text(),
-            json.dumps(document),
+            original_config,
         )
         self.assertEqual(env.read_text(), "GRAFANA_ADMIN_PASSWORD=keep\n")
-        self.assertEqual(targets.read_text(), '[{"targets":["other:9109"]}]')
+        self.assertEqual(router_targets.read_text(), original_router_targets)
+        self.assertEqual(sensor_targets.read_text(), original_sensor_targets)
         self.assertFalse(
             (self.root / "srv/ForcAD/config/runtime/network/routers.yml").exists()
         )
@@ -250,6 +286,89 @@ class HostTests(unittest.TestCase):
                 output = common.run("bash", str(script_dir / f"{action}.sh"), "--help")
                 self.assertIn("--live", output)
         self.assertFalse(any(self.root.iterdir()))
+
+    def test_forcad_live_check_waits_for_starting_container(self):
+        bundle = self.make("forcad")
+        outputs = [
+            json.dumps(
+                [{"Service": "grafana", "State": "running", "Health": "starting"}]
+            ),
+            json.dumps(
+                [{"Service": "grafana", "State": "running", "Health": "healthy"}]
+            ),
+        ]
+        with (
+            patch.object(forcad_host, "run", side_effect=outputs) as run,
+            patch.object(forcad_host.time, "sleep"),
+        ):
+            bundle.wait_for_containers(
+                "/opt/forcad/backend/bin/forcad",
+                Path("/opt/forcad"),
+                "monitoring",
+                {"grafana"},
+            )
+        self.assertEqual(run.call_count, 2)
+
+    def test_forcad_live_check_includes_logs_when_container_is_unhealthy(self):
+        bundle = self.make("forcad")
+        output = json.dumps(
+            [{"Service": "grafana", "State": "running", "Health": "unhealthy"}]
+        )
+        with (
+            patch.object(
+                forcad_host,
+                "run",
+                side_effect=[output, "grafana failed to load provisioning"],
+            ) as run,
+            self.assertRaisesRegex(ValueError, "failed readiness check") as error,
+        ):
+            bundle.wait_for_containers(
+                "/opt/forcad/backend/bin/forcad",
+                Path("/opt/forcad"),
+                "monitoring",
+                {"grafana"},
+            )
+        self.assertIn("grafana failed to load provisioning", str(error.exception))
+        self.assertIn("logs", " ".join(run.call_args_list[-1].args))
+
+    def test_forcad_live_check_reads_monitoring_targets_from_compose_config(self):
+        bundle = self.make("forcad")
+        repo = self.root / "srv/ForcAD"
+        bundle.options = {
+            "repo": str(repo),
+            "network_metrics": True,
+            "game_metrics": False,
+        }
+        bundle.test_live_role = MagicMock()
+        addresses = json.dumps(
+            [
+                {
+                    "ifname": "ens19",
+                    "addr_info": [{"local": "10.183.2.10", "prefixlen": 24}],
+                }
+            ]
+        )
+        routes = json.dumps(
+            [{"dst": "default", "gateway": "10.183.2.1", "dev": "ens19"}]
+        )
+        with (
+            patch.object(host_base, "run", side_effect=[addresses, routes, ""]),
+            patch.object(
+                host_base,
+                "read_yaml",
+                return_value=[{"targets": ["10.183.2.1:9109"]}],
+            ) as read_yaml,
+            patch.object(host_base, "http") as http,
+        ):
+            bundle.test_live()
+
+        self.assertEqual(
+            read_yaml.call_args.args[0],
+            repo / "deployment/monitoring/file_sd/routers.yml",
+        )
+        http.assert_called_once_with(
+            "http://10.183.2.1:9109/metrics", metrics="network-metrics"
+        )
 
     def test_metrics_reject_failed_scrapes_and_stale_heartbeats(self):
         response = MagicMock()

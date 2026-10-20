@@ -115,7 +115,17 @@ rollback() {
     status=$?
     if (( status != 0 )); then
         if [[ "$created" == true && -f "$target/control.sh" ]]; then
-            (cd "$target" && ./control.sh down -v --remove-orphans) || true
+            if [[ @@MONITORING@@ == true ]]; then
+                (cd "$target" && ./control.sh monitoring down -v --remove-orphans) || true
+            else
+                (cd "$target" && ./control.sh down -v --remove-orphans) || true
+            fi
+            mapfile -t project_volumes < <(
+                docker volume ls -q --filter label=com.docker.compose.project=forcad
+            )
+            if ((${#project_volumes[@]})); then
+                docker volume rm "${project_volumes[@]}" || true
+            fi
         fi
         if [[ "$host_installed" == true ]]; then
             bash "$bundle_dir/host/uninstall.sh" --force || true

@@ -211,11 +211,14 @@ def load_config(path):
         ),
         "env",
     )
+    if isinstance(config["game"], dict):
+        config["game"].setdefault("extra_checks", 0)
     exact_keys(
         config["game"],
         (
             "mode",
             "round_time",
+            "extra_checks",
             "rounds",
             "start_time",
             "timezone",
@@ -297,6 +300,9 @@ def load_config(path):
         raise ValueError("env.brand_accent must use #RRGGBB")
     safe_asset(env["brand_logo"], "public/brand", "env.brand_logo")
     game = config["game"]
+    integer(game["extra_checks"], 0, 8, "game.extra_checks")
+    if game["extra_checks"] and game["mode"] != "classic":
+        raise ValueError("game.extra_checks requires classic mode")
     if game["mode"] not in {"classic", "blitz"}:
         raise ValueError("game.mode must be classic or blitz")
     for field in ("round_time", "default_score", "flag_lifetime"):
@@ -371,6 +377,8 @@ def load_config(path):
             raise ValueError(
                 f"tasks.entries[{index}].env_path must be an absolute path"
             )
+        if game["extra_checks"] and task["checker_timeout"] + 3 >= game["round_time"]:
+            raise ValueError("Extra checks require round_time > checker_timeout + 3")
         if task["get_period"] is not None:
             integer(
                 task["get_period"],
@@ -711,6 +719,9 @@ def forcad_config(config):
     game = config["game"]
     lines = ["game:"]
     for key, value in game.items():
+        # Older releases reject unknown fields, even when the feature is off.
+        if key == "extra_checks" and value == 0:
+            continue
         if value is not None:
             lines.append(f"  {key}: {yaml_value(value)}")
     lines.append("tasks:")

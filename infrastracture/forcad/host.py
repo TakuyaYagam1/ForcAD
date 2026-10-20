@@ -1,6 +1,8 @@
 """Plan and check ForcAD application host files."""
 
 import json
+import subprocess
+import time
 from pathlib import Path
 
 from hostlib.base import BundleBase
@@ -14,6 +16,9 @@ from hostlib.common import (
     regular,
     run,
 )
+
+HEALTH_CHECK_TIMEOUT = 120
+HEALTH_CHECK_INTERVAL = 5
 
 
 class Bundle(BundleBase):
@@ -56,7 +61,7 @@ class Bundle(BundleBase):
                 path = project / "deployment/monitoring/file_sd" / name
                 groups = read_yaml(path) if path.exists() else []
                 self.put(
-                    f"{repo}/config/runtime/network/{name}",
+                    f"{repo}/deployment/monitoring/file_sd/{name}",
                     dump_yaml(
                         merge_targets(
                             groups, f"{self.config['checks']['metrics_address']}:{port}"
@@ -101,44 +106,104 @@ class Bundle(BundleBase):
             if self.options["network_metrics"] or self.options["game_metrics"]
             else "compose"
         )
-        output = run(
-            binary,
-            "control",
-            "--project-root",
-            str(repo),
-            command,
-            "ps",
-            "--all",
-            "--format",
-            "json",
-        )
-        containers = (
-            json.loads(output)
-            if output.lstrip().startswith("[")
-            else [json.loads(line) for line in output.splitlines() if line.strip()]
-        )
         expected = {"api", "receiver", "worker", "ticker", "nginx"}
         if command == "monitoring":
             expected |= {"prometheus", "grafana"}
-        if not expected <= {container.get("Service") for container in containers}:
-            raise ValueError("Required ForcAD containers are missing")
-        for container in containers:
-            if (
-                container.get("Service")
-                in {"initializer", "config-loader", "postgres-data"}
-                and container.get("State") == "exited"
-                and container.get("ExitCode") == 0
-            ):
-                continue
-            if container.get("State") != "running" or container.get("Health") not in (
-                None,
-                "",
-                "healthy",
-            ):
-                raise ValueError(
-                    f"Container is not healthy: {container.get('Service')}"
-                )
+        self.wait_for_containers(binary, repo, command, expected)
         self.http(self.config["checks"]["forcad_url"])
+
+    def wait_for_containers(self, binary, repo, command, expected):
+        deadline = time.monotonic() + HEALTH_CHECK_TIMEOUT
+        while True:
+            output = run(
+                binary,
+                "control",
+                "--project-root",
+                str(repo),
+                command,
+                "ps",
+                "--all",
+                "--format",
+                "json",
+            )
+            containers = (
+                json.loads(output)
+                if output.lstrip().startswith("[")
+                else [json.loads(line) for line in output.splitlines() if line.strip()]
+            )
+            services = {container.get("Service") for container in containers}
+            missing = expected - services
+            pending = []
+            failed = []
+
+            for container in containers:
+                service = container.get("Service", "unknown")
+                state = container.get("State")
+                health = container.get("Health")
+                if (
+                    service in {"initializer", "config-loader", "postgres-data"}
+                    and state == "exited"
+                    and container.get("ExitCode") == 0
+                ):
+                    continue
+                if state == "running" and health in (None, "", "healthy"):
+                    continue
+                if state in {"created", "restarting"} or (
+                    state == "running" and health == "starting"
+                ):
+                    pending.append(f"{service} (state={state}, health={health})")
+                    continue
+                failed.append(f"{service} (state={state}, health={health})")
+
+            if not missing and not pending and not failed:
+                return
+            if failed or time.monotonic() >= deadline:
+                details = []
+                if missing:
+                    details.append(f"missing services: {', '.join(sorted(missing))}")
+                if pending:
+                    details.append(f"still starting: {', '.join(pending)}")
+                if failed:
+                    details.append(f"failed services: {', '.join(failed)}")
+                diagnostics = self.container_logs(
+                    binary,
+                    repo,
+                    command,
+                    {item.split(" (", 1)[0] for item in pending + failed},
+                )
+                suffix = f"\n{diagnostics}" if diagnostics else ""
+                if failed:
+                    message = f"ForcAD containers failed readiness check: {'; '.join(details)}"
+                else:
+                    message = (
+                        f"ForcAD containers did not become healthy within "
+                        f"{HEALTH_CHECK_TIMEOUT}s: {'; '.join(details)}"
+                    )
+                raise ValueError(message + suffix)
+            time.sleep(min(HEALTH_CHECK_INTERVAL, max(0, deadline - time.monotonic())))
+
+    @staticmethod
+    def container_logs(binary, repo, command, services):
+        outputs = []
+        for service in sorted(services):
+            try:
+                logs = run(
+                    binary,
+                    "control",
+                    "--project-root",
+                    str(repo),
+                    command,
+                    "logs",
+                    "--no-color",
+                    "--tail",
+                    "80",
+                    service,
+                )
+            except (OSError, ValueError, subprocess.SubprocessError) as error:
+                logs = f"Could not read logs: {error}"
+            if logs.strip():
+                outputs.append(f"Logs for {service}:\n{logs.rstrip()}")
+        return "\n".join(outputs)
 
 
 def main():

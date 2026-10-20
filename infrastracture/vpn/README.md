@@ -3,7 +3,8 @@
 Use a dedicated Debian 12/13 host with `python3`, `wireguard-tools`,
 `nftables`, `iproute2`, `iputils-ping`, `procps`, `ifupdown` and `resolvconf`.
 The installer does not install packages. The transit subnet and both host
-addresses are generated from `[network]` in `settings.toml`.
+addresses are generated from `[network]` in `settings.toml`. Start with the
+[generator guide](../README.md) for the complete workflow.
 
 ## Generate keys
 
@@ -23,7 +24,11 @@ owner.
 Do not generate keys again when changing firewall or network settings. The
 generator refuses an existing output directory; a new output creates new peer
 identities. The installer also refuses to replace existing server keys with
-different keys. Keep the deployed server configs for subsequent renders.
+different keys. Keep the deployed server configs for subsequent renders. Place
+them in `server/` beside the extracted bundle or pass
+`--wireguard-dir /path/to/server` to `install.sh`. Without either, the installer
+can use existing configs in `/etc/wireguard/`. Check that peer addresses still
+match the new settings.
 
 ## Install
 
@@ -31,8 +36,8 @@ Copy `runtime/vpn.tar.gz` to the VPN host and extract it into a new `vpn/`
 directory. Run from there at the host console:
 
 ```sh
-bash install.sh
-bash test.sh
+sudo bash install.sh
+sudo bash test.sh
 ```
 
 The installer applies the interface and sysctl settings, loads the VPN
@@ -44,17 +49,19 @@ The router must forward the configured participant and admin UDP ports to this
 host. Its return routes for both VPN ranges must use the VPN host address on the
 transit link. The VPN host preserves peer addresses and does not perform SNAT.
 
-`test.sh` checks local configuration and services. Client handshakes and access
-isolation require a connected client; verify those separately.
+`test.sh` checks configuration, services, routes and configured connectivity.
+Use `install.sh --files-only` and `test.sh --files-only` to stage and check files
+without applying live settings. Client handshakes and access isolation require
+a connected client; verify those separately.
 
 ## Remove
 
 Preview and restore the saved state from the host console:
 
 ```sh
-bash uninstall.sh --dry-run
-bash uninstall.sh
+sudo bash uninstall.sh --dry-run
+sudo bash uninstall.sh
 ```
 
 If files changed after installation, review the diff before using
-`bash uninstall.sh --force`. See [UNINSTALL.txt](UNINSTALL.txt).
+`sudo bash uninstall.sh --force`. See [UNINSTALL.txt](UNINSTALL.txt).

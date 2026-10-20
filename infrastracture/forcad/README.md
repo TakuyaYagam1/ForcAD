@@ -7,19 +7,12 @@ not an updater; do not run it over an existing game.
 
 ## Configure and render
 
-On the workstation, copy and edit the example settings, then render the bundle:
-
-```sh
-cp -n infrastracture/settings.example.toml infrastracture/settings.toml
-cd infrastracture
-# Edit settings.toml: network, repository revision, game, tasks, teams,
-# logos, branding and monitoring.
-python3 render.py
-```
-
-The renderer creates a complete `config.yml`, environment settings, logo and
-checker assets, and `runtime/forcad.tar.gz`. Review the generated bundle before
-transferring it. It does not change the host or clone the repository.
+Follow the [generator guide](../README.md) on the workstation. `settings.toml`
+defines the full game config, teams, tasks, branding and monitoring. The
+renderer copies selected assets and creates `runtime/forcad.tar.gz`; it does
+not change the host or clone the repository. Review the bundle before transfer.
+The installer clones `forcad.repository_url` at the branch or tag in
+`forcad.revision`; that revision must support the selected game settings.
 
 ## Install
 
@@ -27,8 +20,8 @@ Copy `runtime/forcad.tar.gz` to the host, extract it into a new directory and
 run there:
 
 ```sh
-bash install.sh
-bash test.sh
+sudo bash install.sh
+sudo bash test.sh
 ```
 
 The installer installs Git, Docker Engine/Compose and required host tools,
@@ -38,6 +31,7 @@ files are staged, not applied; review `host/APPLY.txt` and apply changes from
 the console if needed. A failed run can leave OS packages installed by its
 bootstrap.
 
+Paths below are relative to the installed checkout (`forcad.install_path`).
 Keep `config/runtime/admin.env` and `deployment/docker/.env` private. The first
 contains the generated admin login; the second contains the Grafana password
 when monitoring is enabled. Grafana and Prometheus listen on localhost. See the
@@ -49,9 +43,9 @@ In `[env]` of `settings.toml`:
 
 - `monitoring = true` starts Prometheus and Grafana.
 - `router_metrics = true` adds the router exporter target. Install the router
-  component with `bash install.sh --network-metrics` after preparing its files.
+  component with `sudo bash install.sh --network-metrics` after preparing its files.
 - `game_metrics = true` adds the Zeek target. Install Zeek and `forcad-sensor`
-  on the router, then run `bash install.sh --game-metrics` there.
+  on the router, then run `sudo bash install.sh --game-metrics` there.
 
 Enable both router options when both exporters are ready. These settings add
 ForcAD scrape targets; they do not install the router components.
@@ -59,7 +53,7 @@ ForcAD scrape targets; they do not install the router components.
 ## Remove
 
 ```sh
-bash uninstall.sh --confirm
+sudo bash uninstall.sh --confirm
 ```
 
 This permanently deletes the managed checkout, database and Compose volumes.

@@ -44,6 +44,16 @@ class RenderTests(unittest.TestCase):
     def test_rejects_invalid_and_injectable_config(self):
         example = (ROOT / "settings.example.toml").read_text()
         bad_inputs = [
+            example.replace("extra_checks = 0", "extra_checks = -1"),
+            example.replace("extra_checks = 0", "extra_checks = 9"),
+            example.replace("extra_checks = 0", "extra_checks = true"),
+            example.replace("extra_checks = 0", "extra_checks = 1.5"),
+            example.replace("extra_checks = 0", "extra_checks = 2").replace(
+                'mode = "classic"', 'mode = "blitz"'
+            ),
+            example.replace("extra_checks = 0", "extra_checks = 2").replace(
+                "round_time = 60", "round_time = 13"
+            ),
             example.replace(
                 'wan_interface = "ens19"', 'wan_interface = "ens19; reboot"'
             ),
@@ -79,6 +89,20 @@ class RenderTests(unittest.TestCase):
                     path.write_text(text)
                     with self.assertRaises(ValueError):
                         render.load_config(path)
+
+    def test_extra_checks_are_optional_and_rendered(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            for source in (example, example.replace("extra_checks = 0\n", "")):
+                with self.subTest(explicit_setting="extra_checks" in source):
+                    path.write_text(source)
+                    config = render.load_config(path)
+                    self.assertEqual(config["game"]["extra_checks"], 0)
+                    self.assertNotIn("extra_checks:", render.forcad_config(config))
+            path.write_text(example.replace("extra_checks = 0", "extra_checks = 2"))
+            config = render.load_config(path)
+            self.assertIn("  extra_checks: 2\n", render.forcad_config(config))
 
     def test_team_networks_do_not_overlap_other_configured_networks(self):
         self.config["teams"]["entries"] = [
@@ -227,6 +251,7 @@ class RenderTests(unittest.TestCase):
             )
 
     def test_render_has_no_secrets_and_supports_udp_only_game(self):
+        self.config["env"]["monitoring"] = True
         self.config["game_tcp_ports"] = []
         self.config["game_udp_ports"] = [31337]
         files = render.render(self.config)
@@ -249,6 +274,17 @@ class RenderTests(unittest.TestCase):
             files["forcad/install.sh"].index("git clone"),
         )
         self.assertIn("docker volume ls -q", files["forcad/install.sh"])
+        self.assertIn(
+            "./control.sh monitoring down -v --remove-orphans",
+            files["forcad/install.sh"],
+        )
+        self.assertIn(
+            "./control.sh down -v --remove-orphans", files["forcad/install.sh"]
+        )
+        self.assertIn(
+            "label=com.docker.compose.project=forcad", files["forcad/install.sh"]
+        )
+        self.assertIn("docker volume rm", files["forcad/install.sh"])
         self.assertIn(".forcad-managed-packages", files["forcad/install.sh"])
         self.assertIn("down -v --remove-orphans", files["forcad/uninstall.sh"])
         self.assertIn('rm -rf -- "$target"', files["forcad/uninstall.sh"])

@@ -94,6 +94,8 @@ game_metrics = false
 mode = "classic"
 # Durations and intervals are in seconds; start_time uses the configured timezone.
 round_time = 60
+# Experimental extra CHECKs per round, classic only; 0 disables them.
+extra_checks = 0
 rounds = 300
 start_time = "2027-01-01 12:00:00"
 timezone = "Europe/Moscow"

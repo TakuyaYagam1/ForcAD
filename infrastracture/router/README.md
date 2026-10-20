@@ -2,9 +2,9 @@
 
 Use a dedicated Debian 12/13 host with `python3`, `nftables`, `iproute2`,
 `iputils-ping`, `procps`, `ifupdown`, `vlan` and `resolvconf` installed. The
-installer does not install packages. Set interfaces, addresses and game ports
-in [`settings.toml`](../settings.example.toml), then run `python3 render.py` in
-the infrastructure directory.
+installer does not install packages. Follow the [generator guide](../README.md)
+to set interfaces, addresses and game ports in `settings.toml` and render the
+bundle.
 
 ## Install
 
@@ -18,9 +18,11 @@ Copy `runtime/router.tar.gz` to the router and extract it into a new directory.
 Run there:
 
 ```sh
-bash install.sh
-bash test.sh
+sudo bash install.sh
+sudo bash test.sh
 ```
+
+Run the test once VPN, ForcAD and the configured vulnboxes are reachable.
 
 The installer records the original host state in
 `/var/backups/forcad/router/live.json`. Reinstalls keep this baseline and the
@@ -28,24 +30,36 @@ selected game mode. Use `--files-only` to stage files without changing live
 network or service state. The matching `test.sh --files-only` checks staged
 files only.
 
-The installer owns `inet forcad_router` and `ip forcad_nat`. It does not flush
-the full nftables ruleset. A pre-existing firewall manager or custom rules may
-cause preflight to stop; review them first.
+Firewall files are installed under `/etc/forcad/router/`. The installer owns
+`inet forcad_router` and `ip forcad_nat`. It does not flush the full nftables
+ruleset. A pre-existing firewall manager or custom rules may cause preflight to
+stop; review them first.
 
-## Monitoring
+## Network metrics
 
-For network metrics, place `network.json`, `network.nft` and the
-router-compatible `forcad` binary beside the extracted bundle, then run:
+After ForcAD setup, open a root shell in its installed checkout and export the
+inventory and rules:
 
 ```sh
-bash install.sh --network-metrics
+./backend/bin/forcad network-config --config config/config.yml > network.json
+./backend/bin/forcad network-rules --config network.json > network.nft
 ```
+
+Transfer `network.json`, `network.nft` and `backend/bin/forcad` into the extracted
+router bundle, with the binary named `forcad`. It must be built for the router's
+OS and CPU architecture. On the router, run:
+
+```sh
+sudo bash install.sh --network-metrics
+```
+
+## Game metrics
 
 For HTTP/WS and flow metrics, install Zeek 9+ under `/opt/zeek`, create the
 `forcad-sensor` system account, then run:
 
 ```sh
-bash install.sh --game-metrics
+sudo bash install.sh --game-metrics
 ```
 
 The sensor captures both directions on the VPN-facing interface before
@@ -63,11 +77,13 @@ printf 'include "/etc/forcad/router/game.nft"\n' | sudo tee /etc/forcad/router/a
 sudo systemctl reload forcad-router-firewall.service
 ```
 
+To return to pre-game mode, use `pre-game.nft` in both commands above.
+
 For removal, preview first, then restore the recorded baseline:
 
 ```sh
-bash uninstall.sh --dry-run
-bash uninstall.sh
+sudo bash uninstall.sh --dry-run
+sudo bash uninstall.sh
 ```
 
 File-only installs have no live rollback record. See [UNINSTALL.txt](UNINSTALL.txt)
