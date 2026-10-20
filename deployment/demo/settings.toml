@@ -1,0 +1,104 @@
+# Local Docker demo. Addresses and interface names belong to this Compose stack.
+admins = 1
+game_tcp_ports = [8080, 8081, 9001]
+game_udp_ports = [9000]
+management_tcp_ports = [22]
+dns_servers = ["1.1.1.1", "8.8.8.8"]
+
+[network]
+router_vpn = "10.183.1.0/30"
+forcad = "10.183.2.0/24"
+participant_vpn = "10.183.200.0/24"
+admin_vpn = "10.183.201.0/24"
+team_network_base = "10.183.101.0/24"
+team_vlan_start = 101
+
+[router]
+wan_interface = "eth0"
+wan_address = "172.30.241.2/24"
+wan_gateway = "172.30.241.1"
+vpn_interface = "eth1"
+forcad_interface = "eth2"
+team_trunk = "eth3"
+
+[vpn]
+interface = "eth0"
+endpoint = "172.30.241.2"
+participant_port = 56767
+admin_port = 56768
+
+[forcad]
+interface = "eth1"
+repository_url = "https://github.com/TakuyaYagam1/ForcAD.git"
+revision = "main"
+install_path = "/opt/forcad"
+
+[teams]
+members_per_team = 1
+
+[[teams.entries]]
+name = "danosito's ai farm"
+logo = "danosito.jpg"
+highlighted = false
+
+[[teams.entries]]
+name = "pod egidoy"
+logo = "egida.png"
+highlighted = true
+
+[[teams.entries]]
+name = "daywave"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "PudgeFunClub"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "CUT"
+logo = ""
+highlighted = false
+
+[env]
+public_host = "10.183.2.10"
+public_scheme = "http"
+brand_name = "ForcAD"
+brand_logo = "forcad-mark.svg"
+brand_primary = "#5B8DEF"
+brand_accent = "#38B7B0"
+monitoring = true
+router_metrics = true
+game_metrics = true
+
+[game]
+mode = "classic"
+round_time = 60
+# Experimental extra CHECKs per round, classic only; 0 disables them.
+extra_checks = 2
+rounds = 300
+start_time = "2027-01-01 12:00:00"
+timezone = "Europe/Moscow"
+default_score = 2500
+flag_lifetime = 5
+game_hardness = 10.0
+inflation = true
+volga_attacks_mode = false
+checkers_path = "/checkers/"
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+[tasks]
+
+[[tasks.entries]]
+name = "example_service"
+checker = "examples/note/checker.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 2
+gets = 2
+places = 2
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60

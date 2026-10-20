@@ -22,6 +22,8 @@ COMPOSE = [
     str(ROOT / "deployment/docker/compose.monitoring.yml"),
     "-f",
     str(ROOT / "deployment/docker/compose.demo.yml"),
+    "-f",
+    str(ROOT / "config/runtime/demo/compose.yml"),
     "--profile",
     "monitoring",
 ]
@@ -119,7 +121,7 @@ def wait_for(description, predicate, seconds=75):
 
 
 def check_routes():
-    for client in ("demo-player1", "demo-player2", "demo-admin"):
+    for client in [*(f"demo-player{team['id']}" for team in inventory()), "demo-admin"]:
         game = execute(client, "ip", "route", "get", "10.183.102.2").stdout
         local = execute(client, "ip", "route", "get", "10.0.2.15").stdout
         assert "dev wg0" in game, game
@@ -127,13 +129,31 @@ def check_routes():
         passed(client + " routes only the game prefix through WireGuard")
 
 
+def inventory():
+    return json.loads((ROOT / "config/runtime/demo/teams.json").read_text())
+
+
 def main():
+    teams = inventory()
+    pairs = [
+        (team["vulnbox"], teams[(index + 1) % len(teams)]["vulnbox"])
+        for index, team in enumerate(teams)
+    ]
     check_routes()
     original = (ROOT / "config/runtime/demo/phase").read_text().strip()
     assert original in {"game", "pre-game"}
     filtering = False
     try:
         phase("game")
+        for index, team in enumerate(teams):
+            player = f"demo-player{team['id']}"
+            neighbor = teams[(index + 1) % len(teams)]
+            probe(player, team["vulnbox"], "tcp", 22)
+            probe(player, neighbor["vulnbox"], "tcp", 22, allowed=False)
+            probe(player, neighbor["vulnbox"], peer=neighbor["gateway"])
+            probe("demo-forcad", team["vulnbox"], peer=team["gateway"])
+            probe("demo-admin", team["vulnbox"], "tcp", 22)
+            probe(f"demo-team{team['id']}", neighbor["vulnbox"], allowed=False)
         for player, target, gateway in (
             ("demo-player1", "10.183.101.2", "10.183.101.1"),
             ("demo-player1", "10.183.102.2", "10.183.102.1"),
@@ -166,7 +186,7 @@ def main():
         passed("VPN peers from different teams are isolated")
 
         phase("pre-game")
-        for target in ("10.183.101.2", "10.183.102.2"):
+        for target in (team["vulnbox"] for team in teams):
             execute("demo-player1", "ping", "-c", "1", "-W", "2", target)
             passed("pre-game ping " + target)
             probe("demo-player1", target, allowed=False)
@@ -214,29 +234,23 @@ def main():
             ),
         )
         wait_for(
-            "both HTTP directions reach Prometheus",
+            "all team HTTP directions reach Prometheus",
             lambda: all(
                 value(
                     f'forcad_game_http_requests_total{{source_team_ip="{source}",team_ip="{target}"}}'
                 )
                 > 0
-                for source, target in (
-                    ("10.183.101.2", "10.183.102.2"),
-                    ("10.183.102.2", "10.183.101.2"),
-                )
+                for source, target in pairs
             ),
         )
         wait_for(
-            "both teams have an observed WebSocket",
+            "all teams have an observed WebSocket",
             lambda: all(
                 value(
                     f'forcad_game_websocket_connections{{source_team_ip="{source}",team_ip="{target}"}}'
                 )
                 >= 1
-                for source, target in (
-                    ("10.183.101.2", "10.183.102.2"),
-                    ("10.183.102.2", "10.183.101.2"),
-                )
+                for source, target in pairs
             ),
         )
         assert value("sum(forcad_game_udp_flows_total)") > 0

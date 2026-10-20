@@ -6,7 +6,8 @@ cd "$root"
 compose() {
     ./control.sh compose --env-file "$root/config/runtime/demo.env" \
         -f "$root/deployment/docker/compose.monitoring.yml" \
-        -f "$root/deployment/docker/compose.demo.yml" --profile monitoring "$@"
+        -f "$root/deployment/docker/compose.demo.yml" \
+        -f "$root/config/runtime/demo/compose.yml" --profile monitoring "$@"
 }
 if [[ "${1:-}" == up ]]; then
     if [[ ! -x api/.venv/bin/python ]]; then
@@ -33,7 +34,9 @@ elif [[ "${1:-}" == phase ]]; then
     exit
 elif [[ "${1:-}" == load ]]; then
     team="${2:-}"
-    [[ "$team" == 1 || "$team" == 2 ]] || { echo 'Usage: demo.sh load 1|2 [--rps 20 --seconds 45 --ws 5]' >&2; exit 2; }
+    [[ "$team" =~ ^[1-9][0-9]*$ ]] && compose config --services | grep -qx "demo-farm$team" || {
+        echo 'Usage: demo.sh load TEAM_NUMBER [--rps 20 --seconds 45 --ws 5]' >&2; exit 2;
+    }
     shift 2
     compose exec -T "demo-farm$team" python load.py "$@"
     exit

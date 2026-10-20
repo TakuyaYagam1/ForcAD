@@ -22,8 +22,8 @@ def main():
     ):
         parser.error("Limits: RPS 1..100, duration 1..300 seconds, WS 0..20")
     peer = os.environ["DEMO_PEER"]
-    if peer not in {"10.183.101.2", "10.183.102.2"}:
-        parser.error("Load is restricted to the two local demo vulnboxes")
+    if peer not in {f"10.183.{number}.2" for number in range(101, 133)}:
+        parser.error("Load is restricted to local demo vulnboxes")
     sockets = []
     successes = failures = 0
     started = time.monotonic()

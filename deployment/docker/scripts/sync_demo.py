@@ -1,4 +1,4 @@
-"""Move the two existing demo teams to their routed addresses without resetting a game."""
+"""Synchronize demo teams without resetting scores or existing tokens."""
 
 import http.cookiejar
 import json
@@ -9,6 +9,80 @@ import urllib.request
 from pathlib import Path
 
 import yaml
+
+
+def sync_teams(request, configured, output):
+    existing = request("/api/admin/teams/")
+    pending_path = output / "teams-pending.json"
+    pending = json.loads(pending_path.read_text()) if pending_path.exists() else {}
+    by_token = {team["token"]: team for team in existing}
+    desired_tokens = {team["token"] for team in configured}
+    desired_by_ip = {team["ip"]: team for team in configured}
+    # A journal entry permits recovery after POST succeeded but PUT was interrupted.
+    for current in existing:
+        if current["token"] in desired_tokens:
+            continue
+        planned = pending.get(current["ip"])
+        desired = desired_by_ip.get(current["ip"])
+        if (
+            planned is None
+            or desired is None
+            or planned != {"name": desired["name"], "token": desired["token"]}
+            or current["name"] != planned["name"]
+        ):
+            raise SystemExit(
+                "Demo database contains an unrecognized team; no teams changed"
+            )
+    updates, additions = [], []
+    for index, team in enumerate(configured):
+        current = by_token.get(team["token"])
+        if current is None:
+            current = next(
+                (item for item in existing if item["ip"] == team["ip"]), None
+            )
+            if current is None:
+                if any(item["name"] == team["name"] for item in existing):
+                    raise SystemExit("Demo team name collision; no teams changed")
+                additions.append(team)
+            else:
+                updates.append({**current, "token": team["token"]})
+            continue
+        allowed = {team["ip"]}
+        if index < 2:
+            allowed.update((f"172.30.240.{11 + index}", f"10.{101 + index}.0.2"))
+        if current["ip"] not in allowed:
+            raise SystemExit("Existing team address is not part of the demo")
+        if current["ip"] != team["ip"]:
+            updates.append({**current, "ip": team["ip"]})
+    if additions or updates:
+        backup = output / "teams-before.json"
+        if not backup.exists():
+            backup.write_text(json.dumps(existing, indent=2))
+            backup.chmod(0o600)
+    for team in additions:
+        pending[team["ip"]] = {"name": team["name"], "token": team["token"]}
+    if pending:
+        pending_path.write_text(json.dumps(pending, indent=2))
+        pending_path.chmod(0o600)
+    for team in additions:
+        current = request(
+            "/api/admin/teams/",
+            {
+                "name": team["name"],
+                "ip": team["ip"],
+                "active": True,
+                "highlighted": team.get("highlighted", False),
+                "logo_path": team.get("logo", ""),
+            },
+            "POST",
+        )
+        updates.append({**current, "token": team["token"]})
+    for team in updates:
+        request(f"/api/admin/teams/{team['id']}/", team, "PUT")
+    pending_path.unlink(missing_ok=True)
+    print(
+        f"Demo teams synchronized ({len(additions)} added, {len(updates)} updated); existing scores and tokens retained."
+    )
 
 
 def main():
@@ -50,39 +124,7 @@ def main():
         },
         "POST",
     )
-    existing = request("/api/admin/teams/")
-    if len(existing) != 2 or len(configured) != 2:
-        raise SystemExit(
-            "Refusing to modify a database that does not contain exactly two demo teams"
-        )
-    by_token = {team["token"]: team for team in existing}
-    if {team["token"] for team in configured} != set(by_token):
-        raise SystemExit(
-            "Demo team tokens do not match the database; existing data left untouched"
-        )
-    updates = []
-    for team in configured:
-        current = by_token[team["token"]]
-        if current["ip"] not in {
-            "172.30.240.11",
-            "172.30.240.12",
-            "10.101.0.2",
-            "10.102.0.2",
-            "10.183.101.2",
-            "10.183.102.2",
-        }:
-            raise SystemExit("Existing team address is not part of the demo")
-        if current["ip"] != team["ip"]:
-            updates.append({**current, "ip": team["ip"]})
-    if updates:
-        backup = root / "config/runtime/demo/teams-before.json"
-        if not backup.exists():
-            backup.write_text(json.dumps(existing, indent=2))
-        for team in updates:
-            request(f"/api/admin/teams/{team['id']}/", team, "PUT")
-    print(
-        f"Demo team addresses synchronized ({len(updates)} updated); scores, tokens and session retained."
-    )
+    sync_teams(request, configured, root / "config/runtime/demo")
 
 
 if __name__ == "__main__":

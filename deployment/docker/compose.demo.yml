@@ -124,8 +124,6 @@ services:
       demo-wan: {ipv4_address: 172.30.241.2, interface_name: eth0, gw_priority: 1}
       demo-transit: {ipv4_address: 10.183.1.1, interface_name: eth1}
       demo-forcad: {ipv4_address: 10.183.2.1, interface_name: eth2}
-      demo-team1: {ipv4_address: 10.183.101.1, interface_name: eth3.101}
-      demo-team2: {ipv4_address: 10.183.102.1, interface_name: eth3.102}
     volumes:
       - ../../config/runtime/demo/router:/etc/forcad/router:ro
       - ../../config/runtime/demo/network.json:/etc/forcad/network.json:ro
@@ -157,43 +155,12 @@ services:
       timeout: 3s
       retries: 12
 
-  demo-player1:
-    <<: *player
-    networks:
-      demo-wan: {ipv4_address: 172.30.241.11, interface_name: eth0}
-    volumes:
-      - ../../config/runtime/demo/wireguard/participants/team-01/member-01.conf:/app/keys/wg0.conf:ro
-  demo-player2:
-    <<: *player
-    networks:
-      demo-wan: {ipv4_address: 172.30.241.12, interface_name: eth0}
-    volumes:
-      - ../../config/runtime/demo/wireguard/participants/team-02/member-01.conf:/app/keys/wg0.conf:ro
   demo-admin:
     <<: *player
     networks:
-      demo-wan: {ipv4_address: 172.30.241.13, interface_name: eth0}
+      demo-wan: {ipv4_address: 172.30.241.250, interface_name: eth0}
     volumes:
       - ../../config/runtime/demo/wireguard/admins/admin-01.conf:/app/keys/wg0.conf:ro
-
-  demo-team1:
-    <<: *team
-    environment:
-      DEMO_GATEWAY: 10.183.101.1
-    volumes:
-      - demo-team1-data:/data
-      - ../../config/runtime/demo/seeds/team1:/app/seed:ro
-    networks:
-      demo-team1: {ipv4_address: 10.183.101.2, interface_name: eth0}
-  demo-team2:
-    <<: *team
-    environment:
-      DEMO_GATEWAY: 10.183.102.1
-    volumes:
-      - demo-team2-data:/data
-      - ../../config/runtime/demo/seeds/team2:/app/seed:ro
-    networks:
-      demo-team2: {ipv4_address: 10.183.102.2, interface_name: eth0}
 
   demo-sensor:
     image: zeek/zeek@sha256:70733f4e540ba1608e37e00c6a93d009f79734262c9ec2ba09d90aa9abc16de5 # 9.0.0
@@ -247,28 +214,6 @@ services:
     depends_on:
       demo-router: {condition: service_healthy}
 
-  demo-farm1:
-    <<: *demo
-    command: [traffic]
-    user: "10001:10001"
-    network_mode: service:demo-player1
-    env_file: ../../config/runtime/demo-team1.env
-    depends_on:
-      demo-player1: {condition: service_healthy}
-      demo-team2: {condition: service_healthy}
-      nginx: {condition: service_started}
-      demo-sensor: {condition: service_healthy}
-  demo-farm2:
-    <<: *demo
-    command: [traffic]
-    user: "10001:10001"
-    network_mode: service:demo-player2
-    env_file: ../../config/runtime/demo-team2.env
-    depends_on:
-      demo-player2: {condition: service_healthy}
-      demo-team1: {condition: service_healthy}
-      nginx: {condition: service_started}
-      demo-sensor: {condition: service_healthy}
 
 networks:
   default:
@@ -288,15 +233,3 @@ networks:
     internal: true
     ipam:
       config: [{subnet: 10.183.2.0/24, gateway: 10.183.2.254}]
-  demo-team1:
-    internal: true
-    ipam:
-      config: [{subnet: 10.183.101.0/24, gateway: 10.183.101.254}]
-  demo-team2:
-    internal: true
-    ipam:
-      config: [{subnet: 10.183.102.0/24, gateway: 10.183.102.254}]
-
-volumes:
-  demo-team1-data: {}
-  demo-team2-data: {}
