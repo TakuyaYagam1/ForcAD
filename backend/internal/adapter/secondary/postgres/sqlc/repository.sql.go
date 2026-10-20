@@ -38,16 +38,18 @@ WHERE CheckerJobs.id = $4
   AND finished_at IS NULL
   AND deadline_at > $3
   AND (claim_token IS NULL OR claim_deadline_at <= $3)
-  AND action IN ('classic', 'puts_only', 'check_gets')
-  AND (action = 'check_gets' OR put_started_at IS NULL)
+  AND action IN ('classic', 'puts_only', 'check_gets', 'check_only')
+  AND (action IN ('check_gets', 'check_only') OR put_started_at IS NULL)
+  AND (not_before IS NULL OR not_before <= $3)
   AND EXISTS (
       SELECT 1 FROM GameSession AS session
       WHERE session.id = 1 AND NOT session.reset_pending
+        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING id, run_id, round, action, team_id, task_id, payload, sent_at,
           publish_token, publish_deadline_at, claim_token, claim_deadline_at,
-          put_started_at, finished_at, deadline_at
+          put_started_at, finished_at, deadline_at, not_before, expires_at
 `
 
 type ClaimCheckerJobParams struct {
@@ -73,6 +75,8 @@ type ClaimCheckerJobRow struct {
 	PutStartedAt      pgtype.Timestamptz `json:"put_started_at"`
 	FinishedAt        pgtype.Timestamptz `json:"finished_at"`
 	DeadlineAt        pgtype.Timestamptz `json:"deadline_at"`
+	NotBefore         pgtype.Timestamptz `json:"not_before"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) ClaimCheckerJob(ctx context.Context, arg ClaimCheckerJobParams) (ClaimCheckerJobRow, error) {
@@ -99,6 +103,8 @@ func (q *Queries) ClaimCheckerJob(ctx context.Context, arg ClaimCheckerJobParams
 		&i.PutStartedAt,
 		&i.FinishedAt,
 		&i.DeadlineAt,
+		&i.NotBefore,
+		&i.ExpiresAt,
 	)
 	return i, err
 }
@@ -110,6 +116,8 @@ WITH pending AS (
     JOIN GameSession AS session ON session.id = 1
     WHERE job.sent_at IS NULL AND job.finished_at IS NULL
       AND (job.publish_token IS NULL OR job.publish_deadline_at <= $3)
+      AND (job.not_before IS NULL OR job.not_before <= $3)
+      AND (job.expires_at IS NULL OR job.expires_at > $3)
       AND NOT session.reset_pending
       AND session.paused_at IS NULL
       AND (job.payload ->> 'generation')::BIGINT = session.generation
@@ -125,7 +133,7 @@ WHERE job.id = pending.id
 RETURNING job.id, job.run_id, job.round, job.action, job.team_id, job.task_id,
           job.payload, job.sent_at, job.publish_token, job.publish_deadline_at,
           job.claim_token, job.claim_deadline_at, job.put_started_at,
-          job.finished_at, job.deadline_at
+          job.finished_at, job.deadline_at, job.not_before, job.expires_at
 `
 
 type ClaimOutboxJobsParams struct {
@@ -151,6 +159,8 @@ type ClaimOutboxJobsRow struct {
 	PutStartedAt      pgtype.Timestamptz `json:"put_started_at"`
 	FinishedAt        pgtype.Timestamptz `json:"finished_at"`
 	DeadlineAt        pgtype.Timestamptz `json:"deadline_at"`
+	NotBefore         pgtype.Timestamptz `json:"not_before"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) ClaimOutboxJobs(ctx context.Context, arg ClaimOutboxJobsParams) ([]ClaimOutboxJobsRow, error) {
@@ -183,6 +193,8 @@ func (q *Queries) ClaimOutboxJobs(ctx context.Context, arg ClaimOutboxJobsParams
 			&i.PutStartedAt,
 			&i.FinishedAt,
 			&i.DeadlineAt,
+			&i.NotBefore,
+			&i.ExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -197,10 +209,11 @@ func (q *Queries) ClaimOutboxJobs(ctx context.Context, arg ClaimOutboxJobsParams
 const completeCheckerJobClaim = `-- name: CompleteCheckerJobClaim :one
 UPDATE CheckerJobs
 SET finished_at = $1,
+    result = $2::JSONB,
     claim_token = NULL,
     claim_deadline_at = NULL
-WHERE CheckerJobs.id = $2
-  AND claim_token = $3
+WHERE CheckerJobs.id = $3
+  AND claim_token = $4
   AND claim_deadline_at > $1
   AND deadline_at > $1
   AND finished_at IS NULL
@@ -210,30 +223,40 @@ WHERE CheckerJobs.id = $2
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING CheckerJobs.team_id, CheckerJobs.task_id,
-          CheckerJobs.round, CheckerJobs.payload
+          CheckerJobs.round, CheckerJobs.payload, CheckerJobs.run_id, CheckerJobs.aggregate_round
 `
 
 type CompleteCheckerJobClaimParams struct {
 	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	Result     []byte             `json:"result"`
 	JobID      uuid.UUID          `json:"job_id"`
 	OwnerToken *string            `json:"owner_token"`
 }
 
 type CompleteCheckerJobClaimRow struct {
-	TeamID  *uuid.UUID `json:"team_id"`
-	TaskID  *uuid.UUID `json:"task_id"`
-	Round   int32      `json:"round"`
-	Payload []byte     `json:"payload"`
+	TeamID         *uuid.UUID `json:"team_id"`
+	TaskID         *uuid.UUID `json:"task_id"`
+	Round          int32      `json:"round"`
+	Payload        []byte     `json:"payload"`
+	RunID          uuid.UUID  `json:"run_id"`
+	AggregateRound bool       `json:"aggregate_round"`
 }
 
 func (q *Queries) CompleteCheckerJobClaim(ctx context.Context, arg CompleteCheckerJobClaimParams) (CompleteCheckerJobClaimRow, error) {
-	row := q.db.QueryRow(ctx, completeCheckerJobClaim, arg.FinishedAt, arg.JobID, arg.OwnerToken)
+	row := q.db.QueryRow(ctx, completeCheckerJobClaim,
+		arg.FinishedAt,
+		arg.Result,
+		arg.JobID,
+		arg.OwnerToken,
+	)
 	var i CompleteCheckerJobClaimRow
 	err := row.Scan(
 		&i.TeamID,
 		&i.TaskID,
 		&i.Round,
 		&i.Payload,
+		&i.RunID,
+		&i.AggregateRound,
 	)
 	return i, err
 }
@@ -241,47 +264,54 @@ func (q *Queries) CompleteCheckerJobClaim(ctx context.Context, arg CompleteCheck
 const expireCheckerJob = `-- name: ExpireCheckerJob :one
 UPDATE CheckerJobs
 SET finished_at = $1,
+    result = $2::JSONB,
     claim_token = NULL,
     claim_deadline_at = NULL
-WHERE CheckerJobs.id = $2
+WHERE CheckerJobs.id = $3
   AND finished_at IS NULL
   AND deadline_at <= $1
   AND EXISTS (
       SELECT 1 FROM GameSession AS session
       WHERE session.id = 1 AND NOT session.reset_pending
+        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING CheckerJobs.team_id, CheckerJobs.task_id,
-          CheckerJobs.round, CheckerJobs.payload
+          CheckerJobs.round, CheckerJobs.payload, CheckerJobs.run_id, CheckerJobs.aggregate_round
 `
 
 type ExpireCheckerJobParams struct {
 	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	Result     []byte             `json:"result"`
 	JobID      uuid.UUID          `json:"job_id"`
 }
 
 type ExpireCheckerJobRow struct {
-	TeamID  *uuid.UUID `json:"team_id"`
-	TaskID  *uuid.UUID `json:"task_id"`
-	Round   int32      `json:"round"`
-	Payload []byte     `json:"payload"`
+	TeamID         *uuid.UUID `json:"team_id"`
+	TaskID         *uuid.UUID `json:"task_id"`
+	Round          int32      `json:"round"`
+	Payload        []byte     `json:"payload"`
+	RunID          uuid.UUID  `json:"run_id"`
+	AggregateRound bool       `json:"aggregate_round"`
 }
 
 func (q *Queries) ExpireCheckerJob(ctx context.Context, arg ExpireCheckerJobParams) (ExpireCheckerJobRow, error) {
-	row := q.db.QueryRow(ctx, expireCheckerJob, arg.FinishedAt, arg.JobID)
+	row := q.db.QueryRow(ctx, expireCheckerJob, arg.FinishedAt, arg.Result, arg.JobID)
 	var i ExpireCheckerJobRow
 	err := row.Scan(
 		&i.TeamID,
 		&i.TaskID,
 		&i.Round,
 		&i.Payload,
+		&i.RunID,
+		&i.AggregateRound,
 	)
 	return i, err
 }
 
 const extendCheckerJobDeadline = `-- name: ExtendCheckerJobDeadline :execrows
 UPDATE CheckerJobs
-SET deadline_at = GREATEST(deadline_at, $1)
+SET deadline_at = LEAST(GREATEST(deadline_at, $1), expires_at)
 WHERE CheckerJobs.id = $2
   AND claim_token = $3
   AND claim_deadline_at > $4
@@ -651,6 +681,45 @@ func (q *Queries) GetSession(ctx context.Context) (Gamesession, error) {
 	return i, err
 }
 
+const groupedCheckerResults = `-- name: GroupedCheckerResults :many
+SELECT finished_at, result
+FROM CheckerJobs
+WHERE run_id = $1 AND team_id = $2
+  AND task_id = $3 AND aggregate_round
+ORDER BY id
+`
+
+type GroupedCheckerResultsParams struct {
+	RunID  uuid.UUID  `json:"run_id"`
+	TeamID *uuid.UUID `json:"team_id"`
+	TaskID *uuid.UUID `json:"task_id"`
+}
+
+type GroupedCheckerResultsRow struct {
+	FinishedAt pgtype.Timestamptz `json:"finished_at"`
+	Result     []byte             `json:"result"`
+}
+
+func (q *Queries) GroupedCheckerResults(ctx context.Context, arg GroupedCheckerResultsParams) ([]GroupedCheckerResultsRow, error) {
+	rows, err := q.db.Query(ctx, groupedCheckerResults, arg.RunID, arg.TeamID, arg.TaskID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GroupedCheckerResultsRow{}
+	for rows.Next() {
+		var i GroupedCheckerResultsRow
+		if err := rows.Scan(&i.FinishedAt, &i.Result); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const hasUnfinishedJobsThroughRound = `-- name: HasUnfinishedJobsThroughRound :one
 SELECT EXISTS (
     SELECT 1 FROM CheckerJobs
@@ -765,6 +834,19 @@ func (q *Queries) LockGameForSession(ctx context.Context) (int32, error) {
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const lockGroupedTeamTask = `-- name: LockGroupedTeamTask :exec
+SELECT cell.team_id
+FROM TeamTasks AS cell JOIN CheckerJobs AS job
+    ON job.team_id = cell.team_id AND job.task_id = cell.task_id
+WHERE job.id = $1 AND job.aggregate_round
+FOR NO KEY UPDATE OF cell
+`
+
+func (q *Queries) LockGroupedTeamTask(ctx context.Context, jobID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, lockGroupedTeamTask, jobID)
+	return err
 }
 
 const lockOpenCheckerJob = `-- name: LockOpenCheckerJob :one
@@ -900,7 +982,7 @@ UPDATE CheckerJobs
 SET sent_at = $1,
     publish_token = NULL,
     publish_deadline_at = NULL,
-    deadline_at = COALESCE(deadline_at, $2)
+    deadline_at = LEAST(COALESCE(deadline_at, $2), expires_at)
 WHERE CheckerJobs.id = $3
   AND publish_token = $4
   AND publish_deadline_at > $1
@@ -1014,6 +1096,23 @@ func (q *Queries) RenewCheckerJob(ctx context.Context, arg RenewCheckerJobParams
 	return result.RowsAffected(), nil
 }
 
+const resumeExtraChecks = `-- name: ResumeExtraChecks :exec
+UPDATE CheckerJobs AS job
+SET not_before = job.not_before + delay.duration,
+    expires_at = job.expires_at + delay.duration,
+    deadline_at = job.deadline_at + delay.duration
+FROM (
+    SELECT GREATEST(INTERVAL '0 seconds', $1::TIMESTAMPTZ - paused_at) AS duration
+    FROM GameSession WHERE id = 1 AND paused_at IS NOT NULL
+) AS delay
+WHERE job.action = 'check_only' AND job.finished_at IS NULL
+`
+
+func (q *Queries) ResumeExtraChecks(ctx context.Context, resumedAt pgtype.Timestamptz) error {
+	_, err := q.db.Exec(ctx, resumeExtraChecks, resumedAt)
+	return err
+}
+
 const resumeSession = `-- name: ResumeSession :execrows
 UPDATE GameSession
 SET paused_seconds = paused_seconds + GREATEST(0, EXTRACT(EPOCH FROM ($1::TIMESTAMPTZ - paused_at))),
@@ -1068,10 +1167,10 @@ func (q *Queries) SaveScheduleCheckpoint(ctx context.Context, arg SaveScheduleCh
 
 const setCheckerJobDeadline = `-- name: SetCheckerJobDeadline :execrows
 UPDATE CheckerJobs
-SET deadline_at = $1,
+SET deadline_at = LEAST($1, expires_at),
     claim_deadline_at = CASE
         WHEN claim_deadline_at IS NULL THEN NULL
-        ELSE LEAST(claim_deadline_at, $1)
+        ELSE LEAST(claim_deadline_at, $1, expires_at)
     END
 WHERE CheckerJobs.id = $2
   AND claim_token = $3

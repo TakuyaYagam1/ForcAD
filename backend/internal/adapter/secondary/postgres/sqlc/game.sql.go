@@ -369,7 +369,7 @@ SELECT game.id, COALESCE(game.game_running, FALSE)::BOOLEAN AS game_running,
        COALESCE(game.game_hardness, 10)::DOUBLE PRECISION AS game_hardness,
        COALESCE(game.inflation, TRUE)::BOOLEAN AS inflation,
        COALESCE(game.volga_attacks_mode, FALSE)::BOOLEAN AS volga_attacks_mode,
-       COALESCE(game.round_time, 60)::INTEGER AS round_time, game.rounds,
+       COALESCE(game.round_time, 60)::INTEGER AS round_time, game.rounds, game.extra_checks,
        COALESCE(game.mode, 'classic')::TEXT AS mode,
        COALESCE(game.timezone, 'UTC')::TEXT AS timezone, game.start_time,
        session.practice_start, session.final_start, session.reset_pending,
@@ -393,6 +393,7 @@ type ReadGameLifecycleRow struct {
 	VolgaAttacksMode      bool               `json:"volga_attacks_mode"`
 	RoundTime             int32              `json:"round_time"`
 	Rounds                *int32             `json:"rounds"`
+	ExtraChecks           int32              `json:"extra_checks"`
 	Mode                  string             `json:"mode"`
 	Timezone              string             `json:"timezone"`
 	StartTime             pgtype.Timestamptz `json:"start_time"`
@@ -422,6 +423,7 @@ func (q *Queries) ReadGameLifecycle(ctx context.Context, withSnapshot bool) (Rea
 		&i.VolgaAttacksMode,
 		&i.RoundTime,
 		&i.Rounds,
+		&i.ExtraChecks,
 		&i.Mode,
 		&i.Timezone,
 		&i.StartTime,

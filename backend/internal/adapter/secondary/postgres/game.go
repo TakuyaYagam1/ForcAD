@@ -47,7 +47,7 @@ func readLifecycle(ctx context.Context, q *sqlc.Queries, withSnapshot bool) (dom
 		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
 	return domain.Lifecycle{
-		Config:  domain.GameConfig{ID: row.ID, GameRunning: row.GameRunning, RealRound: row.RealRound, FlagLifetime: row.FlagLifetime, GameHardness: row.GameHardness, Inflation: row.Inflation, VolgaAttacksMode: row.VolgaAttacksMode, RoundTime: row.RoundTime, Rounds: row.Rounds, Mode: row.Mode, Timezone: row.Timezone, StartTime: row.StartTime.Time},
+		Config:  domain.GameConfig{ID: row.ID, GameRunning: row.GameRunning, RealRound: row.RealRound, FlagLifetime: row.FlagLifetime, GameHardness: row.GameHardness, Inflation: row.Inflation, VolgaAttacksMode: row.VolgaAttacksMode, RoundTime: row.RoundTime, ExtraChecks: row.ExtraChecks, Rounds: row.Rounds, Mode: row.Mode, Timezone: row.Timezone, StartTime: row.StartTime.Time},
 		Session: domain.Session{PracticeStart: gameTime(row.PracticeStart), FinalStart: gameTime(row.FinalStart), ResetPending: row.ResetPending, Generation: row.Generation, PausedAt: gameTime(row.PausedAt), PausedSeconds: row.PausedSeconds, SchedulePausedSeconds: row.SchedulePausedSeconds, RoundStartedAt: gameTime(row.RoundStartedAt), SnapshotRound: row.SnapshotRound, Snapshot: row.Snapshot},
 		Pending: row.Pending,
 	}, nil
@@ -264,6 +264,9 @@ func (g *GameStore) DeactivateTeam(ctx context.Context, id uuid.UUID) error {
 func (g *GameStore) CreateTask(ctx context.Context, task domain.Task) (domain.Task, error) {
 	const location = "postgres.GameStore.CreateTask"
 	err := g.transaction(ctx, func(q *sqlc.Queries) error {
+		if err := validateExtraCheckTimeout(ctx, q, task); err != nil {
+			return err
+		}
 		id, err := q.InsertGameTask(ctx, sqlc.InsertGameTaskParams{Name: new(task.Name), Checker: new(task.Checker), EnvPath: new(task.EnvPath), Gets: new(task.Gets), Puts: new(task.Puts), Places: new(task.Places), CheckerTimeout: new(task.CheckerTimeout), CheckerType: new(task.CheckerType), GetPeriod: new(task.GetPeriod), DefaultScore: new(task.DefaultScore), Active: new(task.Active)})
 		if err != nil {
 			return fmt.Errorf("%s - insert game task: %w", location, err)
@@ -280,6 +283,9 @@ func (g *GameStore) CreateTask(ctx context.Context, task domain.Task) (domain.Ta
 func (g *GameStore) UpdateTask(ctx context.Context, task domain.Task) (domain.Task, error) {
 	const location = "postgres.GameStore.UpdateTask"
 	err := g.transaction(ctx, func(q *sqlc.Queries) error {
+		if err := validateExtraCheckTimeout(ctx, q, task); err != nil {
+			return err
+		}
 		n, err := q.ReplaceGameTask(ctx, sqlc.ReplaceGameTaskParams{ID: task.ID, Name: new(task.Name), Checker: new(task.Checker), EnvPath: new(task.EnvPath), Gets: new(task.Gets), Puts: new(task.Puts), Places: new(task.Places), CheckerTimeout: new(task.CheckerTimeout), CheckerType: new(task.CheckerType), GetPeriod: new(task.GetPeriod), DefaultScore: new(task.DefaultScore), Active: new(task.Active)})
 		if err != nil {
 			return fmt.Errorf("%s - replace game task: %w", location, err)
@@ -381,6 +387,9 @@ func changeActiveGameSession(
 		return fmt.Errorf("%s - validate game state: %w", location, &domain.StateError{Message: "Game has already finished"})
 	}
 	if action == "resume" {
+		if err := q.ResumeExtraChecks(ctx, gameStamp(now)); err != nil {
+			return fmt.Errorf("%s - resume delayed checks: %w", location, err)
+		}
 		if _, err := q.ResumeSession(ctx, gameStamp(now)); err != nil {
 			return fmt.Errorf("%s - resume game session: %w", location, err)
 		}

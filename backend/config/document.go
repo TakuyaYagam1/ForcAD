@@ -66,6 +66,7 @@ type Redis struct {
 type Game struct {
 	Mode             string  `yaml:"mode"`
 	RoundTime        int     `yaml:"round_time"`
+	ExtraChecks      int     `yaml:"extra_checks"`
 	Rounds           *int    `yaml:"rounds"`
 	StartTime        string  `yaml:"start_time"`
 	Timezone         string  `yaml:"timezone"`
@@ -188,7 +189,7 @@ func validateScalarTypes(node *yaml.Node) error {
 		for i := 0; i < len(node.Content); i += 2 {
 			key, value := node.Content[i].Value, node.Content[i+1]
 			switch key {
-			case "round_time", "rounds", "flag_lifetime", "puts", "gets", "places", "checker_timeout", "get_period", "port", "db":
+			case "round_time", "rounds", "extra_checks", "flag_lifetime", "puts", "gets", "places", "checker_timeout", "get_period", "port", "db":
 				// storages.db is a mapping; nullable values retain their defaults.
 				if value.Kind == yaml.ScalarNode && value.Tag != "!!int" && value.Tag != "!!null" {
 					return fmt.Errorf("%s - %s must be an integer", location, key)
@@ -243,6 +244,9 @@ func (d Document) Validate() error {
 		if err := task.validate(index); err != nil {
 			return err
 		}
+		if d.Game.ExtraChecks > 0 && *task.CheckerTimeout+3 >= d.Game.RoundTime {
+			return fmt.Errorf("%s - extra checks require round_time > checker_timeout + 3 for tasks[%d]", location, index)
+		}
 	}
 	return nil
 }
@@ -251,6 +255,9 @@ func (g Game) validate() error {
 	const location = "config.Game.validate"
 	if g.Mode != "classic" && g.Mode != "blitz" {
 		return fmt.Errorf("%s - game.mode must be classic or blitz", location)
+	}
+	if g.ExtraChecks < 0 || g.ExtraChecks > 8 || (g.ExtraChecks > 0 && g.Mode != "classic") {
+		return fmt.Errorf("%s - game.extra_checks must be 0..8 and requires classic mode when enabled", location)
 	}
 	if err := g.validateRounds(); err != nil {
 		return err

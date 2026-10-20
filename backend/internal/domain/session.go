@@ -25,6 +25,7 @@ const (
 	JobActionClassic   JobAction = "classic"
 	JobActionPutsOnly  JobAction = "puts_only"
 	JobActionCheckGets JobAction = "check_gets"
+	JobActionCheckOnly JobAction = "check_only"
 )
 
 type CheckerJobOwner struct {
@@ -48,6 +49,8 @@ type CheckerJob struct {
 	ClaimToken        *string
 	ClaimDeadlineAt   *time.Time
 	PutStartedAt      *time.Time
+	NotBefore         *time.Time
+	ExpiresAt         *time.Time
 }
 
 type CheckerJobState struct {
@@ -61,9 +64,9 @@ type CheckerJobState struct {
 }
 
 type CheckerResult struct {
-	Round          int32
-	Status         int32
-	PublicMessage  string
-	PrivateMessage string
-	Command        string
+	Round          int32  `json:"round"`
+	Status         int32  `json:"status"`
+	PublicMessage  string `json:"public_message"`
+	PrivateMessage string `json:"private_message"`
+	Command        string `json:"command"`
 }

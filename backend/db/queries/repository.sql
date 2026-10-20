@@ -162,6 +162,8 @@ WITH pending AS (
     JOIN GameSession AS session ON session.id = 1
     WHERE job.sent_at IS NULL AND job.finished_at IS NULL
       AND (job.publish_token IS NULL OR job.publish_deadline_at <= sqlc.arg(claimed_at))
+      AND (job.not_before IS NULL OR job.not_before <= sqlc.arg(claimed_at))
+      AND (job.expires_at IS NULL OR job.expires_at > sqlc.arg(claimed_at))
       AND NOT session.reset_pending
       AND session.paused_at IS NULL
       AND (job.payload ->> 'generation')::BIGINT = session.generation
@@ -177,14 +179,14 @@ WHERE job.id = pending.id
 RETURNING job.id, job.run_id, job.round, job.action, job.team_id, job.task_id,
           job.payload, job.sent_at, job.publish_token, job.publish_deadline_at,
           job.claim_token, job.claim_deadline_at, job.put_started_at,
-          job.finished_at, job.deadline_at;
+          job.finished_at, job.deadline_at, job.not_before, job.expires_at;
 
 -- name: MarkOutboxPublished :execrows
 UPDATE CheckerJobs
 SET sent_at = sqlc.arg(published_at),
     publish_token = NULL,
     publish_deadline_at = NULL,
-    deadline_at = COALESCE(deadline_at, sqlc.arg(initial_deadline))
+    deadline_at = LEAST(COALESCE(deadline_at, sqlc.arg(initial_deadline)), expires_at)
 WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND publish_token = sqlc.arg(owner_token)
   AND publish_deadline_at > sqlc.arg(published_at)
@@ -210,16 +212,18 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND finished_at IS NULL
   AND deadline_at > sqlc.arg(claimed_at)
   AND (claim_token IS NULL OR claim_deadline_at <= sqlc.arg(claimed_at))
-  AND action IN ('classic', 'puts_only', 'check_gets')
-  AND (action = 'check_gets' OR put_started_at IS NULL)
+  AND action IN ('classic', 'puts_only', 'check_gets', 'check_only')
+  AND (action IN ('check_gets', 'check_only') OR put_started_at IS NULL)
+  AND (not_before IS NULL OR not_before <= sqlc.arg(claimed_at))
   AND EXISTS (
       SELECT 1 FROM GameSession AS session
       WHERE session.id = 1 AND NOT session.reset_pending
+        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING id, run_id, round, action, team_id, task_id, payload, sent_at,
           publish_token, publish_deadline_at, claim_token, claim_deadline_at,
-          put_started_at, finished_at, deadline_at;
+          put_started_at, finished_at, deadline_at, not_before, expires_at;
 
 -- name: GetCheckerJobState :one
 SELECT action AS workflow,
@@ -230,7 +234,7 @@ FOR UPDATE;
 
 -- name: ExtendCheckerJobDeadline :execrows
 UPDATE CheckerJobs
-SET deadline_at = GREATEST(deadline_at, sqlc.arg(new_deadline))
+SET deadline_at = LEAST(GREATEST(deadline_at, sqlc.arg(new_deadline)), expires_at)
 WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND claim_token = sqlc.arg(owner_token)
   AND claim_deadline_at > sqlc.arg(touched_at)
@@ -244,10 +248,10 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
 
 -- name: SetCheckerJobDeadline :execrows
 UPDATE CheckerJobs
-SET deadline_at = sqlc.arg(new_deadline),
+SET deadline_at = LEAST(sqlc.arg(new_deadline), expires_at),
     claim_deadline_at = CASE
         WHEN claim_deadline_at IS NULL THEN NULL
-        ELSE LEAST(claim_deadline_at, sqlc.arg(new_deadline))
+        ELSE LEAST(claim_deadline_at, sqlc.arg(new_deadline), expires_at)
     END
 WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND claim_token = sqlc.arg(owner_token)
@@ -278,6 +282,7 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
 -- name: CompleteCheckerJobClaim :one
 UPDATE CheckerJobs
 SET finished_at = sqlc.arg(finished_at),
+    result = sqlc.arg(result)::JSONB,
     claim_token = NULL,
     claim_deadline_at = NULL
 WHERE CheckerJobs.id = sqlc.arg(job_id)
@@ -291,11 +296,12 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING CheckerJobs.team_id, CheckerJobs.task_id,
-          CheckerJobs.round, CheckerJobs.payload;
+          CheckerJobs.round, CheckerJobs.payload, CheckerJobs.run_id, CheckerJobs.aggregate_round;
 
 -- name: ExpireCheckerJob :one
 UPDATE CheckerJobs
 SET finished_at = sqlc.arg(finished_at),
+    result = sqlc.arg(result)::JSONB,
     claim_token = NULL,
     claim_deadline_at = NULL
 WHERE CheckerJobs.id = sqlc.arg(job_id)
@@ -304,10 +310,11 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND EXISTS (
       SELECT 1 FROM GameSession AS session
       WHERE session.id = 1 AND NOT session.reset_pending
+        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING CheckerJobs.team_id, CheckerJobs.task_id,
-          CheckerJobs.round, CheckerJobs.payload;
+          CheckerJobs.round, CheckerJobs.payload, CheckerJobs.run_id, CheckerJobs.aggregate_round;
 
 -- name: LogCurrentTeamTask :execrows
 INSERT INTO TeamTasksLog
@@ -356,3 +363,28 @@ RETURNING run.schedule_id, run.scheduled_at;
 INSERT INTO ScheduleHistory (id, last_run)
 VALUES (sqlc.arg(schedule_id), sqlc.arg(last_run))
 ON CONFLICT (id) DO UPDATE SET last_run = EXCLUDED.last_run;
+
+-- name: LockGroupedTeamTask :exec
+SELECT cell.team_id
+FROM TeamTasks AS cell JOIN CheckerJobs AS job
+    ON job.team_id = cell.team_id AND job.task_id = cell.task_id
+WHERE job.id = sqlc.arg(job_id) AND job.aggregate_round
+FOR NO KEY UPDATE OF cell;
+
+-- name: GroupedCheckerResults :many
+SELECT finished_at, result
+FROM CheckerJobs
+WHERE run_id = sqlc.arg(run_id) AND team_id = sqlc.arg(team_id)
+  AND task_id = sqlc.arg(task_id) AND aggregate_round
+ORDER BY id;
+
+-- name: ResumeExtraChecks :exec
+UPDATE CheckerJobs AS job
+SET not_before = job.not_before + delay.duration,
+    expires_at = job.expires_at + delay.duration,
+    deadline_at = job.deadline_at + delay.duration
+FROM (
+    SELECT GREATEST(INTERVAL '0 seconds', sqlc.arg(resumed_at)::TIMESTAMPTZ - paused_at) AS duration
+    FROM GameSession WHERE id = 1 AND paused_at IS NOT NULL
+) AS delay
+WHERE job.action = 'check_only' AND job.finished_at IS NULL;

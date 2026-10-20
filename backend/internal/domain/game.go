@@ -12,6 +12,7 @@ type GameConfig struct {
 	Inflation        bool      `json:"inflation"`
 	VolgaAttacksMode bool      `json:"volga_attacks_mode"`
 	RoundTime        int32     `json:"round_time"`
+	ExtraChecks      int32     `json:"extra_checks"`
 	Rounds           *int32    `json:"rounds"`
 	Mode             string    `json:"mode"`
 	Timezone         string    `json:"timezone"`

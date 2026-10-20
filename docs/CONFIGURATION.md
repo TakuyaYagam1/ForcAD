@@ -15,6 +15,7 @@ Unknown fields and invalid values are rejected.
 | `start_time` | Required scheduled final start. Accepts a local date and time or RFC 3339. |
 | `timezone` | Time zone for a start time without an offset. Default: `UTC`. |
 | `round_time` | Required round duration in seconds. |
+| `extra_checks` | Experimental additional CHECKs per team/task/round, `0..8`. Default: `0`; positive values require `classic`. |
 | `rounds` | Positive round limit, or `null`/omitted for no configured limit. |
 | `flag_lifetime` | Required flag lifetime in rounds. |
 | `default_score` | Default task score. Default: `2500`. |
@@ -24,6 +25,29 @@ Unknown fields and invalid values are rejected.
 | `checkers_path` | Base checker directory in the worker. Default: `/checkers/`. |
 | `env_path` | Default checker environment path. Default: `/opt/checkers/bin`. |
 | `get_period` | Default GET interval in seconds. If omitted, uses `round_time`. |
+
+With `extra_checks > 0`, each additional CHECK runs at a random time in a
+separate part of the round. Times are persisted in PostgreSQL and shifted on
+resume after a pause. `round_time` must exceed every task's `checker_timeout + 3`.
+CHECK must tolerate concurrent invocation alongside the main workflow.
+PUT, GET and flag lifetime remain unchanged.
+
+The main workflow and extra CHECKs produce one SLA observation per team/task/round.
+Every required job must finish before the result is applied. A confirmed
+service failure survives later UP results. An incomplete observation caused by
+queue/execution expiry produces CHECK_FAILED without changing the SLA counters,
+unless another job confirmed a service failure.
+
+Set this field before initial installation. Editing YAML does not overwrite an
+existing game's database settings. It stays disabled by default pending
+event-scale validation; the demo explicitly enables two extra CHECKs.
+
+The single initial migration includes all extra-CHECK columns and indexes.
+It creates a fresh schema; it does not upgrade an older applied initial schema.
+The initializer rejects databases missing required columns without changing data.
+Back up an existing game before changing versions. The initial migration's
+`Down` removes all application tables and data; it does not just disable CHECKs.
+See [operations](OPERATIONS.md#reset) for explicit reset commands.
 
 ## Teams
 

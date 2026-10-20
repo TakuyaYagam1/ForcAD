@@ -31,7 +31,7 @@ func Migrate(ctx context.Context, databaseURL string) (resultErr error) {
 		}
 	}()
 	database.SetMaxOpenConns(1)
-	if err := validateAppliedUUIDSchema(ctx, database); err != nil {
+	if err := validateAppliedSchema(ctx, database); err != nil {
 		return fmt.Errorf("%s - validate existing database schema: %w", location, err)
 	}
 	files, err := fs.Sub(migrations, "migrations")
@@ -53,8 +53,8 @@ func Migrate(ctx context.Context, databaseURL string) (resultErr error) {
 	return nil
 }
 
-func validateAppliedUUIDSchema(ctx context.Context, database *sql.DB) error {
-	const location = "db.validateAppliedUUIDSchema"
+func validateAppliedSchema(ctx context.Context, database *sql.DB) error {
+	const location = "db.validateAppliedSchema"
 	var versionTableExists bool
 	if err := database.QueryRowContext(ctx, `SELECT to_regclass('goose_db_version') IS NOT NULL`).Scan(&versionTableExists); err != nil {
 		return fmt.Errorf("%s - check migration ledger: %w", location, err)
@@ -79,17 +79,22 @@ func validateAppliedUUIDSchema(ctx context.Context, database *sql.DB) error {
 	var tableName, columnName string
 	var dataType sql.NullString
 	err := database.QueryRowContext(ctx, `
-		WITH expected(table_name, column_name) AS (
+		WITH expected(table_name, column_name, data_type) AS (
 			VALUES
-				('teams', 'id'),
-				('tasks', 'id'),
-				('flags', 'id'), ('flags', 'team_id'), ('flags', 'task_id'),
-				('stolenflags', 'flag_id'), ('stolenflags', 'attacker_id'),
-				('teamtasks', 'team_id'), ('teamtasks', 'task_id'),
-				('teamtaskslog', 'id'), ('teamtaskslog', 'team_id'), ('teamtaskslog', 'task_id'),
-				('dispatchruns', 'id'),
-				('checkerjobs', 'id'), ('checkerjobs', 'run_id'),
-				('checkerjobs', 'team_id'), ('checkerjobs', 'task_id')
+				('teams', 'id', 'uuid'),
+				('tasks', 'id', 'uuid'),
+				('flags', 'id', 'uuid'), ('flags', 'team_id', 'uuid'), ('flags', 'task_id', 'uuid'),
+				('stolenflags', 'flag_id', 'uuid'), ('stolenflags', 'attacker_id', 'uuid'),
+				('teamtasks', 'team_id', 'uuid'), ('teamtasks', 'task_id', 'uuid'),
+				('teamtaskslog', 'id', 'uuid'), ('teamtaskslog', 'team_id', 'uuid'), ('teamtaskslog', 'task_id', 'uuid'),
+				('dispatchruns', 'id', 'uuid'),
+				('checkerjobs', 'id', 'uuid'), ('checkerjobs', 'run_id', 'uuid'),
+				('checkerjobs', 'team_id', 'uuid'), ('checkerjobs', 'task_id', 'uuid'),
+				('gameconfig', 'extra_checks', 'integer'),
+				('checkerjobs', 'not_before', 'timestamp with time zone'),
+				('checkerjobs', 'expires_at', 'timestamp with time zone'),
+				('checkerjobs', 'aggregate_round', 'boolean'),
+				('checkerjobs', 'result', 'jsonb')
 		)
 		SELECT expected.table_name, expected.column_name, actual.data_type
 		FROM expected
@@ -97,22 +102,22 @@ func validateAppliedUUIDSchema(ctx context.Context, database *sql.DB) error {
 		  ON actual.table_schema = current_schema()
 		 AND actual.table_name = expected.table_name
 		 AND actual.column_name = expected.column_name
-		WHERE actual.data_type IS DISTINCT FROM 'uuid'
-		ORDER BY expected.table_name, expected.column_name
+		WHERE actual.data_type IS DISTINCT FROM expected.data_type
+		ORDER BY expected.data_type <> 'uuid', expected.table_name, expected.column_name
 		LIMIT 1
 	`).Scan(&tableName, &columnName, &dataType)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("%s - inspect UUID columns: %w", location, err)
+		return fmt.Errorf("%s - inspect schema columns: %w", location, err)
 	}
 	actualType := "missing"
 	if dataType.Valid {
 		actualType = dataType.String
 	}
 	return fmt.Errorf(
-		"%s - applied migration version 1 has incompatible UUID schema: %s.%s has type %s; initialize a fresh database",
+		"%s - applied migration version 1 has incompatible schema: %s.%s has type %s; initialize a fresh database",
 		location, tableName, columnName, actualType,
 	)
 }

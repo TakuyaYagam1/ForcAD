@@ -1,6 +1,8 @@
 game:
   mode: classic
   round_time: 60
+  # Experimental additional CHECKs per team/task/round; classic only, 0..8.
+  extra_checks: 0
   rounds: 300
   start_time: "2027-01-01 12:00:00"
   timezone: Europe/Moscow

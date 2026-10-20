@@ -38,6 +38,32 @@ func TestDocumentDefaultsAndTimezone(t *testing.T) {
 	if *d.Tasks[0].Puts != 1 || *d.Tasks[0].Gets != 1 || d.Tasks[0].Checker != "/checkers/example/checker.py" || *d.Tasks[0].GetPeriod != 60 {
 		t.Fatal("incorrect task defaults")
 	}
+	if d.Game.ExtraChecks != 0 {
+		t.Fatal("extra checks must remain opt-in")
+	}
+}
+
+func TestDocumentExtraChecks(t *testing.T) {
+	for _, value := range []string{"0", "2", "8"} {
+		source := strings.Replace(example, "round_time: 60", "round_time: 60\n  extra_checks: "+value, 1)
+		if _, err := DecodeDocument(strings.NewReader(source)); err != nil {
+			t.Fatalf("rejected extra_checks %s: %v", value, err)
+		}
+	}
+	for _, fields := range []string{
+		"extra_checks: -1", "extra_checks: 9", "extra_checks: true",
+		"extra_checks: 1.5", "extra_checks: '2'",
+		"extra_checks: 2\n  mode: blitz",
+	} {
+		source := strings.Replace(example, "round_time: 60", "round_time: 60\n  "+fields, 1)
+		if _, err := DecodeDocument(strings.NewReader(source)); err == nil {
+			t.Fatalf("accepted invalid settings: %s", fields)
+		}
+	}
+	source := strings.Replace(example, "round_time: 60", "round_time: 13\n  extra_checks: 2", 1)
+	if _, err := DecodeDocument(strings.NewReader(source)); err == nil {
+		t.Fatal("accepted a round without time for a complete CHECK")
+	}
 }
 
 func TestLoadDocumentAddsContextAndPreservesFilesystemCause(t *testing.T) {

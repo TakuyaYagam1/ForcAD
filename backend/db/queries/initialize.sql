@@ -6,8 +6,8 @@ SELECT EXISTS(SELECT 1 FROM GameConfig)::BOOLEAN;
 
 -- name: InitializeGame :exec
 INSERT INTO GameConfig(id,game_running,real_round,flag_lifetime,game_hardness,inflation,
-                      volga_attacks_mode,round_time,rounds,mode,timezone,start_time)
-VALUES(1,FALSE,0,$1,$2,$3,$4,$5,$6,$7,$8,$9);
+                      volga_attacks_mode,round_time,rounds,mode,timezone,start_time,extra_checks)
+VALUES(1,FALSE,0,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
 
 -- name: InitializeGameCells :exec
 INSERT INTO TeamTasks(team_id,task_id,status,score)

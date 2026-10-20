@@ -45,6 +45,9 @@ func (r *Repository) SetPaused(
 			return domain.Session{}, fmt.Errorf("%s - pause session: %w", location, err)
 		}
 	} else {
+		if err := queries.ResumeExtraChecks(ctx, timestamp(at)); err != nil {
+			return domain.Session{}, fmt.Errorf("%s - resume delayed checks: %w", location, err)
+		}
 		if _, err := queries.ResumeSession(ctx, timestamp(at)); err != nil {
 			return domain.Session{}, fmt.Errorf("%s - resume session: %w", location, err)
 		}

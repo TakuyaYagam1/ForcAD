@@ -143,10 +143,19 @@ func (w *Worker) Handle(ctx context.Context, jobID uuid.UUID) error {
 
 	workCtx, cancel := context.WithCancelCause(ctx)
 	workflowDeadline := claim.claimedAt.Add(w.options.MaxWorkflowDuration)
+	recoveryDeadline := workflowDeadline.Add(w.options.RecoveryGrace)
+	if claim.job.ExpiresAt != nil {
+		// A queue delay must not consume the service's action timeout or turn
+		// an incomplete observation into a DOWN verdict.
+		if cutoff := claim.job.ExpiresAt.Add(-time.Second); cutoff.Before(workflowDeadline) {
+			workflowDeadline = cutoff
+		}
+		recoveryDeadline = *claim.job.ExpiresAt
+	}
 	guard := &leaseGuard{
 		worker: w, jobID: jobID, ownerToken: claim.ownerToken, ctx: workCtx,
 		cancelFn: cancel, done: make(chan struct{}), round: claim.job.Round, workflowDeadline: workflowDeadline,
-		recoveryDeadline: workflowDeadline.Add(w.options.RecoveryGrace),
+		recoveryDeadline: recoveryDeadline,
 	}
 	go guard.run()
 	workflowCtx, cancelWorkflow := context.WithDeadlineCause(workCtx, workflowDeadline, ErrWorkflowDeadline)
@@ -262,13 +271,13 @@ func (w *Worker) execute(ctx context.Context, guard *leaseGuard, job domain.Chec
 	switch workflow {
 	case domain.JobActionPutsOnly:
 		verdicts, err = w.runPuts(ctx, guard, job, payload, ownerToken)
-	case domain.JobActionClassic, domain.JobActionCheckGets:
+	case domain.JobActionClassic, domain.JobActionCheckGets, domain.JobActionCheckOnly:
 		check, checkErr := w.runAction(ctx, guard, job, payload, ownerToken, processchecker.ActionCheck, nil)
 		if checkErr != nil {
 			return domain.CheckerResult{}, fmt.Errorf("%s - run CHECK action: %w", location, checkErr)
 		}
 		verdicts = append(verdicts, check)
-		if check.status == processchecker.StatusUp {
+		if check.status == processchecker.StatusUp && workflow != domain.JobActionCheckOnly {
 			var branches []verdict
 			branches, err = w.runAfterCheck(ctx, guard, job, payload, ownerToken, workflow)
 			verdicts = append(verdicts, branches...)
@@ -599,7 +608,7 @@ func workflowFor(action domain.JobAction, payloadWorkflow string) (domain.JobAct
 		return "", fmt.Errorf("%s - payload workflow does not match job action: %w", location, domain.ErrInvalidJobWorkflow)
 	}
 	switch action {
-	case domain.JobActionClassic, domain.JobActionPutsOnly, domain.JobActionCheckGets:
+	case domain.JobActionClassic, domain.JobActionPutsOnly, domain.JobActionCheckGets, domain.JobActionCheckOnly:
 		return action, nil
 	default:
 		return "", fmt.Errorf("%s - unsupported job action: %w", location, domain.ErrInvalidJobWorkflow)
@@ -618,6 +627,8 @@ func validWorkflowActionCount(workflow domain.JobAction, task domain.Task) bool 
 		count = int64(task.Puts)
 	case domain.JobActionCheckGets:
 		count = int64(task.Gets)
+	case domain.JobActionCheckOnly:
+		count = 0
 	default:
 		return false
 	}

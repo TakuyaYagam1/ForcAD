@@ -77,11 +77,16 @@ func initializeGameConfig(ctx context.Context, q *sqlc.Queries, game config.Game
 	if err != nil {
 		return fmt.Errorf("%s - convert round limit: %w", location, err)
 	}
+	extraChecks, err := checkedInt32(game.ExtraChecks)
+	if err != nil {
+		return fmt.Errorf("%s - convert extra check count: %w", location, err)
+	}
 	err = q.InitializeGame(ctx, sqlc.InitializeGameParams{
 		FlagLifetime: &flagLifetime, GameHardness: new(game.GameHardness),
 		Inflation: new(game.Inflation), VolgaAttacksMode: new(game.VolgaAttacksMode),
 		RoundTime: &roundTime, Rounds: rounds, Mode: new(game.Mode),
 		Timezone: new(game.Timezone), StartTime: gameStamp(start),
+		ExtraChecks: extraChecks,
 	})
 	if err != nil {
 		return fmt.Errorf("%s - insert game configuration: %w", location, err)

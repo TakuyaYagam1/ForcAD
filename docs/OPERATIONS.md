@@ -219,8 +219,10 @@ and start the services:
 
 Use a fresh PostgreSQL database for the first Go installation. The initial schema
 uses UUIDs for entity IDs. Databases from the Python platform or earlier integer-ID
-development builds are not upgraded; the initializer rejects incompatible schemas
-without resetting their data. Back up PostgreSQL before updates. Released schema
+development builds are not upgraded. The single initial migration includes
+extra-CHECK scheduling; an older applied schema without those columns is also
+incompatible. The initializer rejects these schemas without resetting their data.
+Back up PostgreSQL before updates. Released schema
 changes require new versioned migrations rather than edits to an applied one.
 
 The initial Goose migration has a `Down` section that removes all application

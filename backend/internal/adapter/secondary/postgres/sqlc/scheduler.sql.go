@@ -144,6 +144,9 @@ const expiredSchedulerJobs = `-- name: ExpiredSchedulerJobs :many
 SELECT id
 FROM CheckerJobs
 WHERE finished_at IS NULL AND deadline_at <= $1
+  AND (action IS DISTINCT FROM 'check_only' OR EXISTS (
+      SELECT 1 FROM GameSession WHERE id = 1 AND paused_at IS NULL
+  ))
 ORDER BY deadline_at, id
 LIMIT $2
 `
@@ -252,11 +255,16 @@ func (q *Queries) InsertCompletedRoundSnapshot(ctx context.Context, arg InsertCo
 }
 
 const insertSchedulerJobs = `-- name: InsertSchedulerJobs :exec
-INSERT INTO CheckerJobs (id, run_id, round, payload, action, team_id, task_id)
-SELECT job.id, job.run_id, job.round, job.payload, job.action, job.team_id, job.task_id
+INSERT INTO CheckerJobs (
+    id, run_id, round, payload, action, team_id, task_id, not_before,
+    expires_at, deadline_at, aggregate_round
+)
+SELECT job.id, job.run_id, job.round, job.payload, job.action, job.team_id, job.task_id,
+       job.not_before, job.expires_at, job.expires_at AS deadline_at, job.aggregate_round
 FROM jsonb_to_recordset($1::JSONB) AS job(
     id UUID, run_id UUID, round INTEGER, payload JSONB, action VARCHAR(16),
-    team_id UUID, task_id UUID
+    team_id UUID, task_id UUID, not_before TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE, aggregate_round BOOLEAN
 )
 `
 
@@ -340,7 +348,8 @@ func (q *Queries) ListCompletedRoundSnapshots(ctx context.Context, arg ListCompl
 const lockSchedulerGame = `-- name: LockSchedulerGame :one
 SELECT COALESCE(real_round, 0)::INTEGER AS real_round,
        COALESCE(game_running, FALSE)::BOOLEAN AS game_running,
-       rounds, COALESCE(mode, 'classic')::TEXT AS mode, start_time
+       rounds, COALESCE(mode, 'classic')::TEXT AS mode, start_time,
+       COALESCE(round_time, 60)::INTEGER AS round_time, extra_checks
 FROM GameConfig
 WHERE id = 1
 FOR UPDATE
@@ -352,6 +361,8 @@ type LockSchedulerGameRow struct {
 	Rounds      *int32             `json:"rounds"`
 	Mode        string             `json:"mode"`
 	StartTime   pgtype.Timestamptz `json:"start_time"`
+	RoundTime   int32              `json:"round_time"`
+	ExtraChecks int32              `json:"extra_checks"`
 }
 
 func (q *Queries) LockSchedulerGame(ctx context.Context) (LockSchedulerGameRow, error) {
@@ -363,6 +374,8 @@ func (q *Queries) LockSchedulerGame(ctx context.Context) (LockSchedulerGameRow, 
 		&i.Rounds,
 		&i.Mode,
 		&i.StartTime,
+		&i.RoundTime,
+		&i.ExtraChecks,
 	)
 	return i, err
 }

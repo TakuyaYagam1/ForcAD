@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -31,6 +32,9 @@ func (r *Repository) Claim(
 	queries := r.queries.WithTx(tx)
 	if err := lockJobLifecycle(ctx, queries); err != nil {
 		return domain.CheckerJob{}, fmt.Errorf("%s - lock job lifecycle: %w", location, err)
+	}
+	if err := queries.LockGroupedTeamTask(ctx, jobID); err != nil {
+		return domain.CheckerJob{}, fmt.Errorf("%s - lock round result: %w", location, err)
 	}
 	row, err := queries.ClaimCheckerJob(ctx, sqlc.ClaimCheckerJobParams{
 		OwnerToken: &ownerToken, ClaimDeadline: timestamp(claimDeadline),
@@ -260,6 +264,10 @@ func (r *Repository) Complete(
 	if jobID == uuid.Nil() || ownerToken == "" || result.Status <= 0 {
 		return false, fmt.Errorf("%s - validate checker result: %w", location, domain.ErrInvalidCheckerResult)
 	}
+	encodedResult, err := json.Marshal(result)
+	if err != nil {
+		return false, fmt.Errorf("%s - encode checker result: %w", location, err)
+	}
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return false, fmt.Errorf("%s - begin completion transaction: %w", location, err)
@@ -272,8 +280,12 @@ func (r *Repository) Complete(
 		}
 		return false, fmt.Errorf("%s - lock job lifecycle: %w", location, err)
 	}
+	if err := queries.LockGroupedTeamTask(ctx, jobID); err != nil {
+		return false, fmt.Errorf("%s - lock round result: %w", location, err)
+	}
 	row, err := queries.CompleteCheckerJobClaim(ctx, sqlc.CompleteCheckerJobClaimParams{
 		FinishedAt: timestamp(at), JobID: jobID, OwnerToken: &ownerToken,
+		Result: encodedResult,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -301,6 +313,16 @@ func applyCheckerResult(
 		return fmt.Errorf("%s - validate job team and task: %w", location, domain.ErrTeamTaskMissing)
 	}
 	logRound := result.Round
+	counted := true
+	if row.AggregateRound {
+		var ready bool
+		var err error
+		result, ready, counted, err = groupedResult(ctx, queries, row)
+		if err != nil || !ready {
+			return err
+		}
+		logRound = row.Round
+	}
 	if logRound == 0 {
 		logRound = row.Round
 	}
@@ -308,13 +330,17 @@ func applyCheckerResult(
 		return fmt.Errorf("%s - record prior task result: %w", location, err)
 	}
 	passedDelta := int32(0)
+	checkDelta := int32(0)
+	if counted {
+		checkDelta = 1
+	}
 	if result.Status == domain.TaskStatusUp {
 		passedDelta = 1
 	}
 	updated, err := queries.UpdateTeamTaskResult(ctx, sqlc.UpdateTeamTaskResultParams{
 		Status: &result.Status, PublicMessage: result.PublicMessage,
 		PrivateMessage: result.PrivateMessage, Command: result.Command,
-		PassedDelta: &passedDelta, CheckDelta: int32Pointer(1),
+		PassedDelta: &passedDelta, CheckDelta: int32Pointer(checkDelta),
 		TeamID: *row.TeamID, TaskID: *row.TaskID,
 	})
 	if err != nil {
@@ -358,8 +384,12 @@ func (r *Repository) Expire(ctx context.Context, jobID uuid.UUID, at time.Time) 
 
 func expireCheckerJobInTx(ctx context.Context, queries *sqlc.Queries, jobID uuid.UUID, at time.Time) (bool, error) {
 	const location = "postgres.expireCheckerJobInTx"
+	if err := queries.LockGroupedTeamTask(ctx, jobID); err != nil {
+		return false, fmt.Errorf("%s - lock round result: %w", location, err)
+	}
 	row, err := queries.ExpireCheckerJob(ctx, sqlc.ExpireCheckerJobParams{
 		FinishedAt: timestamp(at), JobID: jobID,
+		Result: []byte(`{"status":110,"public_message":"Checker did not finish","private_message":"Execution or queue deadline expired"}`),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -369,6 +399,12 @@ func expireCheckerJobInTx(ctx context.Context, queries *sqlc.Queries, jobID uuid
 	}
 	if row.TeamID == nil || row.TaskID == nil {
 		return false, fmt.Errorf("%s - validate job team and task: %w", location, domain.ErrTeamTaskMissing)
+	}
+	if row.AggregateRound {
+		if err := applyCheckerResult(ctx, queries, sqlc.CompleteCheckerJobClaimRow(row), domain.CheckerResult{}); err != nil {
+			return false, fmt.Errorf("%s - finalize round result: %w", location, err)
+		}
+		return true, nil
 	}
 	if err := logTaskResult(ctx, queries, row.Round, *row.TeamID, *row.TaskID); err != nil {
 		return false, fmt.Errorf("%s - record prior task result: %w", location, err)
@@ -506,7 +542,7 @@ func checkerJobAction(action *string) (domain.JobAction, error) {
 	}
 	workflow := domain.JobAction(*action)
 	switch workflow {
-	case domain.JobActionClassic, domain.JobActionPutsOnly, domain.JobActionCheckGets:
+	case domain.JobActionClassic, domain.JobActionPutsOnly, domain.JobActionCheckGets, domain.JobActionCheckOnly:
 		return workflow, nil
 	default:
 		return "", fmt.Errorf("%s - validate job workflow: %w", location, domain.ErrInvalidJobWorkflow)
@@ -514,19 +550,23 @@ func checkerJobAction(action *string) (domain.JobAction, error) {
 }
 
 func checkerJobFromClaim(row sqlc.ClaimCheckerJobRow) (domain.CheckerJob, error) {
-	return makeCheckerJob(
+	job, err := makeCheckerJob(
 		row.ID, row.RunID, row.Round, row.Action, row.TeamID, row.TaskID, row.Payload,
 		row.SentAt, row.FinishedAt, row.DeadlineAt, row.PublishToken,
 		row.PublishDeadlineAt, row.ClaimToken, row.ClaimDeadlineAt, row.PutStartedAt,
 	)
+	job.NotBefore, job.ExpiresAt = nullableTime(row.NotBefore), nullableTime(row.ExpiresAt)
+	return job, err
 }
 
 func checkerJobFromOutbox(row sqlc.ClaimOutboxJobsRow) (domain.CheckerJob, error) {
-	return makeCheckerJob(
+	job, err := makeCheckerJob(
 		row.ID, row.RunID, row.Round, row.Action, row.TeamID, row.TaskID, row.Payload,
 		row.SentAt, row.FinishedAt, row.DeadlineAt, row.PublishToken,
 		row.PublishDeadlineAt, row.ClaimToken, row.ClaimDeadlineAt, row.PutStartedAt,
 	)
+	job.NotBefore, job.ExpiresAt = nullableTime(row.NotBefore), nullableTime(row.ExpiresAt)
+	return job, err
 }
 
 func makeCheckerJob(

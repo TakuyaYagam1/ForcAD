@@ -62,7 +62,9 @@ CREATE TABLE GameConfig
     rounds             INTEGER CHECK (rounds > 0),
     mode               VARCHAR(8) DEFAULT 'classic',
     timezone           VARCHAR(32) DEFAULT 'UTC',
-    start_time         TIMESTAMP WITH TIME ZONE
+    start_time         TIMESTAMP WITH TIME ZONE,
+    extra_checks       INTEGER NOT NULL DEFAULT 0 CHECK (extra_checks BETWEEN 0 AND 8),
+    CONSTRAINT extra_checks_classic CHECK (extra_checks = 0 OR mode IS NOT DISTINCT FROM 'classic')
 );
 
 CREATE TABLE Teams
@@ -190,7 +192,7 @@ CREATE TABLE CheckerJobs
     run_id              UUID NOT NULL REFERENCES DispatchRuns(id) ON DELETE CASCADE,
     round               INTEGER NOT NULL,
     payload             JSONB NOT NULL,
-    action              VARCHAR(16) CHECK (action IS NULL OR action IN ('classic', 'puts_only', 'check_gets')),
+    action              VARCHAR(16) CHECK (action IS NULL OR action IN ('classic', 'puts_only', 'check_gets', 'check_only')),
     team_id             UUID,
     task_id             UUID,
     sent_at             TIMESTAMP WITH TIME ZONE,
@@ -200,7 +202,11 @@ CREATE TABLE CheckerJobs
     claim_deadline_at   TIMESTAMP WITH TIME ZONE,
     put_started_at      TIMESTAMP WITH TIME ZONE,
     finished_at         TIMESTAMP WITH TIME ZONE,
-    deadline_at         TIMESTAMP WITH TIME ZONE
+    deadline_at         TIMESTAMP WITH TIME ZONE,
+    not_before          TIMESTAMP WITH TIME ZONE,
+    expires_at          TIMESTAMP WITH TIME ZONE,
+    aggregate_round     BOOLEAN NOT NULL DEFAULT FALSE,
+    result              JSONB
 );
 
 CREATE TABLE GameRoundSnapshots
@@ -228,6 +234,10 @@ CREATE INDEX checker_jobs_publish_deadline
     ON CheckerJobs (publish_deadline_at) WHERE sent_at IS NULL;
 CREATE INDEX checker_jobs_claim_deadline
     ON CheckerJobs (claim_deadline_at) WHERE finished_at IS NULL;
+CREATE INDEX checker_jobs_round_group
+    ON CheckerJobs (run_id, team_id, task_id) WHERE aggregate_round;
+CREATE INDEX checker_jobs_not_before
+    ON CheckerJobs (not_before, id) WHERE sent_at IS NULL AND finished_at IS NULL;
 CREATE INDEX game_round_snapshots_created
     ON GameRoundSnapshots (created_at, round);
 

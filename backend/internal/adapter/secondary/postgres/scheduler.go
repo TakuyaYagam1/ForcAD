@@ -2,9 +2,12 @@ package postgres
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
 	"strings"
 	"time"
 	"uuid"
@@ -51,7 +54,7 @@ func (r *Repository) Prepare(ctx context.Context, request domain.ScheduleRequest
 		}
 		return nil, nil
 	}
-	run, err := createSchedulerRun(ctx, queries, request, resolved.logicalAt, roundState, resolved.session.Generation)
+	run, err := createSchedulerRun(ctx, queries, request, resolved.logicalAt, roundState, resolved.session.Generation, resolved.game)
 	if err != nil {
 		return nil, fmt.Errorf("%s - create dispatch run: %w", location, err)
 	}
@@ -298,6 +301,7 @@ func createSchedulerRun(
 	logicalAt time.Time,
 	state schedulerRoundState,
 	generation int64,
+	game sqlc.LockSchedulerGameRow,
 ) (*domain.DispatchRun, error) {
 	const location = "postgres.createSchedulerRun"
 	runID := uuid.NewV7()
@@ -322,6 +326,18 @@ func createSchedulerRun(
 	jobs, err := buildSchedulerJobs(runID, state.round, generation, request.Workflow, request.TaskID, teams, tasks)
 	if err != nil {
 		return nil, fmt.Errorf("%s - build checker jobs: %w", location, err)
+	}
+	if game.ExtraChecks > 0 {
+		if !request.AdvancesRound || request.Workflow != domain.JobActionClassic {
+			return nil, fmt.Errorf("%s - extra checks require classic round scheduling", location)
+		}
+		jobs, err = addExtraChecks(jobs, request.At, game.RoundTime, game.ExtraChecks, rand.Reader)
+		if err != nil {
+			return nil, fmt.Errorf("%s - schedule extra checks: %w", location, err)
+		}
+	}
+	if err := shuffleSchedulerJobs(jobs, rand.Reader); err != nil {
+		return nil, fmt.Errorf("%s - shuffle checker jobs: %w", location, err)
 	}
 	if len(jobs) > 0 {
 		encodedJobs, err := json.Marshal(jobs)
@@ -621,13 +637,16 @@ func (r *Repository) LastRun(ctx context.Context, scheduleID string) (*time.Time
 }
 
 type schedulerJobRecord struct {
-	ID      uuid.UUID       `json:"id"`
-	RunID   uuid.UUID       `json:"run_id"`
-	Round   int32           `json:"round"`
-	Payload json.RawMessage `json:"payload"`
-	Action  string          `json:"action"`
-	TeamID  uuid.UUID       `json:"team_id"`
-	TaskID  uuid.UUID       `json:"task_id"`
+	ID             uuid.UUID       `json:"id"`
+	RunID          uuid.UUID       `json:"run_id"`
+	Round          int32           `json:"round"`
+	Payload        json.RawMessage `json:"payload"`
+	Action         string          `json:"action"`
+	TeamID         uuid.UUID       `json:"team_id"`
+	TaskID         uuid.UUID       `json:"task_id"`
+	NotBefore      *time.Time      `json:"not_before"`
+	ExpiresAt      *time.Time      `json:"expires_at"`
+	AggregateRound bool            `json:"aggregate_round"`
 }
 
 func buildSchedulerJobs(
@@ -665,14 +684,28 @@ func buildSchedulerJobs(
 			if err != nil {
 				return nil, fmt.Errorf("%s - encode checker job payload: %w", location, err)
 			}
-			id := uuid.NewV7()
 			jobs = append(jobs, schedulerJobRecord{
-				ID: id, RunID: runID, Round: round, Payload: payload,
+				RunID: runID, Round: round, Payload: payload,
 				Action: string(workflow), TeamID: team.ID, TaskID: task.ID,
 			})
 		}
 	}
 	return jobs, nil
+}
+
+func shuffleSchedulerJobs(jobs []schedulerJobRecord, random io.Reader) error {
+	const location = "postgres.shuffleSchedulerJobs"
+	for i := len(jobs) - 1; i > 0; i-- {
+		index, err := rand.Int(random, big.NewInt(int64(i+1)))
+		if err != nil {
+			return fmt.Errorf("%s - choose job position: %w", location, err)
+		}
+		jobs[i], jobs[index.Int64()] = jobs[index.Int64()], jobs[i]
+	}
+	for i := range jobs {
+		jobs[i].ID = uuid.NewV7()
+	}
+	return nil
 }
 
 func dispatchRunFromRow(row sqlc.Dispatchrun, generation int64) (*domain.DispatchRun, error) {
@@ -788,6 +821,9 @@ func validJobAction(action domain.JobAction) bool {
 	switch action {
 	case domain.JobActionClassic, domain.JobActionPutsOnly, domain.JobActionCheckGets:
 		return true
+	case domain.JobActionCheckOnly:
+		// Extra CHECKs belong to an existing classic round, not a separate schedule.
+		return false
 	default:
 		return false
 	}

@@ -22,6 +22,42 @@ func TestNewV7ID(t *testing.T) {
 	}
 }
 
+func TestShuffleSchedulerJobsAssignsIDsAfterShuffling(t *testing.T) {
+	jobs := []schedulerJobRecord{
+		{TeamID: uuid.NewV7()},
+		{TeamID: uuid.NewV7()},
+		{TeamID: uuid.NewV7()},
+		{TeamID: uuid.NewV7()},
+	}
+	original := []uuid.UUID{jobs[0].TeamID, jobs[1].TeamID, jobs[2].TeamID, jobs[3].TeamID}
+	if err := shuffleSchedulerJobs(jobs, strings.NewReader(strings.Repeat("\x00", 64))); err != nil {
+		t.Fatal(err)
+	}
+	seen := make(map[uuid.UUID]struct{}, len(jobs))
+	for i, originalIndex := range []int{1, 2, 3, 0} {
+		if jobs[i].TeamID != original[originalIndex] {
+			t.Fatalf("job %d belongs to team %s, want %s", i, jobs[i].TeamID, original[originalIndex])
+		}
+		if jobs[i].ID == uuid.Nil() || jobs[i].ID[6]>>4 != 7 {
+			t.Fatalf("job %d has invalid UUIDv7 %s", i, jobs[i].ID)
+		}
+		if _, duplicate := seen[jobs[i].ID]; duplicate {
+			t.Fatalf("duplicate job ID %s", jobs[i].ID)
+		}
+		seen[jobs[i].ID] = struct{}{}
+	}
+}
+
+func TestShuffleSchedulerJobsFailsWhenRandomSourceFails(t *testing.T) {
+	jobs := make([]schedulerJobRecord, 2)
+	if err := shuffleSchedulerJobs(jobs, strings.NewReader("")); err == nil {
+		t.Fatal("shuffleSchedulerJobs() accepted an exhausted random source")
+	}
+	if jobs[0].ID != uuid.Nil() || jobs[1].ID != uuid.Nil() {
+		t.Fatal("shuffleSchedulerJobs() assigned IDs after a failed shuffle")
+	}
+}
+
 func TestDispatchRunUsesStoredSnapshotMetadata(t *testing.T) {
 	snapshotRound := int32(7)
 	snapshotRoundStart := float64(1234)

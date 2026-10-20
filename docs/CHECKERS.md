@@ -61,9 +61,15 @@ lines that would become retrieval data.
 
 Exit code `0` is not success in this protocol. Unsupported codes become
 `CHECK_FAILED`. A checker action exceeding `checker_timeout` becomes `DOWN`.
-A completed workflow contributes one SLA check even when it ends as
-`CHECK_FAILED`; only `UP` counts as passed. Scheduler recovery of expired jobs is
+A completed workflow with `extra_checks = 0` contributes one SLA check even when
+it ends as `CHECK_FAILED`; only `UP` counts as passed. Scheduler recovery of expired jobs is
 different: it records `CHECK_FAILED` without changing SLA counters.
+
+With experimental `game.extra_checks > 0`, the main classic workflow and all
+additional CHECKs count as one round observation. Any confirmed service failure
+fails that observation. If there is a CHECK_FAILED result without any confirmed
+service failure, the observation is CHECK_FAILED and does not change SLA counters. CHECK-only jobs
+never perform PUT/GET; CHECK must support concurrent calls on the same service.
 
 ## Execution and limits
 

@@ -25,6 +25,10 @@ type Checkerjob struct {
 	PutStartedAt      pgtype.Timestamptz `json:"put_started_at"`
 	FinishedAt        pgtype.Timestamptz `json:"finished_at"`
 	DeadlineAt        pgtype.Timestamptz `json:"deadline_at"`
+	NotBefore         pgtype.Timestamptz `json:"not_before"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	AggregateRound    bool               `json:"aggregate_round"`
+	Result            []byte             `json:"result"`
 }
 
 type Dispatchrun struct {
@@ -64,6 +68,7 @@ type Gameconfig struct {
 	Mode             *string            `json:"mode"`
 	Timezone         *string            `json:"timezone"`
 	StartTime        pgtype.Timestamptz `json:"start_time"`
+	ExtraChecks      int32              `json:"extra_checks"`
 }
 
 type Gameroundsnapshot struct {
