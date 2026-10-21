@@ -18,7 +18,15 @@ export SEMGREP_LOG_FILE := $(CACHE)/semgrep.log
 # Semgrep also runs on hosts where io_uring is unavailable or restricted.
 export EIO_BACKEND ?= posix
 
-.PHONY: help test test-integration test-deployment test-load test-monitoring test-network e2e security security-filesystem security-secrets security-semgrep security-go-vuln security-rules security-test security-image
+.PHONY: help test test-integration test-deployment test-load test-monitoring test-network e2e security security-filesystem security-secrets security-semgrep security-go-vuln security-rules security-test security-image security-images
+
+IMAGE_TARGETS ?=
+_IMAGE_TARGETS_ALLOWED := runtime worker nginx postgres pgbouncer
+ifneq ($(strip $(IMAGE_TARGETS)),)
+ifneq ($(filter-out $(_IMAGE_TARGETS_ALLOWED),$(IMAGE_TARGETS)),)
+$(error IMAGE_TARGETS supports only runtime worker nginx postgres pgbouncer)
+endif
+endif
 
 help: ## Show available checks.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "%-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -102,6 +110,10 @@ security-image: | $(REPORTS) $(CACHE) ## Scan an existing local Docker image: ma
 	else echo 'Trivy did not create an image report.' >&2; status=1; fi; \
 	$(TRIVY) --cache-dir "$(CACHE)/trivy" --version > "$(REPORTS)/trivy-version.txt" || status=1; \
 	exit "$$status"
+
+security-images: | $(REPORTS) $(CACHE) ## Build and scan selected production images with pinned Trivy.
+	$(PYTHON) "$(ROOT)/security/scan_images.py" $(IMAGE_TARGETS) \
+		--reports "$(REPORTS)" --cache "$(CACHE)" --docker "$(DOCKER)"
 
 security-go-vuln: ## Check reachable vulnerabilities in Go dependencies.
 	cd "$(ROOT)/backend" && go tool govulncheck ./...

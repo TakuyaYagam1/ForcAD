@@ -108,3 +108,55 @@ jobs:
             --json-output /reports/semgrep.json \
             /work/backend/internal /work/backend/config /work/backend/cmd \
             /work/frontend/src /work/infrastracture
+
+      - name: Upload source scan reports
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: security-source-reports
+          path: |
+            ${{ runner.temp }}/forcad-security/reports/trivy-filesystem.json
+            ${{ runner.temp }}/forcad-security/reports/gitleaks-files.json
+            ${{ runner.temp }}/forcad-security/reports/gitleaks-history.json
+            ${{ runner.temp }}/forcad-security/reports/gitleaks-version.txt
+            ${{ runner.temp }}/forcad-security/reports/semgrep.json
+          if-no-files-found: error
+          retention-days: 45
+
+  image_scans:
+    name: Scan ${{ matrix.image }} image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [runtime, worker, nginx, postgres, pgbouncer]
+    steps:
+      - name: Checkout source
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Prepare private reports and cache
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: install -d -m 0700 "$RUNNER_TEMP/forcad-security/reports" "$RUNNER_TEMP/forcad-security/cache"
+
+      - name: Test image scanner helper
+        run: PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=security python3 -m unittest discover -s security/tests -p 'test_scan_images.py' -v
+
+      - name: Build and scan selected image
+        env:
+          IMAGE_TARGET: ${{ matrix.image }}
+          REPORTS: ${{ runner.temp }}/forcad-security/reports
+          CACHE: ${{ runner.temp }}/forcad-security/cache
+        run: python3 security/scan_images.py "$IMAGE_TARGET" --reports "$REPORTS" --cache "$CACHE"
+
+      - name: Upload image scan reports
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: security-image-${{ matrix.image }}
+          path: ${{ runner.temp }}/forcad-security/reports/images/${{ matrix.image }}/
+          if-no-files-found: error
+          retention-days: 45

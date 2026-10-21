@@ -5,10 +5,11 @@ See the [README documentation index](../README.md#documentation).
 Run checks from the repository root. They inspect local source, dependencies,
 and images. They do not start a game or contact participant services. Trivy and
 `govulncheck` may access vulnerability data. Trivy may download checks on its
-first run. Image scans require Docker and an existing local image.
+first run. Image scans require Docker; the `security-image` target also needs
+an existing local image.
 
-Requirements: Go from `backend/go.mod`, Python 3, GNU Make, Trivy, Gitleaks, and
-Semgrep. Run the full source scan with:
+Requirements: Go from `backend/go.mod`, Python 3, GNU Make, Docker, Trivy,
+Gitleaks, and Semgrep. Run the full source scan with:
 
 ```sh
 make -C deployment security
@@ -28,19 +29,47 @@ make -C deployment security-semgrep
 | `security-secrets` | Gitleaks scans tracked files, non-ignored untracked files, and all reachable Git history. It requires a full checkout. Tracked files stay in scope when ignored; symlinks are excluded from the current-file copy, and report values are redacted. |
 | `security-semgrep` | Local rules scan `backend/internal`, `backend/config`, `backend/cmd`, `frontend/src`, and production source under `infrastracture/`. The infrastructure scan excludes `infrastracture/tests/` and rendered bundles under `infrastracture/runtime/`. Rules cover selected Python, Go, JavaScript, and TypeScript patterns, including dynamic execution, unsafe YAML or pickle loads, shell calls, disabled TLS, bare Go HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not catch every way to use these APIs. |
 | `security-go-vuln` | `govulncheck` checks reachable vulnerabilities in backend packages. |
+| `security-images` | Builds selected project image targets and scans their final images with pinned Trivy. Defaults to `runtime`, `worker`, `nginx`, `postgres`, and `pgbouncer`. |
 
-Image scans use an existing local image and its image ID. They do not build,
-pull, or publish it:
+The `security-image` target scans an existing local image by image ID. It does
+not build, pull, or publish it:
 
 ```sh
 make -C deployment security-image IMAGE=forcad-nginx:local
 ```
 
+Build and scan the five repository images locally with the pinned Trivy
+container:
+
+```sh
+make -C deployment security-images
+```
+
+Select targets explicitly with:
+
+```sh
+make -C deployment security-images IMAGE_TARGETS='runtime worker'
+```
+
+The supported targets are `runtime`, `worker`, `nginx`, `postgres`, and
+`pgbouncer`; the workflow scans all five independently. Runtime and initializer
+share a filesystem, while the worker includes the Python checker runtime. Trivy
+scans packages it detects in the final images, including OS and Go/Python
+packages, nginx, PostgreSQL, and PgBouncer; coverage of source-built C/C++
+binaries is limited. JavaScript build dependencies remain in the
+`security-filesystem` scope. Redis, RabbitMQ, Prometheus, and Grafana are
+externally supplied and are not built or scanned by this image matrix. The
+scanner keeps local build cache, removes its temporary image tag and archive,
+and does not start application containers, sign, or publish images. JSON, table
+summaries, and image IDs are stored under `REPORTS/images/<target>/`. GitHub uploads report
+files only, not image archives or build cache; source and image reports are
+retained as workflow artifacts for 45 days.
+
 `make -C deployment security-test` checks Semgrep positive and negative
-fixtures, then runs Python unit tests for secret-scan input handling and error
-cases. It does not run the source scanners. Reports and caches default to
-`security/reports/` and `security/.cache/`; set `REPORTS` and `CACHE` to use
-other paths.
+fixtures, then runs Python unit tests for secret-scan input handling and image
+scanner cleanup/error cases. It does not run the source scanners. Reports and
+caches default to `security/reports/` and `security/.cache/`; set `REPORTS` and
+`CACHE` to use other paths.
 
 GitHub Actions runs the security workflow monthly on the 1st at 09:17
 Europe/Moscow (`17 6 1 * *`) and supports manual dispatch; it does not run on
