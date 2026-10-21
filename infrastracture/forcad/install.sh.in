@@ -5,6 +5,7 @@ bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 target=@@INSTALL_PATH@@
 repo=@@REPOSITORY_URL@@
 revision=@@REVISION@@
+go_version=1.27.3
 created=false
 host_installed=false
 toolchain_tmp=
@@ -116,21 +117,21 @@ install_dependencies() {
         exit 1
     fi
 
-    go_dir=/opt/forcad-toolchain/go1.27.2
+    go_dir="/opt/forcad-toolchain/go$go_version"
     if [[ -x "$go_dir/bin/go" ]]; then
-        [[ "$($go_dir/bin/go version)" == *"go1.27.2"* ]] || { echo "Unexpected Go toolchain at $go_dir" >&2; exit 1; }
-    elif command -v go >/dev/null && [[ "$(go version)" == *"go1.27.2"* ]]; then
+        [[ "$($go_dir/bin/go version)" == *"go$go_version"* ]] || { echo "Unexpected Go toolchain at $go_dir" >&2; exit 1; }
+    elif command -v go >/dev/null && [[ "$(go version)" == *"go$go_version"* ]]; then
         go_dir="$(dirname -- "$(dirname -- "$(command -v go)")")"
     else
         arch="$(dpkg --print-architecture)"
         case "$arch" in
-            amd64) go_arch=amd64; go_sum=ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 ;;
-            arm64) go_arch=arm64; go_sum=94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8 ;;
-            *) echo "Go 1.27.2 is pinned for amd64 and arm64; unsupported architecture: $arch" >&2; exit 1 ;;
+            amd64) go_arch=amd64; go_sum=65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 ;;
+            arm64) go_arch=arm64; go_sum=a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49 ;;
+            *) echo "Go $go_version is pinned for amd64 and arm64; unsupported architecture: $arch" >&2; exit 1 ;;
         esac
         tmp="$(mktemp -d)"
         toolchain_tmp="$tmp"
-        curl --fail --silent --show-error --location "https://go.dev/dl/go1.27.2.linux-$go_arch.tar.gz" -o "$tmp/go.tar.gz"
+        curl --fail --silent --show-error --location "https://go.dev/dl/go$go_version.linux-$go_arch.tar.gz" -o "$tmp/go.tar.gz"
         printf '%s  %s\n' "$go_sum" "$tmp/go.tar.gz" | sha256sum --check --status || { echo "Go archive checksum mismatch" >&2; exit 1; }
         tar -C "$tmp" -xzf "$tmp/go.tar.gz"
         go_dir="$tmp/go"
@@ -211,10 +212,10 @@ rm -f -- "$target/.forcad-current-packages" "$packages_before"
 packages_before=
 if [[ -n "$toolchain_tmp" ]]; then
     install -d -m 0755 "$target/.toolchain"
-    mv "$toolchain_tmp/go" "$target/.toolchain/go1.27.2"
+    mv "$toolchain_tmp/go" "$target/.toolchain/go$go_version"
     rm -rf -- "$toolchain_tmp"
     toolchain_tmp=
-    go_dir="$target/.toolchain/go1.27.2"
+    go_dir="$target/.toolchain/go$go_version"
 fi
 export PATH="$go_dir/bin:$PATH"
 prepare_go_environment

@@ -111,5 +111,7 @@ jobs:
             semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
             scan --strict --error --disable-nosem --metrics off \
             --config /work/security/semgrep/rules.yml \
+            --exclude 'infrastracture/tests/**' --exclude 'infrastracture/runtime/**' \
             --json-output /reports/semgrep.json \
-            /work/backend/internal /work/backend/config /work/backend/cmd /work/frontend/src
+            /work/backend/internal /work/backend/config /work/backend/cmd \
+            /work/frontend/src /work/infrastracture

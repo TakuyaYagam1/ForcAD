@@ -227,7 +227,7 @@ run_control_down() {
         return
     fi
 
-    local root="$target/.forcad-go" path go_bin="$target/.toolchain/go1.27.2/bin"
+    local root="$target/.forcad-go" path go_bin= go_version candidate
     for path in "$root" "$root/build" "$root/modules" "$root/path"; do
         [[ ! -L "$path" ]] || { echo "Refusing symlinked Go cache path: $path" >&2; return 1; }
         if [[ -e "$path" && ! -d "$path" ]]; then
@@ -239,8 +239,15 @@ run_control_down() {
     export GOCACHE="$root/build"
     export GOMODCACHE="$root/modules"
     export GOPATH="$root/path"
-    if [[ ! -L "$target/.toolchain" && ! -L "$target/.toolchain/go1.27.2" \
-        && ! -L "$go_bin" && ! -L "$go_bin/go" && -x "$go_bin/go" ]]; then
+    for go_version in 1.27.3 1.27.2; do
+        candidate="$target/.toolchain/go$go_version/bin"
+        if [[ ! -L "$target/.toolchain" && ! -L "$target/.toolchain/go$go_version" \
+            && ! -L "$candidate" && ! -L "$candidate/go" && -x "$candidate/go" ]]; then
+            go_bin="$candidate"
+            break
+        fi
+    done
+    if [[ -n "$go_bin" ]]; then
         export PATH="$go_bin:$PATH"
     fi
     if [[ "$monitoring" == true ]]; then

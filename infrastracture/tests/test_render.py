@@ -107,6 +107,8 @@ class RenderTests(unittest.TestCase):
                 'public_host = "10.183.2.10"', 'public_host = "10.183.3.11"'
             ),
             example.replace('logo = "danosito.jpg"', 'logo = "../danosito.jpg"'),
+            example.replace('name = "danosito\'s ai farm"', 'name = "../outside"'),
+            example.replace('name = "danosito\'s ai farm"', 'name = "team\\n[Peer]"'),
         ]
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "settings.toml"
@@ -242,6 +244,45 @@ class RenderTests(unittest.TestCase):
             link.symlink_to(target, target_is_directory=True)
             with self.assertRaises(FileExistsError):
                 render.write_bundle(link, {})
+
+    def test_write_bundle_rejects_unsafe_paths_before_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "bundle"
+
+            with self.assertRaisesRegex(ValueError, "Unsafe bundle path"):
+                render.write_bundle(
+                    output,
+                    {
+                        "safe/file": "ok\n",
+                        "../escaped/private.conf": "PrivateKey = test\n",
+                    },
+                )
+
+            self.assertFalse(output.exists())
+            self.assertFalse((root / "escaped/private.conf").exists())
+
+    def test_team_names_keep_spaces_apostrophes_and_unicode(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        expected = "東京 team's"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(
+                example.replace('name = "danosito\'s ai farm"', f'name = "{expected}"')
+            )
+
+            config = render.load_config(path)
+
+        self.assertEqual(render.teams(config)[0]["name"], expected)
+
+    def test_wireguard_peer_comment_rejects_newline_injection(self):
+        with self.assertRaisesRegex(ValueError, "control characters"):
+            generate.server(
+                "private",
+                "10.0.0.1/24",
+                51820,
+                [("team\n[Peer]", "10.0.0.2", "public", "psk")],
+            )
 
     def test_archives_are_role_prefixed_private_and_extractable(self):
         with tempfile.TemporaryDirectory() as directory:

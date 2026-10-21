@@ -76,7 +76,9 @@ security-semgrep: | $(REPORTS) $(CACHE) ## Check source with local security rule
 	cd "$(ROOT)"; \
 	$(SEMGREP) scan --strict --error --disable-nosem --metrics off \
 		--config security/semgrep/rules.yml \
-		--json-output "$(REPORTS)/semgrep.json" backend/internal backend/config backend/cmd frontend/src
+		--exclude 'infrastracture/tests/**' --exclude 'infrastracture/runtime/**' \
+		--json-output "$(REPORTS)/semgrep.json" \
+		backend/internal backend/config backend/cmd frontend/src infrastracture
 
 security-rules: | $(CACHE) ## Validate local Semgrep rules against positive and negative fixtures.
 	cd "$(ROOT)" && $(SEMGREP) --test --metrics off \

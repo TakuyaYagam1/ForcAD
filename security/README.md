@@ -26,7 +26,7 @@ make -C deployment security-semgrep
 | --- | --- |
 | `security-filesystem` | Trivy scans dependencies and Dockerfiles for HIGH and CRITICAL vulnerabilities and misconfigurations. It includes development dependencies and unfixed findings. The custom file patterns also include `requirements-*.txt`. |
 | `security-secrets` | Gitleaks scans tracked files, non-ignored untracked files, and all reachable Git history. It requires a full checkout. Tracked files stay in scope when ignored; symlinks are excluded from the current-file copy, and report values are redacted. |
-| `security-semgrep` | Local rules scan `backend/internal`, `backend/config`, `backend/cmd`, and `frontend/src`. They cover selected Python, Go, JavaScript, and TypeScript patterns, including dynamic execution, unsafe YAML or pickle loads, shell calls, disabled TLS, bare Go HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not catch every way to use these APIs. |
+| `security-semgrep` | Local rules scan `backend/internal`, `backend/config`, `backend/cmd`, `frontend/src`, and production source under `infrastracture/`. The infrastructure scan excludes `infrastracture/tests/` and rendered bundles under `infrastracture/runtime/`. Rules cover selected Python, Go, JavaScript, and TypeScript patterns, including dynamic execution, unsafe YAML or pickle loads, shell calls, disabled TLS, bare Go HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not catch every way to use these APIs. |
 | `security-go-vuln` | `govulncheck` checks reachable vulnerabilities in backend packages. |
 
 Image scans use an existing local image and its image ID. They do not build,

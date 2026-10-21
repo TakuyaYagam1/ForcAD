@@ -42,6 +42,11 @@ def keypair():
 def server(private, address, port, peers):
     content = f"[Interface]\nPrivateKey = {private}\nAddress = {address}\nListenPort = {port}\n"
     for name, peer_address, public, psk in peers:
+        if not isinstance(name, str) or any(
+            ord(char) < 0x20 or 0x7F <= ord(char) <= 0x9F or char in "\u2028\u2029"
+            for char in name
+        ):
+            raise ValueError("WireGuard peer names must not contain control characters")
         content += f"\n# {name}\n[Peer]\nPublicKey = {public}\nPresharedKey = {psk}\nAllowedIPs = {peer_address}/32\n"
     return content
 

@@ -112,6 +112,24 @@ def integer(value, low, high, name):
         raise ValueError(f"{name}: expected an integer from {low} to {high}")
 
 
+def validate_team_name(value, location="team name"):
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > 128
+        or value in {".", ".."}
+        or any(char in value for char in "/\\")
+        or any(
+            ord(char) < 0x20 or 0x7F <= ord(char) <= 0x9F or char in "\u2028\u2029"
+            for char in value
+        )
+    ):
+        raise ValueError(
+            f"{location} must be 1 to 128 printable characters without path separators"
+        )
+    return value
+
+
 def interface(value):
     if (
         not isinstance(value, str)
@@ -248,12 +266,7 @@ def load_config(path):
     names = set()
     for index, team in enumerate(entries, 1):
         exact_keys(team, ("name", "logo", "highlighted"), f"teams.entries[{index}]")
-        if (
-            not isinstance(team["name"], str)
-            or not team["name"].strip()
-            or len(team["name"]) > 128
-        ):
-            raise ValueError(f"teams.entries[{index}].name must be 1 to 128 characters")
+        validate_team_name(team["name"], f"teams.entries[{index}].name")
         if team["name"] in names:
             raise ValueError(f"Duplicate team name: {team['name']}")
         names.add(team["name"])
@@ -489,6 +502,7 @@ def teams(config):
     subnets = list(layout["participant_vpn"].subnets(new_prefix=29))
     team_config = config["teams"]
     for number, entry in enumerate(team_config["entries"], 1):
+        name = validate_team_name(entry["name"])
         vlan = layout["team_vlan_start"] + number - 1
         group = subnets[number - 1]
         peers = [str(ip) for ip in group.hosts() if ip != layout["participant_server"]][
@@ -498,7 +512,7 @@ def teams(config):
         result.append(
             {
                 "id": number,
-                "name": entry["name"],
+                "name": name,
                 "logo": entry["logo"],
                 "highlighted": entry["highlighted"],
                 "vlan": vlan,
@@ -1062,10 +1076,27 @@ net.ipv6.conf.default.disable_ipv6=1
 
 def write_bundle(output, files):
     output = Path(output)
+    entries = []
+    for relative, content in files.items():
+        if (
+            not isinstance(relative, str)
+            or not relative
+            or relative.startswith("/")
+            or "\\" in relative
+            or re.match(r"^[A-Za-z]:", relative)
+            or any(part in {"", ".", ".."} for part in relative.split("/"))
+            or any(
+                ord(char) < 0x20 or 0x7F <= ord(char) <= 0x9F or char in "\u2028\u2029"
+                for char in relative
+            )
+        ):
+            raise ValueError(f"Unsafe bundle path: {relative!r}")
+        entries.append((Path(*relative.split("/")), content))
+
     output.mkdir(mode=0o700, parents=False, exist_ok=False)
     previous_umask = os.umask(0o077)
     try:
-        for relative, content in files.items():
+        for relative, content in entries:
             path = output / relative
             path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             if isinstance(content, bytes):

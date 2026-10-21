@@ -42,6 +42,8 @@
 /config/config.yml
 /config/config_backup*.yml
 /config/runtime
+/infrastracture/settings.toml
+/infrastracture/runtime
 /checkers/**
 !/checkers/requirements.txt
 /README.md
