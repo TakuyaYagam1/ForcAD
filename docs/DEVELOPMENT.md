@@ -106,10 +106,10 @@ Reserved team-task CRUD methods are checked for their documented 404 response.
 discovery and N/A values after source failure. `make -C deployment test-network`
 checks generated nftables rules and the exporter in a disposable container.
 
-Network firewalls, the Zeek sensor and all dashboard queries have separate
-[infrastructure checks](../infrastracture/README.md#verification). The
-[network demo](../deployment/demo/README.md) runs real two-team WireGuard traffic;
-it is separate from Vite's in-memory demo and the backend load suite.
+Network firewalls, the Zeek sensor and dashboard queries have separate
+[infrastructure checks](../infrastracture/COMMANDS.md#workstation). The
+[network demo](../deployment/demo/README.md) exercises five-team WireGuard
+traffic. It is separate from Vite's in-memory demo and the backend load suite.
 
 For local security checks and their exact coverage, see [security/README.md](../security/README.md).
 

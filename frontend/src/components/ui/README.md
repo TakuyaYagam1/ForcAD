@@ -1,6 +1,6 @@
 # UI primitives
 
-This directory contains reusable base components: badge, button, card,
-checkbox, dialog, form, input, label, scroll area, separator, table, and tabs.
-Keep their props and styling consistent with the existing components. Compose
-app-wide pieces in [shared UI](../../shared/ui/README.md).
+This directory holds reusable base components: badge, button, card, checkbox,
+dialog, form, input, label, scroll area, separator, table, and tabs. Keep their
+props and styles consistent with the existing components. Compose components
+shared across the app in [shared UI](../../shared/ui/README.md).

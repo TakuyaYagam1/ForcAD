@@ -57,9 +57,23 @@ Configure at least one team. `name` and an IPv4 or IPv6 `ip` are required;
 `traffic_cidrs` optionally lists the team's service, VPN and farm networks for
 monitoring attribution. It defaults to the exact `ip` address. Explicit CIDRs
 replace that default, must be canonical and must not overlap another entry.
-Validated flag tokens take priority over source IPs. Unlike game settings,
-these networks are read from YAML at backend startup; apply edits with `setup`
-and restart API/receiver processes. See [Monitoring](MONITORING.md).
+Validated flag tokens take priority over source IPs. These networks are read
+from the staged YAML at API and receiver startup. After changing them, run
+`setup`, then recreate the stack so `config-loader` stages the updated file:
+
+```sh
+./control.sh setup
+./control.sh compose up -d --force-recreate
+```
+
+If the monitoring overlay is active, use:
+
+```sh
+./control.sh monitoring up -d --force-recreate
+```
+
+Game and task settings still come from PostgreSQL after initialization. See
+[Monitoring](MONITORING.md).
 
 `logo_path` is optional. It accepts a safe root-relative path or an HTTP(S) URL.
 For a local image, put the file under `public/teams/` and use a path such as
@@ -111,6 +125,24 @@ The storage sections are `db` (`host`, `port`, `user`, `password`, `dbname`),
 `rabbitmq` (`host`, `port`, `user`, `password`, `vhost`) and `redis` (`host`,
 `port`, `password`, `db`). Treat `config/config.yml` and `config/runtime/` as
 private because they contain credentials.
+
+## Compose environment
+
+`deployment/docker/.env` starts from `frontend/.env.example` and supplies
+frontend build-time branding values. It can also hold Compose settings such as
+`PUBLIC_ORIGIN` and `GRAFANA_ADMIN_PASSWORD`.
+
+Set `PUBLIC_ORIGIN` to the exact origin users open in their browser, including
+the scheme and port when present, for example `https://game.example`. Do not
+include a path. ForcAD checks this origin on admin mutations; a mismatch returns
+403. If a reverse proxy terminates TLS, set `TRUSTED_PROXY_CIDRS` to that
+proxy's source CIDR so ForcAD can recognize HTTPS requests. Keep the proxy list
+limited to trusted proxies. `PUBLIC_ORIGIN` may also be exported in the
+environment before running Compose.
+
+Set `GRAFANA_ADMIN_PASSWORD` before starting the monitoring overlay. Grafana
+uses it only when initializing an empty Grafana data volume; changing it does
+not change an existing account password. See [Monitoring](MONITORING.md#start).
 
 ## Initialization and lifecycle
 

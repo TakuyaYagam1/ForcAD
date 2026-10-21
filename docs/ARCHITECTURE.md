@@ -3,8 +3,8 @@
 [Documentation index](../README.md#documentation)
 
 ForcAD has one Go backend and separately deployed process roles. All roles use
-the same game rules, database schema and release. A single `forcad` binary selects
-its role through `FORCAD_ROLE`.
+the same game rules, database schema and release. One `forcad` binary selects
+the process role through `FORCAD_ROLE`.
 
 ## Runtime
 
@@ -25,9 +25,8 @@ The [default Compose file](../deployment/docker/compose.yml) starts:
 `initializer`, `config-loader` and `postgres-data` are startup jobs. They prepare
 configuration/storage, apply embedded migrations and initialize a new game.
 
-The Go worker replaces Celery. Python remains in the worker image for checker
-programs. Admin and public APIs share the `api` service. Events also run there;
-there is no separate Socket.IO service or Flower dashboard.
+Python remains in the worker image for checker programs. The `api` service
+serves the public and admin REST endpoints and WebSocket events.
 
 The optional monitoring overlay adds Prometheus and Grafana. Application metrics
 describe ForcAD; router counters and a passive Zeek sensor describe game traffic.
@@ -142,9 +141,9 @@ does not change API requests, game state or WebSocket subscriptions.
 
 HTTP uses chi and ogen; storage uses pgx and sqlc. Wire assembles dependencies.
 Logging uses `log/slog` with a bounded output queue. Basic HTTP middleware lives
-in the HTTP adapter. The wahrwelt-kit packages still provide caching, WebSockets,
-HTTP metrics, readiness checks and trusted-proxy parsing. Generated code lives beside its consumer; see
-[code generation](DEVELOPMENT.md#code-generation).
+in the HTTP adapter. wahrwelt-kit provides caching, WebSockets, HTTP metrics,
+readiness checks and trusted-proxy parsing. Generated code lives beside its
+consumer; see [code generation](DEVELOPMENT.md#code-generation).
 
 API, receiver and worker replicas can be adjusted independently. Keep the default
 single ticker. Compose uses soft memory reservations per container, with optional

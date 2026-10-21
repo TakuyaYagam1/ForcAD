@@ -72,10 +72,9 @@ the worker containers, and the main deployment must already be initialized.
 
 ## Compatibility
 
-All 12 old CLI commands are available. `--fast` remains an ignored compatibility
-flag for `build`, `start`, `worker`, `reset`, `clean` and `rd`/`compose`. For Compose
-passthrough, put it before the Compose arguments: `./control.sh rd --fast ps`.
-Flags inside a forwarded command are preserved.
+The ignored `--fast` compatibility flag is accepted by `build`, `start`,
+`worker`, `reset`, `clean` and `compose`. Put it before Compose arguments, as in
+`./control.sh rd --fast ps`; later arguments pass through unchanged.
 
 `scale` maps `celery` to `worker`, `http-receiver` to `receiver`, and
 `client-api`, `admin-api`, `events` to the combined `api` service. Use current
@@ -84,4 +83,3 @@ are not part of the Go deployment.
 
 Replica counts accept 0 through 1024. Without `--workers`, `start` uses the
 Compose defaults (currently two workers), whereas the old CLI defaulted to one.
-`reset` and `clean` require explicit `--confirm`; the flag is not added silently.

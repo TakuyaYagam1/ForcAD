@@ -31,11 +31,30 @@ whose metrics are unreachable. For the network demo, always use its `demo.sh` wr
 | Prometheus targets | <http://127.0.0.1:9090/targets> |
 | Prometheus alerts | <http://127.0.0.1:9090/alerts> |
 
-Both bind to localhost. For remote access, forward ports over SSH:
+Both services bind to `127.0.0.1` on the ForcAD host. Run a tunnel from your
+workstation, replacing the example SSH destination with your ForcAD account and
+host:
 
 ```sh
-ssh -L 3000:127.0.0.1:3000 -L 9090:127.0.0.1:9090 USER@FORCAD_HOST
+ssh -N \
+  -L 127.0.0.1:3000:127.0.0.1:3000 \
+  -L 127.0.0.1:9090:127.0.0.1:9090 \
+  user@forcad-host
 ```
+
+If SSH access goes through a Router jump host, add `-J user@router-host` before
+the final destination:
+
+```sh
+ssh -N -J user@router-host \
+  -L 127.0.0.1:3000:127.0.0.1:3000 \
+  -L 127.0.0.1:9090:127.0.0.1:9090 \
+  user@forcad-host
+```
+
+Keep `user@forcad-host` as the final SSH target. The forwarded remote
+`127.0.0.1` is resolved on ForcAD, where Grafana and Prometheus listen. Then
+open the local `http://127.0.0.1` URLs in the workstation browser.
 
 Override ports with `FORCAD_GRAFANA_PORT` and `FORCAD_PROMETHEUS_PORT`; an empty
 value requests a random host port. Prometheus scrapes replicas through Docker
@@ -73,21 +92,24 @@ For capacity defaults, see [Operations](OPERATIONS.md#resource-limits).
 
 ## Router counters
 
-Follow the [ForcAD](../infrastracture/forcad/README.md#monitoring) and
-[router](../infrastracture/router/README.md#network-metrics) guides to export the
+Follow the [ForcAD](../infrastracture/forcad/README.md#install-and-test) and
+[router](../infrastracture/router/README.md#exporters) guides to export the
 public inventory, install counters and enable the exporter on private TCP/9109.
-No agent is installed on vulnboxes. The VPN must preserve peer IPs; the router
-accounts for traffic before game SNAT.
+In `infrastracture/settings.toml`, `router_metrics` adds the scrape target; it
+does not install the Router exporter. Install that service on the Router with
+`sudo bash install.sh --network-metrics`. No agent is installed on vulnboxes.
+The VPN must preserve peer IPs; the router accounts for traffic before game
+SNAT.
 
 Add only installed targets to `deployment/monitoring/file_sd/routers.yml`.
 Leave `[]` when unused. Do not add team labels: each exporter reports all teams.
 The router receives public IP/CIDR inventory, never game credentials.
 
-Team metadata refreshes every 15 seconds. Attribution networks come from YAML
-`traffic_cidrs` at backend startup: run setup and restart API/receiver after edits.
-Router inventory is separate: regenerate JSON/rules together, replace only the
-monitoring table and restart the exporter. A fingerprint mismatch fails collection.
-See [Configuration](CONFIGURATION.md#teams).
+Team metadata refreshes every 15 seconds. Attribution networks come from staged
+YAML `traffic_cidrs` at API and receiver startup; see
+[Configuration](CONFIGURATION.md#teams) to apply edits. Router inventory is
+separate: regenerate JSON/rules together, replace only the monitoring table and
+restart the exporter. A fingerprint mismatch fails collection.
 
 Counter scope:
 
@@ -105,8 +127,10 @@ Capture each path once. Router counters do not measure HTTP requests or WS.
 
 ## Game traffic
 
-Install the [Zeek sensor](../infrastracture/router/README.md#game-httpws-metrics)
-and add its private TCP/9911 endpoint to
+Install the [Zeek sensor](../infrastracture/router/README.md#exporters)
+on the Router with `sudo bash install.sh --game-metrics`. In
+`infrastracture/settings.toml`, `game_metrics` adds its scrape target; it does
+not install Zeek. For a manual setup, add the private TCP/9911 endpoint to
 `deployment/monitoring/file_sd/game-sensors.yml`. Restart existing Prometheus
 when adding jobs or rules; target-file updates are discovered automatically.
 
@@ -159,5 +183,5 @@ make -C infrastracture test-dashboards
 ```
 
 These use isolated containers. Try the [local demo](../deployment/demo/README.md)
-for real two-team WireGuard traffic. Router capacity, NIC offloads and Debian
+for five-team WireGuard traffic. Router capacity, NIC offloads and Debian
 boot order still require staging checks on the intended hosts.

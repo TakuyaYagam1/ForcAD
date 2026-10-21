@@ -2,28 +2,17 @@
 
 [Documentation index](../README.md#documentation)
 
-Use `./control.sh --help` to list commands. The launcher builds the Go operator
-with its build cache and resolves paths from the repository root, even when
-called from another directory. `setup` prepares configuration and private runtime
-credentials; `start` builds and starts the Compose project. See [CONFIGURATION.md](./CONFIGURATION.md) for
-game fields and credential behavior.
+Use `./control.sh --help` or the [Control CLI guide](CONTROL.md) for commands.
+See the [manual setup guide](../README.md#manual-application-setup) for first
+start and [Configuration](CONFIGURATION.md) for game fields and credentials.
+`start` builds and starts containers; it does not start a game session. Use
+`pause` and `resume` to control the game clock and flag acceptance without
+stopping containers.
 
-The complete command reference is in [CONTROL.md](./CONTROL.md).
-Use `./control.sh pause` and `./control.sh resume` to control the game clock and
-flag acceptance without stopping containers.
-
-With monitoring enabled, use `./control.sh monitoring` instead of
-`./control.sh compose` for updates and scaling, and for stopping the full stack.
-Plain `start`/`scale` do not include the monitoring overlay. See
-[Monitoring](MONITORING.md#start) for commands. For the network demo, use
-[demo.sh](../deployment/demo/README.md#manage).
-
-```bash
-cp -n config/config.yml.example config/config.yml
-# Edit config/config.yml and add executable checkers under checkers/.
-./control.sh setup
-./control.sh start
-```
+With monitoring enabled, use `./control.sh monitoring` for Compose updates,
+scaling and shutdown so the overlay stays active. Plain `start`, `scale` and
+`compose` do not include it. See [Monitoring](MONITORING.md#start). For the
+network demo, use its [manage commands](../deployment/demo/README.md#manage-the-stack).
 
 ## Status and credentials
 
@@ -204,7 +193,7 @@ Stop services while keeping their containers:
 ./control.sh stop --timeout 30
 ```
 
-`compose down --timeout 30` also removes the stopped containers and project
+`./control.sh down --timeout 30` also removes the stopped containers and project
 network. PostgreSQL data is in the local `docker_volumes/postgres/data` bind
 mount and remains across a normal `down`.
 

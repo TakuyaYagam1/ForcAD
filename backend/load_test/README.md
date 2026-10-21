@@ -1,24 +1,25 @@
 # Load testing
 
-Vegeta tests an isolated local Compose stack through Nginx. Requires Linux/WSL,
-Bash, Make, Go, Python 3 and Docker Compose. Run from the repository root;
-test containers and volumes are removed on exit.
+`make -C backend test-load` runs the harness against an isolated local Compose
+stack through Nginx. It requires Linux or WSL, Bash, Make, Go, Python 3, and
+Docker Compose. The harness removes its test containers, images, and volumes on
+exit.
 
-## Workload
-
-20 teams, three fixture services, six REST routes, active Python checkers and
-20 WebSocket clients. Flag traffic: 40 batches/s x 100 values, including duplicates.
-Two receivers and two workers with eight checker slots each share the host with
-the application, database and generator.
+The workload uses 20 teams, three fixture services, six REST routes, active
+Python checkers, and 20 WebSocket observers. Flag traffic sends 40 batches per
+second with 100 values per batch, including duplicates. The stack runs two
+receivers and two workers with eight checker slots each.
 
 ## Run
 
+From the repository root:
+
 ```sh
-make -C backend test-load                                      # smoke: 500 RPS, 30s
-LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # 500 -> 10000 RPS
+make -C backend test-load                                       # smoke: 500 RPS for 30s
+LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # 500 to 10000 RPS
 ```
 
-Configuration used for the 10k runs below (four API replicas):
+To reproduce the 10,000 REST RPS stages below, use four API replicas and:
 
 ```sh
 GOMAXPROCS=32 \
@@ -32,36 +33,37 @@ LOAD_DATABASE_STORAGE=disk LOAD_CONTAINER_LOGGING=default LOAD_DIAGNOSTICS=1 \
 make -C backend test-load
 ```
 
-For a five-minute repeat, set both durations to `5m`. For a continuous five-hour
-run, use `LOAD_PROFILE=soak` and set both to `5h`. Without a checkpoint override,
-steady profiles pause for reconciliation every five minutes. Warmup, recovery
-and final checks take additional time. Other profiles/settings: [profile_test.go](profile_test.go)
-and [compose.yml](compose.yml).
+For a five-minute repeat, set both durations to `5m`. For a five-hour run, use
+`LOAD_PROFILE=soak` and set both to `5h`. Without a checkpoint override, steady
+profiles pause for reconciliation every five minutes. Warmup, recovery, and
+final checks add time. See [profile_test.go](profile_test.go) and
+[compose.yml](compose.yml) for other settings.
 
-## Recorded runs - 2026-10-13
+## Recorded runs on 2026-10-13
 
-Intel i9-13900KF / 32 GB RAM, Windows + WSL2 (32 logical CPUs, 28 GB RAM limit).
-PostgreSQL on disk, diagnostics enabled. All rows are separate continuous
-**10000 REST RPS** stages using the configuration above.
+The rows are separate continuous 10,000 REST RPS stages using the configuration
+above. The host was an Intel i9-13900KF with 32 GB RAM, running Windows with
+WSL2 limited to 28 GB and 32 logical CPUs. PostgreSQL used disk storage, with
+diagnostics enabled.
 
 | Duration | REST requests | Capacity 503 | REST p99 | Result |
 | --- | ---: | ---: | ---: | --- |
 | 15 min | 8,999,989 | 0 | 12.99 ms | PASS |
 | 5 min repeat | 3,000,000 | 0 | 16.17 ms | PASS |
-| 5 hours | 180,000,000 | 2,653 (0.001474%) | 11.18 ms | FAIL: zero-error criterion |
+| 5 hours | 180,000,000 | 2,653 (0.001474%) | 11.18 ms | FAIL: strict zero-error criterion |
 
-All ordinary flag batches succeeded in all three runs. The five-hour run processed
-720,000 batches (p99 33.29 ms); all 2,041,676 accepted steals matched the DB.
-WebSocket observations and recovery passed. Final checker-history checks were
-skipped by the harness after the five-hour REST failure.
+All ordinary flag batches succeeded in all three runs. The five-hour run
+processed 720,000 batches (p99 33.29 ms); all 2,041,676 accepted steals matched
+the database. WebSocket observations and recovery passed. The harness skipped
+final checker-history checks after the five-hour REST failure. Its REST success
+rate was 99.998526%.
 
-Most 503s occurred in one short burst coinciding with host memory pressure:
-Windows had 221-404 MiB available and 99% CPU. Interactive use of the PC, including
-possible VS Code startup, may have contributed; an idle-host repeat is needed to
-isolate its impact. Five-hour REST success was **99.998526%**.
+Most 503s occurred in one short burst while Windows had 221 to 404 MiB
+available and 99% CPU. Interactive host activity may have contributed, but the
+run did not establish the cause. Repeat on an idle host to isolate its effect.
 
-Reports contain `generator_valid`, `slo_passed`, latency, errors and flag reconciliation.
-`stress` allows REST 429/503, so test exit alone does not establish capacity.
-Results: [short runs](results/RESULTS-13900KF.txt),
-[five-hour results](results/20261013-112709-soak/RESULTS.txt),
+Reports include `generator_valid`, `slo_passed`, latency, errors, and flag
+reconciliation. A `stress` run allows REST 429 and 503 responses, so a passing
+command alone does not establish capacity. Results: [short runs](results/RESULTS-13900KF.txt),
+[five-hour results](results/20261013-112709-soak/RESULTS.txt), and the
 [five-hour report](results/20261013-112709-soak/latest-report.json).

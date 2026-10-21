@@ -1,88 +1,97 @@
 # Checker examples
 
-Copy the complete `note/` directory into `checkers/<service>/` and adapt its API
-calls to your service. The example uses Python's standard library; no additional
-dependencies are needed. A matching notes fixture is available in the
-[local network demo](../../deployment/demo/README.md); replace it for a competition.
+Copy the complete `note/` directory into `checkers/<service>/` and adapt its
+API calls and scenarios to your service. The example uses Python's standard
+library. A matching notes fixture runs in the [local network demo](../../deployment/demo/README.md);
+replace it for a competition.
 
 | File | Responsibility |
 | --- | --- |
-| [checker.py](note/checker.py) | CHECK/PUT/GET scenarios and output channels |
-| [client.py](note/client.py) | HTTP requests, deadlines, response validation |
-| [protocol.py](note/protocol.py) | CLI arguments, verdicts, versioned private data |
+| [checker.py](note/checker.py) | CHECK, PUT, and GET scenarios; output channels |
+| [client.py](note/client.py) | HTTP requests, deadlines, and response validation |
+| [protocol.py](note/protocol.py) | CLI arguments, verdicts, and versioned private data |
 
 ## Service contract
 
-The example expects HTTP on port `8080`. Manual runs also accept `HOST:PORT` or
-`[IPv6]:PORT`. ForcAD normally supplies a team IP; change `DEFAULT_PORT` for your
-service. Every request uses `Authorization: Bearer <token>`. A new note receives
-a random read token; the token is private retrieval data, never a public hint.
+The example defaults to HTTP port `8080`. ForcAD supplies the team IP; change
+`DEFAULT_PORT` in `client.py` if the service uses another port. Manual runs
+also accept `HOST:PORT` and `[IPv6]:PORT`. Every request uses
+`Authorization: Bearer <token>`. A new note gets a random read token; keep it
+in private retrieval data, never in a public hint.
 
 | Request | Success response |
 | --- | --- |
-| `PUT /notes/{id}` with JSON `{"title":"...","body":"..."}` | `201`, JSON `{"id":"..."}` |
-| `GET /notes/{id}` | `200`, JSON `{"id":"...","title":"...","body":"..."}` |
-| `DELETE /notes/{id}` | `204`, empty body |
+| `PUT /notes/{id}` with JSON `{"title":"...","body":"..."}` | `201` with JSON `{"id":"..."}` |
+| `GET /notes/{id}` | `200` with JSON `{"id":"...","title":"...","body":"..."}` |
+| `DELETE /notes/{id}` | `204` with an empty body |
 
-IDs contain 40 lowercase hex characters. For PUT the ID comes from ForcAD.
+Note IDs contain 40 lowercase hex characters. For PUT, ForcAD supplies the ID.
 All successful responses except DELETE use `Content-Type: application/json`.
-Place `1` stores the flag in `title`; place `2` stores it in `body`.
-The service must preserve notes and credentials for the configured flag lifetime.
+Place 1 stores the flag in `title`; place 2 stores it in `body`. The service
+must keep notes and credentials available for the configured flag lifetime.
 
-## Adaptation
+## Adapt the checker
 
 1. Replace the endpoints and scenarios with real user operations. CHECK creates,
-   reads and deletes its own random note. It must exercise useful behavior beyond
-   a health endpoint. Failed checks can leave a smoke note; service retention
-   should clean up old records.
-2. Keep PUT's readback before returning UP. GET retrieves the existing record,
-   compares the selected field exactly and never recreates or deletes it.
-3. Set `places` to the implemented locations. Adjust timeouts together:
-   requests use 2 seconds, the client checks an 8-second action budget between
-   operations/body reads, and ForcAD enforces `checker_timeout: 10` for the whole
-   subprocess, including DNS and response headers.
-4. Preserve versioned retrieval data. CHECK, PUT and GET are separate processes
-   and may run on different workers. Do not use local files or global mutable
-   state to remember credentials; do not derive secrets from flag contents.
-5. Keep status messages fixed and safe. Never print flags, credentials, raw
-   responses or exception tracebacks. Successful PUT is the sole exception:
-   its designated private output channel contains retrieval credentials.
+   reads, and deletes its own random note. It must test useful service behavior,
+   not only a health endpoint. A failed check can leave a smoke note, so the
+   service should remove old records.
+2. After PUT, read the note back before returning UP. GET must retrieve the
+   existing note, compare the selected field exactly, and leave it unchanged.
+3. Set `places` to the number of implemented flag locations. The client uses a
+   2-second timeout per request and an 8-second budget for one checker action.
+   ForcAD's `checker_timeout: 10` bounds the whole subprocess, including DNS and
+   response headers.
+4. Preserve versioned retrieval data. CHECK, PUT, and GET run as separate
+   processes and may use different workers. Do not rely on local files or
+   global mutable state for credentials, and do not derive secrets from flags.
+5. Keep status messages fixed and safe. Do not print flags, credentials, raw
+   responses, or tracebacks. Successful PUT writes retrieval credentials only
+   to its designated private output channel.
 
-Default output uses `PUBLIC_HINT = False` and `checker_type: hackerdom`.
-For public attack hints, set `PUBLIC_HINT = True` in your copied `checker.py`
-and `checker_type: pfr` in the game config. PUT then writes only the note ID to
-stdout and private JSON to stderr. Do not combine debug output with either.
-See the complete [checker protocol](../../docs/CHECKERS.md).
+By default, `PUBLIC_HINT = False` and `checker_type: hackerdom`. For public
+attack hints, set `PUBLIC_HINT = True` in your copy and `checker_type: pfr` in
+the game config. In PFR mode, PUT prints only the note ID to stdout and writes
+private JSON to stderr. Keep debug output out of both channels. See the
+[checker protocol](../../docs/CHECKERS.md).
 
-For this API, missing/changed stored flags and rejected saved credentials during
-GET produce CORRUPT. Invalid JSON, schema or behavior produce MUMBLE. Connection
-errors, timeouts, HTTP 429 and HTTP 5xx produce DOWN. Invalid checker inputs and
-unexpected programming errors produce CHECK_FAILED. Adapt HTTP status meanings
-to your service rather than treating every unsuccessful request as CORRUPT.
-The client bounds response size and does not follow redirects or retry writes.
+## Verdicts
+
+| Condition | Verdict |
+| --- | --- |
+| A stored flag changed or is missing, or GET rejects saved credentials | CORRUPT |
+| Invalid JSON, schema, or service behavior | MUMBLE |
+| Connection error, timeout, HTTP 429, or HTTP 5xx | DOWN |
+| Invalid checker input or unexpected programming error | CHECK_FAILED |
+
+Adapt HTTP status handling to your service. Do not classify every unsuccessful
+request as CORRUPT. The client caps response size and does not follow redirects
+or retry writes.
 
 ## Run and verify
 
-After copying the example, configure `checker: <service>/checker.py`,
-`checker_type: hackerdom`, `places: 2` and `checker_timeout: 10`. Preserve the
-executable bit with `chmod +x checkers/<service>/checker.py`.
+After copying the example to `checkers/myservice/`, set
+`checker: myservice/checker.py`, `checker_type: hackerdom`, `places: 2`, and
+`checker_timeout: 10`. Preserve the executable bit:
 
 ```sh
-./checkers/examples/note/checker.py check 127.0.0.1:8080
+chmod +x checkers/myservice/checker.py
+./checkers/myservice/checker.py check 127.0.0.1:8080
 ```
 
-Success exits with `101`, not `0`. For a manual PUT, supply a random 40-character
-hex ID, a flag of 31 uppercase letters/digits followed by `=`, and place `1` or
-`2`. Pass the saved private output unchanged to GET with the same flag and place.
+Success exits with status `101`, not `0`. For a manual PUT, use a random
+40-character lowercase hex ID, a flag made of 31 uppercase letters or digits
+followed by `=`, and place `1` or `2`. Pass the saved private output unchanged
+to GET with the same flag and place.
 
-From the repository root, test both output modes against a local HTTP fixture:
+From the repository root, run the example tests against a local HTTP fixture:
 
 ```sh
 make -C backend test-checker
 ```
 
-The tests execute Python through the real Go runner and cover both places,
-independent GET processes, corrupted/missing flags, bad responses, timeouts,
-invalid private state and output privacy. They require Go and Python 3.10+;
-no Docker, database or game network is used. Tests live in
-[backend/integration_test/checker](../../backend/integration_test/checker/).
+The tests run Python through ForcAD's Go checker runner. They cover both output
+modes, both places, separate GET processes, missing or changed flags, invalid
+responses, timeouts, invalid private state, and output privacy. They require Go
+and Python 3.10+. They do not use Docker, a database, or the game network. Test
+code is in [backend/integration_test/checker](../../backend/integration_test/checker/).

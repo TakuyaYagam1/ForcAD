@@ -1,10 +1,9 @@
 # Local network demo
 
-Five notes services, player flag farms, participant/admin WireGuard, generated
-firewalls, Zeek, ForcAD, Prometheus and Grafana. Published host ports bind to
-localhost. `/demo/flags` intentionally exposes flags to demo farms.
-Teams: danosito's ai farm, pod egidoy, daywave, PudgeFunClub and CUT.
-The diagram shows two of the five identical team segments.
+The Docker Compose demo runs five notes services, flag farms, participant and
+admin WireGuard, generated router rules, Zeek, ForcAD, Prometheus, and Grafana.
+Published ports bind to localhost. Demo services intentionally expose
+`/demo/flags` to their farms. The diagram shows two of the five team segments.
 
 ```mermaid
 flowchart LR
@@ -22,42 +21,47 @@ flowchart LR
     M --> G[Grafana]
 ```
 
+## Requirements
+
+Run on Linux with Docker Engine, kernel WireGuard support, and the `wg` tool.
+The demo also requires Compose 2.36 or later for `interface_name`, Go, Make,
+Python 3.11+, Node.js, and pnpm. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
+
 ## Start
 
-Use a disposable game database. Requirements: Linux Docker with kernel WireGuard,
-Compose 2.36+ (`interface_name`), host `wg`, Go, Make, Python 3.11+ with venv, and
-Node/pnpm for `sync-codegen`. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
-
-Edit [settings.toml](settings.toml) for the demo teams, game and task.
-On a fresh demo, `up` creates `config/config.yml` from these settings and
-generates team tokens. With an existing database, keep its current tokens in
-`config/config.yml`; game and task settings must match the TOML. From the
-repository root:
+Edit [settings.toml](settings.toml) to set teams, the game, and tasks. With an
+existing database, keep its team tokens in `config/config.yml` and keep its
+game and task settings matched to the TOML. A fresh demo creates that config
+and generates missing team tokens. From the repository root, run:
 
 ```sh
 make -C backend sync-codegen
 bash deployment/docker/scripts/demo.sh up
 ```
 
-`up` builds and recreates the full stack, retaining volumes. It uses the same
-settings schema as infrastructure, creates missing VPN keys and stores private
-runtime files in `config/runtime/demo/`. Team containers, networks and clients
-are generated from `teams.entries` (2..32 teams). Appending entries adds teams
-through the admin API and extends the VPN without rotating existing keys.
-Existing teams, scores and tokens are preserved. Reordering/removing teams or
-changing an existing network is refused; use a separate disposable deployment.
-Use `demo.sh` for this stack so all Compose overlays remain enabled.
+`up` prepares the demo configuration, creates missing VPN keys, writes private
+runtime files under `config/runtime/demo/`, rebuilds the stack, and recreates
+its containers while retaining volumes. The settings use the same schema as
+the infrastructure renderer.
 
-| Open | Login |
-| --- | --- |
-| [Board](http://localhost:8080/) / [admin](http://localhost:8080/admin/login) | `config/runtime/admin.env` |
-| [Game traffic](http://localhost:3000/d/forcad-game-traffic) / [board traffic](http://localhost:3000/d/forcad-traffic) | `admin`, password in `config/runtime/demo.env` |
-| [Prometheus targets](http://localhost:9090/targets) | None |
+The demo supports 2 to 32 teams. Append entries to `teams.entries` to add teams
+through the admin API and extend the VPN without rotating existing keys.
+Existing teams, scores, and tokens stay in place. Reordering or removing teams,
+changing an existing entry, or editing the topology requires a separate demo.
+Use `demo.sh` for this stack so every Compose overlay remains enabled.
+
+| Service | URL | Credentials |
+| --- | --- | --- |
+| Board and admin | [localhost:8080](http://localhost:8080/) / [admin login](http://localhost:8080/admin/login) | `config/runtime/admin.env` |
+| Grafana dashboards | [Game traffic](http://localhost:3000/d/forcad-game-traffic) / [board traffic](http://localhost:3000/d/forcad-traffic) | `admin`; password in `config/runtime/demo.env` |
+| Prometheus targets | [localhost:9090/targets](http://localhost:9090/targets) | None |
 
 Start practice in the board admin panel. Allow two rounds for checker results
-and about one minute for rates. Farms send HTTP in a ring (1 -> 2 -> ... -> 5 -> 1),
-keep one WS each, send TCP/UDP echoes and submit flags. On Game traffic, sort active directions
-by load and click a team name to inspect a pair. **All teams** clears filters.
+and about one minute for rates. Each farm reads flags from the next team's
+`/demo/flags` endpoint, submits them to the board, and generates HTTP,
+WebSocket, TCP, and UDP traffic. In the Game traffic dashboard, sort active
+directions by load and select a team name to inspect a pair. Select **All teams**
+to clear the filters.
 
 ## Exercise the network
 
@@ -69,31 +73,33 @@ bash deployment/docker/scripts/demo.sh load 1 --rps 20 --seconds 45 --ws 5
 api/.venv/bin/python deployment/demo/timing.py --rounds 5
 ```
 
-`test` checks WireGuard, SNAT, management ownership, isolation, private metrics,
-blocked direct vulnbox relays, pre-game ping-only access, admin/checker access,
-local vulnbox filtering and Prometheus attribution. It restores the prior phase
-and removes its temporary filter. Farms may time out during pre-game.
+`test` checks WireGuard routes, SNAT, team isolation, management and metrics
+access, pre-game policy, vulnbox filtering, and Prometheus attribution. It
+temporarily changes the router phase and adds an nftables test filter, then
+removes the filter and restores the saved phase. Farms may time out during
+pre-game.
 
-After five completed practice rounds, `timing.py` saves dispatch and completion
-offsets from PostgreSQL to `config/runtime/demo/timing.json`. It only reads state.
-These timestamps describe whole checker jobs; they do not measure individual
-CHECK/PUT/GET calls or prove resistance to service availability manipulation.
+`timing.py` reads completed checker jobs from PostgreSQL and saves their sent,
+dispatch-delay, and completion offsets to
+`config/runtime/demo/timing.json`. It does not change game state. The offsets
+describe whole checker jobs, not individual CHECK, PUT, or GET calls, and do not
+test resistance to service-availability manipulation.
 
 ## Availability experiment
 
-The demo explicitly sets `[game] extra_checks = 2` in `settings.toml`.
-Two additional CHECK-only jobs per team/task/round sample availability at random
-times beyond the main workflow, without extra flag writes. The experiment tests
-whether they catch outages missed by that workflow; two is not a proven optimum.
-Times survive restart and shift across a pause. All three jobs contribute to
-one round result; a later UP cannot erase an earlier service failure.
+The demo sets `[game] extra_checks = 2` in `settings.toml`. In classic mode,
+these are two additional CHECK-only jobs per team, task, and round. They run at
+random times outside the main workflow and do not add flag writes. All three
+jobs count toward the round result, so a later UP cannot clear an earlier
+failure.
 
-Normal installations default to `0` (opt-in). Extra CHECKs add load and make the
-round's SLA result stricter. The five-team demo is too small to justify a general
-default of `2`; validate real checkers and the expected load before enabling it.
-See [configuration](../../docs/CONFIGURATION.md#game) for limits and setup.
+Normal installations default to `0`, so extra checks are opt-in. They add
+checker load and make the round SLA stricter. The five-team demo does not show
+that `2` is a suitable general default; test real checkers at the expected
+team and service count before enabling them. See
+[configuration](../../docs/CONFIGURATION.md#game) for limits and setup.
 
-On a running practice session with 60-second rounds:
+With a running practice session, 60-second rounds, and `extra_checks = 2`, run:
 
 ```sh
 api/.venv/bin/python deployment/demo/availability.py healthy --rounds 3
@@ -101,31 +107,38 @@ api/.venv/bin/python deployment/demo/availability.py fault --rounds 5
 api/.venv/bin/python deployment/demo/availability.py pause
 ```
 
-`healthy` checks that all five teams pass. `fault` blocks team 3's notes port
-for 22 seconds after each 15-second available interval, independently of checker
-timing; the other four teams remain controls. It removes its nftables table
-on exit. `pause` pauses through the admin API, restarts ticker/worker, resumes,
-and verifies pending IDs, shifted times and successful completion.
-Reports stay in `config/runtime/demo/availability-*.json`.
-These are local fault tests, not production capacity or continuous uptime proofs.
-See the [recorded experiment](availability.md) for results and the default decision.
+`healthy` checks that every team passes. `fault` blocks team 3's notes port for
+22 seconds after each 15-second available interval. The fault schedule does
+not read checker timing; the other four teams act as controls. The script
+removes its temporary nftables table on exit. `pause` pauses through the admin
+API, restarts the ticker and worker, resumes the game, and checks that pending
+job IDs and times survive the restart and that the jobs complete. Reports are
+written to `config/runtime/demo/availability-*.json`.
 
-`phase` changes router access independently of the board session. Demo starts in
-`game` and remembers later phase changes; host configs default to `pre-game`.
+These are local fault tests, not production-capacity tests or proof of
+continuous uptime. See the [recorded experiment](availability.md) for results
+and the default decision.
 
-`load N` targets the next team's vulnbox from player N; the last targets team 1. Limits: 100 RPS,
-300 seconds, 20 WS. Targets are fixed local fixtures; no flags or board requests
-are sent. Game graphs should rise independently of board graphs.
+## Router phase and bounded load
+
+`phase` changes router access independently of the board session. A fresh demo
+starts in `game` and saves later phase changes. The host installer defaults to
+`pre-game`.
+
+`load N` runs traffic from player N's farm to the next team's vulnbox; the last
+team targets team 1. It accepts at most 100 requests per second, 300 seconds,
+and 20 WebSockets. It sends health requests only, with no flags or board API
+requests. Targets are fixed local fixtures.
 
 | Port | Fixture |
 | --- | --- |
-| TCP/8080 | Notes, flags, `/health` with observed source IP |
-| TCP/8081 | WS echo at `/ws` |
+| TCP/8080 | Notes, public demo flags, and `/health` with the observed source IP |
+| TCP/8081 | WebSocket echo at `/ws` |
 | TCP/9001 | TCP echo |
 | UDP/9000 | UDP echo |
-| TCP/22 | Management ACL probe, not SSH |
+| TCP/22 | Management ACL probe; no SSH service |
 
-## Manage
+## Manage the stack
 
 ```sh
 bash deployment/docker/scripts/demo.sh ps
@@ -135,33 +148,35 @@ bash deployment/docker/scripts/demo.sh start
 bash deployment/docker/scripts/demo.sh down
 ```
 
-`down` preserves database, notes and monitoring data. Secrets are ignored by Git
-and excluded from image layers and command arguments.
+`down` preserves database, notes, and monitoring volumes. Runtime keys and
+credentials live under `config/runtime/`; do not commit them.
 
-Old demo pairs `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` migrate
-automatically. The script saves `config/config_backup_demo_network.yml` and updates matching database records,
-retaining names, tokens, scores and session state. Existing VPN configs move to
-`10.183.200.0/24` and `10.183.201.0/24` without changing keys; the old bundle stays
-in `config/runtime/demo/wireguard-before-network/`. VPN expansion also keeps a
-`wireguard-before-N-peers/` backup. An interrupted team addition can be retried
-with `up`; its private `teams-pending.json` journal prevents duplicate creation.
-Unrecognized database teams are refused.
-Before replacing old ephemeral notes containers, save their SQLite database if
-needed. `config/runtime/demo/seeds/team1/note.db` and `team2/note.db` seed empty
-notes volumes once; later starts use persistent volumes.
+The old team pairs `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` migrate
+during `up`. The script saves `config/config_backup_demo_network.yml`, updates
+matching database records, retains VPN keys, and saves the prior bundle in
+`config/runtime/demo/wireguard-before-network/`. VPN expansion keeps a
+`wireguard-before-N-peers/` backup. If a team addition is interrupted, rerun
+`up`; its private journal prevents duplicate creation. The demo refuses
+unrecognized database teams.
+Before replacing old ephemeral notes containers, save their SQLite database
+if needed. `config/runtime/demo/seeds/team1/note.db` and
+`config/runtime/demo/seeds/team2/note.db` populate empty notes volumes once;
+later starts use the persistent volumes.
 
 ## Limits
 
-- Router/VPN rules are the generated host rules. Internal Docker bridges model
-  VLANs; interfaces are named `eth3.101` through `eth3.105`, but no 802.1Q tags are tested.
-  VPN transit uses /29 to accommodate Docker's bridge gateway.
-- Nginx, one worker and Prometheus share the ForcAD namespace. Setup routes traffic
-  through the router and redirects TCP/80 to Nginx's 8080. Worker metrics use 9091.
-  Application containers have no NET_ADMIN.
-- Zeek shares the router namespace as UID 10001 with NET_RAW. Demo-only `-C`
-  handles veth checksum offload; the host unit keeps checksum validation enabled.
+- Generated host rules define router and VPN behavior. Internal Docker bridges
+  model VLANs, but the demo does not test 802.1Q tags. Interfaces are named
+  `eth3.101` through `eth3.105`. VPN transit uses `/29` to accommodate the
+  Docker bridge gateway.
+- Nginx, one worker, and Prometheus share the ForcAD namespace. Setup routes
+  traffic through the router and redirects TCP/80 to Nginx on port 8080. Worker
+  metrics use port 9091. Application containers do not have `NET_ADMIN`.
+- Zeek shares the router namespace as UID 10001 with `NET_RAW`. The demo uses
+  Zeek's `-C` option for veth checksum offload; the host unit keeps checksum
+  validation enabled.
 - This tests functionality, not capacity, physical VLAN isolation, Debian boot
-  order or hardware MTU. HTTP metrics cover plaintext HTTP/1. Direct vulnbox
+  order, or hardware MTU. HTTP metrics cover plaintext HTTP/1. Direct vulnbox
   relays are blocked; indirect external relays remain possible.
 
-See [Monitoring](../../docs/MONITORING.md) for metric definitions and limits.
+See [monitoring](../../docs/MONITORING.md) for metric definitions and limits.
