@@ -42,8 +42,16 @@ cases. It does not run the source scanners. Reports and caches default to
 `security/reports/` and `security/.cache/`; set `REPORTS` and `CACHE` to use
 other paths.
 
-GitHub Actions runs source checks on pushes to `main`, `master`, and
-`modernization`, pull requests to `main` and `master`, and manual dispatch.
+GitHub Actions runs the security workflow only on pushes to `main`, `master`,
+and `modernization`; it has no pull request, schedule, or manual trigger. The
+separate `tests` workflow continues to run on pull requests. Dependabot checks
+Go, npm/pnpm, Python, Docker, Compose and GitHub Actions dependencies every Monday
+at 09:00 Europe/Moscow; see [dependabot.yml](../.github/dependabot.yml).
+Minor and patch updates are grouped; major updates use separate pull requests.
+GitHub activates the configuration from the repository's default branch.
+Dependabot pull requests use the normal PR tests. Inline script version pins
+and download checksums require manual updates. See the
+[Dependabot configuration reference](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
 Trivy and Semgrep use pinned container images in
 [security.yml](../.github/workflows/security.yml).
 

@@ -1,0 +1,96 @@
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directories:
+      - /api
+      - /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directories:
+      - /api/scripts
+      - /backend
+      - /checkers
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /backend/integration_test/fixtures/network
+      - /backend/load_test/test-data/services
+      - /deployment/demo
+      - /deployment/docker/pgbouncer
+      - /deployment/docker/postgres
+      - /frontend
+      - /infrastracture/tests
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    ignore:
+      # BuildKit supplies this local build context; it is not a registry image.
+      - dependency-name: app
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /backend/load_test
+      - /deployment/docker
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    ignore:
+      # These images are built locally by ForcAD.
+      - dependency-name: forcad_postgres
+      - dependency-name: forcad-demo
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
