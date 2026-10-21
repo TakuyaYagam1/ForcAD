@@ -51,6 +51,7 @@ class Runtime:
         self.calls = []
         self.nft_scripts = []
         self.nft_events = []
+        self.reload_states = {}
 
     def _inventory(self):
         entries = [{"metainfo": {"version": "1"}}]
@@ -76,6 +77,9 @@ class Runtime:
                 router_system.GAME_METRICS,
             ):
                 state = self.units[name]
+                if name in self.reload_states:
+                    self.units[name] = copy.deepcopy(self.reload_states[name])
+                    continue
                 if state["load_state"] == "not-found":
                     state.update(
                         load_state="loaded",
@@ -155,6 +159,15 @@ class RouterSystemTests(unittest.TestCase):
         )
         self.run_patch.start()
         self.addCleanup(self.run_patch.stop)
+        stop_patch = patch.object(
+            router_system,
+            "stop_firewall",
+            side_effect=lambda bundle, name: self.runtime.run(
+                "systemctl", "stop", name
+            ),
+        )
+        self.stop_firewall = stop_patch.start()
+        self.addCleanup(stop_patch.stop)
 
     def snapshot(self, **options):
         return self.system.snapshot(options)
@@ -669,7 +682,7 @@ class RouterSystemTests(unittest.TestCase):
         current = self.system.snapshot(options)
         call_count = len(self.runtime.calls)
 
-        with self.assertRaisesRegex(ValueError, "refusing uninstall"):
+        with self.assertRaisesRegex(ValueError, "differs from saved state"):
             self.system.check_restore(baseline, applied, current)
 
         self.assertFalse(
@@ -693,6 +706,28 @@ class RouterSystemTests(unittest.TestCase):
         current = self.system.snapshot(options)
         with self.assertRaisesRegex(ValueError, "foreign tables"):
             self.system.check_restore(baseline, applied, current, force=True)
+
+    def test_changed_nftables_service_can_return_to_saved_state(self):
+        options = {"network_metrics": False, "game_metrics": False}
+        baseline = self.system.snapshot(options)
+        applied = copy.deepcopy(baseline)
+        self.runtime.units[router_system.NFTABLES] = unit("loaded", "active", "enabled")
+        current = self.system.snapshot(options)
+        self.system.check_restore(baseline, applied, current, allow_unit_changes=True)
+        self.system.restore(baseline)
+        self.assertEqual(
+            self.runtime.units[router_system.NFTABLES],
+            baseline["units"][router_system.NFTABLES],
+        )
+
+    def test_restore_starts_preexisting_networking_if_it_was_stopped(self):
+        options = {"network_metrics": False, "game_metrics": False}
+        baseline = self.system.snapshot(options)
+        self.runtime.units[router_system.NETWORKING]["active_state"] = "inactive"
+        self.system.restore(baseline)
+        self.assertIn(
+            ("systemctl", "start", router_system.NETWORKING), self.runtime.calls
+        )
 
     def test_game_switch_does_not_waive_monitoring_table_drift(self):
         options = {"network_metrics": True, "game_metrics": False}
@@ -749,6 +784,49 @@ class RouterSystemTests(unittest.TestCase):
             ],
         )
         self.assertEqual(disables, stops)
+
+    def test_restore_reloads_deleted_unit_before_reading_file_state(self):
+        before = self.snapshot()
+        self.runtime.units[router_system.FIREWALL] = unit("loaded", "inactive", "bad")
+        self.runtime.reload_states[router_system.FIREWALL] = unit()
+        self.runtime.calls.clear()
+
+        self.system.restore(before)
+
+        self.assertEqual(self.runtime.calls[0], ("systemctl", "daemon-reload"))
+        self.assertEqual(
+            self.runtime.units[router_system.NETWORKING]["active_state"], "active"
+        )
+        self.assertEqual(
+            self.runtime.units[router_system.FIREWALL]["load_state"], "not-found"
+        )
+
+    def test_stop_reloads_restored_unit_before_recovery(self):
+        self.runtime.units[router_system.FIREWALL] = unit("loaded", "inactive", "bad")
+        self.runtime.reload_states[router_system.FIREWALL] = unit(
+            "loaded", "active", "disabled"
+        )
+
+        self.system.stop({})
+
+        self.stop_firewall.assert_called_once_with(self.bundle, router_system.FIREWALL)
+        self.assertEqual(
+            self.runtime.units[router_system.NETWORKING]["active_state"], "active"
+        )
+
+    def test_missing_inactive_unit_has_no_install_state_to_restore(self):
+        self.runtime.units[router_system.FIREWALL] = unit(
+            "not-found", "inactive", "bad"
+        )
+        state = self.system._unit_state(router_system.FIREWALL)
+        self.assertEqual(state["unit_file_state"], "not-found")
+
+    def test_reload_does_not_hide_a_broken_existing_unit(self):
+        before = self.snapshot()
+        self.runtime.units[router_system.FIREWALL] = unit("loaded", "inactive", "bad")
+        with self.assertRaisesRegex(ValueError, "unit-file state 'bad'"):
+            self.system.restore(before)
+        self.stop_firewall.assert_not_called()
 
 
 if __name__ == "__main__":

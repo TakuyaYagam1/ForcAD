@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render reviewed host configs without applying them or generating VPN keys."""
+"""Generate private host bundles and WireGuard configs without applying them."""
 
 import argparse
 import ipaddress
@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import shutil
+import subprocess
 import tarfile
 import tempfile
 import tomllib
@@ -798,6 +799,7 @@ def host_bundle(config):
     layout = network_layout(config)
     for role in ("router", "vpn", "forcad"):
         bundle_root = f"{role}/"
+        result[f"{bundle_root}COMMANDS.md"] = (ROOT / "COMMANDS.md").read_text()
         host = {"role": role, "teams": inventory}
         if role == "router":
             host["devices"] = [
@@ -905,6 +907,11 @@ def host_bundle(config):
             ROOT / role / "UNINSTALL.txt"
         ).read_text()
         for action in ("install", "test", "uninstall"):
+            if role in {"router", "vpn"}:
+                result[f"{bundle_root}{action}.sh"] = template(
+                    "templates/host.sh.in", ROLE=role, ACTION=action
+                )
+                continue
             script_root = f"{role}/host/" if role == "forcad" else bundle_root
             host_script = (
                 f'"$bundle_dir/../host.py" {action} "$@"'
@@ -920,7 +927,7 @@ def host_bundle(config):
 set -euo pipefail
 bundle_dir="$(cd -- "$(dirname -- "${{BASH_SOURCE[0]}}")" && pwd)"
 if [[ "$EUID" -ne 0 && "${{1:-}}" != "--help" ]]; then
-    {sudo_script.removeprefix("exec ")}
+    {sudo_script}
 fi
 exec python3 {host_script}
 """
@@ -1020,6 +1027,21 @@ net.ipv6.conf.default.disable_ipv6=1
         )
     )
     files["router/active.nft"] = 'include "/etc/forcad/router/pre-game.nft"\n'
+    files["router/network.json"] = (
+        json.dumps(
+            {
+                "teams": [
+                    {
+                        "team_ip": team["vulnbox"],
+                        "networks": [f"{team['vulnbox']}/32", team["vpn_cidr"]],
+                    }
+                    for team in teams(config)
+                ]
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     files["router/network-metrics.service"] = (
         (ROOT / "router/network-metrics.service")
         .read_text()
@@ -1085,22 +1107,104 @@ def create_archives(output, roles=("vpn", "router", "forcad"), wireguard_server=
                     if path.is_symlink():
                         raise ValueError(f"Cannot archive symlink: {path}")
                     if path.is_file():
-                        tar.add(path, arcname=path.relative_to(bundle))
+                        tar.add(path, arcname=Path(role) / path.relative_to(bundle))
                 if role == "vpn" and wireguard_server is not None:
                     for path in sorted(Path(wireguard_server).glob("*")):
                         if path.is_symlink() or not path.is_file():
                             raise ValueError(f"Invalid WireGuard server file: {path}")
-                        tar.add(path, arcname=Path("server") / path.name)
+                        bundled = bundle / "server" / path.name
+                        if bundled.exists():
+                            if (
+                                bundled.is_symlink()
+                                or bundled.read_bytes() != path.read_bytes()
+                            ):
+                                raise ValueError(
+                                    f"WireGuard server config differs from bundle: {path.name}"
+                                )
+                            continue
+                        tar.add(path, arcname=Path(role) / "server" / path.name)
             os.replace(temporary, archive)
         except BaseException:
             temporary.unlink(missing_ok=True)
             raise
 
 
+def build_router_metrics(output, architecture):
+    go = shutil.which("go")
+    if go is None:
+        raise ValueError(
+            "Install Go (version required by backend/go.mod) to build router metrics"
+        )
+    backend = ROOT.parent / "backend"
+    router = Path(output).resolve() / "router"
+    host = json.loads(
+        subprocess.run(
+            [go, "env", "-json", "GOHOSTOS", "GOHOSTARCH"],
+            cwd=backend,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    environment = dict(os.environ, CGO_ENABLED="0", GOOS="linux", GOARCH=architecture)
+    binary = router / "forcad"
+    print(f"Building router metrics for linux/{architecture}...", flush=True)
+    subprocess.run(
+        [go, "build", "-mod=readonly", "-trimpath", "-o", str(binary), "./cmd/forcad"],
+        cwd=backend,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    binary.chmod(0o700)
+    command = [str(binary)]
+    if (host["GOHOSTOS"], host["GOHOSTARCH"]) != ("linux", architecture):
+        # Generate rules with a native executable when cross-compiling the router.
+        command = [go, "run", "-mod=readonly", "-trimpath", "./cmd/forcad"]
+        environment.update(GOOS=host["GOHOSTOS"], GOARCH=host["GOHOSTARCH"])
+    rules = subprocess.run(
+        [*command, "network-rules", "--config", str(router / "network.json")],
+        cwd=backend,
+        env=environment,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    with open(
+        router / "network.nft",
+        "x",
+        encoding="utf-8",
+        opener=lambda name, flags: os.open(name, flags, 0o600),
+    ) as stream:
+        stream.write(rules)
+
+
+def generate_wireguard(config, output):
+    from vpn.generate import generate
+
+    output = Path(output)
+    keys = output / "wireguard"
+    generate(config, keys, archives=False)
+    write_bundle(
+        output / "vpn/server",
+        {
+            name: (keys / "server" / name).read_bytes()
+            for name in ("wg-attack.conf", "wg-admin.conf")
+        },
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "settings.toml")
     parser.add_argument("--output", type=Path, default=ROOT / "runtime")
+    parser.add_argument(
+        "--router-arch",
+        choices=("amd64", "arm64"),
+        default="amd64",
+        help="router CPU architecture (Linux; default: amd64)",
+    )
     args = parser.parse_args()
     output_created = False
     try:
@@ -1109,11 +1213,18 @@ def main():
         files["settings.toml"] = args.config.read_text()
         write_bundle(args.output, files)
         output_created = True
+        build_router_metrics(args.output, args.router_arch)
+        generate_wireguard(config, args.output)
         create_archives(args.output)
-    except (ValueError, TypeError, OSError, tomllib.TOMLDecodeError) as error:
+    except (ValueError, TypeError, OSError, subprocess.CalledProcessError) as error:
         if output_created and Path(args.output).is_dir():
             shutil.rmtree(args.output)
-        parser.exit(1, f"Render failed: {error}\n")
+        detail = (
+            error.stderr
+            if isinstance(error, subprocess.CalledProcessError)
+            else str(error)
+        )
+        parser.exit(1, f"Render failed: {detail or error}\n")
     print(
         f"Rendered {len(config['teams']['entries'])} teams into {args.output}. No host configuration was applied."
     )

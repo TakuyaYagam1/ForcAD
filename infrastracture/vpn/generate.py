@@ -4,6 +4,7 @@
 import argparse
 import csv
 import io
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -21,9 +22,16 @@ from render import (
 
 def wg(command, value=None):
     # Never log subprocess output: it may contain a private key.
-    return subprocess.run(
-        ["wg", command], input=value, text=True, capture_output=True, check=True
-    ).stdout.strip()
+    try:
+        return subprocess.run(
+            ["wg", command], input=value, text=True, capture_output=True, check=True
+        ).stdout.strip()
+    except OSError:
+        raise ValueError(
+            "Cannot run wg; install wireguard-tools on the workstation"
+        ) from None
+    except subprocess.CalledProcessError:
+        raise ValueError(f"WireGuard {command} failed") from None
 
 
 def keypair():
@@ -52,7 +60,7 @@ PersistentKeepalive = 25
 """
 
 
-def generate(config, output):
+def generate(config, output, *, archives=True):
     # Refuse an existing destination before generating any keys.
     if output.exists() or output.is_symlink():
         raise FileExistsError(output)
@@ -119,7 +127,14 @@ def generate(config, output):
     )
     files["assignments.csv"] = manifest.getvalue()
     write_bundle(output, files)
-    create_archives(output.parent, roles=("vpn",), wireguard_server=output / "server")
+    if archives:
+        try:
+            create_archives(
+                output.parent, roles=("vpn",), wireguard_server=output / "server"
+            )
+        except BaseException:
+            shutil.rmtree(output)
+            raise
 
 
 def main():

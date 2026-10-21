@@ -45,7 +45,7 @@ class HostTests(unittest.TestCase):
             common, "run", side_effect=AssertionError("install must not run commands")
         ):
             installer.install()
-            backups = list((self.root / "var/backups/forcad/router").iterdir())
+            backups = list((self.root / "var/backups/forcad/router").glob("install-*"))
             self.assertEqual(len(backups), 1)
             backup = backups[0] / "etc/network/interfaces"
             self.assertEqual(backup.read_text(), "auto lo\niface lo inet loopback\n")
@@ -55,7 +55,7 @@ class HostTests(unittest.TestCase):
             repeated.plan()
             repeated.install()
             self.assertEqual(old.stat().st_mtime_ns, before)
-            self.assertEqual(len(list(backups[0].parent.iterdir())), 1)
+            self.assertEqual(len(list(backups[0].parent.glob("install-*"))), 1)
         self.assertIn("ens20", old.read_text())
 
     def test_failure_restores_overwritten_files_and_removes_new_files(self):

@@ -112,6 +112,39 @@ class UninstallTests(unittest.TestCase):
 
         self.assertEqual(self.tree_state(), before)
 
+    def test_uninstall_removes_created_directories_and_history(self):
+        self.write("/etc/network/interfaces", "auto lo\niface lo inet loopback\n")
+        self.install_router()
+        self.make().uninstall()
+        for directory in (
+            "/etc/forcad",
+            "/etc/sysctl.d",
+            "/etc/systemd",
+            "/var/backups/forcad",
+        ):
+            self.assertFalse(self.path(directory).exists(), directory)
+
+    def test_history_cleanup_preserves_unowned_content(self):
+        self.install_router()
+        note = self.write("/var/backups/forcad/router/operator.txt", "keep")
+        self.make().uninstall()
+        self.assertEqual(note.read_text(), "keep")
+        self.assertEqual(list(note.parent.iterdir()), [note])
+
+    def test_legacy_backup_layout_is_cleaned_after_successful_restore(self):
+        self.install_router()
+        self.path("/var/backups/forcad/router/directories-owned.json").unlink()
+        self.make().uninstall()
+        self.assertFalse(self.path("/var/backups/forcad").exists())
+
+    def test_preexisting_backup_directory_is_preserved(self):
+        directory = self.path("/var/backups/forcad/router")
+        directory.mkdir(parents=True)
+        self.install_router()
+        self.make().uninstall()
+        self.assertTrue(directory.is_dir())
+        self.assertEqual(list(directory.iterdir()), [])
+
     def test_preflight_returns_a_compact_plan_without_changes(self):
         self.write("/etc/network/interfaces", "auto lo\niface lo inet loopback\n")
         self.install_router()
@@ -132,7 +165,7 @@ class UninstallTests(unittest.TestCase):
             0o640,
         )
         self.install_router()
-        changed = self.path("/etc/sysctl.d/90-forcad-router.conf")
+        changed = self.path("/etc/network/interfaces")
         changed_data = b"operator change\n"
         changed.write_bytes(changed_data)
         changed.chmod(0o600)
@@ -145,7 +178,7 @@ class UninstallTests(unittest.TestCase):
         self.make().uninstall(force=True)
         self.assertEqual(original.read_bytes(), b"auto lo\niface lo inet loopback\n")
         self.assertEqual(stat.S_IMODE(original.stat().st_mode), 0o640)
-        self.assertFalse(changed.exists())
+        self.assertNotEqual(changed.read_bytes(), changed_data)
         preserved = [
             path
             for path in self.path("/var/backups/forcad/router").rglob("*")
@@ -155,6 +188,13 @@ class UninstallTests(unittest.TestCase):
         self.assertTrue(
             all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in preserved)
         )
+
+    def test_owned_modified_config_is_removed_without_force(self):
+        self.install_router()
+        self.path("/etc/sysctl.d/90-forcad-router.conf").write_text("# changed\n")
+        self.make().uninstall()
+        self.assertFalse(self.path("/etc/sysctl.d/90-forcad-router.conf").exists())
+        self.assertFalse(self.path("/var/backups/forcad/router").exists())
 
     def test_uninstall_keeps_unowned_files_and_nonempty_directories(self):
         self.install_router()

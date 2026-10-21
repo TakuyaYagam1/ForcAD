@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from hostlib.common import run
+from hostlib.services import stop_firewall
 
 FIREWALL = "forcad-router-firewall.service"
 NETWORKING = "networking.service"
@@ -98,6 +99,12 @@ class System:
         required = ("LoadState", "ActiveState", "UnitFileState")
         if any(key not in properties for key in required):
             raise ValueError(f"Could not read systemd state for {unit}")
+        if (
+            properties["LoadState"] == "not-found"
+            and properties["ActiveState"] == "inactive"
+            and properties["UnitFileState"] == "bad"
+        ):
+            properties["UnitFileState"] = "not-found"
         return {
             "load_state": properties["LoadState"],
             "active_state": properties["ActiveState"],
@@ -366,6 +373,8 @@ class System:
             "reload-or-restart",
         }:
             self._assert_firewall_clear(options)
+        if action == "stop" and unit == FIREWALL:
+            return stop_firewall(self.bundle, unit)
         return run("systemctl", action, unit)
 
     def prepare(self, options, before):
@@ -462,6 +471,8 @@ class System:
     def stop(self, options):
         """Stop selected ForcAD units before their staged files are removed."""
         self._require_live_root()
+        # Recovery can reach this method after unit files were removed or restored.
+        run("systemctl", "daemon-reload")
         selected = self._options(options)
         order = []
         if selected["network_metrics"]:
@@ -563,8 +574,8 @@ class System:
             is_active = current_state["active_state"] in ACTIVE_STATES
             if unit == NETWORKING:
                 if wanted_active != is_active:
-                    raise ValueError(
-                        "networking.service changed during router setup; restore it manually"
+                    self._guarded_command(
+                        "start" if wanted_active else "stop", unit, options
                     )
                 continue
             if wanted_active and not is_active:
@@ -606,6 +617,7 @@ class System:
         self._check_snapshot_shape(snapshot)
         self._validate_unit_states(snapshot["units"])
         options = self._options(snapshot.get("options", {}))
+        run("systemctl", "daemon-reload")
         self._validate_unit_states(
             {name: self._unit_state(name) for name in snapshot["units"]}
         )
@@ -649,6 +661,7 @@ class System:
         force=False,
         *,
         allow_game_switch=False,
+        allow_unit_changes=False,
     ):
         """Reject unplanned runtime drift before uninstall starts mutating state."""
         self._require_live_root()
@@ -668,7 +681,7 @@ class System:
 
         drift = []
         for unit, expected in applied["units"].items():
-            if current["units"].get(unit) != expected:
+            if current["units"].get(unit) != expected and not allow_unit_changes:
                 drift.append(f"systemd unit {unit}")
 
         inventory_changed = set(applied_inventory) != set(inventory)
@@ -687,6 +700,5 @@ class System:
             drift.append("owned nftables tables")
         if drift and not force:
             raise ValueError(
-                "Runtime state changed after router setup; refusing uninstall: "
-                + ", ".join(drift)
+                "Router runtime differs from saved state: " + ", ".join(drift)
             )

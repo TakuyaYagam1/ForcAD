@@ -66,7 +66,20 @@ def main():
                         "NET_ADMIN",
                         "--cap-add",
                         "NET_RAW",
-                        *(["--cap-add", "CHOWN"] if role == "install" else []),
+                        # The installer fixture uses a synthetic non-root
+                        # owner; root must manage, inspect and chmod its files.
+                        *(
+                            [
+                                "--cap-add",
+                                "CHOWN",
+                                "--cap-add",
+                                "DAC_OVERRIDE",
+                                "--cap-add",
+                                "FOWNER",
+                            ]
+                            if role == "install"
+                            else []
+                        ),
                         "--sysctl",
                         "net.ipv4.ip_forward=1",
                         "--sysctl",

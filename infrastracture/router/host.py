@@ -30,14 +30,16 @@ class Bundle(BundleBase):
         self.options["router_live"] = True
         return Lifecycle(self).install()
 
-    def uninstall(self, force=False, dry_run=False):
+    def uninstall(self, force=False, dry_run=False, resume=False):
         if self.files_only:
+            if resume:
+                raise ValueError("--resume requires live router uninstall")
             if self.has_live_installation():
                 raise ValueError(
                     "Router has a live installation; rerun without --files-only"
                 )
             return super().uninstall(force=force, dry_run=dry_run)
-        return Lifecycle(self).uninstall(force=force, dry_run=dry_run)
+        return Lifecycle(self).uninstall(force=force, dry_run=dry_run, resume=resume)
 
     def test(self, live=False):
         super().test(live=live or not self.files_only)

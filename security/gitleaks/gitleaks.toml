@@ -48,3 +48,11 @@ targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = ['''^infrastracture/tests/game_trace\.py$''']
 regexes = ['''^dGhlIHNhbXBsZSBub25jZQ==$''']
+
+[[allowlists]]
+description = "Public SHA-256 checksum for the downloaded Zeek repository key"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^infrastracture/hostlib/zeek\.py$''']
+regexes = ['''^b67ae73b8543af4195c930b52a07c208611253fdc519873adcf1190ffcfc1377$''']

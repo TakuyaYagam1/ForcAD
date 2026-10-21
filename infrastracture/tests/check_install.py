@@ -1,7 +1,5 @@
 """Exercise portable installers inside the disposable network test container."""
 
-import importlib.util
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -11,10 +9,6 @@ sys.path.insert(0, str(ROOT))
 from helpers import small_config
 
 import render
-
-spec = importlib.util.spec_from_file_location("generate", ROOT / "vpn/generate.py")
-generate = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(generate)
 
 
 def run(*args, check=True):
@@ -52,8 +46,7 @@ def main():
     small_config(config)
     bundle = Path("/work/bundle")
     render.write_bundle(bundle, render.render(config))
-    generate.generate(config, bundle / "wireguard")
-    shutil.copytree(bundle / "wireguard/server", bundle / "vpn/server")
+    render.generate_wireguard(config, bundle)
     for number in range(19, 23):
         run(
             "ip",
@@ -67,7 +60,9 @@ def main():
             f"peer-{number}",
         )
     for role in ("router", "vpn"):
-        Path("/etc/network/interfaces").write_text("auto lo\niface lo inet loopback\n")
+        interfaces = Path("/etc/network/interfaces")
+        interfaces.write_text("auto lo\niface lo inet loopback\n")
+        shared_before = interfaces.read_bytes()
         before = snapshot()
         directory = bundle / role
         stage = ["--files-only"]
@@ -82,23 +77,26 @@ def main():
         print(
             f"PASS {role}: portable install, repeat install, static checks, unapplied state detection"
         )
-        path = Path(
-            f"/etc/forcad/{role}/{'common.nft' if role == 'router' else 'firewall.nft'}"
-        )
-        original = path.read_bytes()
-        path.write_bytes(original + b"\n# drift\n")
+        # /etc/network/interfaces existed before installation, so later edits
+        # must be reviewed and backed up instead of silently restored.
+        path = interfaces
+        installed = path.read_bytes()
+        changed = installed + b"\n# operator edit\n"
+        path.write_bytes(changed)
         result = run("bash", str(directory / "test.sh"), *stage, check=False)
         assert result.returncode != 0 and "Installed file differs" in result.stderr
         result = run("bash", str(directory / "uninstall.sh"), *stage, check=False)
-        assert result.returncode != 0 and path.read_bytes() != original
+        assert result.returncode != 0 and path.read_bytes() == changed
         run("bash", str(directory / "uninstall.sh"), *stage, "--force", "--dry-run")
-        assert path.exists()
+        assert path.read_bytes() == changed
         run("bash", str(directory / "uninstall.sh"), *stage, "--force")
-        assert not path.exists()
-        assert (
-            Path("/etc/network/interfaces").read_text()
-            == "auto lo\niface lo inet loopback\n"
-        )
+        assert path.read_bytes() == shared_before
+        saved = [
+            candidate
+            for candidate in Path(f"/var/backups/forcad/{role}").rglob("*")
+            if candidate.is_file() and candidate.read_bytes() == changed
+        ]
+        assert saved, "--force must back up the edited shared file"
         assert snapshot() == before, "Uninstaller changed live network state"
         run("bash", str(directory / "uninstall.sh"), *stage)
         print(

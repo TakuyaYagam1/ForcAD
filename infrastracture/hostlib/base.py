@@ -56,7 +56,15 @@ class BundleBase(FileOperations):
     def plan(
         self, repo=None, wireguard_dir=None, network_metrics=False, game_metrics=False
     ):
+        from .access import operator
+
         self.check_role()
+        installed = (
+            json.loads(regular(self.manifest).read_text())
+            if self.manifest.exists()
+            else {}
+        )
+        self.owner = operator(installed.get("owner"))
         self.options = {
             "repo": str(repo) if repo else None,
             "network_metrics": network_metrics,
@@ -164,8 +172,20 @@ class BundleBase(FileOperations):
 
     def uninstall(self, force=False, dry_run=False):
         result = self.uninstall_files(force=force, dry_run=dry_run)
-        print("Live network settings and services are unchanged. See UNINSTALL.txt.")
+        self.finish_uninstall(force=force, dry_run=dry_run)
+        print("File-only uninstall; live network settings and services are unchanged.")
         return result
+
+    def finish_uninstall(self, force=False, dry_run=False):
+        from .history import cleanup_history
+
+        if not dry_run:
+            if force and not getattr(self, "discard_backups", False):
+                print(
+                    "Saved later edits and runtime state in the host backup directory."
+                )
+            else:
+                cleanup_history(self)
 
     def test_files(self, live=False):
         installed = json.loads(regular(self.manifest).read_text())
@@ -186,6 +206,10 @@ class BundleBase(FileOperations):
                 raise ValueError(f"Installed file differs: {path}")
             if stat.S_IMODE(path.stat().st_mode) != item["mode"]:
                 raise ValueError(f"Unexpected permissions: {path}")
+            if installed.get("owner") and (
+                path.stat().st_uid != item["uid"] or path.stat().st_gid != item["gid"]
+            ):
+                raise ValueError(f"Unexpected owner: {path}")
         self.options = installed["options"]
         self.changes = {
             self.path(item["path"]): (

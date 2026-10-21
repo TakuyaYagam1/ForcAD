@@ -13,6 +13,44 @@ from hostlib.common import check_wireguard, regular, run
 class Bundle(BundleBase):
     ROLE = "vpn"
 
+    def uninstall_owned_paths(self):
+        return {
+            "/etc/sysctl.d/90-forcad-vpn.conf",
+            "/etc/systemd/system/forcad-vpn-firewall.service",
+            "/etc/systemd/system/networking.service.d/forcad.conf",
+            "/etc/forcad/vpn/firewall.nft",
+            *(
+                path
+                for name in ("wg-attack", "wg-admin")
+                for path in (
+                    f"/etc/wireguard/{name}.conf",
+                    f"/etc/systemd/system/wg-quick@{name}.service.d/firewall.conf",
+                )
+            ),
+        }
+
+    def finish_uninstall(self, force=False, dry_run=False):
+        if not dry_run and getattr(self, "removed_managed_files", False):
+            for name in (
+                "/etc/wireguard",
+                "/etc/forcad/vpn",
+                "/etc/forcad",
+                "/etc/systemd/system/wg-quick@wg-attack.service.d",
+                "/etc/systemd/system/wg-quick@wg-admin.service.d",
+                "/etc/systemd/system/networking.service.d",
+            ):
+                path = self.path(name)
+                regular(path / "check")
+                if path.is_dir() and not any(path.iterdir()):
+                    path.rmdir()
+        super().finish_uninstall(force=force, dry_run=dry_run)
+
+    def uninstall_files(self, force=False, dry_run=False):
+        installed = self.manifest.exists()
+        result = super().uninstall_files(force=force, dry_run=dry_run)
+        self.removed_managed_files = installed and not dry_run
+        return result
+
     def has_live_installation(self):
         return Lifecycle(self).load() is not None
 
@@ -82,7 +120,7 @@ class Bundle(BundleBase):
                 self.put(f"/etc/wireguard/{name}.conf", regular(target).read_bytes())
             else:
                 raise ValueError(
-                    "Copy only wireguard/server into vpn/server, or pass --wireguard-dir PATH. Generate keys once with vpn/generate.py."
+                    "Use the complete VPN bundle from render.py, or pass existing server configs with --wireguard-dir PATH."
                 )
             check_wireguard(self.changes[target][0], self.config["wireguard"][name])
 

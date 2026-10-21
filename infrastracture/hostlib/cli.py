@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 from .common import regular
+from .packages import Dependencies
 
 
 def main(bundle_class, directory):
@@ -23,7 +24,17 @@ def main(bundle_class, directory):
         help="Back up later edits and restore original files during uninstall",
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Continue an interrupted router uninstall with its saved journal",
+    )
+    parser.add_argument(
         "--repo", type=Path, help="Existing ForcAD checkout (absolute path)"
+    )
+    parser.add_argument(
+        "--discard-backups",
+        action="store_true",
+        help="Remove completed rollback backups even when using --force",
     )
     parser.add_argument(
         "--wireguard-dir", type=Path, help="Directory containing server configs only"
@@ -48,6 +59,17 @@ def main(bundle_class, directory):
         action="store_true",
         help="Use file-only operations for the router or VPN host",
     )
+    packages = parser.add_mutually_exclusive_group()
+    packages.add_argument(
+        "--purge-packages",
+        action="store_true",
+        help="Remove installer-added dependencies after uninstall",
+    )
+    packages.add_argument(
+        "--keep-packages",
+        action="store_true",
+        help="Keep dependencies after uninstall without prompting",
+    )
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.exit(
@@ -57,11 +79,23 @@ def main(bundle_class, directory):
     os.umask(0o077)
     try:
         bundle = bundle_class(Path(directory))
+        if args.resume and (
+            args.action != "uninstall" or bundle.role != "router" or args.files_only
+        ):
+            raise ValueError("--resume is only supported by live router uninstall")
         if args.files_only and bundle.role not in {"router", "vpn"}:
             raise ValueError(
                 "--files-only is only supported by router and VPN installers"
             )
         bundle.files_only = args.files_only
+        bundle.discard_backups = args.discard_backups
+        package_choice = (
+            "purge" if args.purge_packages else "keep" if args.keep_packages else None
+        )
+        if package_choice and (args.action != "uninstall" or bundle.role == "forcad"):
+            raise ValueError(
+                "Package options are only supported by Router/VPN uninstall"
+            )
         if args.action == "uninstall":
             if (
                 args.live
@@ -73,10 +107,15 @@ def main(bundle_class, directory):
                 raise ValueError(
                     "uninstall.sh reads its history from the installed manifest; use only --dry-run, --force and/or --files-only"
                 )
-            bundle.uninstall(force=args.force, dry_run=args.dry_run)
+            options = {"resume": True} if args.resume else {}
+            bundle.uninstall(force=args.force, dry_run=args.dry_run, **options)
+            if bundle.role in {"router", "vpn"}:
+                Dependencies(bundle).uninstall(
+                    choice=package_choice, dry_run=args.dry_run
+                )
             return
-        if args.dry_run or args.force:
-            raise ValueError("--dry-run and --force are only supported by uninstall.sh")
+        if args.dry_run or args.force or args.discard_backups:
+            raise ValueError("Uninstall options are only supported by uninstall.sh")
         if args.action == "install" and args.live:
             raise ValueError("--live is only supported by test.sh")
         if args.action == "test" and (
@@ -100,6 +139,8 @@ def main(bundle_class, directory):
             bundle.plan(
                 args.repo, args.wireguard_dir, args.network_metrics, args.game_metrics
             )
+            if bundle.role in {"router", "vpn"}:
+                Dependencies(bundle).install(game_metrics=args.game_metrics)
             bundle.validate()
             bundle.install()
         else:

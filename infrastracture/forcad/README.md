@@ -1,61 +1,32 @@
-# ForcAD host
+# ForcAD
 
-This bundle installs a new ForcAD deployment on Debian 12/13. Use a clean,
-dedicated host with the address and gateway configured in `settings.toml`, and
-no existing ForcAD install path, Docker project or volumes. The installer is
-not an updater; do not run it over an existing game.
+Generate the bundle with the [main guide](../README.md). See [commands and
+options](../COMMANDS.md#forcad).
 
-## Configure and render
+## Host requirements
 
-Follow the [generator guide](../README.md) on the workstation. `settings.toml`
-defines the full game config, teams, tasks, branding and monitoring. The
-renderer copies selected assets and creates `runtime/forcad.tar.gz`; it does
-not change the host or clone the repository. Review the bundle before transfer.
-The installer clones `forcad.repository_url` at the branch or tag in
-`forcad.revision`; that revision must support the selected game settings.
+Use Debian 12 or 13. Its live address and gateway must match `settings.toml`.
+The install path must be unused, and Docker must not contain an existing ForcAD
+project or volumes. This installer creates a new game; it does not update an
+existing deployment.
 
-## Install
+## Install and test
 
-Copy `runtime/forcad.tar.gz` to the host, extract it into a new directory and
-run there:
+The top-level `install.sh` installs prerequisites, clones the configured
+revision, installs the generated config and assets, initializes the game
+configuration, and starts the application and selected monitoring. Scripts
+under `host/` are helpers called by the installer.
 
-```sh
-sudo bash install.sh
-sudo bash test.sh
-```
+The installer stages network files but does not restart networking. Apply any
+address or gateway changes from the host console before installation. Run the
+top-level `test.sh` after install.
 
-The installer installs Git, Docker Engine/Compose and required host tools,
-clones the configured revision, copies the generated config and assets, then
-starts and checks the game. It verifies the Go archive checksum. Host network
-files are staged, not applied; review `host/APPLY.txt` and apply changes from
-the console if needed. A failed run can leave OS packages installed by its
-bootstrap.
+When enabled, monitoring listens on localhost. `config/runtime/admin.env`
+contains admin credentials; `deployment/docker/.env` contains the Grafana
+password. Keep both private. See [monitoring access](../../docs/MONITORING.md).
 
-Paths below are relative to the installed checkout (`forcad.install_path`).
-Keep `config/runtime/admin.env` and `deployment/docker/.env` private. The first
-contains the generated admin login; the second contains the Grafana password
-when monitoring is enabled. Grafana and Prometheus listen on localhost. See the
-[monitoring guide](../../docs/MONITORING.md) for SSH access.
+## Removal
 
-## Monitoring
-
-In `[env]` of `settings.toml`:
-
-- `monitoring = true` starts Prometheus and Grafana.
-- `router_metrics = true` adds the router exporter target. Install the router
-  component with `sudo bash install.sh --network-metrics` after preparing its files.
-- `game_metrics = true` adds the Zeek target. Install Zeek and `forcad-sensor`
-  on the router, then run `sudo bash install.sh --game-metrics` there.
-
-Enable both router options when both exporters are ready. These settings add
-ForcAD scrape targets; they do not install the router components.
-
-## Remove
-
-```sh
-sudo bash uninstall.sh --confirm
-```
-
-This permanently deletes the managed checkout, database and Compose volumes.
-It restores host files and removes packages installed by this bootstrap.
-Review [UNINSTALL.txt](UNINSTALL.txt) first.
+`uninstall.sh --confirm` permanently removes the managed checkout, database and
+volumes. There is no dry-run. Package and Docker cleanup options are in the
+[command reference](../COMMANDS.md#forcad).

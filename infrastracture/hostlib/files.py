@@ -106,7 +106,13 @@ def rollback_files(root, backup, saved, written, directories):
 
 
 class FileOperations:
+    def uninstall_owned_paths(self):
+        """Role-specific files to remove even when installation adopted them."""
+        return set()
+
     def install_files(self):
+        from .access import operator
+
         previous_manifest = (
             json.loads(regular(self.manifest).read_text())
             if self.manifest.exists()
@@ -116,6 +122,7 @@ class FileOperations:
             raise ValueError(
                 "Legacy installation has no verified rollback history. Restore its original backup manually before reinstalling."
             )
+        self.owner = operator(previous_manifest.get("owner"))
         records = []
         for path, (data, mode) in self.changes.items():
             if path == self.manifest:
@@ -129,8 +136,8 @@ class FileOperations:
                     "path": "/" + str(path.relative_to(self.root)),
                     "sha256": hashlib.sha256(data).hexdigest(),
                     "mode": mode,
-                    "uid": owner.stat().st_uid,
-                    "gid": owner.stat().st_gid,
+                    "uid": self.owner["uid"] if self.owner else owner.stat().st_uid,
+                    "gid": self.owner["gid"] if self.owner else owner.stat().st_gid,
                 }
             )
         manifest = {
@@ -140,6 +147,8 @@ class FileOperations:
             "files": records,
             "rollback": previous_manifest.get("rollback"),
         }
+        if self.owner:
+            manifest["owner"] = self.owner
         self.put(
             f"/etc/forcad/{self.role}/install.json",
             (json.dumps(manifest, indent=2) + "\n").encode(),
@@ -150,15 +159,25 @@ class FileOperations:
             if not path.exists()
             or path.read_bytes() != data
             or stat.S_IMODE(path.stat().st_mode) != mode
+            or (
+                self.owner
+                and (path.stat().st_uid, path.stat().st_gid)
+                != (self.owner["uid"], self.owner["gid"])
+            )
         ]
-        if not changed:
+        directories = self.directory_changes(list(self.changes))
+        if not changed and not directories:
             print("Already installed; no files changed.")
             return
         # Every successful transaction links its predecessor. Failed attempts
         # leave backups for inspection but never enter the uninstall history.
         paths = [path for path, _, _ in changed if path != self.manifest]
         paths.append(self.manifest)
-        directories = self.directory_changes(paths)
+        # Directory-only changes still need their children in rollback metadata.
+        for item in directories:
+            for path in self.changes:
+                if self.path(item["path"]) in path.parents and path not in paths:
+                    paths.append(path)
         backup, saved = self.backup(paths, "install", directories)
         manifest["rollback"] = {
             "backup": "/" + str(backup.relative_to(self.root)),
@@ -180,11 +199,11 @@ class FileOperations:
             for item in sorted(
                 directories, key=lambda item: len(Path(item["path"]).parts)
             ):
+                path = self.path(item["path"])
                 if not item["existed"]:
-                    path = self.path(item["path"])
                     path.mkdir(mode=item["installed_mode"])
-                    path.chmod(item["installed_mode"])
-                    os.chown(path, item["installed_uid"], item["installed_gid"])
+                path.chmod(item["installed_mode"])
+                os.chown(path, item["installed_uid"], item["installed_gid"])
             for directory in ("/etc/forcad", "/etc/forcad/monitoring"):
                 if directory.endswith("monitoring") and not (
                     self.role == "router"
@@ -205,7 +224,11 @@ class FileOperations:
                 uid, gid = (
                     (record["uid"], record["gid"])
                     if record
-                    else (os.geteuid(), os.getegid())
+                    else (
+                        (self.owner["uid"], self.owner["gid"])
+                        if self.owner
+                        else (os.geteuid(), os.getegid())
+                    )
                 )
                 written.append(path)
                 atomic_write(path, data, mode, uid, gid)
@@ -216,6 +239,18 @@ class FileOperations:
 
     def directory_changes(self, paths):
         records = {}
+        access_owner = getattr(self, "owner", None)
+        managed = {"/etc/forcad", f"/etc/forcad/{self.role}"}
+        if self.role == "vpn":
+            managed.add("/etc/wireguard")
+        if self.role == "router" and (
+            self.options["network_metrics"] or self.options["game_metrics"]
+        ):
+            managed.add("/etc/forcad/monitoring")
+        for path in paths:
+            parent = "/" + str(path.parent.relative_to(self.root))
+            if parent.startswith("/etc/systemd/system/") and parent.endswith(".d"):
+                managed.add(parent)
         for path in paths:
             for parent in path.parents:
                 if parent.exists():
@@ -231,6 +266,11 @@ class FileOperations:
                     "installed_uid": owner.stat().st_uid,
                     "installed_gid": owner.stat().st_gid,
                 }
+                if access_owner and name in managed:
+                    records[name].update(
+                        installed_uid=access_owner["uid"],
+                        installed_gid=access_owner["gid"],
+                    )
         for name in ("/etc/forcad", "/etc/forcad/monitoring"):
             if name.endswith("monitoring") and not (
                 self.role == "router"
@@ -251,12 +291,39 @@ class FileOperations:
                     "installed_uid": info.st_uid,
                     "installed_gid": info.st_gid,
                 }
+        if access_owner:
+            for name in managed:
+                path = self.path(name)
+                regular(path / "check")
+                if name in records:
+                    records[name].update(
+                        installed_uid=access_owner["uid"],
+                        installed_gid=access_owner["gid"],
+                    )
+                elif path.exists():
+                    info = path.stat()
+                    mode = 0o700 if name == "/etc/wireguard" else 0o755
+                    if (stat.S_IMODE(info.st_mode), info.st_uid, info.st_gid) != (
+                        mode,
+                        access_owner["uid"],
+                        access_owner["gid"],
+                    ):
+                        records[name] = {
+                            "path": name,
+                            "existed": True,
+                            "mode": stat.S_IMODE(info.st_mode),
+                            "uid": info.st_uid,
+                            "gid": info.st_gid,
+                            "installed_mode": mode,
+                            "installed_uid": access_owner["uid"],
+                            "installed_gid": access_owner["gid"],
+                        }
         return list(records.values())
 
     def backup(self, paths, action, directories=()):
-        base = self.path(f"/var/backups/forcad/{self.role}")
-        regular(base / "check")
-        base.mkdir(parents=True, exist_ok=True, mode=0o700)
+        from .history import prepare_history
+
+        base = prepare_history(self)
         backup = Path(
             tempfile.mkdtemp(prefix=time.strftime(f"{action}-%Y%m%d-%H%M%S-"), dir=base)
         )
@@ -366,14 +433,20 @@ class FileOperations:
         self.check_role()
         installed = json.loads(self.manifest.read_text())
         self.options = installed["options"]
+        self.config = installed["config"]
         originals, directories, expected = self.uninstall_history(installed)
+        owned = self.uninstall_owned_paths() & expected.keys()
+        for name in owned:
+            # Identical adopted files appear in the manifest but not in backups.
+            originals.setdefault(name, ({"existed": True, **expected[name]}, None))
         changes, conflicts = [], []
         manifest_name = "/" + str(self.manifest.relative_to(self.root))
         for name, (original, data) in originals.items():
             path = self.path(name)
             current = file_state(path)
             fields = ("existed", "sha256", "mode", "uid", "gid")
-            if all(current.get(key) == original.get(key) for key in fields):
+            target = {"existed": False} if name in owned else original
+            if all(current.get(key) == target.get(key) for key in fields):
                 continue
             if name != manifest_name:
                 wanted = {"existed": True, **expected[name]}
@@ -386,13 +459,17 @@ class FileOperations:
                         b'include "/etc/forcad/router/pre-game.nft"',
                     )
                 )
-                if any(
-                    current.get(key) != wanted.get(key)
-                    for key in fields
-                    if not (active and key == "sha256")
+                if (
+                    original["existed"]
+                    and not all(current.get(key) == original.get(key) for key in fields)
+                    and any(
+                        current.get(key) != wanted.get(key)
+                        for key in fields
+                        if not (active and key == "sha256")
+                    )
                 ):
                     conflicts.append(name)
-            changes.append((path, original, data))
+            changes.append((path, target, None if name in owned else data))
         directory_before = []
         for name, item in directories.items():
             path = self.path(name)
@@ -490,5 +567,5 @@ class FileOperations:
             rollback_files(self.root, backup, saved, written, directory_before)
             raise
         print(
-            "Uninstalled host files; original files and permissions restored. Backups retained."
+            "Uninstalled host files; shared files restored and managed files removed."
         )

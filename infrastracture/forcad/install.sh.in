@@ -9,10 +9,19 @@ created=false
 host_installed=false
 toolchain_tmp=
 go_dir=
+go_environment_ready=false
 packages_before=
 docker_repo_created=false
+docker_group_before=
 docker_was_active=inactive
 docker_was_enabled=disabled
+socket_was_active=inactive
+socket_was_enabled=disabled
+containerd_was_active=inactive
+containerd_was_enabled=disabled
+created_directories=()
+sysctl_before=
+firewall_before=
 
 if [[ "$EUID" -ne 0 ]]; then
     exec sudo -- bash "$0" "$@"
@@ -29,6 +38,7 @@ parent="$(dirname -- "$target")"
 cursor="$parent"
 while [[ "$cursor" != / ]]; do
     [[ ! -L "$cursor" ]] || { echo "Refusing symlinked install parent: $cursor" >&2; exit 1; }
+    if [[ ! -e "$cursor" ]]; then created_directories+=("$cursor"); fi
     cursor="$(dirname -- "$cursor")"
 done
 mkdir -p -- "$parent"
@@ -39,11 +49,26 @@ install_dependencies() {
         echo "Automatic dependency installation supports Debian 12 and 13." >&2
         exit 1
     }
-    export DEBIAN_FRONTEND=noninteractive
+    export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
+    # Capture these before apt: package post-install scripts can start services.
+    docker_was_active="$(systemctl is-active docker.service 2>/dev/null || true)"
+    docker_was_enabled="$(systemctl is-enabled docker.service 2>/dev/null || true)"
+    socket_was_active="$(systemctl is-active docker.socket 2>/dev/null || true)"
+    socket_was_enabled="$(systemctl is-enabled docker.socket 2>/dev/null || true)"
+    containerd_was_active="$(systemctl is-active containerd.service 2>/dev/null || true)"
+    containerd_was_enabled="$(systemctl is-enabled containerd.service 2>/dev/null || true)"
+    docker_group_before="$(getent group docker || true)"
+    for path in /etc/docker /etc/containerd /var/lib/docker /var/lib/containerd /etc/apt/keyrings; do
+        if [[ ! -e "$path" && ! -L "$path" ]]; then created_directories+=("$path"); fi
+    done
+    sysctl_before="$(printf 'net.ipv4.ip_forward = %s\nnet.ipv6.conf.all.forwarding = %s\n' \
+        "$(</proc/sys/net/ipv4/ip_forward)" "$(</proc/sys/net/ipv6/conf/all/forwarding)")"
     packages_before="$(mktemp)"
-    dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' | awk '$1 == "installed" {print $2}' | sort -u > "$packages_before"
+    dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' | awk '$1 != "not-installed" {print $2}' | sort -u > "$packages_before"
     apt-get update
-    apt-get install -y ca-certificates curl git make openssl python3 python3-yaml ifupdown iproute2 iputils-ping tar
+    apt-get install -y ca-certificates curl git make openssl python3 python3-yaml ifupdown iproute2 iputils-ping procps tar
+    firewall_before="$(mktemp)"
+    (cd "$bundle_dir" && python3 -m hostlib.docker_state capture) > "$firewall_before"
 
     if ! command -v docker >/dev/null; then
         for package in docker.io docker-compose docker-doc docker-buildx podman-docker containerd runc; do
@@ -76,8 +101,14 @@ install_dependencies() {
             exit 1
         fi
     fi
-    docker_was_active="$(systemctl is-active docker 2>/dev/null || true)"
-    docker_was_enabled="$(systemctl is-enabled docker 2>/dev/null || true)"
+    if ! docker buildx version >/dev/null 2>&1; then
+        if [[ -f /etc/apt/sources.list.d/docker.sources ]] && grep -Fqx 'URIs: https://download.docker.com/linux/debian' /etc/apt/sources.list.d/docker.sources; then
+            apt-get install -y docker-buildx-plugin
+        else
+            echo "Docker Buildx is required; no verified Docker apt source is configured." >&2
+            exit 1
+        fi
+    fi
     systemctl enable --now docker
 
     if [[ -n "$(docker ps -aq --filter label=com.docker.compose.project=forcad)" || -n "$(docker volume ls -q --filter label=com.docker.compose.project=forcad)" ]]; then
@@ -98,10 +129,10 @@ install_dependencies() {
             *) echo "Go 1.27.2 is pinned for amd64 and arm64; unsupported architecture: $arch" >&2; exit 1 ;;
         esac
         tmp="$(mktemp -d)"
+        toolchain_tmp="$tmp"
         curl --fail --silent --show-error --location "https://go.dev/dl/go1.27.2.linux-$go_arch.tar.gz" -o "$tmp/go.tar.gz"
         printf '%s  %s\n' "$go_sum" "$tmp/go.tar.gz" | sha256sum --check --status || { echo "Go archive checksum mismatch" >&2; exit 1; }
         tar -C "$tmp" -xzf "$tmp/go.tar.gz"
-        toolchain_tmp="$tmp"
         go_dir="$tmp/go"
     fi
     export PATH="$go_dir/bin:$PATH"
@@ -111,15 +142,44 @@ install_dependencies() {
     docker compose version >/dev/null
 }
 
+prepare_go_environment() {
+    local root="$target/.forcad-go" path
+    for path in "$root" "$root/build" "$root/modules" "$root/path"; do
+        [[ ! -L "$path" ]] || { echo "Refusing symlinked Go cache path: $path" >&2; return 1; }
+        if [[ -e "$path" && ! -d "$path" ]]; then
+            echo "Refusing non-directory Go cache path: $path" >&2
+            return 1
+        fi
+    done
+    install -d -m 0700 "$root" "$root/build" "$root/modules" "$root/path"
+    export GOCACHE="$root/build"
+    export GOMODCACHE="$root/modules"
+    export GOPATH="$root/path"
+    go_environment_ready=true
+}
+
+run_control_down() {
+    local binary="$target/backend/bin/forcad"
+    if [[ -f "$binary" && ! -L "$binary" && -x "$binary" ]]; then
+        if [[ @@MONITORING@@ == true ]]; then
+            "$binary" control --project-root "$target" monitoring down -v --remove-orphans
+        else
+            "$binary" control --project-root "$target" down -v --remove-orphans
+        fi
+    elif [[ "$go_environment_ready" == true ]]; then
+        if [[ @@MONITORING@@ == true ]]; then
+            (cd "$target" && ./control.sh monitoring down -v --remove-orphans)
+        else
+            (cd "$target" && ./control.sh down -v --remove-orphans)
+        fi
+    fi
+}
+
 rollback() {
     status=$?
     if (( status != 0 )); then
         if [[ "$created" == true && -f "$target/control.sh" ]]; then
-            if [[ @@MONITORING@@ == true ]]; then
-                (cd "$target" && ./control.sh monitoring down -v --remove-orphans) || true
-            else
-                (cd "$target" && ./control.sh down -v --remove-orphans) || true
-            fi
+            run_control_down || true
             mapfile -t project_volumes < <(
                 docker volume ls -q --filter label=com.docker.compose.project=forcad
             )
@@ -135,6 +195,7 @@ rollback() {
         fi
         if [[ -n "$toolchain_tmp" ]]; then rm -rf -- "$toolchain_tmp"; fi
         if [[ -n "$packages_before" ]]; then rm -f -- "$packages_before"; fi
+        if [[ -n "$firewall_before" ]]; then rm -f -- "$firewall_before"; fi
         echo "Fresh installation failed; temporary deployment state was removed." >&2
     fi
     exit "$status"
@@ -156,10 +217,18 @@ if [[ -n "$toolchain_tmp" ]]; then
     go_dir="$target/.toolchain/go1.27.2"
 fi
 export PATH="$go_dir/bin:$PATH"
+prepare_go_environment
+[[ ! -e "$target/.forcad-buildx" && ! -L "$target/.forcad-buildx" ]] || { echo "Buildx state path already exists" >&2; exit 1; }
+install -d -m 0700 "$target/.forcad-buildx"
+export BUILDX_CONFIG="$target/.forcad-buildx" BUILDX_BUILDER=default
+(cd "$bundle_dir" && python3 -m hostlib.docker_resources capture) > "$target/.forcad-resources-before"
 install -m 0600 "$bundle_dir/config.yml" "$target/config/config.yml"
 install -m 0600 "$bundle_dir/environment.env" "$target/deployment/docker/.env"
 if [[ -d "$bundle_dir/public" ]]; then
     cp -a "$bundle_dir/public/." "$target/public/"
+    # Bundles are private; published assets must be readable by nginx workers.
+    find "$target/public" -type d -exec chmod 0755 {} +
+    find "$target/public" -type f -exec chmod 0644 {} +
 fi
 if [[ -d "$bundle_dir/checkers" ]]; then
     cp -a "$bundle_dir/checkers/." "$target/checkers/"
@@ -176,6 +245,28 @@ if [[ "$docker_repo_created" == true ]]; then
     sha256sum /etc/apt/keyrings/docker.asc | cut -d ' ' -f 1 > "$target/.forcad-docker-key.sha256"
 fi
 printf '%s\n%s\n' "$docker_was_active" "$docker_was_enabled" > "$target/.forcad-docker-state"
+printf '%s\n%s\n' "$socket_was_active" "$socket_was_enabled" > "$target/.forcad-socket-state"
+printf '%s\n%s\n' "$containerd_was_active" "$containerd_was_enabled" > "$target/.forcad-containerd-state"
+: > "$target/.forcad-created-dirs"
+if ((${#created_directories[@]})); then printf '%s\n' "${created_directories[@]}" > "$target/.forcad-created-dirs"; fi
+printf '%s\n' "$sysctl_before" > "$target/.forcad-sysctl"
+printf '%s\n' @@MONITORING@@ > "$target/.forcad-monitoring"
+if [[ -z "$docker_group_before" ]]; then
+    group_entry="$(getent group docker || true)"
+    if [[ -n "$group_entry" ]]; then
+        cut -d : -f 3 <<< "$group_entry" > "$target/.forcad-docker-group"
+    else
+        : > "$target/.forcad-docker-group"
+    fi
+else
+    : > "$target/.forcad-docker-group"
+fi
+mv -- "$firewall_before" "$target/.forcad-firewall-before"
+firewall_before=
+for name in docker-state socket-state containerd-state created-dirs sysctl monitoring firewall-before resources-before docker-group; do
+    chmod 0600 "$target/.forcad-$name"
+    printf '%s_sha256=%s\n' "$name" "$(sha256sum "$target/.forcad-$name" | cut -d ' ' -f 1)" >> "$target/.forcad-fresh-install"
+done
 chmod 0600 "$target/.forcad-fresh-install" "$target/.forcad-managed-packages" "$target/.forcad-docker-state"
 
 cd "$target"
@@ -193,6 +284,13 @@ else
     ./control.sh start
 fi
 bash "$bundle_dir/test.sh"
+(cd "$bundle_dir" && python3 -m hostlib.docker_state capture) > "$target/.forcad-firewall-applied"
+(cd "$bundle_dir" && python3 -m hostlib.docker_resources capture) > "$target/.forcad-resources-applied"
+for name in firewall-applied resources-applied; do
+    chmod 0600 "$target/.forcad-$name"
+    printf '%s_sha256=%s\n' "$name" "$(sha256sum "$target/.forcad-$name" | cut -d ' ' -f 1)" >> "$target/.forcad-fresh-install"
+done
+(cd "$bundle_dir" && python3 -m hostlib.access "$target")
 trap - EXIT
 echo "Fresh ForcAD installation is ready at $target."
 echo "Admin credentials: $target/config/runtime/admin.env"

@@ -1,90 +1,31 @@
 # Router
 
-Use a dedicated Debian 12/13 host with `python3`, `nftables`, `iproute2`,
-`iputils-ping`, `procps`, `ifupdown`, `vlan` and `resolvconf` installed. The
-installer does not install packages. Follow the [generator guide](../README.md)
-to set interfaces, addresses and game ports in `settings.toml` and render the
-bundle.
+Generate the bundle with the [main guide](../README.md). See [commands and
+options](../COMMANDS.md#router).
 
-## Install
+## Host requirements
 
-The router installer changes interfaces, routes, sysctl settings, nftables and
-selected monitoring services. Run it from the host console; it can interrupt
-SSH. It supports static IPv4 with ifupdown. DHCP, active IPv6 and firewall rules
-owned by another service must be resolved before installation. Do not disable
-another firewall or flush its rules to bypass a preflight refusal.
+Use a dedicated Debian 12 or 13 host with static IPv4 configured through
+ifupdown. Prepare the interfaces, VLAN trunk and address plan from
+`settings.toml`. Resolve DHCP, active IPv6 and other firewall ownership before
+installation. Do not flush rules to bypass installer checks.
 
-Copy `runtime/router.tar.gz` to the router and extract it into a new directory.
-Run there:
+The installer adds missing base packages. If Python is absent, `install.sh`
+bootstraps it. Keep console access because network changes can interrupt SSH.
 
-```sh
-sudo bash install.sh
-sudo bash test.sh
-```
+## Exporters
 
-Run the test once VPN, ForcAD and the configured vulnboxes are reachable.
+The bundle includes the network exporter and inventory files; no Go install is
+needed on the Router. Enable it with `--network-metrics`.
 
-The installer records the original host state in
-`/var/backups/forcad/router/live.json`. Reinstalls keep this baseline and the
-selected game mode. Use `--files-only` to stage files without changing live
-network or service state. The matching `test.sh --files-only` checks staged
-files only.
+Game metrics are optional. `--game-metrics` requires Zeek 9 or newer at
+`/opt/zeek`. The installer adds Zeek if needed and creates the `forcad-sensor`
+account. It captures the configured VPN-facing interface before SNAT. Use both
+options to enable both exporters.
 
-Firewall files are installed under `/etc/forcad/router/`. The installer owns
-`inet forcad_router` and `ip forcad_nat`. It does not flush the full nftables
-ruleset. A pre-existing firewall manager or custom rules may cause preflight to
-stop; review them first.
+## Firewall and removal
 
-## Network metrics
-
-After ForcAD setup, open a root shell in its installed checkout and export the
-inventory and rules:
-
-```sh
-./backend/bin/forcad network-config --config config/config.yml > network.json
-./backend/bin/forcad network-rules --config network.json > network.nft
-```
-
-Transfer `network.json`, `network.nft` and `backend/bin/forcad` into the extracted
-router bundle, with the binary named `forcad`. It must be built for the router's
-OS and CPU architecture. On the router, run:
-
-```sh
-sudo bash install.sh --network-metrics
-```
-
-## Game metrics
-
-For HTTP/WS and flow metrics, install Zeek 9+ under `/opt/zeek`, create the
-`forcad-sensor` system account, then run:
-
-```sh
-sudo bash install.sh --game-metrics
-```
-
-The sensor captures both directions on the VPN-facing interface before
-filtering and SNAT. Do not capture the trunk or `any`; duplicate capture counts
-traffic twice. For both exporters, provide both options to `install.sh`.
-ForcAD must also be configured to scrape enabled targets in `settings.toml`.
-
-## Firewall mode and rollback
-
-The initial mode is pre-game. To select game mode:
-
-```sh
-sudo nft -c -f /etc/forcad/router/game.nft
-printf 'include "/etc/forcad/router/game.nft"\n' | sudo tee /etc/forcad/router/active.nft >/dev/null
-sudo systemctl reload forcad-router-firewall.service
-```
-
-To return to pre-game mode, use `pre-game.nft` in both commands above.
-
-For removal, preview first, then restore the recorded baseline:
-
-```sh
-sudo bash uninstall.sh --dry-run
-sudo bash uninstall.sh
-```
-
-File-only installs have no live rollback record. See [UNINSTALL.txt](UNINSTALL.txt)
-before removing them or using `--force`.
+The initial firewall mode is pre-game. Owned rules live under
+`/etc/forcad/router/` in nftables tables `inet forcad_router` and `ip
+forcad_nat`. Forward the configured VPN UDP ports to the Router WAN address. See
+[commands and options](../COMMANDS.md#router) to switch modes and uninstall.

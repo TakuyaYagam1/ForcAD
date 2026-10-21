@@ -1,11 +1,19 @@
-`install.sh` applies the generated interface and sysctl settings, loads the
-ForcAD firewall, and enables and starts both WireGuard tunnels. It restarts
-`networking.service` only when the live address or default route differs.
+VPN application
 
-Run `bash test.sh` after installation. Keep console access available because a
-network restart can interrupt SSH. If installation reports a failure, it tries
-to restore the files and live state and reports any recovery problem.
+From the extracted vpn bundle, with console access:
 
-Forward UDP/56767 and UDP/56768 from the external gateway to the router WAN IP
-(use the configured ports if different). Verify a client handshake from
-outside with `wg show`.
+  sudo bash install.sh
+  sudo bash test.sh
+  sudo wg show
+
+The bundle includes wg-attack and wg-admin server configs. The installer
+supports Debian 12/13, adds missing prerequisites, applies networking, sysctl
+and firewall, then starts both tunnels. Use --wireguard-dir /path/to/server to
+reuse server configs for the same deployment; their peer addresses must match
+the bundle.
+
+The Router must forward the configured VPN UDP ports and route both VPN ranges
+through this host. Verify a client handshake and access isolation separately.
+Use --files-only to stage files without applying network settings or managed
+services. It may still install prerequisites. Manual live changes made after
+staging are not recorded for automatic removal. See COMMANDS.md for options.

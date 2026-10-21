@@ -24,14 +24,14 @@ class Lifecycle:
     @contextmanager
     def locked(self):
         regular(self.journal)
-        self.journal.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        lock = regular(self.journal.parent / "operation.lock")
+        lock = regular(self.bundle.path("/run/lock/forcad-router.lock"))
+        lock.parent.mkdir(parents=True, exist_ok=True)
         with lock.open("a") as stream:
             os.fchmod(stream.fileno(), 0o600)
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             yield
 
-    def load(self):
+    def load(self, resume=False):
         if not regular(self.journal).exists():
             if self.bundle.manifest.exists():
                 installed = json.loads(regular(self.bundle.manifest).read_text())
@@ -47,11 +47,25 @@ class Lifecycle:
             envelope.get("sha256") != hashlib.sha256(encoded).hexdigest()
             or record.get("format") != 1
             or not isinstance(record.get("baseline"), dict)
-            or record.get("phase") != "active"
         ):
             raise ValueError(
                 f"Incomplete or corrupt router recovery journal: {self.journal}. "
                 "Inspect its saved state before continuing."
+            )
+        phase = record.get("phase")
+        if phase != "active" and not (
+            resume
+            and phase == "uninstalling"
+            and isinstance(record.get("before"), dict)
+        ):
+            hint = (
+                "Preview continuation with uninstall.sh --resume --dry-run."
+                if phase == "uninstalling"
+                else "Inspect its saved state before continuing."
+            )
+            raise ValueError(
+                f"Incomplete or corrupt router recovery journal: {self.journal}. "
+                f"Recorded phase: {phase}. {hint}"
             )
         return record
 
@@ -103,7 +117,10 @@ class Lifecycle:
     def game_mode_changed(self):
         installed = json.loads(regular(self.bundle.manifest).read_text())
         name = "/etc/forcad/router/active.nft"
-        data = regular(self.bundle.path(name)).read_bytes()
+        path = regular(self.bundle.path(name))
+        if not path.exists():
+            return False
+        data = path.read_bytes()
         record = next(item for item in installed["files"] if item["path"] == name)
         return (
             data.strip()
@@ -114,7 +131,7 @@ class Lifecycle:
             and hashlib.sha256(data).hexdigest() != record["sha256"]
         )
 
-    def check_drift(self, previous, before, force=False):
+    def check_drift(self, previous, before, force=False, removing=False):
         if "applied" not in previous:
             raise ValueError(
                 "Router journal has no applied snapshot; recover its original backup first"
@@ -129,8 +146,9 @@ class Lifecycle:
             previous["baseline"]["system"],
             previous["applied"]["system"],
             before["system"],
-            force=force,
+            force=force or removing,
             allow_game_switch=self.game_mode_changed(),
+            allow_unit_changes=True,
         )
 
     def restore_files(self, checkpoint):
@@ -229,13 +247,14 @@ class Lifecycle:
         print("PASS router settings applied and selected services enabled and running.")
         print("Run bash test.sh to check connectivity to VPN, ForcAD and vulnboxes.")
 
-    def uninstall(self, force=False, dry_run=False):
+    def uninstall(self, force=False, dry_run=False, resume=False):
         bundle = self.bundle
         with self.locked():
-            previous = self.load()
+            previous = self.load(resume=resume)
             plan = bundle.preflight_uninstall(force=force)
             if previous is None:
                 bundle.uninstall_files(force=force, dry_run=dry_run)
+                bundle.finish_uninstall(force=force, dry_run=dry_run)
                 print(
                     "No recorded live installation; manually applied settings are unchanged."
                 )
@@ -248,8 +267,7 @@ class Lifecycle:
             before = self.snapshot(
                 options, previous["baseline"]["network"].get("config")
             )
-            self.check_drift(previous, before, force=force)
-            self.system.preflight(before["system"], options)
+            self.check_drift(previous, before, force=force, removing=True)
             if dry_run:
                 bundle.uninstall_files(force=force, dry_run=True)
                 print(
@@ -287,4 +305,5 @@ class Lifecycle:
                     error,
                     allowed_current=previous["baseline"]["network"],
                 )
-        print("PASS original router files and live state restored. Backups retained.")
+            bundle.finish_uninstall(force=force)
+        print("PASS router services removed; original files and live state restored.")

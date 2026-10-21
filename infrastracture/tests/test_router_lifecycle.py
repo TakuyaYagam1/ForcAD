@@ -94,6 +94,17 @@ class LifecycleTests(unittest.TestCase):
         self.system.restore.assert_called_once_with(self.runtime["system"])
         self.assertFalse(self.Lifecycle(bundle).journal.exists())
 
+    def test_uninstall_does_not_require_install_prerequisites(self):
+        bundle = self.make()
+        bundle.install()
+        self.system.preflight.side_effect = ValueError("metrics dependency removed")
+        self.system.preflight.reset_mock()
+        bundle.uninstall()
+        self.system.preflight.assert_not_called()
+        self.system.stop.assert_called()
+        self.system.restore.assert_called_once()
+        self.assertFalse(bundle.path("/var/backups/forcad/router").exists())
+
     def test_failed_reinstall_keeps_previous_installation(self):
         self.make().install()
         before = self.original.read_bytes()
@@ -160,6 +171,66 @@ class LifecycleTests(unittest.TestCase):
         self.assertTrue(self.Lifecycle(bundle).journal.exists())
         with self.assertRaisesRegex(ValueError, "Incomplete or corrupt"):
             self.Lifecycle(bundle).load()
+
+    def interrupted_uninstall(self):
+        bundle = self.make()
+        bundle.install()
+        lifecycle = self.Lifecycle(bundle)
+        record = lifecycle.load()
+        record["phase"] = "uninstalling"
+        record["before"] = copy.deepcopy(self.runtime)
+        lifecycle.save(record)
+        self.system.reset_mock()
+        return bundle, lifecycle, record
+
+    def test_resume_uninstall_requires_explicit_option(self):
+        bundle, lifecycle, _ = self.interrupted_uninstall()
+        with self.assertRaisesRegex(ValueError, "uninstalling"):
+            bundle.uninstall()
+        self.system.stop.assert_not_called()
+        original_journal = lifecycle.journal.read_bytes()
+        bundle.uninstall(resume=True, dry_run=True)
+        self.system.stop.assert_not_called()
+        self.assertEqual(lifecycle.journal.read_bytes(), original_journal)
+        bundle.uninstall(resume=True)
+        self.system.stop.assert_called()
+        self.assertFalse(bundle.manifest.exists())
+        self.assertFalse(lifecycle.journal.exists())
+        self.assertEqual(self.original.read_bytes(), self.old_interfaces)
+
+    def test_resume_does_not_accept_corrupt_journal(self):
+        bundle, lifecycle, _ = self.interrupted_uninstall()
+        lifecycle.journal.write_text(
+            lifecycle.journal.read_text().replace('"uninstalling"', '"active"')
+        )
+        with self.assertRaisesRegex(ValueError, "corrupt"):
+            bundle.uninstall(resume=True)
+        self.system.stop.assert_not_called()
+
+    def test_resume_does_not_accept_interrupted_install(self):
+        bundle, lifecycle, record = self.interrupted_uninstall()
+        record["phase"] = "applying"
+        lifecycle.save(record)
+        with self.assertRaisesRegex(ValueError, "applying"):
+            bundle.uninstall(resume=True)
+        self.system.stop.assert_not_called()
+
+    def test_failed_resume_keeps_unfinished_journal(self):
+        bundle, lifecycle, record = self.interrupted_uninstall()
+        self.network.restore.side_effect = [ValueError("restore failed"), None]
+        with self.assertRaisesRegex(
+            ValueError, "previous files and live state restored"
+        ):
+            bundle.uninstall(resume=True)
+        self.assertTrue(bundle.manifest.exists())
+        self.assertEqual(lifecycle.load(resume=True), record)
+
+    def test_resume_requires_original_file_manifest(self):
+        bundle, _, _ = self.interrupted_uninstall()
+        bundle.manifest.unlink()
+        with self.assertRaisesRegex(ValueError, "no file manifest"):
+            bundle.uninstall(resume=True)
+        self.system.stop.assert_not_called()
 
     def test_missing_journal_cannot_downgrade_live_uninstall_to_files_only(self):
         bundle = self.make()

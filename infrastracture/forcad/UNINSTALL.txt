@@ -1,11 +1,23 @@
-Use the generated root-level uninstaller:
+ForcAD removal
 
-```sh
-bash uninstall.sh --confirm
-```
+From the root of the extracted forcad bundle:
 
-It permanently deletes the game, database, Compose volumes and managed checkout.
-It restores host files, removes the backup created by this install, purges
-packages installed by the bootstrap, and removes its Docker apt source if the
-source and signing key are unchanged. Packages and files that existed before
-installation are kept.
+  sudo bash uninstall.sh --confirm
+
+This permanently removes the managed checkout, database and ForcAD Compose
+volumes. There is no dry-run. It restores recorded host files and service
+state. Forwarding values are restored when recorded and Docker was inactive
+before install. Docker firewall state is restored only when its before/applied
+records exist, Docker was inactive, and no other Docker resources remain.
+
+The package prompt defaults to keeping dependencies. Use
+--confirm --keep-packages to skip the prompt and retain them. Use
+--confirm --purge-packages to remove installer-added packages and install-owned
+Docker images, build cache and data directories. Unrelated Docker objects and
+pre-existing packages are preserved; purge stops when ownership is unclear. The
+downloaded Go toolchain and its caches are inside the checkout and are removed
+in either mode. System Go is preserved.
+
+Older installs without Docker resource records cannot prove image/cache
+ownership. Use --keep-packages to leave those resources in place. Keep recovery
+records if cleanup fails. See COMMANDS.md for options.

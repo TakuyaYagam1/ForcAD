@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: render test test-network test-game test-dashboards
+.PHONY: render test test-network test-game test-dashboards test-dependencies
 
 render:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) render.py
@@ -16,3 +16,9 @@ test-game:
 
 test-dashboards:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dashboards.py
+
+test-dependencies:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dependencies.py --debian 12
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dependencies.py --debian 13
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dependencies.py --debian 13 --role vpn
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dependencies.py --debian 13 --bootstrap

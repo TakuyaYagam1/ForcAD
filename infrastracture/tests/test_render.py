@@ -1,5 +1,7 @@
+import base64
 import hashlib
 import importlib.util
+import io
 import ipaddress
 import json
 import os
@@ -10,15 +12,39 @@ import sys
 import tarfile
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tests"))
+from helpers import common, source_bundle
+
 import render
 
 spec = importlib.util.spec_from_file_location("generate", ROOT / "vpn/generate.py")
 generate = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generate)
+
+
+def extract_archive(bundle, destination):
+    """Extract regular files while keeping the test portable before Python 3.12."""
+    destination = Path(destination)
+    for member in bundle.getmembers():
+        name = PurePosixPath(member.name)
+        if name.is_absolute() or ".." in name.parts or not member.isfile():
+            raise AssertionError(f"Unsafe archive member: {member.name}")
+        target = destination.joinpath(*name.parts)
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        stream = bundle.extractfile(member)
+        if stream is None:
+            raise AssertionError(f"Unreadable archive member: {member.name}")
+        descriptor = os.open(
+            target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, member.mode & 0o755
+        )
+        with stream, os.fdopen(descriptor, "wb") as output:
+            shutil.copyfileobj(stream, output)
+            os.fchmod(output.fileno(), member.mode & 0o755)
 
 
 class RenderTests(unittest.TestCase):
@@ -169,6 +195,37 @@ class RenderTests(unittest.TestCase):
             "http://172.25.2.20/api/client/status/",
         )
         self.assertNotIn("10.183.", "\n".join(files["router/interfaces"].splitlines()))
+        inventory = json.loads(files["router/network.json"])
+        self.assertEqual(
+            inventory["teams"][0],
+            {
+                "team_ip": "172.27.101.2",
+                "networks": ["172.27.101.2/32", "172.26.200.0/29"],
+            },
+        )
+        self.assertNotIn("10.183.", files["router/network.json"])
+
+    def test_network_inventory_contains_only_team_addresses_and_traffic_networks(self):
+        for count in (1, 5, 32):
+            with self.subTest(teams=count):
+                self.config["teams"]["entries"] = [
+                    {"name": f"team-{number}", "logo": "", "highlighted": False}
+                    for number in range(count)
+                ]
+                files = render.render(self.config)
+                expected = {
+                    "teams": [
+                        {
+                            "team_ip": f"10.183.{101 + number}.2",
+                            "networks": [
+                                f"10.183.{101 + number}.2/32",
+                                f"10.183.200.{number * 8}/29",
+                            ],
+                        }
+                        for number in range(count)
+                    ]
+                }
+                self.assertEqual(json.loads(files["router/network.json"]), expected)
 
     def test_output_is_private_and_never_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -186,28 +243,150 @@ class RenderTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 render.write_bundle(link, {})
 
-    def test_archives_are_private_and_vpn_archive_includes_generated_server_keys(self):
+    def test_archives_are_role_prefixed_private_and_extractable(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "runtime"
             output.mkdir(mode=0o700)
-            for role in ("vpn", "router", "forcad"):
-                render.write_bundle(output / role, {"install.sh": "#!/bin/sh\n"})
+            files_by_role = {
+                "vpn": {
+                    "host.py": "vpn host\n",
+                    "firewall.nft": "vpn firewall\n",
+                    "server/wg-admin.conf": "PrivateKey = test\n",
+                },
+                "router": {
+                    "host.py": "router host\n",
+                    "network.json": "{}\n",
+                    "rules/firewall.nft": "router firewall\n",
+                },
+                "forcad": {
+                    "host.py": "forcad host\n",
+                    "config.yml": "teams: []\n",
+                    "checkers/check.py": "print('ok')\n",
+                },
+            }
+            expected = {
+                role: {f"{role}/{name}": content for name, content in files.items()}
+                for role, files in files_by_role.items()
+            }
+            expected["vpn"]["vpn/server/wg-admin.conf"] = "PrivateKey = test\n"
+            for role, files in files_by_role.items():
+                render.write_bundle(output / role, files)
             wireguard_server = output / "wireguard/server"
             wireguard_server.mkdir(mode=0o700, parents=True)
-            (wireguard_server / "wg-attack.conf").write_text("PrivateKey = test\n")
+            (wireguard_server / "wg-admin.conf").write_text("PrivateKey = test\n")
 
             render.create_archives(output, wireguard_server=wireguard_server)
 
+            extract_to = Path(directory) / "extracted"
+            extract_to.mkdir()
             for role in ("vpn", "router", "forcad"):
                 archive = output / f"{role}.tar.gz"
                 self.assertEqual(stat.S_IMODE(archive.stat().st_mode), 0o600)
                 with tarfile.open(archive, "r:gz") as bundle:
                     names = bundle.getnames()
-                    self.assertIn("install.sh", names)
-                    if role == "vpn":
-                        self.assertIn("server/wg-attack.conf", names)
-                    else:
-                        self.assertEqual(names, ["install.sh"])
+                    self.assertCountEqual(names, expected[role])
+                    self.assertTrue(all(name.startswith(f"{role}/") for name in names))
+                    extract_archive(bundle, extract_to)
+            for archive_files in expected.values():
+                for name, content in archive_files.items():
+                    extracted = extract_to / name
+                    self.assertTrue(extracted.is_file())
+                    self.assertEqual(extracted.read_text(), content)
+
+    def test_installed_public_assets_are_readable_and_config_stays_private(self):
+        files = render.fresh_forcad_files(self.config)
+        script = files["forcad/install.sh"]
+        copy_assets = script[
+            script.index('install -m 0600 "$bundle_dir/config.yml"') : script.index(
+                'if [[ -d "$bundle_dir/checkers" ]]'
+            )
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "runtime"
+            render.write_bundle(output, files)
+            render.create_archives(output, roles=("forcad",))
+            extracted = root / "extracted"
+            with tarfile.open(output / "forcad.tar.gz") as archive:
+                extract_archive(archive, extracted)
+            target = root / "installed"
+            for name in ("config", "deployment/docker", "public/teams"):
+                (target / name).mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                [
+                    "bash",
+                    "-c",
+                    'set -euo pipefail\numask 077\nbundle_dir="$1"\ntarget="$2"\n'
+                    + copy_assets,
+                    "install-assets",
+                    str(extracted / "forcad"),
+                    str(target),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            public = target / "public"
+            for path in (public, *public.rglob("*")):
+                self.assertEqual(
+                    stat.S_IMODE(path.stat().st_mode),
+                    0o755 if path.is_dir() else 0o644,
+                    str(path.relative_to(target)),
+                )
+                if path.is_file():
+                    self.assertEqual(
+                        path.read_bytes(),
+                        files[f"forcad/{path.relative_to(target).as_posix()}"],
+                    )
+            for name in ("config/config.yml", "deployment/docker/.env"):
+                self.assertEqual(stat.S_IMODE((target / name).stat().st_mode), 0o600)
+
+    def test_archive_collision_preserves_existing_archive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "runtime"
+            output.mkdir(mode=0o700)
+            render.write_bundle(
+                output / "vpn", {"server/wg-admin.conf": "PrivateKey = bundled\n"}
+            )
+            wireguard_server = output / "wireguard/server"
+            wireguard_server.mkdir(mode=0o700, parents=True)
+            (wireguard_server / "wg-admin.conf").write_text("PrivateKey = external\n")
+            archive = output / "vpn.tar.gz"
+            archive.write_bytes(b"existing archive\n")
+
+            with self.assertRaisesRegex(ValueError, "differs from bundle"):
+                render.create_archives(
+                    output, roles=("vpn",), wireguard_server=wireguard_server
+                )
+
+            self.assertEqual(archive.read_bytes(), b"existing archive\n")
+            self.assertEqual(list(output.glob(".vpn.*.tmp")), [])
+
+    def test_archive_collision_cleans_standalone_wireguard_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Path(directory) / "runtime"
+            runtime.mkdir(mode=0o700)
+            render.write_bundle(
+                runtime / "vpn", {"server/wg-attack.conf": "old server config\n"}
+            )
+            archive = runtime / "vpn.tar.gz"
+            archive.write_bytes(b"existing archive\n")
+            output = runtime / "wireguard"
+            counter = 0
+
+            def fake_wg(command, value=None):
+                nonlocal counter
+                counter += 1
+                return base64.b64encode(counter.to_bytes(32, "big")).decode()
+
+            with (
+                mock.patch.object(generate, "wg", side_effect=fake_wg),
+                self.assertRaisesRegex(ValueError, "differs from bundle"),
+            ):
+                generate.generate(self.config, output)
+
+            self.assertFalse(output.exists())
+            self.assertEqual(archive.read_bytes(), b"existing archive\n")
 
     def test_render_cli_writes_three_archives(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -232,6 +411,48 @@ class RenderTests(unittest.TestCase):
             self.assertNotEqual(refused.returncode, 0)
             self.assertEqual(marker.read_text(), "preserve\n")
 
+            fake_bin = Path(directory) / "bin"
+            fake_bin.mkdir()
+            host_arch = "amd64"
+            router_arch = "arm64"
+            fake_go = fake_bin / "go"
+            fake_go.write_text(
+                f"#!{sys.executable}\n"
+                "import json\n"
+                "from pathlib import Path\n"
+                "import sys\n"
+                f"host_arch = {host_arch!r}\n"
+                "args = sys.argv[1:]\n"
+                "if args[:1] == ['env']:\n"
+                "    print(json.dumps({'GOHOSTOS': 'linux', 'GOHOSTARCH': host_arch}))\n"
+                "elif args[:1] == ['build']:\n"
+                "    output = Path(args[args.index('-o') + 1])\n"
+                "    output.write_bytes(bytes.fromhex('7f454c46') + b' fixture\\n')\n"
+                "elif args[:1] == ['run']:\n"
+                "    print('create table inet forcad_monitoring')\n"
+                "else:\n"
+                "    raise SystemExit(f'Unexpected fake Go command: {args!r}')\n"
+            )
+            fake_go.chmod(0o700)
+            fake_wg = fake_bin / "wg"
+            fake_wg.write_text(
+                f"#!{sys.executable}\n"
+                "import base64\n"
+                "import sys\n"
+                "from pathlib import Path\n"
+                "counter = Path(__file__).with_suffix('.count')\n"
+                "try:\n"
+                "    number = int(counter.read_text()) + 1\n"
+                "except FileNotFoundError:\n"
+                "    number = 1\n"
+                "counter.write_text(str(number))\n"
+                "if sys.argv[1] not in {'genkey', 'genpsk', 'pubkey'}:\n"
+                "    raise SystemExit(2)\n"
+                "print(base64.b64encode(number.to_bytes(32, 'big')).decode())\n"
+            )
+            fake_wg.chmod(0o700)
+            environment = dict(os.environ, PATH=f"{fake_bin}:{os.environ['PATH']}")
+
             subprocess.run(
                 [
                     sys.executable,
@@ -240,7 +461,10 @@ class RenderTests(unittest.TestCase):
                     str(ROOT / "settings.example.toml"),
                     "--output",
                     str(output),
+                    "--router-arch",
+                    router_arch,
                 ],
+                env=environment,
                 check=True,
                 capture_output=True,
                 text=True,
@@ -248,6 +472,252 @@ class RenderTests(unittest.TestCase):
             self.assertEqual(
                 {path.name for path in output.glob("*.tar.gz")},
                 {"vpn.tar.gz", "router.tar.gz", "forcad.tar.gz"},
+            )
+
+            wireguard = output / "wireguard"
+            server_files = ("wg-attack.conf", "wg-admin.conf")
+            server_contents = {}
+            for name in server_files:
+                generated = (wireguard / "server" / name).read_bytes()
+                bundled = (output / "vpn/server" / name).read_bytes()
+                self.assertIn(b"PrivateKey = ", generated)
+                self.assertEqual(bundled, generated)
+                self.assertEqual(
+                    stat.S_IMODE((output / "vpn/server" / name).stat().st_mode),
+                    0o600,
+                )
+                server_contents[name] = generated
+
+            participants = list((wireguard / "participants").rglob("*.conf"))
+            admins = list((wireguard / "admins").glob("*.conf"))
+            config = render.load_config(ROOT / "settings.example.toml")
+            self.assertEqual(
+                len(participants),
+                len(config["teams"]["entries"]) * config["teams"]["members_per_team"],
+            )
+            self.assertEqual(len(admins), config["admins"])
+            with tarfile.open(output / "vpn.tar.gz", "r:gz") as bundle_archive:
+                names = bundle_archive.getnames()
+                for name, content in server_contents.items():
+                    archived = f"vpn/server/{name}"
+                    self.assertEqual(names.count(archived), 1)
+                    self.assertEqual(
+                        bundle_archive.extractfile(archived).read(), content
+                    )
+                self.assertFalse(
+                    any(
+                        name.startswith(("vpn/participants/", "vpn/admins/"))
+                        for name in names
+                    )
+                )
+
+            before_repeat = {
+                name: (output / "vpn/server" / name).read_bytes()
+                for name in server_files
+            }
+            repeated = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "render.py"),
+                    "--config",
+                    str(ROOT / "settings.example.toml"),
+                    "--output",
+                    str(output),
+                    "--router-arch",
+                    router_arch,
+                ],
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(repeated.returncode, 0)
+            self.assertEqual(
+                before_repeat,
+                {
+                    name: (output / "vpn/server" / name).read_bytes()
+                    for name in server_files
+                },
+            )
+
+            extracted = Path(directory) / "extracted"
+            extracted.mkdir()
+            with tarfile.open(output / "vpn.tar.gz", "r:gz") as bundle_archive:
+                extract_archive(bundle_archive, extracted)
+            host_root = Path(directory) / "host"
+            host_root.mkdir()
+            wireguard_dir = host_root / "etc/wireguard"
+            wireguard_dir.mkdir(mode=0o700, parents=True)
+            unrelated = wireguard_dir / "wg-unrelated.conf"
+            unrelated.write_text("unrelated config\n")
+            unrelated.chmod(0o600)
+            vpn = source_bundle("vpn", extracted / "vpn", host_root)
+            self.assertTrue(vpn.files_only)
+
+            with (
+                mock.patch.object(
+                    common, "run", side_effect=AssertionError("runtime command")
+                ),
+                mock.patch(
+                    "vpn.host.run", side_effect=AssertionError("runtime command")
+                ),
+                mock.patch(
+                    "hostlib.base.run", side_effect=AssertionError("runtime command")
+                ),
+            ):
+                vpn.plan()
+                vpn.install()
+                installed = {
+                    name: (wireguard_dir / name).read_bytes() for name in server_files
+                }
+                self.assertEqual(installed, server_contents)
+                for name in server_files:
+                    self.assertEqual(
+                        stat.S_IMODE((wireguard_dir / name).stat().st_mode), 0o600
+                    )
+
+                vpn.plan()
+                vpn.install()
+                self.assertEqual(
+                    {
+                        name: (wireguard_dir / name).read_bytes()
+                        for name in server_files
+                    },
+                    installed,
+                )
+                vpn.uninstall()
+
+            for name in server_files:
+                self.assertFalse((wireguard_dir / name).exists())
+            self.assertEqual(unrelated.read_text(), "unrelated config\n")
+            self.assertEqual(stat.S_IMODE(unrelated.stat().st_mode), 0o600)
+            with tarfile.open(output / "router.tar.gz", "r:gz") as bundle:
+                inventory = bundle.getmember("router/network.json")
+                self.assertEqual(inventory.mode, 0o600)
+                self.assertEqual(
+                    bundle.extractfile(inventory).read(),
+                    (output / "router/network.json").read_bytes(),
+                )
+                self.assertEqual(bundle.getmember("router/forcad").mode, 0o700)
+                self.assertEqual(
+                    bundle.extractfile("router/forcad").read(4), b"\x7fELF"
+                )
+                self.assertEqual(bundle.getmember("router/network.nft").mode, 0o600)
+                self.assertTrue(
+                    bundle.extractfile("router/network.nft")
+                    .read()
+                    .startswith(b"create table inet forcad_monitoring\n")
+                )
+
+    def test_failed_metrics_build_removes_partial_output(self):
+        for error in (
+            ValueError("Install Go"),
+            subprocess.CalledProcessError(1, ["go", "build"], stderr="build failed"),
+            subprocess.CalledProcessError(
+                1, ["forcad", "network-rules"], stderr="invalid inventory"
+            ),
+        ):
+            with (
+                self.subTest(error=str(error)),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                output = Path(directory) / "runtime"
+                with (
+                    mock.patch.object(
+                        sys,
+                        "argv",
+                        [
+                            "render.py",
+                            "--config",
+                            str(ROOT / "settings.example.toml"),
+                            "--output",
+                            str(output),
+                        ],
+                    ),
+                    mock.patch.object(
+                        render, "build_router_metrics", side_effect=error
+                    ),
+                    mock.patch.object(render, "create_archives") as archives,
+                    mock.patch("sys.stderr"),
+                    self.assertRaises(SystemExit) as failure,
+                ):
+                    render.main()
+                self.assertEqual(failure.exception.code, 1)
+                self.assertFalse(output.exists())
+                archives.assert_not_called()
+
+    def test_failed_wireguard_generation_cleans_output_and_hides_subprocess_stderr(
+        self,
+    ):
+        leaked_key = "PrivateKey = must-not-be-logged"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "runtime"
+            with (
+                mock.patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "render.py",
+                        "--config",
+                        str(ROOT / "settings.example.toml"),
+                        "--output",
+                        str(output),
+                    ],
+                ),
+                mock.patch.object(render, "build_router_metrics"),
+                mock.patch.object(render, "create_archives") as archives,
+                mock.patch(
+                    "vpn.generate.subprocess.run",
+                    side_effect=subprocess.CalledProcessError(
+                        1, ["wg", "genkey"], stderr=leaked_key
+                    ),
+                ),
+                mock.patch("sys.stderr", new_callable=io.StringIO) as stderr,
+                self.assertRaises(SystemExit) as failure,
+            ):
+                render.main()
+
+            self.assertEqual(failure.exception.code, 1)
+            self.assertFalse(output.exists())
+            archives.assert_not_called()
+            self.assertIn("WireGuard genkey failed", stderr.getvalue())
+            self.assertNotIn(leaked_key, stderr.getvalue())
+
+    def test_cross_compile_generates_rules_with_native_go(self):
+        with tempfile.TemporaryDirectory() as directory:
+            router = Path(directory) / "router"
+            router.mkdir()
+            (router / "network.json").write_text('{"teams": []}')
+            calls = []
+
+            def run(command, **kwargs):
+                calls.append((command, dict(kwargs.get("env", {}))))
+                if command[1] == "env":
+                    return subprocess.CompletedProcess(
+                        command, 0, '{"GOHOSTOS": "darwin", "GOHOSTARCH": "amd64"}'
+                    )
+                if command[1] == "build":
+                    (router / "forcad").write_bytes(b"linux-arm64")
+                    return subprocess.CompletedProcess(command, 0, "")
+                self.assertEqual(command[1], "run")
+                return subprocess.CompletedProcess(
+                    command, 0, "create table inet forcad_monitoring\n"
+                )
+
+            with (
+                mock.patch.object(render.shutil, "which", return_value="/usr/bin/go"),
+                mock.patch.object(render.subprocess, "run", side_effect=run),
+            ):
+                render.build_router_metrics(directory, "arm64")
+            self.assertEqual(calls[1][1]["GOOS"], "linux")
+            self.assertEqual(calls[1][1]["GOARCH"], "arm64")
+            self.assertEqual(calls[1][1]["CGO_ENABLED"], "0")
+            self.assertEqual(calls[2][1]["GOOS"], "darwin")
+            self.assertEqual(calls[2][1]["GOARCH"], "amd64")
+            self.assertEqual((router / "forcad").read_bytes(), b"linux-arm64")
+            self.assertEqual(
+                (router / "network.nft").read_text(),
+                "create table inet forcad_monitoring\n",
             )
 
     def test_render_has_no_secrets_and_supports_udp_only_game(self):
@@ -289,9 +759,7 @@ class RenderTests(unittest.TestCase):
         self.assertIn("down -v --remove-orphans", files["forcad/uninstall.sh"])
         self.assertIn('rm -rf -- "$target"', files["forcad/uninstall.sh"])
         self.assertIn("apt-get purge -y", files["forcad/uninstall.sh"])
-        self.assertIn(
-            "/var/backups/forcad/forcad/install-", files["forcad/uninstall.sh"]
-        )
+        self.assertIn("--discard-backups", files["forcad/uninstall.sh"])
         self.assertNotIn("update.sh", files)
         self.assertIn(
             "down ip route del 10.183.200.0/24 via 10.183.1.2 dev ens20 || true",
@@ -354,7 +822,7 @@ class RenderTests(unittest.TestCase):
             fake_bin = root / "bin"
             fake_bin.mkdir()
             call_log = root / "calls.log"
-            for command in ("apt-get", "systemctl", "rmdir"):
+            for command in ("apt-get", "systemctl", "rmdir", "docker"):
                 executable = fake_bin / command
                 executable.write_text(
                     "#!/usr/bin/env bash\n"
@@ -377,6 +845,7 @@ class RenderTests(unittest.TestCase):
 
             completed = subprocess.run(
                 ["bash", str(script), "--confirm"],
+                input="y\n",
                 env=environment,
                 capture_output=True,
                 text=True,
@@ -386,8 +855,8 @@ class RenderTests(unittest.TestCase):
             self.assertFalse(target.exists())
             calls = call_log.read_text()
             self.assertIn("apt-get purge -y -- forcad-example", calls)
-            self.assertIn("systemctl enable docker", calls)
-            self.assertIn("systemctl start docker", calls)
+            self.assertIn("systemctl enable docker.service", calls)
+            self.assertIn("systemctl start docker.service", calls)
             self.assertNotIn("autoremove", calls)
 
     @unittest.skipUnless(shutil.which("wg"), "wireguard-tools is required")

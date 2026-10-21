@@ -12,6 +12,7 @@ from pathlib import Path
 
 from hostlib.common import regular, run
 from hostlib.files import atomic_write, rollback_files
+from hostlib.services import stop_firewall
 
 FIREWALL = "forcad-vpn-firewall.service"
 WG_UNITS = ("wg-quick@wg-attack.service", "wg-quick@wg-admin.service")
@@ -255,7 +256,10 @@ class Runtime:
         self._require_live_root()
         for unit in (*WG_UNITS, FIREWALL):
             if self._unit_state(unit)["active_state"] in ACTIVE:
-                run("systemctl", "stop", unit)
+                if unit == FIREWALL:
+                    stop_firewall(self.bundle, unit)
+                else:
+                    run("systemctl", "stop", unit)
             state = self._unit_state(unit)["unit_file_state"]
             if state in ENABLED:
                 self._disable(unit, state)
@@ -271,10 +275,47 @@ class Runtime:
     def _wireguard_interfaces():
         return sorted(run("wg", "show", "interfaces").split())
 
+    def verify_removed(self):
+        self._require_live_root()
+        remaining = set(self._wireguard_interfaces()) & {"wg-attack", "wg-admin"}
+        if remaining:
+            raise ValueError(
+                "Managed WireGuard interfaces remain active: "
+                + ", ".join(sorted(remaining))
+            )
+        for unit in (FIREWALL, *WG_UNITS):
+            state = self._unit_state(unit)
+            if state["active_state"] in ACTIVE or state["unit_file_state"] in ENABLED:
+                raise ValueError(
+                    f"Managed VPN service remains active or enabled: {unit}"
+                )
+
+    def check_restore(self, snapshot):
+        for manager in FIREWALL_MANAGERS:
+            if self._unit_state(manager)["active_state"] in ACTIVE:
+                raise ValueError(f"Another firewall manager is active: {manager}")
+        current = self._unit_state(NFTABLES)["active_state"] in ACTIVE
+        wanted = snapshot["units"][NFTABLES]["active_state"] == "active"
+        if current != wanted:
+            inventory = json.loads(run("nft", "-j", "list", "tables"))
+            foreign = [
+                f"{item['table']['family']} {item['table']['name']}"
+                for item in inventory.get("nftables", [])
+                if "table" in item
+                and (item["table"]["family"], item["table"]["name"])
+                != ("inet", "forcad_vpn")
+            ]
+            if foreign:
+                raise ValueError(
+                    "Cannot restore nftables.service with foreign tables: "
+                    + ", ".join(foreign)
+                )
+
     def restore(self, snapshot):
         self._require_live_root()
         if snapshot.get("role") != "vpn":
             raise ValueError("Runtime snapshot belongs to another host role")
+        self.check_restore(snapshot)
         self.stop()
         for key, value in snapshot["sysctls"].items():
             run("sysctl", "-w", f"{key}={value}")
@@ -302,9 +343,16 @@ class Runtime:
                 continue
             active = self._unit_state(unit)["active_state"] in ACTIVE
             if wanted["active_state"] == "active" and not active:
+                if unit == NFTABLES:
+                    self.check_restore(snapshot)
                 run("systemctl", "start", unit)
             elif wanted["active_state"] != "active" and active:
-                run("systemctl", "stop", unit)
+                if unit == NFTABLES:
+                    self.check_restore(snapshot)
+                if unit == FIREWALL:
+                    stop_firewall(self.bundle, unit)
+                else:
+                    run("systemctl", "stop", unit)
         if snapshot["table"] is not None and self._table() is None:
             with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8") as rules:
                 rules.write(snapshot["table"])
@@ -361,8 +409,8 @@ class Lifecycle:
     @contextmanager
     def locked(self):
         regular(self.journal)
-        self.journal.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        lock = regular(self.journal.parent / "operation.lock")
+        lock = regular(self.bundle.path("/run/lock/forcad-vpn.lock"))
+        lock.parent.mkdir(parents=True, exist_ok=True)
         with lock.open("a") as stream:
             os.fchmod(stream.fileno(), 0o600)
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -476,6 +524,28 @@ class Lifecycle:
             os.getegid(),
         )
 
+    @staticmethod
+    def removal_snapshot(snapshot):
+        """Restore shared host settings while keeping the managed VPN removed."""
+        target = deepcopy(snapshot)
+        for unit in WG_UNITS:
+            if unit in target["units"]:
+                target["units"][unit].update(
+                    active_state="inactive", unit_file_state="disabled"
+                )
+        if FIREWALL in target["units"]:
+            target["units"][FIREWALL].update(
+                load_state="not-found", active_state="inactive", unit_file_state=""
+            )
+        target["table"] = None
+        if "wireguard_interfaces" in target:
+            target["wireguard_interfaces"] = [
+                name
+                for name in target["wireguard_interfaces"]
+                if name not in {"wg-attack", "wg-admin"}
+            ]
+        return target
+
     def uninstall(self, force=False, dry_run=False):
         with self.locked():
             previous = self.load()
@@ -492,6 +562,7 @@ class Lifecycle:
             plan = self.bundle.preflight_uninstall(force=force)
             if previous is None:
                 self.bundle.uninstall_files(force=force, dry_run=dry_run)
+                self.bundle.finish_uninstall(force=force, dry_run=dry_run)
                 print(
                     "No recorded live VPN installation; live settings were not changed."
                 )
@@ -503,9 +574,11 @@ class Lifecycle:
                 )
                 return
             current = self.runtime.snapshot()
-            if current != previous["applied"] and not force:
+            target = self.removal_snapshot(previous["baseline"])
+            self.runtime.check_restore(target)
+            if current["network"] != previous["applied"]["network"] and not force:
                 raise ValueError(
-                    "VPN runtime changed since installation; inspect it or use --force"
+                    "VPN network changed since installation; inspect it or use --force"
                 )
             if not plan["installed"]:
                 raise ValueError("Live VPN installation has no file manifest")
@@ -521,7 +594,8 @@ class Lifecycle:
             try:
                 self.runtime.stop()
                 self.bundle.uninstall_files(force=force)
-                self.runtime.restore(previous["baseline"])
+                self.runtime.restore(target)
+                self.runtime.verify_removed()
                 self.journal.unlink(missing_ok=True)
             except BaseException as error:
                 failures = []
@@ -545,6 +619,7 @@ class Lifecycle:
                     ) from error
                 self.save(previous)
                 raise
+            self.bundle.finish_uninstall(force=force)
         print(
-            "PASS VPN services stopped and original files and live settings restored."
+            "PASS managed VPN tunnels, services and files removed; shared host settings restored."
         )

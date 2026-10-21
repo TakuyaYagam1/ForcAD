@@ -3,11 +3,18 @@ set -Eeuo pipefail
 
 bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 target=@@INSTALL_PATH@@
+repo=@@REPOSITORY_URL@@
 if [[ "$EUID" -ne 0 ]]; then exec sudo -- bash "$0" "$@"; fi
-if [[ $# -ne 1 || "$1" != "--confirm" ]]; then
-    echo "Usage: bash uninstall.sh --confirm" >&2
+if [[ $# -lt 1 || $# -gt 2 || "$1" != "--confirm" ]]; then
+    echo "Usage: bash uninstall.sh --confirm [--purge-packages|--keep-packages]" >&2
     echo "This permanently removes the deployment, database and Compose volumes." >&2
     exit 2
+fi
+package_choice="${2:-ask}"
+case "$package_choice" in ask|--purge-packages|--keep-packages) ;; *) echo "Unknown package option" >&2; exit 2 ;; esac
+if [[ ! -e "$target" && ! -L "$target" ]]; then
+    echo "ForcAD is already uninstalled."
+    exit 0
 fi
 [[ -d "$target" && ! -L "$target" ]] || { echo "No safe managed installation found at $target" >&2; exit 1; }
 cursor="$(dirname -- "$target")"
@@ -15,70 +22,378 @@ while [[ "$cursor" != / ]]; do
     [[ ! -L "$cursor" ]] || { echo "Refusing symlinked install parent: $cursor" >&2; exit 1; }
     cursor="$(dirname -- "$cursor")"
 done
-[[ -f "$target/.forcad-fresh-install" && ! -L "$target/.forcad-fresh-install" ]] || { echo "No managed installation marker found at $target" >&2; exit 1; }
-grep -Fqx @@INSTALL_MARKER@@ "$target/.forcad-fresh-install" || { echo "Install marker does not match this bundle" >&2; exit 1; }
-packages_file="$target/.forcad-managed-packages"
-[[ -f "$packages_file" && ! -L "$packages_file" ]] || { echo "Managed package manifest is missing or unsafe" >&2; exit 1; }
-expected_packages_sha="$(sed -n 's/^packages_sha256=//p' "$target/.forcad-fresh-install")"
-[[ "$expected_packages_sha" =~ ^[a-f0-9]{64}$ && "$(sha256sum "$packages_file" | cut -d ' ' -f 1)" == "$expected_packages_sha" ]] || { echo "Managed package manifest checksum mismatch" >&2; exit 1; }
-mapfile -t packages < "$packages_file"
-for package in "${packages[@]}"; do
-    [[ "$package" =~ ^[a-zA-Z0-9.+:~_-]+$ ]] || { echo "Invalid package in managed manifest: $package" >&2; exit 1; }
+marker="$target/.forcad-fresh-install"
+[[ -f "$marker" && ! -L "$marker" ]] || { echo "No managed installation marker found at $target" >&2; exit 1; }
+IFS= read -r installed_source < "$marker"
+[[ "$installed_source" == "$repo "* ]] || { echo "Installation belongs to another repository" >&2; exit 1; }
+
+verify_record() {
+    local name="$1" file="$target/.forcad-$1" expected
+    [[ -f "$file" && ! -L "$file" ]] || { echo "Missing or unsafe install record: $name" >&2; exit 1; }
+    expected="$(sed -n "s/^${name}_sha256=//p" "$marker")"
+    [[ "$expected" =~ ^[a-f0-9]{64}$ && "$(sha256sum "$file" | cut -d ' ' -f 1)" == "$expected" ]] || {
+        echo "Install record checksum mismatch: $name" >&2; exit 1;
+    }
+}
+for name in docker-state socket-state containerd-state created-dirs sysctl monitoring firewall-before firewall-applied resources-before resources-applied resources-cleaned docker-group uninstalled; do
+    if grep -q "^${name}_sha256=" "$marker"; then verify_record "$name"; fi
 done
-host_backup=
-[[ -f "$target/.forcad-host-backup" && ! -L "$target/.forcad-host-backup" ]] || { echo "Host backup marker is missing or unsafe" >&2; exit 1; }
-host_backup="$(<"$target/.forcad-host-backup")"
-[[ "$host_backup" =~ ^[0-9]{8}-[0-9]{6}-[a-zA-Z0-9_-]+$ ]] || { echo "Invalid host backup marker" >&2; exit 1; }
-docker_active=inactive
-docker_enabled=disabled
-[[ -f "$target/.forcad-docker-state" && ! -L "$target/.forcad-docker-state" ]] || { echo "Docker service state marker is missing or unsafe" >&2; exit 1; }
-mapfile -t docker_state < "$target/.forcad-docker-state"
-[[ ${#docker_state[@]} -eq 2 ]] || { echo "Invalid Docker service state marker" >&2; exit 1; }
-docker_active="${docker_state[0]}"
-docker_enabled="${docker_state[1]}"
-[[ "$docker_active" =~ ^(active|inactive|failed|unknown)$ && "$docker_enabled" =~ ^(enabled|enabled-runtime|disabled|masked|masked-runtime|static|indirect|alias|generated|unknown)$ ]] || { echo "Invalid Docker service state marker" >&2; exit 1; }
-docker_repo_owned=false
-if [[ -f "$target/.forcad-docker.sources" && ! -L "$target/.forcad-docker.sources" && -f "$target/.forcad-docker-key.sha256" && ! -L "$target/.forcad-docker-key.sha256" ]]; then
-    docker_repo_owned=true
-fi
-(cd "$target" && ./control.sh down -v --remove-orphans)
-host_uninstall_output="$(bash "$bundle_dir/host/uninstall.sh" --force)"
-printf '%s\n' "$host_uninstall_output"
-uninstall_backup="$(sed -n 's/^Current files saved: \/var\/backups\/forcad\/forcad\/uninstall-//p' <<< "$host_uninstall_output")"
-if [[ -n "$uninstall_backup" ]]; then
-    [[ "$uninstall_backup" =~ ^[0-9]{8}-[0-9]{6}-[a-zA-Z0-9_-]+$ ]] || { echo "Invalid uninstall backup marker" >&2; exit 1; }
-fi
-if ! printf '%s\n' "${packages[@]}" | grep -Eq '^(docker-ce|docker.io)(:[A-Za-z0-9_-]+)?$'; then
-    case "$docker_enabled" in
-        enabled) systemctl enable docker ;;
-        disabled) systemctl disable docker ;;
-        masked) systemctl mask docker ;;
-        masked-runtime) systemctl mask --runtime docker ;;
+# The first installer used a different checksum key for this record.
+packages_file="$target/.forcad-managed-packages"
+[[ -f "$packages_file" && ! -L "$packages_file" ]] || { echo "Managed package record is missing or unsafe" >&2; exit 1; }
+expected_packages_sha="$(sed -n 's/^packages_sha256=//p' "$marker")"
+[[ "$expected_packages_sha" =~ ^[a-f0-9]{64}$ && "$(sha256sum "$packages_file" | cut -d ' ' -f 1)" == "$expected_packages_sha" ]] || { echo "Managed package checksum mismatch" >&2; exit 1; }
+mapfile -t packages < "$packages_file"
+docker_owned=false
+containerd_owned=false
+for package in "${packages[@]}"; do
+    [[ "$package" =~ ^[a-z0-9][a-z0-9.+-]*(:[a-z0-9_-]+)?$ ]] || { echo "Invalid managed package: $package" >&2; exit 1; }
+    case "${package%%:*}" in docker-ce|docker.io) docker_owned=true ;; containerd.io|containerd) containerd_owned=true ;; esac
+done
+
+read_service() {
+    local name="$1" owned="$2" file="$target/.forcad-$1-state"
+    service_state=(unknown unknown)
+    if [[ "$name" == docker && ! -e "$file" ]]; then echo "Docker service record is missing" >&2; exit 1; fi
+    if [[ -e "$file" || -L "$file" ]]; then
+        [[ -f "$file" && ! -L "$file" ]] || { echo "Unsafe service record: $file" >&2; exit 1; }
+        if [[ "$name" != docker ]] || grep -q '^docker-state_sha256=' "$marker"; then verify_record "$name-state"; fi
+        mapfile -t service_state < "$file"
+        [[ ${#service_state[@]} -eq 2 ]] || { echo "Invalid service record: $file" >&2; exit 1; }
+    fi
+    [[ "${service_state[0]}" =~ ^(active|inactive|failed|unknown)$ ]] || { echo "Invalid service activity record" >&2; exit 1; }
+    case "${service_state[1]}" in
+        enabled|enabled-runtime|disabled|masked|masked-runtime|static|indirect|alias|generated|unknown|not-found|"") ;;
+        *) echo "Invalid service enablement record" >&2; exit 1 ;;
     esac
-    if [[ "$docker_active" == active ]]; then systemctl start docker; else systemctl stop docker || true; fi
+    # Old installers captured Docker after apt had already started it.
+    if [[ "$owned" == true ]]; then service_state=(inactive disabled); fi
+}
+read_service docker "$docker_owned"; docker_state=("${service_state[@]}")
+read_service socket "$docker_owned"; socket_state=("${service_state[@]}")
+read_service containerd "$containerd_owned"; containerd_state=("${service_state[@]}")
+
+created_directories=()
+if [[ -e "$target/.forcad-created-dirs" || -L "$target/.forcad-created-dirs" ]]; then
+    verify_record created-dirs
+    mapfile -t created_directories < "$target/.forcad-created-dirs"
+    for path in "${created_directories[@]}"; do
+        case "$path" in
+            /etc/docker|/etc/containerd|/var/lib/docker|/var/lib/containerd|/etc/apt/keyrings) ;;
+            *)
+                [[ "$path" != / && "$path" == /* && "$path" != *"/../"* && "$target" == "$path/"* ]] || {
+                    echo "Invalid created directory record: $path" >&2; exit 1;
+                }
+                ;;
+        esac
+        cursor="$path"
+        while [[ "$cursor" != / ]]; do
+            [[ ! -L "$cursor" ]] || { echo "Refusing replaced directory: $cursor" >&2; exit 1; }
+            cursor="$(dirname -- "$cursor")"
+        done
+    done
 fi
-if [[ "$docker_repo_owned" == true ]]; then
-    if [[ -f /etc/apt/sources.list.d/docker.sources && ! -L /etc/apt/sources.list.d/docker.sources && -f /etc/apt/keyrings/docker.asc && ! -L /etc/apt/keyrings/docker.asc ]] \
-        && cmp -s "$target/.forcad-docker.sources" /etc/apt/sources.list.d/docker.sources \
-        && [[ "$(sha256sum /etc/apt/keyrings/docker.asc 2>/dev/null | cut -d ' ' -f 1)" == "$(<"$target/.forcad-docker-key.sha256")" ]]; then
-        rm -- /etc/apt/sources.list.d/docker.sources /etc/apt/keyrings/docker.asc
-        rmdir --ignore-fail-on-non-empty /etc/apt/keyrings
+sysctls=()
+if [[ -e "$target/.forcad-sysctl" || -L "$target/.forcad-sysctl" ]]; then
+    verify_record sysctl
+    mapfile -t sysctls < "$target/.forcad-sysctl"
+    for value in "${sysctls[@]}"; do
+        [[ "$value" =~ ^net\.ipv[46]\.(ip_forward|conf\.all\.forwarding)\ =\ [01]$ ]] || {
+            echo "Invalid saved forwarding setting" >&2; exit 1;
+        }
+    done
+fi
+monitoring=false
+if [[ -e "$target/.forcad-monitoring" || -L "$target/.forcad-monitoring" ]]; then
+    verify_record monitoring
+    monitoring="$(<"$target/.forcad-monitoring")"
+    [[ "$monitoring" == true || "$monitoring" == false ]] || { echo "Invalid monitoring record" >&2; exit 1; }
+elif grep -q '^GRAFANA_ADMIN_PASSWORD=' "$target/deployment/docker/.env" 2>/dev/null; then
+    monitoring=true
+fi
+firewall_recorded=false
+if [[ -e "$target/.forcad-firewall-before" || -L "$target/.forcad-firewall-before" ]]; then
+    verify_record firewall-before
+    verify_record firewall-applied
+    firewall_recorded=true
+fi
+resources_recorded=false
+if [[ -e "$target/.forcad-resources-before" || -L "$target/.forcad-resources-before" ]]; then
+    verify_record resources-before
+    verify_record resources-applied
+    resources_recorded=true
+fi
+docker_group=
+if [[ -e "$target/.forcad-docker-group" || -L "$target/.forcad-docker-group" ]]; then
+    verify_record docker-group
+    docker_group="$(<"$target/.forcad-docker-group")"
+    [[ -z "$docker_group" || "$docker_group" =~ ^[0-9]+$ ]] || { echo "Invalid Docker group record" >&2; exit 1; }
+fi
+if [[ -e "$target/.forcad-resources-cleaned" || -L "$target/.forcad-resources-cleaned" ]]; then
+    verify_record resources-cleaned
+    [[ "$(<"$target/.forcad-resources-cleaned")" == true ]] || { echo "Invalid resource cleanup record" >&2; exit 1; }
+fi
+
+restore_service() {
+    local unit="$1" activity="$2" enabled="$3" current
+    [[ "$activity" != unknown ]] || return 0
+    current="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
+    case "$current" in masked) systemctl unmask "$unit" || return ;; masked-runtime) systemctl unmask --runtime "$unit" || return ;; esac
+    if [[ "$activity" != active ]]; then systemctl stop "$unit" || return; fi
+    if [[ "$current" == enabled-runtime && "$enabled" != enabled-runtime ]]; then systemctl disable --runtime "$unit" || return; fi
+    case "$enabled" in
+        enabled) systemctl enable "$unit" || return ;;
+        enabled-runtime) systemctl disable "$unit" || return; systemctl enable --runtime "$unit" || return ;;
+        disabled|unknown|not-found|"") systemctl disable "$unit" || return ;;
+        masked) systemctl disable "$unit" || return; systemctl mask "$unit" || return ;;
+        masked-runtime) systemctl disable "$unit" || return; systemctl mask --runtime "$unit" || return ;;
+    esac
+    if [[ "$activity" == active ]]; then systemctl start "$unit"; fi
+}
+
+stop_service_if_present() {
+    local state
+    state="$(systemctl show "$1" -p LoadState --value)"
+    [[ "$state" != not-found ]] || return 0
+    systemctl stop "$1"
+}
+
+cleanup_resources() (
+    # Docker may already be stopped by host teardown. Restore its runtime again
+    # on both success and failure, including a bridge recreated by this start.
+    local scratch status captured=false path="$target/.forcad-buildx"
+    local options=()
+    [[ ! -L "$path" && ( ! -e "$path" || -d "$path" ) ]] || { echo "Unsafe Buildx state directory" >&2; exit 1; }
+    install -d -m 0700 "$target/.forcad-buildx"
+    export BUILDX_CONFIG="$target/.forcad-buildx" BUILDX_BUILDER=default
+    scratch="$(mktemp -d)"
+    restore_cleanup_runtime() {
+        status=$?
+        trap - EXIT
+        if (cd "$bundle_dir" && python3 -m hostlib.docker_state capture) > "$scratch/applied"; then captured=true; else status=1; fi
+        restore_service docker.socket "${socket_state[@]}" || status=1
+        restore_service docker.service "${docker_state[@]}" || status=1
+        restore_service containerd.service "${containerd_state[@]}" || status=1
+        if [[ "${docker_state[0]}" != active && "$docker_shared" == false && "$captured" == true ]]; then
+            (cd "$bundle_dir" && python3 -m hostlib.docker_state restore "$scratch/before" "$scratch/applied") || status=1
+        fi
+        if [[ "${docker_state[0]}" != active ]]; then
+            for value in "${sysctls[@]}"; do sysctl -w "${value// /}" || status=1; done
+        fi
+        rm -rf -- "$scratch"
+        exit "$status"
+    }
+    if ! (cd "$bundle_dir" && python3 -m hostlib.docker_state capture) > "$scratch/before"; then
+        rm -rf -- "$scratch"
+        exit 1
+    fi
+    trap restore_cleanup_runtime EXIT
+    systemctl start docker.service
+    if [[ "$docker_owned" == true || "$containerd_owned" == true ]]; then options+=(--exclusive); fi
+    if [[ "$resources_recorded" == true ]]; then
+        (cd "$bundle_dir" && python3 -m hostlib.docker_resources cleanup \
+            "$target/.forcad-resources-before" "$target/.forcad-resources-applied" "${options[@]}")
     else
-        echo "Preserved changed Docker apt repository files."
+        # Legacy installers did not record image/cache ownership. Never infer
+        # that an otherwise unused daemon has no pre-existing build data.
+        images="$(docker image ls -aq)"
+        cache="$(docker buildx du --builder default --format '{{.ID}}')"
+        [[ -z "$images" && -z "$cache" ]] || {
+            echo "Legacy installation has no image/cache ownership record; inspect Docker resources or use --keep-packages." >&2
+            exit 1
+        }
+    fi
+    if [[ "$containerd_owned" == true ]]; then
+        namespaces="$(ctr --address /run/containerd/containerd.sock namespaces list --quiet)"
+        while IFS= read -r namespace; do
+            [[ -n "$namespace" ]] || continue
+            case "$namespace" in moby|plugins.moby) ;; *) echo "Other containerd namespace exists: $namespace" >&2; exit 1 ;; esac
+            for kind in containers tasks images; do
+                objects="$(ctr --address /run/containerd/containerd.sock --namespace "$namespace" "$kind" list --quiet)"
+                [[ -z "$objects" ]] || { echo "Containerd $namespace still has $kind; refusing to delete its data." >&2; exit 1; }
+            done
+        done <<< "$namespaces"
+    fi
+)
+
+run_control_down() {
+    local binary="$target/backend/bin/forcad"
+    if [[ -f "$binary" && ! -L "$binary" && -x "$binary" ]]; then
+        if [[ "$monitoring" == true ]]; then
+            "$binary" control --project-root "$target" monitoring down -v --remove-orphans
+        else
+            "$binary" control --project-root "$target" down -v --remove-orphans
+        fi
+        return
+    fi
+
+    local root="$target/.forcad-go" path go_bin="$target/.toolchain/go1.27.2/bin"
+    for path in "$root" "$root/build" "$root/modules" "$root/path"; do
+        [[ ! -L "$path" ]] || { echo "Refusing symlinked Go cache path: $path" >&2; return 1; }
+        if [[ -e "$path" && ! -d "$path" ]]; then
+            echo "Refusing non-directory Go cache path: $path" >&2
+            return 1
+        fi
+    done
+    install -d -m 0700 "$root" "$root/build" "$root/modules" "$root/path"
+    export GOCACHE="$root/build"
+    export GOMODCACHE="$root/modules"
+    export GOPATH="$root/path"
+    if [[ ! -L "$target/.toolchain" && ! -L "$target/.toolchain/go1.27.2" \
+        && ! -L "$go_bin" && ! -L "$go_bin/go" && -x "$go_bin/go" ]]; then
+        export PATH="$go_bin:$PATH"
+    fi
+    if [[ "$monitoring" == true ]]; then
+        (cd "$target" && ./control.sh monitoring down -v --remove-orphans)
+    else
+        (cd "$target" && ./control.sh down -v --remove-orphans)
+    fi
+}
+
+if [[ -e "$target/.forcad-uninstalled" || -L "$target/.forcad-uninstalled" ]]; then
+    verify_record uninstalled
+    docker_shared="$(<"$target/.forcad-uninstalled")"
+    [[ "$docker_shared" == true || "$docker_shared" == false ]] || { echo "Invalid cleanup record" >&2; exit 1; }
+else
+    systemctl start docker.service
+    run_control_down
+    # Include volumes left by older, incomplete monitoring rollbacks.
+    volume_output="$(docker volume ls -q --filter label=com.docker.compose.project=forcad)"
+    project_volumes=()
+    if [[ -n "$volume_output" ]]; then mapfile -t project_volumes <<< "$volume_output"; fi
+    if ((${#project_volumes[@]})); then docker volume rm "${project_volumes[@]}"; fi
+    docker_shared=false
+    containers="$(docker ps -aq)"
+    volumes="$(docker volume ls -q)"
+    networks="$(docker network ls -q --filter type=custom)"
+    if [[ -n "$containers" || -n "$volumes" || -n "$networks" ]]; then
+        docker_shared=true
+    fi
+    running="$(docker ps -q)"
+    if [[ "${docker_state[0]}" != active && -n "$running" ]]; then
+        echo "Other containers are running; keep Docker available and resolve ownership before uninstalling." >&2
+        exit 1
+    fi
+    bash "$bundle_dir/host/uninstall.sh" --force
+    restore_service docker.socket "${socket_state[@]}"
+    restore_service docker.service "${docker_state[@]}"
+    restore_service containerd.service "${containerd_state[@]}"
+    if [[ "${docker_state[0]}" != active && "$docker_shared" == false && "$firewall_recorded" == true ]]; then
+        (cd "$bundle_dir" && python3 -m hostlib.docker_state restore "$target/.forcad-firewall-before" "$target/.forcad-firewall-applied")
+    fi
+    if [[ "${docker_state[0]}" != active ]]; then
+        for value in "${sysctls[@]}"; do sysctl -w "${value// /}"; done
+    fi
+    bash "$bundle_dir/host/uninstall.sh" --discard-backups
+    printf '%s\n' "$docker_shared" > "$target/.forcad-uninstalled"
+    chmod 0600 "$target/.forcad-uninstalled"
+    printf 'uninstalled_sha256=%s\n' "$(sha256sum "$target/.forcad-uninstalled" | cut -d ' ' -f 1)" >> "$marker"
+fi
+
+purge=false
+if ((${#packages[@]})) || [[ "$resources_recorded" == true ]]; then
+    if ((${#packages[@]})); then printf 'Packages installed by install.sh: %s\n' "${packages[*]}"; fi
+    case "$package_choice" in
+        --purge-packages) purge=true ;;
+        ask)
+            answer=
+            read -r -p "Remove these packages and their install-owned data? [y/N] " answer || true
+            case "$answer" in y|Y|yes|YES) purge=true ;; esac
+            ;;
+    esac
+fi
+if [[ "$purge" == true ]]; then
+    if [[ "$docker_owned" == true || "$containerd_owned" == true ]] && systemctl is-active --quiet docker.service; then
+        containers="$(docker ps -aq)"
+        volumes="$(docker volume ls -q)"
+        networks="$(docker network ls -q --filter type=custom)"
+        if [[ -n "$containers" || -n "$volumes" || -n "$networks" ]]; then
+            docker_shared=true
+        fi
+    fi
+    if [[ "$docker_shared" == true && ( "$docker_owned" == true || "$containerd_owned" == true ) ]]; then
+        echo "Other Docker objects exist; refusing to purge their runtime and data." >&2
+        exit 1
+    fi
+    if [[ "$resources_recorded" == true || "$docker_owned" == true || "$containerd_owned" == true ]]; then
+        cleanup_tools=true
+        for tool in docker python3; do command -v "$tool" >/dev/null || cleanup_tools=false; done
+        if [[ "$docker_owned" == true ]] && ! command -v dockerd >/dev/null; then cleanup_tools=false; fi
+        if [[ "$containerd_owned" == true ]] && ! command -v containerd >/dev/null; then cleanup_tools=false; fi
+        if [[ "$containerd_owned" == true ]] && ! command -v ctr >/dev/null; then cleanup_tools=false; fi
+        if [[ "$cleanup_tools" == true ]] && ! docker buildx version >/dev/null 2>&1; then cleanup_tools=false; fi
+        if [[ "$cleanup_tools" == true ]]; then
+            cleanup_resources
+            if [[ ! -e "$target/.forcad-resources-cleaned" ]]; then
+                printf 'true\n' > "$target/.forcad-resources-cleaned"
+                chmod 0600 "$target/.forcad-resources-cleaned"
+                printf 'resources-cleaned_sha256=%s\n' "$(sha256sum "$target/.forcad-resources-cleaned" | cut -d ' ' -f 1)" >> "$marker"
+            fi
+        elif [[ ! -e "$target/.forcad-resources-cleaned" ]]; then
+            echo "Docker cleanup tools are missing; keep the installation records and restore its dependencies before retrying." >&2
+            exit 1
+        elif systemctl is-active --quiet docker.service || systemctl is-active --quiet containerd.service; then
+            echo "Container runtime is active but cleanup tools are missing; refusing package removal." >&2
+            exit 1
+        fi
+    fi
+    if [[ -n "$docker_group" ]]; then
+        group_entry="$(getent group docker || true)"
+        if [[ -n "$group_entry" ]]; then
+            IFS=: read -r _ _ current_gid members <<< "$group_entry"
+            primary_users="$(getent passwd | awk -F : -v gid="$docker_group" '$4 == gid {print $1}')"
+            [[ "$current_gid" == "$docker_group" && -z "$members" && -z "$primary_users" ]] || {
+                echo "Docker group changed or has users; refusing to remove it." >&2; exit 1;
+            }
+        fi
+    fi
+    if [[ "$docker_owned" == true ]]; then
+        stop_service_if_present docker.socket
+        stop_service_if_present docker.service
+    fi
+    if [[ "$containerd_owned" == true ]]; then stop_service_if_present containerd.service; fi
+    # apt must not cascade into packages that predate this installation.
+    simulation=
+    if ((${#packages[@]})); then simulation="$(apt-get -s purge -- "${packages[@]}")"; fi
+    while read -r action package _; do
+        [[ "$action" == Remv || "$action" == Purg ]] || continue
+        found=false
+        for owned in "${packages[@]}"; do
+            if [[ "$package" == "$owned" || ( "$package" != *:* && "$package" == "${owned%%:*}" ) ]]; then found=true; break; fi
+        done
+        [[ "$found" == true ]] || { echo "Package removal would also remove pre-existing package: $package" >&2; exit 1; }
+    done <<< "$simulation"
+    export DEBIAN_FRONTEND=noninteractive
+    if ((${#packages[@]})); then apt-get purge -y -- "${packages[@]}"; fi
+    if [[ -n "$docker_group" ]] && getent group docker >/dev/null; then groupdel docker; fi
+    for path in "${created_directories[@]}"; do
+        case "$path" in
+            /etc/docker|/etc/containerd|/var/lib/docker|/var/lib/containerd)
+                owned=false
+                case "$path" in /etc/docker|/var/lib/docker) owned="$docker_owned" ;; *) owned="$containerd_owned" ;; esac
+                if [[ "$owned" == true && -d "$path" ]]; then
+                    if mountpoint -q "$path"; then echo "Refusing mounted data directory: $path" >&2; exit 1; fi
+                    rm -rf --one-file-system -- "$path"
+                fi
+                ;;
+        esac
+    done
+    if [[ -f "$target/.forcad-docker.sources" && ! -L "$target/.forcad-docker.sources" \
+        && -f "$target/.forcad-docker-key.sha256" && ! -L "$target/.forcad-docker-key.sha256" \
+        && -f /etc/apt/sources.list.d/docker.sources && ! -L /etc/apt/sources.list.d/docker.sources \
+        && -f /etc/apt/keyrings/docker.asc && ! -L /etc/apt/keyrings/docker.asc ]] \
+        && cmp -s "$target/.forcad-docker.sources" /etc/apt/sources.list.d/docker.sources \
+        && [[ "$(sha256sum /etc/apt/keyrings/docker.asc | cut -d ' ' -f 1)" == "$(<"$target/.forcad-docker-key.sha256")" ]]; then
+        rm -- /etc/apt/sources.list.d/docker.sources /etc/apt/keyrings/docker.asc
     fi
 fi
-if (( ${#packages[@]} > 0 )); then
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get purge -y -- "${packages[@]}"
-fi
-if [[ -n "$host_backup" ]]; then
-    backup_dir="/var/backups/forcad/forcad/install-$host_backup"
-    [[ -d "$backup_dir" && ! -L "$backup_dir" && -f "$backup_dir/files.json" ]] && rm -rf -- "$backup_dir"
-fi
-if [[ -n "$uninstall_backup" ]]; then
-    backup_dir="/var/backups/forcad/forcad/uninstall-$uninstall_backup"
-    [[ -d "$backup_dir" && ! -L "$backup_dir" && -f "$backup_dir/files.json" ]] && rm -rf -- "$backup_dir"
-fi
-rmdir --ignore-fail-on-non-empty /var/backups/forcad/forcad
 rm -rf -- "$target"
-echo "Removed ForcAD, its Docker volumes, install-owned packages and apt repository files."
+for path in "${created_directories[@]}"; do
+    case "$path" in
+        /etc/docker|/etc/containerd|/var/lib/docker|/var/lib/containerd) continue ;;
+        /etc/apt/keyrings) [[ "$purge" == true ]] || continue ;;
+    esac
+    if [[ -d "$path" ]]; then rmdir --ignore-fail-on-non-empty -- "$path"; fi
+done
+echo "Removed ForcAD, its volumes and host files; original service state restored."
+if [[ "$purge" == true ]]; then echo "Install-owned packages and recorded data directories removed."; fi

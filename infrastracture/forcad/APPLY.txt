@@ -1,9 +1,17 @@
-The generated install.sh applies the ForcAD host files and starts the game.
-It does not restart networking. If the staged interfaces file differs from the
-live setup, review and apply it from the host console before relying on it.
+ForcAD application
 
-After the installer succeeds, check the deployment with:
+Run commands from the root of the extracted forcad bundle:
 
-```sh
-bash test.sh
-```
+  sudo bash install.sh
+  sudo bash test.sh
+
+The installer supports Debian 12/13 and creates a new deployment. It requires an
+unused install path, no existing ForcAD Docker project or volumes, and a live
+address and gateway that already match settings.toml. It stages
+/etc/network/interfaces but does not restart networking. Apply network changes
+from the host console before installation.
+
+The installer installs dependencies, clones the configured revision, initializes
+the game configuration, and starts the application and selected monitoring.
+Install scripts under host/ are helpers, not a separate procedure. See
+COMMANDS.md for details.

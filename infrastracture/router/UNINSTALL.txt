@@ -1,35 +1,25 @@
-# Uninstall router
+Router removal
 
-Run from the transferred bundle at the host console. Preview the default
-managed uninstall, then restore the original files and recorded live state:
+From the extracted router bundle:
 
-```sh
-bash uninstall.sh --dry-run
-bash uninstall.sh
-```
+  sudo bash uninstall.sh --dry-run
+  sudo bash uninstall.sh
 
-The live baseline is stored privately at
-`/var/backups/forcad/router/live.json`. A successful uninstall removes it and
-keeps transaction backups. It restores only state owned by the router
-installation. It does not remove packages or accounts.
+The live uninstall restores recorded network, route, firewall, sysctl, service
+and file state. Files created by install are removed during normal uninstall,
+including edited copies. If a pre-existing shared file changed after
+installation, uninstall stops. Review it, then use --force to save the current
+copy and restore the recorded original. Use --discard-backups only after
+successful removal.
 
-For an install staged with `--files-only`, use file-only uninstall:
+For an interrupted live uninstall, use --resume only when the journal and
+installed file manifest are valid:
 
-```sh
-bash uninstall.sh --files-only --dry-run
-bash uninstall.sh --files-only
-```
+  sudo bash uninstall.sh --resume --dry-run
+  sudo bash uninstall.sh --resume
 
-File-only uninstall is refused while `live.json` exists. It restores staged
-files only. If you applied live changes manually after a file-only install,
-restore those changes from the host console before removing the files. They
-were not recorded for automatic rollback.
-
-If an owned file has drifted, review the diff before using `--force`; it saves
-the current files before restoration. Legacy manifests without a verified
-rollback link fail closed and require manual review of their backups.
-
-Do not stop or disable a pre-existing firewall service, delete `/etc/nftables.conf`,
-or remove tables by name to work around a preflight refusal. Never flush the
-whole ruleset. A refusal means the current owner must be reviewed before
-continuing.
+Use --files-only only for a staged install without a live journal. It does not
+revert manually applied network changes. Keep
+/var/backups/forcad/router/live.json and dependency records until cleanup
+succeeds. Package removal is optional; the default keeps packages. Pre-existing
+packages are preserved. See COMMANDS.md for options.

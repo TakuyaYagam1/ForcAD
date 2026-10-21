@@ -1,22 +1,21 @@
-# Uninstall VPN host
+VPN removal
 
-Run from the transferred `vpn/` directory at the host console:
+From the extracted vpn bundle, with console access:
 
-```sh
-bash uninstall.sh --dry-run
-bash uninstall.sh
-```
+  sudo bash uninstall.sh --dry-run
+  sudo bash uninstall.sh
 
-The normal uninstall stops and disables the WireGuard tunnels and ForcAD
-firewall, removes only `inet forcad_vpn`, restores the original interface,
-sysctl and service state, and restores files from before the first install.
-Backups remain in `/var/backups/forcad/vpn/`.
+Removal stops and disables wg-attack and wg-admin, removes their server configs
+and managed firewall files, and restores recorded network, sysctl and service
+state. It deletes wg-attack.conf and wg-admin.conf even when adopted from
+/etc/wireguard. Keep private copies if you may reinstall. Other WireGuard
+configs are preserved.
 
-If an owned file changed, uninstall stops before making changes. Review the
-diff, then use `bash uninstall.sh --force` to preserve the current files in a
-backup and restore the original state. Do not use `--force` to bypass an
-unrecognized change without reviewing the saved runtime snapshot first.
-
-Installations made by an older file-only installer have no runtime recovery
-record. Their files can be restored, but any manually applied network,
-firewall, sysctl or tunnel state must be reverted separately.
+Files created by install are removed normally, including edited copies. If a
+pre-existing shared file changed after installation, uninstall stops. Review
+it, then use --force to save the current copy and restore the recorded original.
+This does not restore adopted WireGuard configs; the two role configs are
+deleted. Use --files-only only for a staged install without a live journal;
+revert manual live changes yourself. Keep recovery and dependency records if
+removal fails. Package cleanup defaults to keep; pre-existing packages are
+never removed. See COMMANDS.md for options.
