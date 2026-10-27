@@ -1,4 +1,4 @@
-package game
+package usecase
 
 import (
 	"context"
@@ -79,7 +79,7 @@ func (c *runtimeObservedContext) Done() <-chan struct{} {
 	return c.Context.Done()
 }
 
-func startRuntimeCall(ctx context.Context, service *Service) <-chan runtimeCall {
+func startRuntimeCall(ctx context.Context, service *Game) <-chan runtimeCall {
 	result := make(chan runtimeCall, 1)
 	go func() {
 		status, err := service.Runtime(ctx)
@@ -111,7 +111,7 @@ func awaitRuntimeResult(t *testing.T, result <-chan runtimeCall, name string) ru
 func TestRuntimeSingleflightWaiterCancellationIsIndependent(t *testing.T) {
 	repo := newRuntimeGateRepository()
 	repo.deadlines = make(chan runtimeDeadline, 1)
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	defer repo.unblock(1)
 
 	leaderCtx, cancelLeader := context.WithCancel(context.Background())
@@ -160,7 +160,7 @@ func TestRuntimeSingleflightWaiterCancellationIsIndependent(t *testing.T) {
 
 func TestRuntimeChangedStartsFreshLoadBeforeOldLoadFinishes(t *testing.T) {
 	repo := newRuntimeGateRepository()
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	defer repo.unblock(1)
 	defer repo.unblock(2)
 
@@ -186,7 +186,7 @@ func TestRuntimeChangedStartsFreshLoadBeforeOldLoadFinishes(t *testing.T) {
 
 func TestRuntimeCloseCancelsForgottenLoadsAndRejectsNewLoads(t *testing.T) {
 	repo := newRuntimeGateRepository()
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	defer repo.unblock(1)
 	defer repo.unblock(2)
 
@@ -230,7 +230,7 @@ func (r *runtimeRetryRepository) Lifecycle(context.Context) (domain.Lifecycle, e
 func TestRuntimeDoesNotCacheErrors(t *testing.T) {
 	wantErr := errors.New("temporary lifecycle failure")
 	repo := &runtimeRetryRepository{err: wantErr}
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 
 	if _, err := service.Runtime(context.Background()); !errors.Is(err, wantErr) {
 		t.Fatalf("first Runtime() error = %v, want wrapped temporary error", err)
@@ -271,7 +271,7 @@ func TestRuntimeSharedLoadHasBoundedTimeout(t *testing.T) {
 			deadline: make(chan runtimeDeadline, 1),
 			finished: make(chan error, 1),
 		}
-		service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+		service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 		result := startRuntimeCall(t.Context(), service)
 
 		<-repo.started

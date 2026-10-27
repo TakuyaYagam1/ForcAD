@@ -11,7 +11,29 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 )
+
+func TestWriteErrorPreservesStatusHeadersAndNewline(t *testing.T) {
+	response := httptest.NewRecorder()
+	response.Header().Set("Retry-After", "1")
+
+	WriteError(response, http.StatusTooManyRequests, api.ApiError{Error: "Request limit exceeded"})
+
+	if response.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusTooManyRequests)
+	}
+	if got := response.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+		t.Fatalf("Content-Type = %q", got)
+	}
+	if got := response.Header().Get("Retry-After"); got != "1" {
+		t.Fatalf("Retry-After = %q", got)
+	}
+	if got, want := response.Body.String(), "{\"error\":\"Request limit exceeded\"}\n"; got != want {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+}
 
 func TestRequestIDRejectsUnsafeValues(t *testing.T) {
 	for _, id := range []string{"", "bad\r\nvalue", strings.Repeat("a", 129), "bad value", "request-42"} {

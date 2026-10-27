@@ -1,4 +1,4 @@
-package httpadapter
+package v1
 
 import (
 	"fmt"
@@ -15,15 +15,14 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/middleware"
-	httpv1 "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1"
 )
 
 type Traffic interface {
 	Middleware(route func(*http.Request) string) func(http.Handler) http.Handler
 }
 
-func NewRouter(cfg config.Config, handler *httpv1.Handler, events http.Handler, monitor http.Handler, registry prometheus.Registerer, limiter middleware.RateLimiter, logger *slog.Logger, traffic ...Traffic) (http.Handler, error) {
-	const location = "httpadapter.NewRouter"
+func NewRouter(cfg config.Config, handler *Handler, events http.Handler, monitor http.Handler, registry prometheus.Registerer, limiter middleware.RateLimiter, logger *slog.Logger, traffic ...Traffic) (http.Handler, error) {
+	const location = "httpv1.NewRouter"
 	server, err := api.NewServer(handler, handler, handler, api.WithErrorHandler(errorHandler(logger)))
 	if err != nil {
 		return nil, fmt.Errorf("%s - create API server: %w", location, err)

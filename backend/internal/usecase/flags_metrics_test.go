@@ -1,4 +1,4 @@
-package flags
+package usecase
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func (o *flagObserver) ObserveFlags(_ uuid.UUID, verdict string, count int) {
 }
 
 func TestFlagMetricsCountFlagsInsteadOfBatches(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	observer := &flagObserver{counts: make(map[string]int)}
 	service.SetObserver(observer)
 	flag := strings.Repeat("A", 31) + "="

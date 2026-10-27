@@ -1,4 +1,4 @@
-package game
+package usecase
 
 import (
 	"bytes"
@@ -30,11 +30,12 @@ const (
 	maxCheckerTypeLength = 32
 )
 
+// Publisher sends live events; Game and Flags both use it.
 type Publisher interface {
 	Publish(ctx context.Context, topic string, payload any) error
 }
 
-type Service struct {
+type Game struct {
 	repo           outbound.GameRepository
 	flags          outbound.FlagRepository
 	publisher      Publisher
@@ -51,38 +52,38 @@ const (
 	runtimeLifecycleTimeout = 5 * time.Second
 )
 
-func New(repo outbound.GameRepository, flags outbound.FlagRepository, publisher Publisher, logger *slog.Logger) *Service {
+func NewGame(repo outbound.GameRepository, flags outbound.FlagRepository, publisher Publisher, logger *slog.Logger) *Game {
 	runtimeCtx, runtimeCancel := context.WithCancel(context.Background())
-	return &Service{repo: repo, flags: flags, publisher: publisher, logger: logger,
+	return &Game{repo: repo, flags: flags, publisher: publisher, logger: logger,
 		snapshot:   cachekit.MustNewCachedValue[domain.Scoreboard]("scoreboard", 500*time.Millisecond, cachekit.WithLoadTimeout(5*time.Second)),
 		runtimeCtx: runtimeCtx, runtimeCancel: runtimeCancel, changed: make(chan struct{}, 1)}
 }
 
-func (s *Service) Close() {
-	s.runtimeCancel()
+func (g *Game) Close() {
+	g.runtimeCancel()
 }
 
-func (s *Service) Lifecycle(ctx context.Context) (domain.Lifecycle, error) {
-	return s.repo.Lifecycle(ctx)
+func (g *Game) Lifecycle(ctx context.Context) (domain.Lifecycle, error) {
+	return g.repo.Lifecycle(ctx)
 }
-func (s *Service) Runtime(ctx context.Context) (domain.RuntimeStatus, error) {
-	const location = "game.Service.Runtime"
+func (g *Game) Runtime(ctx context.Context) (domain.RuntimeStatus, error) {
+	const location = "usecase.Game.Runtime"
 	if err := ctx.Err(); err != nil {
 		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
-	if err := s.runtimeCtx.Err(); err != nil {
+	if err := g.runtimeCtx.Err(); err != nil {
 		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
-	resultCh := s.runtimeFlights.DoChan(runtimeLifecycleKey, func() (any, error) {
+	resultCh := g.runtimeFlights.DoChan(runtimeLifecycleKey, func() (any, error) {
 		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), runtimeLifecycleTimeout)
-		//nolint:contextcheck // The shared load is request-independent by design; Service.Close and its timeout own cancellation.
-		stopClose := context.AfterFunc(s.runtimeCtx, cancel)
+		//nolint:contextcheck // The shared load is request-independent by design; Game.Close and its timeout own cancellation.
+		stopClose := context.AfterFunc(g.runtimeCtx, cancel)
 		defer stopClose()
 		defer cancel()
-		if err := s.runtimeCtx.Err(); err != nil {
+		if err := g.runtimeCtx.Err(); err != nil {
 			return nil, err
 		}
-		return s.repo.Lifecycle(loadCtx)
+		return g.repo.Lifecycle(loadCtx)
 	})
 	var result singleflight.Result
 	select {
@@ -102,26 +103,26 @@ func (s *Service) Runtime(ctx context.Context) (domain.RuntimeStatus, error) {
 	}
 	return life.Runtime(time.Now()), nil
 }
-func (s *Service) Teams(ctx context.Context, active bool) ([]domain.Team, error) {
-	return s.repo.Teams(ctx, active)
+func (g *Game) Teams(ctx context.Context, active bool) ([]domain.Team, error) {
+	return g.repo.Teams(ctx, active)
 }
-func (s *Service) Tasks(ctx context.Context, active bool) ([]domain.Task, error) {
-	return s.repo.Tasks(ctx, active)
+func (g *Game) Tasks(ctx context.Context, active bool) ([]domain.Task, error) {
+	return g.repo.Tasks(ctx, active)
 }
-func (s *Service) History(ctx context.Context, team uuid.UUID, task *uuid.UUID) ([]domain.Cell, error) {
-	return s.repo.History(ctx, team, task)
+func (g *Game) History(ctx context.Context, team uuid.UUID, task *uuid.UUID) ([]domain.Cell, error) {
+	return g.repo.History(ctx, team, task)
 }
-func (s *Service) PublicHistory(ctx context.Context, team uuid.UUID) ([]domain.PublicCell, error) {
-	return s.repo.PublicHistory(ctx, team)
-}
-
-func (s *Service) Scoreboard(ctx context.Context) (domain.Scoreboard, error) {
-	return s.snapshot.Get(ctx, s.loadScoreboard)
+func (g *Game) PublicHistory(ctx context.Context, team uuid.UUID) ([]domain.PublicCell, error) {
+	return g.repo.PublicHistory(ctx, team)
 }
 
-func (s *Service) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
-	const location = "game.Service.loadScoreboard"
-	data, err := s.repo.Board(ctx)
+func (g *Game) Scoreboard(ctx context.Context) (domain.Scoreboard, error) {
+	return g.snapshot.Get(ctx, g.loadScoreboard)
+}
+
+func (g *Game) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
+	const location = "usecase.Game.loadScoreboard"
+	data, err := g.repo.Board(ctx)
 	if err != nil {
 		return domain.Scoreboard{}, fmt.Errorf("%s - load scoreboard data: %w", location, err)
 	}
@@ -155,14 +156,14 @@ func (s *Service) loadScoreboard(ctx context.Context) (domain.Scoreboard, error)
 }
 
 type Standing struct {
-	Pos   int     `json:"pos"`
-	Team  string  `json:"team"`
-	Score float64 `json:"score"`
+	Pos   int
+	Team  string
+	Score float64
 }
 
-func (s *Service) Standings(ctx context.Context) ([]Standing, error) {
-	const location = "game.Service.Standings"
-	board, err := s.Scoreboard(ctx)
+func (g *Game) Standings(ctx context.Context) ([]Standing, error) {
+	const location = "usecase.Game.Standings"
+	board, err := g.Scoreboard(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s - load scoreboard: %w", location, err)
 	}
@@ -186,13 +187,13 @@ func (s *Service) Standings(ctx context.Context) ([]Standing, error) {
 	return result, nil
 }
 
-func (s *Service) AttackData(ctx context.Context) (map[string]map[string][]string, error) {
-	const location = "game.Service.AttackData"
-	life, err := s.repo.Lifecycle(ctx)
+func (g *Game) AttackData(ctx context.Context) (map[string]map[string][]string, error) {
+	const location = "usecase.Game.AttackData"
+	life, err := g.repo.Lifecycle(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
-	tasks, err := s.repo.Tasks(ctx, true)
+	tasks, err := g.repo.Tasks(ctx, true)
 	if err != nil {
 		return nil, fmt.Errorf("%s - list active tasks: %w", location, err)
 	}
@@ -209,7 +210,7 @@ func (s *Service) AttackData(ctx context.Context) (map[string]map[string][]strin
 	if len(ids) == 0 {
 		return data, nil
 	}
-	flags, err := s.flags.AttackData(ctx, life.Config.RealRound, ids)
+	flags, err := g.flags.AttackData(ctx, life.Config.RealRound, ids)
 	if err != nil {
 		return nil, fmt.Errorf("%s - load public attack data: %w", location, err)
 	}
@@ -229,17 +230,17 @@ func hasTag(tags, tag string) bool {
 	return false
 }
 
-func (s *Service) Changed() {
-	s.runtimeFlights.Forget(runtimeLifecycleKey)
-	s.snapshot.Invalidate()
+func (g *Game) Changed() {
+	g.runtimeFlights.Forget(runtimeLifecycleKey)
+	g.snapshot.Invalidate()
 	select {
-	case s.changed <- struct{}{}:
+	case g.changed <- struct{}{}:
 	default:
 	}
 }
 
 // Periodic reconciliation also covers commits from other API and worker replicas.
-func (s *Service) Run(ctx context.Context) {
+func (g *Game) Run(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	var previous []byte
@@ -248,12 +249,12 @@ func (s *Service) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-		case <-s.changed:
+		case <-g.changed:
 		}
-		board, err := s.Scoreboard(ctx)
+		board, err := g.Scoreboard(ctx)
 		if err != nil {
 			if ctx.Err() == nil {
-				s.logger.Warn("scoreboard refresh unavailable", "error", err)
+				g.logger.Warn("scoreboard refresh unavailable", "error", err)
 			}
 			continue
 		}
@@ -261,9 +262,9 @@ func (s *Service) Run(ctx context.Context) {
 		if err != nil || bytes.Equal(previous, encoded) {
 			continue
 		}
-		if err = s.publisher.Publish(ctx, "init_scoreboard", map[string]any{"data": board}); err != nil {
+		if err = g.publisher.Publish(ctx, "init_scoreboard", map[string]any{"data": board}); err != nil {
 			if ctx.Err() == nil {
-				s.logger.Warn("scoreboard publication unavailable", "error", err)
+				g.logger.Warn("scoreboard publication unavailable", "error", err)
 			}
 			continue
 		}
@@ -271,17 +272,17 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) ChangeState(ctx context.Context, action string, generation *int64) error {
-	const location = "game.Service.ChangeState"
-	if err := s.repo.ChangeState(ctx, action, generation, time.Now()); err != nil {
+func (g *Game) ChangeState(ctx context.Context, action string, generation *int64) error {
+	const location = "usecase.Game.ChangeState"
+	if err := g.repo.ChangeState(ctx, action, generation, time.Now()); err != nil {
 		return fmt.Errorf("%s - change game state: %w", location, err)
 	}
-	s.Changed()
+	g.Changed()
 	return nil
 }
 
-func (s *Service) SaveTeam(ctx context.Context, team domain.Team, create bool) (domain.Team, error) {
-	const location = "game.Service.SaveTeam"
+func (g *Game) SaveTeam(ctx context.Context, team domain.Team, create bool) (domain.Team, error) {
+	const location = "usecase.Game.SaveTeam"
 	team.Name = strings.TrimSpace(team.Name)
 	team.IP = strings.TrimSpace(team.IP)
 	team.LogoPath = strings.TrimSpace(team.LogoPath)
@@ -306,19 +307,19 @@ func (s *Service) SaveTeam(ctx context.Context, team domain.Team, create bool) (
 		return domain.Team{}, fmt.Errorf("%s - invalid team token format: %w", location, &domain.ValidationError{Message: "Team token must contain exactly 16 lowercase hexadecimal characters"})
 	}
 	if create {
-		team, err = s.repo.CreateTeam(ctx, team)
+		team, err = g.repo.CreateTeam(ctx, team)
 	} else {
-		team, err = s.repo.UpdateTeam(ctx, team)
+		team, err = g.repo.UpdateTeam(ctx, team)
 	}
 	if err != nil {
 		return domain.Team{}, fmt.Errorf("%s - save team: %w", location, err)
 	}
-	s.Changed()
+	g.Changed()
 	return team, nil
 }
 
-func (s *Service) SaveTask(ctx context.Context, task domain.Task, create bool) (domain.Task, error) {
-	const location = "game.Service.SaveTask"
+func (g *Game) SaveTask(ctx context.Context, task domain.Task, create bool) (domain.Task, error) {
+	const location = "usecase.Game.SaveTask"
 	task.Name = strings.TrimSpace(task.Name)
 	task.Checker = strings.TrimSpace(task.Checker)
 	task.CheckerType = strings.TrimSpace(task.CheckerType)
@@ -327,19 +328,19 @@ func (s *Service) SaveTask(ctx context.Context, task domain.Task, create bool) (
 	}
 	var err error
 	if create {
-		task, err = s.repo.CreateTask(ctx, task)
+		task, err = g.repo.CreateTask(ctx, task)
 	} else {
-		task, err = s.repo.UpdateTask(ctx, task)
+		task, err = g.repo.UpdateTask(ctx, task)
 	}
 	if err != nil {
 		return domain.Task{}, fmt.Errorf("%s - save task: %w", location, err)
 	}
-	s.Changed()
+	g.Changed()
 	return task, nil
 }
 
 func validateTask(task domain.Task) error {
-	const location = "game.validateTask"
+	const location = "usecase.validateTask"
 	if int64(task.Puts)+int64(task.Gets) > maxCheckerActions {
 		return fmt.Errorf("%s - invalid checker action count: %w", location, &domain.ValidationError{
 			Message: fmt.Sprintf("Total PUT and GET count must not exceed %d", maxCheckerActions),
@@ -359,21 +360,21 @@ func invalidTaskSettings(task domain.Task) bool {
 		task.GetPeriod < 1 || task.DefaultScore < 0
 }
 
-func (s *Service) DeleteTeam(ctx context.Context, id uuid.UUID) error {
-	const location = "game.Service.DeleteTeam"
-	err := s.repo.DeactivateTeam(ctx, id)
+func (g *Game) DeleteTeam(ctx context.Context, id uuid.UUID) error {
+	const location = "usecase.Game.DeleteTeam"
+	err := g.repo.DeactivateTeam(ctx, id)
 	if err != nil {
 		return fmt.Errorf("%s - deactivate team: %w", location, err)
 	}
-	s.Changed()
+	g.Changed()
 	return nil
 }
-func (s *Service) DeleteTask(ctx context.Context, id uuid.UUID) error {
-	const location = "game.Service.DeleteTask"
-	err := s.repo.DeactivateTask(ctx, id)
+func (g *Game) DeleteTask(ctx context.Context, id uuid.UUID) error {
+	const location = "usecase.Game.DeleteTask"
+	err := g.repo.DeactivateTask(ctx, id)
 	if err != nil {
 		return fmt.Errorf("%s - deactivate task: %w", location, err)
 	}
-	s.Changed()
+	g.Changed()
 	return nil
 }

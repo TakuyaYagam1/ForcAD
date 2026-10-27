@@ -5,8 +5,7 @@ import (
 	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/game"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 )
 
 type GameService interface {
@@ -17,7 +16,7 @@ type GameService interface {
 	History(ctx context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error)
 	PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error)
 	Scoreboard(ctx context.Context) (domain.Scoreboard, error)
-	Standings(ctx context.Context) ([]game.Standing, error)
+	Standings(ctx context.Context) ([]usecase.Standing, error)
 	AttackData(ctx context.Context) (map[string]map[string][]string, error)
 	ChangeState(ctx context.Context, action string, generation *int64) error
 	SaveTeam(ctx context.Context, team domain.Team, create bool) (domain.Team, error)
@@ -33,5 +32,5 @@ type AuthService interface {
 }
 
 type FlagService interface {
-	Submit(ctx context.Context, token string, values []string) ([]flags.Response, error)
+	Submit(ctx context.Context, token string, values []string) ([]usecase.FlagResponse, error)
 }

@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/response"
-	httpv1 "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1"
 )
 
 func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
@@ -18,13 +16,13 @@ func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
 				allowed := publicOrigin
 				if allowed == "" {
 					scheme := "http"
-					if httpv1.IsSecureRequest(r.Context()) {
+					if IsSecureRequest(r.Context()) {
 						scheme = "https"
 					}
 					allowed = scheme + "://" + r.Host
 				}
 				if r.Header.Get("Sec-Fetch-Site") == "cross-site" || origin != "" && !sameOrigin(origin, allowed) {
-					response.JSON(w, http.StatusForbidden, api.ApiError{Error: "Cross-origin administrative request rejected"})
+					WriteError(w, http.StatusForbidden, api.ApiError{Error: "Cross-origin administrative request rejected"})
 					return
 				}
 			}

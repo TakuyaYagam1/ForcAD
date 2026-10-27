@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/response"
 )
 
 func BodyLimit(next http.Handler) http.Handler {
@@ -15,7 +14,7 @@ func BodyLimit(next http.Handler) http.Handler {
 			limit = 32 << 10
 		}
 		if r.ContentLength > limit {
-			response.JSON(w, http.StatusRequestEntityTooLarge, api.ApiError{Error: "Request body too large"})
+			WriteError(w, http.StatusRequestEntityTooLarge, api.ApiError{Error: "Request body too large"})
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
@@ -36,7 +35,7 @@ func Admission(limit int) func(http.Handler) http.Handler {
 				defer func() { <-slots }()
 			default:
 				w.Header().Set("Retry-After", "1")
-				response.JSON(w, http.StatusServiceUnavailable, api.ApiError{Error: "Service capacity exceeded"})
+				WriteError(w, http.StatusServiceUnavailable, api.ApiError{Error: "Service capacity exceeded"})
 				return
 			}
 			next.ServeHTTP(w, r)

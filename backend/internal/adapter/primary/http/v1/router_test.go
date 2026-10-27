@@ -1,4 +1,4 @@
-package httpadapter
+package v1
 
 import (
 	"context"
@@ -15,10 +15,8 @@ import (
 	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
-	httpv1 "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/auth"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -26,7 +24,7 @@ type testAuth struct{ err error }
 
 func (a testAuth) Login(_ context.Context, user, password string) (string, error) {
 	if user != "admin" || password != "password" {
-		return "", auth.ErrUnauthorized
+		return "", usecase.ErrUnauthorized
 	}
 	return "session-value", a.err
 }
@@ -35,7 +33,7 @@ func (a testAuth) Status(_ context.Context, token string) (string, error) {
 		return "", a.err
 	}
 	if token != "valid" {
-		return "", auth.ErrUnauthorized
+		return "", usecase.ErrUnauthorized
 	}
 	return "admin", nil
 }
@@ -48,7 +46,7 @@ type testFlags struct {
 	calls   int
 }
 
-func (f *testFlags) Submit(ctx context.Context, token string, values []string) ([]flags.Response, error) {
+func (f *testFlags) Submit(ctx context.Context, token string, values []string) ([]usecase.FlagResponse, error) {
 	f.calls++
 	if f.entered != nil {
 		close(f.entered)
@@ -64,9 +62,9 @@ func (f *testFlags) Submit(ctx context.Context, token string, values []string) (
 	if f.err != nil {
 		return nil, f.err
 	}
-	result := make([]flags.Response, 0, len(values))
+	result := make([]usecase.FlagResponse, 0, len(values))
 	for _, value := range values {
-		result = append(result, flags.Response{Flag: value, Message: "invalid"})
+		result = append(result, usecase.FlagResponse{Flag: value, Message: "invalid"})
 	}
 	return result, nil
 }
@@ -77,7 +75,7 @@ var (
 )
 
 type testGame struct {
-	httpv1.GameService
+	GameService
 
 	changed     string
 	historyTeam uuid.UUID
@@ -106,11 +104,11 @@ type testLimiter struct{}
 
 func (testLimiter) Allow(context.Context, string, int, int, int) (bool, error) { return true, nil }
 
-func testRouter(t *testing.T, role string, g httpv1.GameService, a httpv1.AuthService, f httpv1.FlagService) http.Handler {
+func testRouter(t *testing.T, role string, g GameService, a AuthService, f FlagService) http.Handler {
 	t.Helper()
 	cfg := config.Config{Role: role, HTTPMaxInflight: 1, RequestTimeout: time.Second}
 	noop := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
-	r, err := NewRouter(cfg, httpv1.NewHandler(g, a, f), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
+	r, err := NewRouter(cfg, NewHandler(g, a, f), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,31 +274,31 @@ func TestErrorHandlerPreservesWrappedPublicErrors(t *testing.T) {
 	}{
 		{
 			name:     "game state sentinel",
-			err:      fmt.Errorf("flags.Service.Submit - game has not started: %w", flags.ErrNotStarted),
+			err:      fmt.Errorf("usecase.Flags.Submit - game has not started: %w", usecase.ErrNotStarted),
 			status:   http.StatusBadRequest,
-			message:  flags.ErrNotStarted.Error(),
-			mustHide: "flags.Service.Submit",
+			message:  usecase.ErrNotStarted.Error(),
+			mustHide: "usecase.Flags.Submit",
 		},
 		{
 			name:     "batch sentinel",
-			err:      fmt.Errorf("flags.Service.Submit - validate flag batch: %w", flags.ErrInvalidBatch),
+			err:      fmt.Errorf("usecase.Flags.Submit - validate flag batch: %w", usecase.ErrInvalidBatch),
 			status:   http.StatusBadRequest,
-			message:  flags.ErrInvalidBatch.Error(),
-			mustHide: "flags.Service.Submit",
+			message:  usecase.ErrInvalidBatch.Error(),
+			mustHide: "usecase.Flags.Submit",
 		},
 		{
 			name:     "validation error",
-			err:      fmt.Errorf("game.Service.SaveTask - invalid task settings: %w", &domain.ValidationError{Message: "Invalid task settings"}),
+			err:      fmt.Errorf("usecase.Game.SaveTask - invalid task settings: %w", &domain.ValidationError{Message: "Invalid task settings"}),
 			status:   http.StatusBadRequest,
 			message:  "Invalid task settings",
-			mustHide: "game.Service.SaveTask",
+			mustHide: "usecase.Game.SaveTask",
 		},
 		{
 			name:     "state error",
-			err:      fmt.Errorf("game.Service.ChangeState - reject state change: %w", &domain.StateError{Message: "Game has already finished"}),
+			err:      fmt.Errorf("usecase.Game.ChangeState - reject state change: %w", &domain.StateError{Message: "Game has already finished"}),
 			status:   http.StatusConflict,
 			message:  "Game has already finished",
-			mustHide: "game.Service.ChangeState",
+			mustHide: "usecase.Game.ChangeState",
 		},
 		{
 			name:     "unexpected error",
@@ -333,17 +331,17 @@ func TestWrappedFlagSentinelsKeepPublicMessages(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "not started", err: flags.ErrNotStarted},
-		{name: "invalid batch", err: flags.ErrInvalidBatch},
+		{name: "not started", err: usecase.ErrNotStarted},
+		{name: "invalid batch", err: usecase.ErrInvalidBatch},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			serviceErr := fmt.Errorf("flags.Service.Submit - operation failed: %w", test.err)
+			serviceErr := fmt.Errorf("usecase.Flags.Submit - operation failed: %w", test.err)
 			r := testRouter(t, "receiver", &testGame{}, testAuth{}, &testFlags{err: serviceErr})
 			w := request(r, "PUT", "/flags", "[]", map[string]string{"X-Team-Token": "0123456789abcdef"})
 			if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), test.err.Error()) {
 				t.Fatalf("public response: %d %s", w.Code, w.Body.String())
 			}
-			if strings.Contains(w.Body.String(), "flags.Service.Submit") {
+			if strings.Contains(w.Body.String(), "usecase.Flags.Submit") {
 				t.Fatalf("response exposed internal location: %s", w.Body.String())
 			}
 		})

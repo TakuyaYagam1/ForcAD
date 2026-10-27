@@ -38,7 +38,8 @@ description = "Malformed-session test identifier with no corresponding credentia
 condition = "AND"
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
-paths = ['''^backend/internal/usecase/auth/service_test\.go$''']
+# auth/service_test.go is the path before the usecase merge; the Git history scan still needs it.
+paths = ['''^backend/internal/usecase/(auth/service_test|auth_test)\.go$''']
 regexes = ['''^(0123456789abcdef){4}$''']
 
 [[allowlists]]

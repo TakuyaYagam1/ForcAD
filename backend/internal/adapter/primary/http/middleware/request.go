@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	httpv1 "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1"
 )
 
 func ContextTimeout(timeout time.Duration) func(http.Handler) http.Handler {
@@ -52,7 +50,7 @@ func RequestContext(publicOrigin string, trusted []*net.IPNet) func(http.Handler
 			if strings.HasPrefix(r.URL.Path, "/api/admin/") {
 				w.Header().Set("Cache-Control", "no-store")
 			}
-			next.ServeHTTP(w, r.WithContext(httpv1.WithRequestInfo(r.Context(), session, secure)))
+			next.ServeHTTP(w, r.WithContext(WithRequestInfo(r.Context(), session, secure)))
 		})
 	}
 }

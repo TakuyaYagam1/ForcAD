@@ -1,4 +1,4 @@
-package auth
+package usecase
 
 import (
 	"context"
@@ -37,8 +37,8 @@ func (m *memoryStore) Del(_ context.Context, keys ...string) error {
 func TestSessionLifecycleAndPasswordRotation(t *testing.T) {
 	ctx := context.Background()
 	store := &memoryStore{values: map[string][]byte{}}
-	service := New(store, "admin", "original-password")
-	if _, err := service.Login(ctx, "admin", "wrong"); !errors.Is(err, ErrUnauthorized) || !strings.HasPrefix(err.Error(), "auth.Service.Login - ") {
+	service := NewAuth(store, "admin", "original-password")
+	if _, err := service.Login(ctx, "admin", "wrong"); !errors.Is(err, ErrUnauthorized) || !strings.HasPrefix(err.Error(), "usecase.Auth.Login - ") {
 		t.Fatal("accepted wrong password")
 	}
 	token, err := service.Login(ctx, "admin", "original-password")
@@ -51,7 +51,7 @@ func TestSessionLifecycleAndPasswordRotation(t *testing.T) {
 	if username, err := service.Status(ctx, token); err != nil || username != "admin" {
 		t.Fatalf("session rejected: %v", err)
 	}
-	rotated := New(store, "admin", "changed-password")
+	rotated := NewAuth(store, "admin", "changed-password")
 	if _, err := rotated.Status(ctx, token); !errors.Is(err, ErrUnauthorized) {
 		t.Fatal("password rotation didn't revoke session")
 	}
@@ -73,7 +73,7 @@ func TestSessionLifecycleAndPasswordRotation(t *testing.T) {
 func TestMalformedSessionsFailClosed(t *testing.T) {
 	ctx := context.Background()
 	store := &memoryStore{values: map[string][]byte{}}
-	service := New(store, "admin", "password")
+	service := NewAuth(store, "admin", "password")
 	for _, token := range []string{"", "session:*", "../secret", "ffffffff"} {
 		if _, err := service.Status(ctx, token); !errors.Is(err, ErrUnauthorized) {
 			t.Fatal("malformed token accepted")

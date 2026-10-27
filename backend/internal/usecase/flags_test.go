@@ -1,4 +1,4 @@
-package flags
+package usecase
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-type testState struct {
+type flagsState struct {
 	life        domain.Lifecycle
 	lookupCalls int
 	cost        int
@@ -22,17 +22,17 @@ type testState struct {
 	storageErr  error
 }
 
-func (s *testState) ActiveIDByToken(context.Context, string) (uuid.UUID, error) {
+func (s *flagsState) ActiveIDByToken(context.Context, string) (uuid.UUID, error) {
 	return uuid.MustParse("00000000-0000-7000-8000-000000000001"), nil
 }
-func (s *testState) IsActiveTeam(context.Context, uuid.UUID) (bool, error) { return true, nil }
-func (s *testState) Lifecycle(context.Context) (domain.Lifecycle, error)   { return s.life, nil }
-func (s *testState) Allow(_ context.Context, scope string, cost, _, _ int) (bool, error) {
+func (s *flagsState) IsActiveTeam(context.Context, uuid.UUID) (bool, error) { return true, nil }
+func (s *flagsState) Lifecycle(context.Context) (domain.Lifecycle, error)   { return s.life, nil }
+func (s *flagsState) Allow(_ context.Context, scope string, cost, _, _ int) (bool, error) {
 	s.cost = cost
 	s.scope = scope
 	return s.rateAllowed, nil
 }
-func (s *testState) SubmitBatch(_ context.Context, submission domain.FlagSubmission) ([]domain.SubmissionResult, error) {
+func (s *flagsState) SubmitBatch(_ context.Context, submission domain.FlagSubmission) ([]domain.SubmissionResult, error) {
 	s.lookupCalls++
 	if s.storageErr != nil {
 		return nil, s.storageErr
@@ -51,16 +51,16 @@ func (s *testState) SubmitBatch(_ context.Context, submission domain.FlagSubmiss
 	}
 	return results, nil
 }
-func (s *testState) Publish(context.Context, string, any) error { return nil }
+func (s *flagsState) Publish(context.Context, string, any) error { return nil }
 
-func newTestService() (*Service, *testState) {
-	state := &testState{life: domain.Lifecycle{Config: domain.GameConfig{GameRunning: true, RealRound: 1}}, rateAllowed: true, submitted: map[string]bool{}}
-	service := New(state, state, state, state, state, slog.New(slog.DiscardHandler), 200, 400)
+func newTestFlags() (*Flags, *flagsState) {
+	state := &flagsState{life: domain.Lifecycle{Config: domain.GameConfig{GameRunning: true, RealRound: 1}}, rateAllowed: true, submitted: map[string]bool{}}
+	service := NewFlags(state, state, state, state, state, slog.New(slog.DiscardHandler), 200, 400)
 	return service, state
 }
 
 func TestBatchChargesEveryFlagAndLooksUpOnce(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	flag := strings.Repeat("A", 31) + "="
 	values := make([]string, 100)
 	for i := range values {
@@ -85,9 +85,9 @@ func TestBatchChargesEveryFlagAndLooksUpOnce(t *testing.T) {
 }
 
 func TestGameBoundaryAndRateLimitStopDatabaseWork(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	state.life.Config.GameRunning = false
-	if _, err := service.Submit(context.Background(), "0123456789abcdef", []string{"bad"}); !errors.Is(err, ErrFinished) || !strings.HasPrefix(err.Error(), "flags.Service.Submit - ") {
+	if _, err := service.Submit(context.Background(), "0123456789abcdef", []string{"bad"}); !errors.Is(err, ErrFinished) || !strings.HasPrefix(err.Error(), "usecase.Flags.Submit - ") {
 		t.Fatalf("finished game accepted: %v", err)
 	}
 	state.life.Config.GameRunning = true
@@ -101,7 +101,7 @@ func TestGameBoundaryAndRateLimitStopDatabaseWork(t *testing.T) {
 }
 
 func TestMalformedFlagsProducePerFlagVerdicts(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	results, err := service.Submit(context.Background(), "0123456789abcdef", []string{"", "not-a-flag"})
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestMalformedFlagsProducePerFlagVerdicts(t *testing.T) {
 }
 
 func TestStorageFailureHasNoFlagVerdictsOrEvents(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	state.storageErr = context.DeadlineExceeded
 	results, err := service.Submit(t.Context(), "0123456789abcdef", []string{strings.Repeat("A", 31) + "="})
 	if !errors.Is(err, context.DeadlineExceeded) || results != nil || len(service.events) != 0 {
@@ -124,7 +124,7 @@ func TestStorageFailureHasNoFlagVerdictsOrEvents(t *testing.T) {
 }
 
 func TestEmptyBatchStillConsumesAdmissionBudget(t *testing.T) {
-	service, state := newTestService()
+	service, state := newTestFlags()
 	if _, err := service.Submit(t.Context(), "0123456789abcdef", nil); err != nil {
 		t.Fatal(err)
 	}

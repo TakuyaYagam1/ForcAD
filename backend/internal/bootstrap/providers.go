@@ -7,7 +7,6 @@ import (
 	promclient "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
-	httpadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http"
 	httpv1 "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/websocket"
 	processchecker "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/checker"
@@ -15,9 +14,7 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/rabbitmq"
 	redisadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/auth"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/game"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	checkerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/checker"
 	schedulerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/scheduler"
 )
@@ -28,17 +25,17 @@ func newBroker(cfg config.Config, logger *slog.Logger) *rabbitmq.Broker {
 func newEvents(cache *redisadapter.Store, logger *slog.Logger) *websocket.Events {
 	return websocket.New(cache.Client, logger)
 }
-func newAuth(cfg config.Config, cache *redisadapter.Store) *auth.Service {
-	return auth.New(cache, cfg.AdminUsername, cfg.AdminPassword)
+func newAuth(cfg config.Config, cache *redisadapter.Store) *usecase.Auth {
+	return usecase.NewAuth(cache, cfg.AdminUsername, cfg.AdminPassword)
 }
-func newGame(repo *postgres.GameStore, storage *postgres.Repository, events *websocket.Events, logger *slog.Logger) (*game.Service, func()) {
-	service := game.New(repo, storage, events, logger)
+func newGame(repo *postgres.GameStore, storage *postgres.Repository, events *websocket.Events, logger *slog.Logger) (*usecase.Game, func()) {
+	service := usecase.NewGame(repo, storage, events, logger)
 	return service, service.Close
 }
-func newFlags(cfg config.Config, storage *postgres.Repository, game *postgres.GameStore, cache *redisadapter.Store, events *websocket.Events, logger *slog.Logger) *flags.Service {
-	return flags.New(storage, storage, game, cache, events, logger, cfg.FlagRate, cfg.FlagBurst)
+func newFlags(cfg config.Config, storage *postgres.Repository, game *postgres.GameStore, cache *redisadapter.Store, events *websocket.Events, logger *slog.Logger) *usecase.Flags {
+	return usecase.NewFlags(storage, storage, game, cache, events, logger, cfg.FlagRate, cfg.FlagBurst)
 }
-func newHandler(game *game.Service, auth *auth.Service, flags *flags.Service) *httpv1.Handler {
+func newHandler(game *usecase.Game, auth *usecase.Auth, flags *usecase.Flags) *httpv1.Handler {
 	return httpv1.NewHandler(game, auth, flags)
 }
 func newRouter(cfg config.Config, handler *httpv1.Handler, events *websocket.Events, metrics *prometheus.Metrics, cache *redisadapter.Store, logger *slog.Logger, traffic *prometheus.TeamTraffic) (apiHandler, error) {
@@ -49,7 +46,7 @@ func newRouter(cfg config.Config, handler *httpv1.Handler, events *websocket.Eve
 		promclient.NewCounterFunc(promclient.CounterOpts{Name: "forcad_websocket_slow_client_drops_total", Help: "Slow subscriber deliveries dropped by the event hub."}, func() float64 { return float64(events.SlowClientDrops()) }),
 		promclient.NewCounterFunc(promclient.CounterOpts{Name: "forcad_websocket_notification_drops_total", Help: "Optional activity notifications skipped for full subscriber queues."}, func() float64 { return float64(events.NotificationDrops()) }),
 	)
-	router, err := httpadapter.NewRouter(cfg, handler, events, metrics.Export, metrics.Registry, cache, logger, traffic)
+	router, err := httpv1.NewRouter(cfg, handler, events, metrics.Export, metrics.Registry, cache, logger, traffic)
 	if err != nil {
 		return apiHandler{}, fmt.Errorf("%s - create HTTP router: %w", location, err)
 	}

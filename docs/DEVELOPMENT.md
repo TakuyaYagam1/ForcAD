@@ -117,7 +117,7 @@ For local security checks and their exact coverage, see [security/README.md](../
 
 ```sh
 cd backend
-go test -run='^$' -bench='^BenchmarkRuntimeConcurrent$' -benchmem -count=3 ./internal/usecase/game
+go test -run='^$' -bench='^BenchmarkRuntimeConcurrent$' -benchmem -count=3 ./internal/usecase
 ./integration_test/scripts/run_tests.sh -run='^$' -bench='^BenchmarkPublishBatch$' -benchtime=3x -count=3
 ```
 

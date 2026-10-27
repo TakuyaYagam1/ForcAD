@@ -1,4 +1,4 @@
-package httpadapter
+package v1
 
 import (
 	"context"
@@ -7,10 +7,9 @@ import (
 	"net/http"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/response"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/middleware"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/auth"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	"github.com/ogen-go/ogen/ogenerrors"
 )
 
@@ -35,7 +34,7 @@ func errorHandler(logger *slog.Logger) api.ErrorHandler {
 		if status == http.StatusServiceUnavailable {
 			w.Header().Set("Retry-After", "1")
 		}
-		response.JSON(w, status, api.ApiError{Error: message})
+		middleware.WriteError(w, status, api.ApiError{Error: message})
 	}
 }
 
@@ -43,7 +42,7 @@ func commonRequestError(err error) (int, string, bool) {
 	var validation *domain.ValidationError
 	var state *domain.StateError
 	switch {
-	case errors.Is(err, auth.ErrUnauthorized):
+	case errors.Is(err, usecase.ErrUnauthorized):
 		return http.StatusForbidden, "Invalid credentials or session", true
 	case errors.Is(err, domain.ErrTeamTokenInvalid):
 		return http.StatusBadRequest, "Invalid team token", true
@@ -62,15 +61,15 @@ func commonRequestError(err error) (int, string, bool) {
 
 func flagRequestError(err error, w http.ResponseWriter) (int, string, bool) {
 	switch {
-	case errors.Is(err, flags.ErrNotStarted):
-		return http.StatusBadRequest, flags.ErrNotStarted.Error(), true
-	case errors.Is(err, flags.ErrInvalidBatch):
-		return http.StatusBadRequest, flags.ErrInvalidBatch.Error(), true
-	case errors.Is(err, flags.ErrFinished):
+	case errors.Is(err, usecase.ErrNotStarted):
+		return http.StatusBadRequest, usecase.ErrNotStarted.Error(), true
+	case errors.Is(err, usecase.ErrInvalidBatch):
+		return http.StatusBadRequest, usecase.ErrInvalidBatch.Error(), true
+	case errors.Is(err, usecase.ErrFinished):
 		return http.StatusGone, "Game has finished", true
-	case errors.Is(err, flags.ErrPaused):
+	case errors.Is(err, usecase.ErrPaused):
 		return http.StatusServiceUnavailable, "Game is paused", true
-	case errors.Is(err, flags.ErrLimited):
+	case errors.Is(err, usecase.ErrLimited):
 		w.Header().Set("Retry-After", "1")
 		return http.StatusTooManyRequests, "Flag submission rate exceeded", true
 	default:

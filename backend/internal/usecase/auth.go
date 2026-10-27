@@ -1,4 +1,4 @@
-package auth
+package usecase
 
 import (
 	"bytes"
@@ -20,14 +20,14 @@ const SessionTTL = 8 * time.Hour
 
 var ErrUnauthorized = errors.New("invalid credentials or session")
 
-type Store interface {
+type SessionStore interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
 	Del(ctx context.Context, keys ...string) error
 }
 
-type Service struct {
-	store              Store
+type Auth struct {
+	store              SessionStore
 	username, password string
 }
 type sessionData struct {
@@ -35,8 +35,8 @@ type sessionData struct {
 	PasswordVersion string `json:"password_version"`
 }
 
-func New(store Store, username, password string) *Service {
-	return &Service{store: store, username: username, password: password}
+func NewAuth(store SessionStore, username, password string) *Auth {
+	return &Auth{store: store, username: username, password: password}
 }
 
 func equal(a, b string) bool {
@@ -56,10 +56,10 @@ func marker(password, session, username string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-func (s *Service) Login(ctx context.Context, username, password string) (string, error) {
-	const location = "auth.Service.Login"
-	userOK, passwordOK := equal(username, s.username), equal(password, s.password)
-	if !userOK || !passwordOK || s.username == "" || s.password == "" {
+func (a *Auth) Login(ctx context.Context, username, password string) (string, error) {
+	const location = "usecase.Auth.Login"
+	userOK, passwordOK := equal(username, a.username), equal(password, a.password)
+	if !userOK || !passwordOK || a.username == "" || a.password == "" {
 		return "", fmt.Errorf("%s - authenticate administrator: %w", location, ErrUnauthorized)
 	}
 	var random [32]byte
@@ -67,22 +67,22 @@ func (s *Service) Login(ctx context.Context, username, password string) (string,
 		return "", fmt.Errorf("%s - generate session token: %w", location, err)
 	}
 	token := hex.EncodeToString(random[:])
-	data, err := json.Marshal(sessionData{Username: s.username, PasswordVersion: marker(s.password, token, s.username)})
+	data, err := json.Marshal(sessionData{Username: a.username, PasswordVersion: marker(a.password, token, a.username)})
 	if err != nil {
 		return "", fmt.Errorf("%s - encode session: %w", location, err)
 	}
-	if err = s.store.Set(ctx, "session:"+token, data, SessionTTL); err != nil {
+	if err = a.store.Set(ctx, "session:"+token, data, SessionTTL); err != nil {
 		return "", fmt.Errorf("%s - store session: %w", location, err)
 	}
 	return token, nil
 }
 
-func (s *Service) Status(ctx context.Context, token string) (string, error) {
-	const location = "auth.Service.Status"
+func (a *Auth) Status(ctx context.Context, token string) (string, error) {
+	const location = "usecase.Auth.Status"
 	if !validToken(token) {
 		return "", fmt.Errorf("%s - validate session token: %w", location, ErrUnauthorized)
 	}
-	data, err := s.store.Get(ctx, "session:"+token)
+	data, err := a.store.Get(ctx, "session:"+token)
 	if err != nil {
 		if errors.Is(err, cachekit.ErrNotFound) {
 			return "", fmt.Errorf("%s - session is unavailable: %w", location, ErrUnauthorized)
@@ -90,19 +90,19 @@ func (s *Service) Status(ctx context.Context, token string) (string, error) {
 		return "", fmt.Errorf("%s - load session: %w", location, err)
 	}
 	var session sessionData
-	if json.Unmarshal(data, &session) != nil || !equal(session.Username, s.username) || !equal(session.PasswordVersion, marker(s.password, token, s.username)) {
-		_ = s.store.Del(ctx, "session:"+token)
+	if json.Unmarshal(data, &session) != nil || !equal(session.Username, a.username) || !equal(session.PasswordVersion, marker(a.password, token, a.username)) {
+		_ = a.store.Del(ctx, "session:"+token)
 		return "", fmt.Errorf("%s - validate stored session: %w", location, ErrUnauthorized)
 	}
-	return s.username, nil
+	return a.username, nil
 }
 
-func (s *Service) Logout(ctx context.Context, token string) error {
-	const location = "auth.Service.Logout"
+func (a *Auth) Logout(ctx context.Context, token string) error {
+	const location = "usecase.Auth.Logout"
 	if !validToken(token) {
 		return nil
 	}
-	if err := s.store.Del(ctx, "session:"+token); err != nil {
+	if err := a.store.Del(ctx, "session:"+token); err != nil {
 		return fmt.Errorf("%s - delete session: %w", location, err)
 	}
 	return nil

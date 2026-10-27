@@ -1,4 +1,4 @@
-package flags
+package usecase
 
 import (
 	"errors"
@@ -7,12 +7,12 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-func (s *Service) observeSubmission(team uuid.UUID, count int, responses []Response, err error) {
-	if s.observer == nil {
+func (f *Flags) observeSubmission(team uuid.UUID, count int, responses []FlagResponse, err error) {
+	if f.observer == nil {
 		return
 	}
 	if err != nil {
-		s.observer.ObserveFlags(team, submissionVerdict(err), count)
+		f.observer.ObserveFlags(team, submissionVerdict(err), count)
 		return
 	}
 	counts := make(map[string]int)
@@ -20,7 +20,7 @@ func (s *Service) observeSubmission(team uuid.UUID, count int, responses []Respo
 		counts[response.Verdict]++
 	}
 	for verdict, count := range counts {
-		s.observer.ObserveFlags(team, verdict, count)
+		f.observer.ObserveFlags(team, verdict, count)
 	}
 }
 

@@ -8,10 +8,10 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/websocket"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 )
 
-func newTeamTraffic(cfg config.Config, metrics *prometheus.Metrics, repo *postgres.GameStore, events *websocket.Events, submissions *flags.Service, logger *slog.Logger) (*prometheus.TeamTraffic, error) {
+func newTeamTraffic(cfg config.Config, metrics *prometheus.Metrics, repo *postgres.GameStore, events *websocket.Events, submissions *usecase.Flags, logger *slog.Logger) (*prometheus.TeamTraffic, error) {
 	const location = "bootstrap.newTeamTraffic"
 	var teams []config.Team
 	if cfg.ConfigPath != "" {

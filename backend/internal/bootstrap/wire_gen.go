@@ -32,13 +32,13 @@ func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*A
 		return nil, nil, err
 	}
 	events := newEvents(store, logger)
-	service, cleanup3 := newGame(gameStore, repository, events, logger)
-	authService := newAuth(cfg, store)
-	flagsService := newFlags(cfg, repository, gameStore, store, events, logger)
-	handler := newHandler(service, authService, flagsService)
+	game, cleanup3 := newGame(gameStore, repository, events, logger)
+	auth := newAuth(cfg, store)
+	flags := newFlags(cfg, repository, gameStore, store, events, logger)
+	handler := newHandler(game, auth, flags)
 	broker := newBroker(cfg, logger)
 	metrics := prometheus.New(cfg, pool, store, broker)
-	teamTraffic, err := newTeamTraffic(cfg, metrics, gameStore, events, flagsService, logger)
+	teamTraffic, err := newTeamTraffic(cfg, metrics, gameStore, events, flags, logger)
 	if err != nil {
 		cleanup3()
 		cleanup2()
@@ -54,7 +54,7 @@ func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*A
 	}
 	worker := newChecker(cfg, repository, gameStore, logger)
 	bootstrapScheduledWorker := newScheduler(cfg, repository, gameStore, broker, logger)
-	application := NewApplication(cfg, bootstrapApiHandler, metrics, logger, events, service, flagsService, broker, worker, bootstrapScheduledWorker, teamTraffic)
+	application := NewApplication(cfg, bootstrapApiHandler, metrics, logger, events, game, flags, broker, worker, bootstrapScheduledWorker, teamTraffic)
 	return application, func() {
 		cleanup3()
 		cleanup2()

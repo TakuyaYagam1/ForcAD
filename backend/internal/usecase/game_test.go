@@ -1,4 +1,4 @@
-package game
+package usecase
 
 import (
 	"context"
@@ -51,7 +51,7 @@ func TestScoreboardRetainsCompletedResultsDuringNextRound(t *testing.T) {
 		Tasks:     []domain.Task{{ID: taskID, Name: "service", Checker: "private/checker"}},
 		Cells:     []domain.Cell{{TeamID: firstID, TaskID: taskID, Score: 1000, Status: 104, PrivateMessage: "private-message"}, {TeamID: secondID, TaskID: taskID, Score: 1000, Status: 104}},
 	}}
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	board, err := service.Scoreboard(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestScoreboardRetainsCompletedResultsDuringNextRound(t *testing.T) {
 
 func TestInvalidSnapshotDoesNotFallBackToLiveScores(t *testing.T) {
 	repo := &boardRepository{board: domain.BoardData{Lifecycle: domain.Lifecycle{Session: domain.Session{Snapshot: []byte(`{invalid`)}}}}
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	if _, err := service.Scoreboard(t.Context()); err == nil {
 		t.Fatal("corrupt completed snapshot silently replaced")
 	}
@@ -104,7 +104,7 @@ func TestStandingsBreakScoreTiesByUUID(t *testing.T) {
 			{TeamID: firstID, Score: 50, Checks: 1, ChecksPassed: 1},
 		},
 	}}
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	standings, err := service.Standings(t.Context())
 	if err != nil {
 		t.Fatal(err)
@@ -116,20 +116,20 @@ func TestStandingsBreakScoreTiesByUUID(t *testing.T) {
 
 func TestMutationErrorsKeepContextAndTypedMessage(t *testing.T) {
 	stateErr := &domain.StateError{Message: "Game has already finished"}
-	service := New(&stateErrorRepository{err: stateErr}, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(&stateErrorRepository{err: stateErr}, nil, nil, slog.New(slog.DiscardHandler))
 	if err := service.ChangeState(context.Background(), "finish", nil); !errors.Is(err, stateErr) {
 		t.Fatalf("ChangeState() error = %v, want wrapped state error", err)
-	} else if !strings.HasPrefix(err.Error(), "game.Service.ChangeState - ") {
+	} else if !strings.HasPrefix(err.Error(), "usecase.Game.ChangeState - ") {
 		t.Fatalf("ChangeState() error has no location: %v", err)
 	}
 
-	service = New(nil, nil, nil, slog.New(slog.DiscardHandler))
+	service = NewGame(nil, nil, nil, slog.New(slog.DiscardHandler))
 	_, err := service.SaveTask(context.Background(), domain.Task{Puts: 1025}, true)
 	var validation *domain.ValidationError
 	if !errors.As(err, &validation) || validation.Message != "Total PUT and GET count must not exceed 1024" {
 		t.Fatalf("SaveTask() error lost validation details: %v", err)
 	}
-	if !strings.HasPrefix(err.Error(), "game.Service.SaveTask - ") {
+	if !strings.HasPrefix(err.Error(), "usecase.Game.SaveTask - ") {
 		t.Fatalf("SaveTask() error has no location: %v", err)
 	}
 }

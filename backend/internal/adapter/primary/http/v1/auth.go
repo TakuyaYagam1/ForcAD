@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/auth"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/middleware"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 )
 
 type authHandler struct {
@@ -24,9 +25,8 @@ func (h *authHandler) HandleSessionCookie(ctx context.Context, _ api.OperationNa
 }
 
 func sessionCookie(ctx context.Context, token string, expired bool) string {
-	info, _ := ctx.Value(requestKey).(requestInfo)
 	//nolint:gosec // Secure is enabled from TLS, configured HTTPS, or a trusted proxy.
-	c := http.Cookie{Name: "session", Value: token, Path: "/", MaxAge: int(auth.SessionTTL.Seconds()), HttpOnly: true, Secure: info.secure, SameSite: http.SameSiteLaxMode}
+	c := http.Cookie{Name: "session", Value: token, Path: "/", MaxAge: int(usecase.SessionTTL.Seconds()), HttpOnly: true, Secure: middleware.IsSecureRequest(ctx), SameSite: http.SameSiteLaxMode}
 	if expired {
 		c.MaxAge = -1
 		c.Expires = time.Unix(1, 0)
@@ -45,8 +45,7 @@ func (h *authHandler) AdminLogin(ctx context.Context, req *api.AdminLoginRequest
 
 func (h *authHandler) AdminLogout(ctx context.Context) (*api.StatusResponseHeaders, error) {
 	const location = "httpv1.authHandler.AdminLogout"
-	info, _ := ctx.Value(requestKey).(requestInfo)
-	if err := h.auth.Logout(ctx, info.session); err != nil {
+	if err := h.auth.Logout(ctx, middleware.Session(ctx)); err != nil {
 		return nil, fmt.Errorf("%s - end administrator session: %w", location, err)
 	}
 	return &api.StatusResponseHeaders{SetCookie: api.NewOptString(sessionCookie(ctx, "", true)), Response: api.StatusResponse{Status: api.StatusResponseStatusOk}}, nil

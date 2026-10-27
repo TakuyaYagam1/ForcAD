@@ -1,4 +1,4 @@
-package flags
+package usecase
 
 import (
 	"context"
@@ -35,16 +35,13 @@ type LifecycleReader interface {
 type Limiter interface {
 	Allow(ctx context.Context, scope string, cost, rate, burst int) (bool, error)
 }
-type Publisher interface {
-	Publish(ctx context.Context, topic string, payload any) error
-}
 
 type Observer interface {
 	ResolveTeam(ctx context.Context, team uuid.UUID)
 	ObserveFlags(team uuid.UUID, verdict string, count int)
 }
 
-type Service struct {
+type Flags struct {
 	teams       outbound.TeamRepository
 	attacks     outbound.AttackRepository
 	lifecycle   LifecycleReader
@@ -56,27 +53,27 @@ type Service struct {
 	observer    Observer
 }
 
-type Response struct {
-	Message string `json:"msg"`
-	Flag    string `json:"flag"`
-	Verdict string `json:"-"`
+type FlagResponse struct {
+	Message string
+	Flag    string
+	Verdict string
 }
 
 // SetObserver is called during bootstrap, before the service handles requests.
-func (s *Service) SetObserver(observer Observer) { s.observer = observer }
+func (f *Flags) SetObserver(observer Observer) { f.observer = observer }
 
-func New(teams outbound.TeamRepository, attacks outbound.AttackRepository, lifecycle LifecycleReader, limiter Limiter, publisher Publisher, logger *slog.Logger, rate, burst int) *Service {
-	return &Service{teams: teams, attacks: attacks, lifecycle: lifecycle, limiter: limiter, publisher: publisher, logger: logger, rate: rate, burst: burst, events: make(chan domain.AttackResult, eventQueueCapacity)}
+func NewFlags(teams outbound.TeamRepository, attacks outbound.AttackRepository, lifecycle LifecycleReader, limiter Limiter, publisher Publisher, logger *slog.Logger, rate, burst int) *Flags {
+	return &Flags{teams: teams, attacks: attacks, lifecycle: lifecycle, limiter: limiter, publisher: publisher, logger: logger, rate: rate, burst: burst, events: make(chan domain.AttackResult, eventQueueCapacity)}
 }
 
 var flagPattern = regexp.MustCompile(`^[A-Z0-9]{31}=$`)
 var tokenPattern = regexp.MustCompile(`^[0-9a-f]{16}$`)
 
-func (s *Service) Submit(ctx context.Context, token string, values []string) (responses []Response, submitErr error) {
-	const location = "flags.Service.Submit"
+func (f *Flags) Submit(ctx context.Context, token string, values []string) (responses []FlagResponse, submitErr error) {
+	const location = "usecase.Flags.Submit"
 	receivedAt := time.Now()
-	team, life, err := s.resolveSubmission(ctx, token)
-	defer func() { s.observeSubmission(team, len(values), responses, submitErr) }()
+	team, life, err := f.resolveSubmission(ctx, token)
+	defer func() { f.observeSubmission(team, len(values), responses, submitErr) }()
 	if err != nil {
 		return nil, fmt.Errorf("%s - resolve submission: %w", location, err)
 	}
@@ -86,22 +83,22 @@ func (s *Service) Submit(ctx context.Context, token string, values []string) (re
 	if err := validateFlagBatch(values); err != nil {
 		return nil, fmt.Errorf("%s - validate submission: %w", location, err)
 	}
-	if err := s.allowSubmission(ctx, team, max(1, len(values))); err != nil {
+	if err := f.allowSubmission(ctx, team, max(1, len(values))); err != nil {
 		return nil, fmt.Errorf("%s - check submission allowance: %w", location, err)
 	}
-	return s.submitBatch(ctx, domain.FlagSubmission{
+	return f.submitBatch(ctx, domain.FlagSubmission{
 		TeamID: team, Values: values, ReceivedAt: receivedAt, Generation: life.Session.Generation,
 	})
 }
 
-func (s *Service) submitBatch(ctx context.Context, submission domain.FlagSubmission) ([]Response, error) {
-	const location = "flags.Service.submitBatch"
+func (f *Flags) submitBatch(ctx context.Context, submission domain.FlagSubmission) ([]FlagResponse, error) {
+	const location = "usecase.Flags.submitBatch"
 	values := submission.Values
 	valid := make([]string, 0, len(values))
 	indexes := make([]int, 0, len(values))
-	results := make([]Response, len(values))
+	results := make([]FlagResponse, len(values))
 	for i, value := range values {
-		results[i] = Response{Message: "[" + value + "] Flag is invalid or too old.", Flag: value, Verdict: "invalid"}
+		results[i] = FlagResponse{Message: "[" + value + "] Flag is invalid or too old.", Flag: value, Verdict: "invalid"}
 		if flagPattern.MatchString(value) {
 			valid = append(valid, value)
 			indexes = append(indexes, i)
@@ -111,7 +108,7 @@ func (s *Service) submitBatch(ctx context.Context, submission domain.FlagSubmiss
 		return results, nil
 	}
 	submission.Values = valid
-	outcomes, err := s.attacks.SubmitBatch(ctx, submission)
+	outcomes, err := f.attacks.SubmitBatch(ctx, submission)
 	if err != nil {
 		return nil, fmt.Errorf("%s - commit flag batch: %w", location, err)
 	}
@@ -129,7 +126,7 @@ func (s *Service) submitBatch(ctx context.Context, submission domain.FlagSubmiss
 	for _, outcome := range outcomes {
 		if outcome.Err == nil {
 			select {
-			case s.events <- outcome.Attack:
+			case f.events <- outcome.Attack:
 			default:
 			}
 		}
@@ -138,7 +135,7 @@ func (s *Service) submitBatch(ctx context.Context, submission domain.FlagSubmiss
 }
 
 func submissionMessage(outcome domain.SubmissionResult) (string, error) {
-	const location = "flags.submissionMessage"
+	const location = "usecase.submissionMessage"
 	if outcome.Err != nil {
 		if message, known := verdict(outcome.Err); known {
 			return message, nil
@@ -148,22 +145,22 @@ func submissionMessage(outcome domain.SubmissionResult) (string, error) {
 	return fmt.Sprintf("Flag accepted! Earned %s flag points!", strconv.FormatFloat(outcome.Attack.AttackerDelta, 'f', -1, 64)), nil
 }
 
-func (s *Service) resolveSubmission(
+func (f *Flags) resolveSubmission(
 	ctx context.Context,
 	token string,
 ) (uuid.UUID, domain.Lifecycle, error) {
-	const location = "flags.Service.resolveSubmission"
+	const location = "usecase.Flags.resolveSubmission"
 	if !tokenPattern.MatchString(token) {
 		return uuid.Nil(), domain.Lifecycle{}, fmt.Errorf("%s - validate team token: %w", location, domain.ErrTeamTokenInvalid)
 	}
-	team, err := s.teams.ActiveIDByToken(ctx, token)
+	team, err := f.teams.ActiveIDByToken(ctx, token)
 	if err != nil {
 		return uuid.Nil(), domain.Lifecycle{}, fmt.Errorf("%s - resolve submitting team: %w", location, err)
 	}
-	if s.observer != nil {
-		s.observer.ResolveTeam(ctx, team)
+	if f.observer != nil {
+		f.observer.ResolveTeam(ctx, team)
 	}
-	life, err := s.lifecycle.Lifecycle(ctx)
+	life, err := f.lifecycle.Lifecycle(ctx)
 	if err != nil {
 		return team, domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
@@ -171,7 +168,7 @@ func (s *Service) resolveSubmission(
 }
 
 func validateSubmissionLifecycle(life domain.Lifecycle) error {
-	const location = "flags.validateSubmissionLifecycle"
+	const location = "usecase.validateSubmissionLifecycle"
 	if life.Finished() {
 		return fmt.Errorf("%s - game has finished: %w", location, ErrFinished)
 	}
@@ -185,7 +182,7 @@ func validateSubmissionLifecycle(life domain.Lifecycle) error {
 }
 
 func validateFlagBatch(values []string) error {
-	const location = "flags.validateFlagBatch"
+	const location = "usecase.validateFlagBatch"
 	if len(values) > maxBatchSize {
 		return fmt.Errorf("%s - validate flag batch: %w", location, ErrInvalidBatch)
 	}
@@ -197,9 +194,9 @@ func validateFlagBatch(values []string) error {
 	return nil
 }
 
-func (s *Service) allowSubmission(ctx context.Context, team uuid.UUID, count int) error {
-	const location = "flags.Service.allowSubmission"
-	ok, err := s.limiter.Allow(ctx, "team:"+team.String(), count, s.rate, s.burst)
+func (f *Flags) allowSubmission(ctx context.Context, team uuid.UUID, count int) error {
+	const location = "usecase.Flags.allowSubmission"
+	ok, err := f.limiter.Allow(ctx, "team:"+team.String(), count, f.rate, f.burst)
 	if err != nil {
 		return fmt.Errorf("%s - check submission rate: %w", location, err)
 	}
@@ -227,12 +224,12 @@ func verdict(err error) (string, bool) {
 	return "", false
 }
 
-func (s *Service) Run(ctx context.Context) {
+func (f *Flags) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case event := <-s.events:
+		case event := <-f.events:
 			data := struct {
 				AttackerID    uuid.UUID `json:"attacker_id"`
 				VictimID      uuid.UUID `json:"victim_id"`
@@ -240,8 +237,8 @@ func (s *Service) Run(ctx context.Context) {
 				AttackerDelta float64   `json:"attacker_delta"`
 				Generation    int64     `json:"generation"`
 			}{event.AttackerID, event.VictimID, event.TaskID, event.AttackerDelta, event.Generation}
-			if err := s.publisher.Publish(ctx, "flag_stolen", map[string]any{"data": data}); err != nil && ctx.Err() == nil {
-				s.logger.Warn("live flag event unavailable", "error", err)
+			if err := f.publisher.Publish(ctx, "flag_stolen", map[string]any{"data": data}); err != nil && ctx.Err() == nil {
+				f.logger.Warn("live flag event unavailable", "error", err)
 			}
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/response"
 	"github.com/wahrwelt-kit/go-httpkit/httputil"
 )
 
@@ -28,7 +27,7 @@ func LoginLimit(limiter RateLimiter, trusted []*net.IPNet, onError api.ErrorHand
 				}
 				if !ok {
 					w.Header().Set("Retry-After", "1")
-					response.JSON(w, http.StatusTooManyRequests, api.ApiError{Error: "Login rate exceeded"})
+					WriteError(w, http.StatusTooManyRequests, api.ApiError{Error: "Login rate exceeded"})
 					return
 				}
 			}

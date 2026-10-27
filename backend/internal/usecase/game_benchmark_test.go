@@ -1,4 +1,4 @@
-package game
+package usecase
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func (r *runtimeBenchmarkRepository) Lifecycle(ctx context.Context) (domain.Life
 
 func BenchmarkRuntimeConcurrent(b *testing.B) {
 	repo := &runtimeBenchmarkRepository{}
-	service := New(repo, nil, nil, slog.New(slog.DiscardHandler))
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 	ctx := context.Background()
 	b.SetParallelism(4)
 	b.ReportAllocs()

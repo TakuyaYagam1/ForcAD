@@ -10,7 +10,6 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/response"
 )
 
 func Recoverer(logger *slog.Logger) func(http.Handler) http.Handler {
@@ -24,7 +23,7 @@ func Recoverer(logger *slog.Logger) func(http.Handler) http.Handler {
 					}
 					logger.ErrorContext(ctx, "panic recovered", "panic", recovered, "stack", string(debug.Stack()))
 					if writer.Status() == 0 {
-						response.JSON(writer, http.StatusInternalServerError, api.ApiError{Error: "Internal server error"})
+						WriteError(writer, http.StatusInternalServerError, api.ApiError{Error: "Internal server error"})
 					}
 				}
 			}(r.Context())

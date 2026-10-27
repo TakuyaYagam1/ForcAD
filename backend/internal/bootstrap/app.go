@@ -18,8 +18,7 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/websocket"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/rabbitmq"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/flags"
-	"github.com/TakuyaYagam1/ForcAD/internal/usecase/game"
+	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	checkerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/checker"
 )
 
@@ -34,15 +33,15 @@ type Application struct {
 	metrics   *prometheus.Metrics
 	logger    *slog.Logger
 	events    *websocket.Events
-	game      *game.Service
-	flags     *flags.Service
+	game      *usecase.Game
+	flags     *usecase.Flags
 	broker    *rabbitmq.Broker
 	checker   *checkerworker.Worker
 	scheduler scheduledWorker
 	traffic   *prometheus.TeamTraffic
 }
 
-func NewApplication(cfg config.Config, handler apiHandler, metrics *prometheus.Metrics, logger *slog.Logger, events *websocket.Events, game *game.Service, flags *flags.Service, broker *rabbitmq.Broker, checker *checkerworker.Worker, scheduler scheduledWorker, traffic *prometheus.TeamTraffic) *Application {
+func NewApplication(cfg config.Config, handler apiHandler, metrics *prometheus.Metrics, logger *slog.Logger, events *websocket.Events, game *usecase.Game, flags *usecase.Flags, broker *rabbitmq.Broker, checker *checkerworker.Worker, scheduler scheduledWorker, traffic *prometheus.TeamTraffic) *Application {
 	return &Application{config: cfg, handler: handler, metrics: metrics, logger: logger, events: events, game: game, flags: flags, broker: broker, checker: checker, scheduler: scheduler, traffic: traffic}
 }
 
