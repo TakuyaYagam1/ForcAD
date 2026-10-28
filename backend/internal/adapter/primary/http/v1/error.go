@@ -48,6 +48,8 @@ func commonRequestError(err error) (int, string, bool) {
 		return http.StatusBadRequest, "Invalid team token", true
 	case errors.Is(err, domain.ErrNotFound):
 		return http.StatusNotFound, "Not found", true
+	case errors.Is(err, domain.ErrEventCursorInvalid):
+		return http.StatusBadRequest, "Invalid event cursor", true
 	case errors.Is(err, domain.ErrConflict):
 		return http.StatusConflict, "Data violates database constraints", true
 	case errors.As(err, &validation):

@@ -198,6 +198,9 @@ DELETE FROM DispatchRuns;
 -- name: DeletePracticeStolenFlags :exec
 DELETE FROM StolenFlags;
 
+-- name: DeletePracticeAnnouncements :exec
+DELETE FROM PublicAnnouncements;
+
 -- name: DeletePracticeFlags :exec
 DELETE FROM Flags;
 

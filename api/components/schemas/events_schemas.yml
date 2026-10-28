@@ -23,6 +23,14 @@ schemas:
     properties:
       data:
         "$ref": "#/schemas/FlagNotification"
+  AdminMessageEventPayload:
+    type: object
+    additionalProperties: false
+    required:
+    - data
+    properties:
+      data:
+        "$ref": "#/schemas/PublicEvent"
   InitScoreboardEvent:
     type: object
     additionalProperties: false
@@ -71,6 +79,22 @@ schemas:
         "$ref": "#/schemas/FlagStolenEventPayload"
       timestamp:
         type: string
+  AdminMessageEvent:
+    type: object
+    additionalProperties: false
+    required:
+    - type
+    - payload
+    - timestamp
+    properties:
+      type:
+        type: string
+        enum:
+        - admin_message
+      payload:
+        "$ref": "#/schemas/AdminMessageEventPayload"
+      timestamp:
+        type: string
   RealtimeEvent:
     description: Public event sent as a JSON text frame on /api/events/ws. No administration
       or checker-private data is included.
@@ -78,9 +102,11 @@ schemas:
     - "$ref": "#/schemas/InitScoreboardEvent"
     - "$ref": "#/schemas/UpdateScoreboardEvent"
     - "$ref": "#/schemas/FlagStolenEvent"
+    - "$ref": "#/schemas/AdminMessageEvent"
     discriminator:
       propertyName: type
       mapping:
         init_scoreboard: "#/schemas/InitScoreboardEvent"
         update_scoreboard: "#/schemas/UpdateScoreboardEvent"
         flag_stolen: "#/schemas/FlagStolenEvent"
+        admin_message: "#/schemas/AdminMessageEvent"

@@ -5,10 +5,11 @@ package api
 import (
 	"io"
 	"net/http"
+	"time"
+	"uuid"
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
-	"github.com/google/uuid"
 )
 
 type AdminLoginBadRequest ApiError
@@ -872,6 +873,32 @@ func (s *AdminTeamUpdateAdditional) init() AdminTeamUpdateAdditional {
 	return m
 }
 
+// Ref: #/components/schemas/AnnouncementCreate
+type AnnouncementCreate struct {
+	Title    string `json:"title"`
+	Markdown string `json:"markdown"`
+}
+
+// GetTitle returns the value of Title.
+func (s *AnnouncementCreate) GetTitle() string {
+	return s.Title
+}
+
+// GetMarkdown returns the value of Markdown.
+func (s *AnnouncementCreate) GetMarkdown() string {
+	return s.Markdown
+}
+
+// SetTitle sets the value of Title.
+func (s *AnnouncementCreate) SetTitle(val string) {
+	s.Title = val
+}
+
+// SetMarkdown sets the value of Markdown.
+func (s *AnnouncementCreate) SetMarkdown(val string) {
+	s.Markdown = val
+}
+
 // Ref: #/components/schemas/ApiError
 type ApiError struct {
 	Error string `json:"error"`
@@ -891,6 +918,7 @@ func (*ApiError) getAdminSessionStatusRes()      {}
 func (*ApiError) getAdminTasksRes()              {}
 func (*ApiError) getAdminTeamsRes()              {}
 func (*ApiError) getClientCtftimeScoreboardRes() {}
+func (*ApiError) getClientEventsRes()            {}
 
 // Task name to team IP to public flag values.
 // Ref: #/components/schemas/AttackData
@@ -1000,6 +1028,200 @@ func (*ChangeAdminGameStateForbidden) changeAdminGameStateRes() {}
 type ChangeAdminGameStateNotFound ApiError
 
 func (*ChangeAdminGameStateNotFound) changeAdminGameStateRes() {}
+
+// Ref: #/components/schemas/CheckerLog
+type CheckerLog struct {
+	ID            UUID      `json:"id"`
+	Round         int32     `json:"round"`
+	Action        string    `json:"action"`
+	Stage         string    `json:"stage"`
+	StartedAt     time.Time `json:"started_at"`
+	FinishedAt    time.Time `json:"finished_at"`
+	DurationMs    int64     `json:"duration_ms"`
+	TimedOut      bool      `json:"timed_out"`
+	Status        int32     `json:"status"`
+	PublicMessage string    `json:"public_message"`
+}
+
+// GetID returns the value of ID.
+func (s *CheckerLog) GetID() UUID {
+	return s.ID
+}
+
+// GetRound returns the value of Round.
+func (s *CheckerLog) GetRound() int32 {
+	return s.Round
+}
+
+// GetAction returns the value of Action.
+func (s *CheckerLog) GetAction() string {
+	return s.Action
+}
+
+// GetStage returns the value of Stage.
+func (s *CheckerLog) GetStage() string {
+	return s.Stage
+}
+
+// GetStartedAt returns the value of StartedAt.
+func (s *CheckerLog) GetStartedAt() time.Time {
+	return s.StartedAt
+}
+
+// GetFinishedAt returns the value of FinishedAt.
+func (s *CheckerLog) GetFinishedAt() time.Time {
+	return s.FinishedAt
+}
+
+// GetDurationMs returns the value of DurationMs.
+func (s *CheckerLog) GetDurationMs() int64 {
+	return s.DurationMs
+}
+
+// GetTimedOut returns the value of TimedOut.
+func (s *CheckerLog) GetTimedOut() bool {
+	return s.TimedOut
+}
+
+// GetStatus returns the value of Status.
+func (s *CheckerLog) GetStatus() int32 {
+	return s.Status
+}
+
+// GetPublicMessage returns the value of PublicMessage.
+func (s *CheckerLog) GetPublicMessage() string {
+	return s.PublicMessage
+}
+
+// SetID sets the value of ID.
+func (s *CheckerLog) SetID(val UUID) {
+	s.ID = val
+}
+
+// SetRound sets the value of Round.
+func (s *CheckerLog) SetRound(val int32) {
+	s.Round = val
+}
+
+// SetAction sets the value of Action.
+func (s *CheckerLog) SetAction(val string) {
+	s.Action = val
+}
+
+// SetStage sets the value of Stage.
+func (s *CheckerLog) SetStage(val string) {
+	s.Stage = val
+}
+
+// SetStartedAt sets the value of StartedAt.
+func (s *CheckerLog) SetStartedAt(val time.Time) {
+	s.StartedAt = val
+}
+
+// SetFinishedAt sets the value of FinishedAt.
+func (s *CheckerLog) SetFinishedAt(val time.Time) {
+	s.FinishedAt = val
+}
+
+// SetDurationMs sets the value of DurationMs.
+func (s *CheckerLog) SetDurationMs(val int64) {
+	s.DurationMs = val
+}
+
+// SetTimedOut sets the value of TimedOut.
+func (s *CheckerLog) SetTimedOut(val bool) {
+	s.TimedOut = val
+}
+
+// SetStatus sets the value of Status.
+func (s *CheckerLog) SetStatus(val int32) {
+	s.Status = val
+}
+
+// SetPublicMessage sets the value of PublicMessage.
+func (s *CheckerLog) SetPublicMessage(val string) {
+	s.PublicMessage = val
+}
+
+// Ref: #/components/schemas/CheckerLogPage
+type CheckerLogPage struct {
+	TeamID       UUID         `json:"team_id"`
+	TaskID       UUID         `json:"task_id"`
+	Limit        int32        `json:"limit"`
+	HasMore      bool         `json:"has_more"`
+	NextBeforeID OptUUID      `json:"next_before_id"`
+	Logs         []CheckerLog `json:"logs"`
+}
+
+// GetTeamID returns the value of TeamID.
+func (s *CheckerLogPage) GetTeamID() UUID {
+	return s.TeamID
+}
+
+// GetTaskID returns the value of TaskID.
+func (s *CheckerLogPage) GetTaskID() UUID {
+	return s.TaskID
+}
+
+// GetLimit returns the value of Limit.
+func (s *CheckerLogPage) GetLimit() int32 {
+	return s.Limit
+}
+
+// GetHasMore returns the value of HasMore.
+func (s *CheckerLogPage) GetHasMore() bool {
+	return s.HasMore
+}
+
+// GetNextBeforeID returns the value of NextBeforeID.
+func (s *CheckerLogPage) GetNextBeforeID() OptUUID {
+	return s.NextBeforeID
+}
+
+// GetLogs returns the value of Logs.
+func (s *CheckerLogPage) GetLogs() []CheckerLog {
+	return s.Logs
+}
+
+// SetTeamID sets the value of TeamID.
+func (s *CheckerLogPage) SetTeamID(val UUID) {
+	s.TeamID = val
+}
+
+// SetTaskID sets the value of TaskID.
+func (s *CheckerLogPage) SetTaskID(val UUID) {
+	s.TaskID = val
+}
+
+// SetLimit sets the value of Limit.
+func (s *CheckerLogPage) SetLimit(val int32) {
+	s.Limit = val
+}
+
+// SetHasMore sets the value of HasMore.
+func (s *CheckerLogPage) SetHasMore(val bool) {
+	s.HasMore = val
+}
+
+// SetNextBeforeID sets the value of NextBeforeID.
+func (s *CheckerLogPage) SetNextBeforeID(val OptUUID) {
+	s.NextBeforeID = val
+}
+
+// SetLogs sets the value of Logs.
+func (s *CheckerLogPage) SetLogs(val []CheckerLog) {
+	s.Logs = val
+}
+
+func (*CheckerLogPage) getClientCheckerLogsRes() {}
+
+type CreateAdminEventBadRequest ApiError
+
+func (*CreateAdminEventBadRequest) createAdminEventRes() {}
+
+type CreateAdminEventForbidden ApiError
+
+func (*CreateAdminEventForbidden) createAdminEventRes() {}
 
 type CreateAdminTaskBadRequest ApiError
 
@@ -1672,9 +1894,66 @@ type GetAdminTeamsOKApplicationJSON []AdminTeam
 
 func (*GetAdminTeamsOKApplicationJSON) getAdminTeamsRes() {}
 
+// GetClientAttackDataNotModified is response for GetClientAttackData operation.
+type GetClientAttackDataNotModified struct {
+	CacheControl OptString
+	ETag         OptString
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *GetClientAttackDataNotModified) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetETag returns the value of ETag.
+func (s *GetClientAttackDataNotModified) GetETag() OptString {
+	return s.ETag
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *GetClientAttackDataNotModified) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetETag sets the value of ETag.
+func (s *GetClientAttackDataNotModified) SetETag(val OptString) {
+	s.ETag = val
+}
+
+func (*GetClientAttackDataNotModified) getClientAttackDataRes() {}
+
+// GetClientAttackDataOKRawApplicationJSON represents raw HTTP response for GetClientAttackData application/json.
+type GetClientAttackDataOKRawApplicationJSON struct {
+	Response *http.Response `json:"-"`
+}
+
+// GetResponse returns the value of Response.
+func (s *GetClientAttackDataOKRawApplicationJSON) GetResponse() *http.Response {
+	return s.Response
+}
+
+// SetResponse sets the value of Response.
+func (s *GetClientAttackDataOKRawApplicationJSON) SetResponse(val *http.Response) {
+	s.Response = val
+}
+
+func (*GetClientAttackDataOKRawApplicationJSON) getClientAttackDataRes() {}
+
+type GetClientCheckerLogsBadRequest ApiError
+
+func (*GetClientCheckerLogsBadRequest) getClientCheckerLogsRes() {}
+
+type GetClientCheckerLogsNotFound ApiError
+
+func (*GetClientCheckerLogsNotFound) getClientCheckerLogsRes() {}
+
 type GetClientCtftimeScoreboardOKApplicationJSON []CtftimeStanding
 
 func (*GetClientCtftimeScoreboardOKApplicationJSON) getClientCtftimeScoreboardRes() {}
+
+type GetClientEventsOKApplicationJSON []PublicEvent
+
+func (*GetClientEventsOKApplicationJSON) getClientEventsRes() {}
 
 // GetScoreboardOKRawApplicationJSON represents raw HTTP response for GetScoreboard application/json.
 type GetScoreboardOKRawApplicationJSON struct {
@@ -1750,6 +2029,43 @@ func (o NilAttackData) Or(d AttackData) AttackData {
 		return v
 	}
 	return d
+}
+
+// NilAttackDataHeaders wraps NilAttackData with response headers.
+type NilAttackDataHeaders struct {
+	CacheControl OptString
+	ETag         OptString
+	Response     NilAttackData
+}
+
+// GetCacheControl returns the value of CacheControl.
+func (s *NilAttackDataHeaders) GetCacheControl() OptString {
+	return s.CacheControl
+}
+
+// GetETag returns the value of ETag.
+func (s *NilAttackDataHeaders) GetETag() OptString {
+	return s.ETag
+}
+
+// GetResponse returns the value of Response.
+func (s *NilAttackDataHeaders) GetResponse() NilAttackData {
+	return s.Response
+}
+
+// SetCacheControl sets the value of CacheControl.
+func (s *NilAttackDataHeaders) SetCacheControl(val OptString) {
+	s.CacheControl = val
+}
+
+// SetETag sets the value of ETag.
+func (s *NilAttackDataHeaders) SetETag(val OptString) {
+	s.ETag = val
+}
+
+// SetResponse sets the value of Response.
+func (s *NilAttackDataHeaders) SetResponse(val NilAttackData) {
+	s.Response = val
 }
 
 // NewNilBool returns new NilBool with value set to v.
@@ -2072,6 +2388,52 @@ func (o OptBool) Or(d bool) bool {
 	return d
 }
 
+// NewOptFloat64 returns new OptFloat64 with value set to v.
+func NewOptFloat64(v float64) OptFloat64 {
+	return OptFloat64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFloat64 is optional float64.
+type OptFloat64 struct {
+	Value float64
+	Set   bool
+}
+
+// IsSet returns true if OptFloat64 was set.
+func (o OptFloat64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFloat64) Reset() {
+	var v float64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFloat64) SetTo(v float64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFloat64) Get() (v float64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFloat64) Or(d float64) float64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptGameActionRequest returns new OptGameActionRequest with value set to v.
 func NewOptGameActionRequest(v GameActionRequest) OptGameActionRequest {
 	return OptGameActionRequest{
@@ -2112,6 +2474,52 @@ func (o OptGameActionRequest) Get() (v GameActionRequest, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptGameActionRequest) Or(d GameActionRequest) GameActionRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptInt32 returns new OptInt32 with value set to v.
+func NewOptInt32(v int32) OptInt32 {
+	return OptInt32{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptInt32 is optional int32.
+type OptInt32 struct {
+	Value int32
+	Set   bool
+}
+
+// IsSet returns true if OptInt32 was set.
+func (o OptInt32) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt32) Reset() {
+	var v int32
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt32) SetTo(v int32) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt32) Get() (v int32, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt32) Or(d int32) int32 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -2296,6 +2704,52 @@ func (o OptString) Get() (v string, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptUUID returns new OptUUID with value set to v.
+func NewOptUUID(v UUID) OptUUID {
+	return OptUUID{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptUUID is optional UUID.
+type OptUUID struct {
+	Value UUID
+	Set   bool
+}
+
+// IsSet returns true if OptUUID was set.
+func (o OptUUID) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptUUID) Reset() {
+	var v UUID
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptUUID) SetTo(v UUID) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptUUID) Get() (v UUID, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptUUID) Or(d UUID) UUID {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -2543,6 +2997,207 @@ func (s *ParticipantTeamTaskHistoryAdditional) init() ParticipantTeamTaskHistory
 		*s = m
 	}
 	return m
+}
+
+// Ref: #/components/schemas/PublicEvent
+type PublicEvent struct {
+	ID            string          `json:"id"`
+	Kind          PublicEventKind `json:"kind"`
+	CreatedAt     time.Time       `json:"created_at"`
+	AttackerID    OptUUID         `json:"attacker_id"`
+	AttackerName  OptString       `json:"attacker_name"`
+	VictimID      OptUUID         `json:"victim_id"`
+	VictimName    OptString       `json:"victim_name"`
+	TaskID        OptUUID         `json:"task_id"`
+	TaskName      OptString       `json:"task_name"`
+	Round         OptInt32        `json:"round"`
+	AttackerDelta OptFloat64      `json:"attacker_delta"`
+	Title         OptString       `json:"title"`
+	Markdown      OptString       `json:"markdown"`
+	Author        OptString       `json:"author"`
+}
+
+// GetID returns the value of ID.
+func (s *PublicEvent) GetID() string {
+	return s.ID
+}
+
+// GetKind returns the value of Kind.
+func (s *PublicEvent) GetKind() PublicEventKind {
+	return s.Kind
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *PublicEvent) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetAttackerID returns the value of AttackerID.
+func (s *PublicEvent) GetAttackerID() OptUUID {
+	return s.AttackerID
+}
+
+// GetAttackerName returns the value of AttackerName.
+func (s *PublicEvent) GetAttackerName() OptString {
+	return s.AttackerName
+}
+
+// GetVictimID returns the value of VictimID.
+func (s *PublicEvent) GetVictimID() OptUUID {
+	return s.VictimID
+}
+
+// GetVictimName returns the value of VictimName.
+func (s *PublicEvent) GetVictimName() OptString {
+	return s.VictimName
+}
+
+// GetTaskID returns the value of TaskID.
+func (s *PublicEvent) GetTaskID() OptUUID {
+	return s.TaskID
+}
+
+// GetTaskName returns the value of TaskName.
+func (s *PublicEvent) GetTaskName() OptString {
+	return s.TaskName
+}
+
+// GetRound returns the value of Round.
+func (s *PublicEvent) GetRound() OptInt32 {
+	return s.Round
+}
+
+// GetAttackerDelta returns the value of AttackerDelta.
+func (s *PublicEvent) GetAttackerDelta() OptFloat64 {
+	return s.AttackerDelta
+}
+
+// GetTitle returns the value of Title.
+func (s *PublicEvent) GetTitle() OptString {
+	return s.Title
+}
+
+// GetMarkdown returns the value of Markdown.
+func (s *PublicEvent) GetMarkdown() OptString {
+	return s.Markdown
+}
+
+// GetAuthor returns the value of Author.
+func (s *PublicEvent) GetAuthor() OptString {
+	return s.Author
+}
+
+// SetID sets the value of ID.
+func (s *PublicEvent) SetID(val string) {
+	s.ID = val
+}
+
+// SetKind sets the value of Kind.
+func (s *PublicEvent) SetKind(val PublicEventKind) {
+	s.Kind = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *PublicEvent) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetAttackerID sets the value of AttackerID.
+func (s *PublicEvent) SetAttackerID(val OptUUID) {
+	s.AttackerID = val
+}
+
+// SetAttackerName sets the value of AttackerName.
+func (s *PublicEvent) SetAttackerName(val OptString) {
+	s.AttackerName = val
+}
+
+// SetVictimID sets the value of VictimID.
+func (s *PublicEvent) SetVictimID(val OptUUID) {
+	s.VictimID = val
+}
+
+// SetVictimName sets the value of VictimName.
+func (s *PublicEvent) SetVictimName(val OptString) {
+	s.VictimName = val
+}
+
+// SetTaskID sets the value of TaskID.
+func (s *PublicEvent) SetTaskID(val OptUUID) {
+	s.TaskID = val
+}
+
+// SetTaskName sets the value of TaskName.
+func (s *PublicEvent) SetTaskName(val OptString) {
+	s.TaskName = val
+}
+
+// SetRound sets the value of Round.
+func (s *PublicEvent) SetRound(val OptInt32) {
+	s.Round = val
+}
+
+// SetAttackerDelta sets the value of AttackerDelta.
+func (s *PublicEvent) SetAttackerDelta(val OptFloat64) {
+	s.AttackerDelta = val
+}
+
+// SetTitle sets the value of Title.
+func (s *PublicEvent) SetTitle(val OptString) {
+	s.Title = val
+}
+
+// SetMarkdown sets the value of Markdown.
+func (s *PublicEvent) SetMarkdown(val OptString) {
+	s.Markdown = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *PublicEvent) SetAuthor(val OptString) {
+	s.Author = val
+}
+
+func (*PublicEvent) createAdminEventRes() {}
+
+type PublicEventKind string
+
+const (
+	PublicEventKindFlagStolen   PublicEventKind = "flag_stolen"
+	PublicEventKindAdminMessage PublicEventKind = "admin_message"
+)
+
+// AllValues returns all PublicEventKind values.
+func (PublicEventKind) AllValues() []PublicEventKind {
+	return []PublicEventKind{
+		PublicEventKindFlagStolen,
+		PublicEventKindAdminMessage,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s PublicEventKind) MarshalText() ([]byte, error) {
+	switch s {
+	case PublicEventKindFlagStolen:
+		return []byte(s), nil
+	case PublicEventKindAdminMessage:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *PublicEventKind) UnmarshalText(data []byte) error {
+	switch PublicEventKind(data) {
+	case PublicEventKindFlagStolen:
+		*s = PublicEventKindFlagStolen
+		return nil
+	case PublicEventKindAdminMessage:
+		*s = PublicEventKindAdminMessage
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 // Ref: #/components/schemas/Scoreboard

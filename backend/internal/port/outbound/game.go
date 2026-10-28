@@ -15,6 +15,7 @@ type GameRepository interface {
 	Tasks(ctx context.Context, active bool) ([]domain.Task, error)
 	Cells(ctx context.Context) ([]domain.Cell, error)
 	History(ctx context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error)
+	CheckerLogs(ctx context.Context, teamID, taskID uuid.UUID, beforeID *uuid.UUID, limit int32) ([]domain.CheckerLog, error)
 	PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error)
 	ChangeState(ctx context.Context, action string, generation *int64, at time.Time) error
 	CreateTeam(ctx context.Context, team domain.Team) (domain.Team, error)

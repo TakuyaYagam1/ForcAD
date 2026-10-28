@@ -26,6 +26,43 @@ type stateErrorRepository struct {
 	err error
 }
 
+type attackDataRepository struct {
+	outbound.GameRepository
+
+	lifecycle domain.Lifecycle
+	tasks     []domain.Task
+}
+
+func (r *attackDataRepository) Lifecycle(context.Context) (domain.Lifecycle, error) {
+	return r.lifecycle, nil
+}
+
+func (r *attackDataRepository) Tasks(context.Context, bool) ([]domain.Task, error) {
+	return r.tasks, nil
+}
+
+type attackDataFlags struct {
+	outbound.FlagRepository
+
+	requested []uuid.UUID
+	rows      []domain.AttackDatum
+}
+
+func (f *attackDataFlags) AttackData(_ context.Context, _ int32, taskIDs []uuid.UUID) ([]domain.AttackDatum, error) {
+	f.requested = append([]uuid.UUID(nil), taskIDs...)
+	selected := make(map[uuid.UUID]struct{}, len(taskIDs))
+	for _, id := range taskIDs {
+		selected[id] = struct{}{}
+	}
+	rows := make([]domain.AttackDatum, 0, len(f.rows))
+	for _, row := range f.rows {
+		if _, ok := selected[row.TaskID]; ok {
+			rows = append(rows, row)
+		}
+	}
+	return rows, nil
+}
+
 func (r *stateErrorRepository) ChangeState(context.Context, string, *int64, time.Time) error {
 	return r.err
 }
@@ -111,6 +148,93 @@ func TestStandingsBreakScoreTiesByUUID(t *testing.T) {
 	}
 	if len(standings) != 2 || standings[0].Team != "first" || standings[1].Team != "second" {
 		t.Fatalf("equal-score ordering: %+v", standings)
+	}
+}
+
+func TestAttackDataFiltersByExactService(t *testing.T) {
+	firstID := uuid.MustParse("01912345-6789-7000-8000-00000000000a")
+	secondID := uuid.MustParse("01912345-6789-7000-8000-00000000000b")
+	flags := &attackDataFlags{rows: []domain.AttackDatum{
+		{TaskID: firstID, TeamIP: "192.0.2.1", PublicData: "first-flag"},
+		{TaskID: secondID, TeamIP: "192.0.2.2", PublicData: "second-flag"},
+	}}
+	repo := &attackDataRepository{
+		lifecycle: domain.Lifecycle{Config: domain.GameConfig{RealRound: 7}},
+		tasks: []domain.Task{
+			{ID: firstID, Name: "service-one", CheckerType: "pfr"},
+			{ID: secondID, Name: "service-two", CheckerType: "_pfr_tcp_"},
+			{Name: "ignored", CheckerType: "other"},
+		},
+	}
+	service := NewGame(repo, flags, nil, slog.New(slog.DiscardHandler))
+	name := "service-one"
+	data, err := service.AttackData(t.Context(), &name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 1 || len(data[name]) != 1 || data[name]["192.0.2.1"][0] != "first-flag" {
+		t.Fatalf("filtered attack data = %#v", data)
+	}
+	if len(flags.requested) != 1 || flags.requested[0] != firstID {
+		t.Fatalf("requested flag task IDs = %v, want only %s", flags.requested, firstID)
+	}
+}
+
+func TestAttackDataWithoutServicePreservesFullShape(t *testing.T) {
+	firstID := uuid.MustParse("01912345-6789-7000-8000-00000000000a")
+	secondID := uuid.MustParse("01912345-6789-7000-8000-00000000000b")
+	flags := &attackDataFlags{rows: []domain.AttackDatum{{TaskID: firstID, TeamIP: "192.0.2.1", PublicData: "flag"}}}
+	repo := &attackDataRepository{
+		lifecycle: domain.Lifecycle{Config: domain.GameConfig{RealRound: 7}},
+		tasks: []domain.Task{
+			{ID: firstID, Name: "service-one", CheckerType: "pfr"},
+			{ID: secondID, Name: "service-two", CheckerType: "_pfr_tcp_"},
+			{Name: "ignored", CheckerType: "other"},
+		},
+	}
+	service := NewGame(repo, flags, nil, slog.New(slog.DiscardHandler))
+	data, err := service.AttackData(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 2 || len(data["service-one"]) != 1 || data["service-one"]["192.0.2.1"][0] != "flag" || data["service-two"] == nil || len(data["service-two"]) != 0 {
+		t.Fatalf("full attack data = %#v", data)
+	}
+	if len(flags.requested) != 2 || flags.requested[0] != firstID || flags.requested[1] != secondID {
+		t.Fatalf("requested flag task IDs = %v, want [%s %s]", flags.requested, firstID, secondID)
+	}
+	flags.requested = nil
+	name := "service-two"
+	filtered, err := service.AttackData(t.Context(), &name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filtered) != 1 || filtered[name] == nil || len(filtered[name]) != 0 {
+		t.Fatalf("service without flags = %#v, want an empty team map", filtered)
+	}
+	if len(flags.requested) != 1 || flags.requested[0] != secondID {
+		t.Fatalf("requested flag task IDs = %v, want only %s", flags.requested, secondID)
+	}
+}
+
+func TestAttackDataMissingServiceReturnsEmptyObject(t *testing.T) {
+	repo := &attackDataRepository{
+		lifecycle: domain.Lifecycle{Config: domain.GameConfig{RealRound: 7}},
+		tasks:     []domain.Task{{Name: "service-one", CheckerType: "pfr"}},
+	}
+	flags := &attackDataFlags{}
+	service := NewGame(repo, flags, nil, slog.New(slog.DiscardHandler))
+	for _, name := range []string{"missing", ""} {
+		data, err := service.AttackData(t.Context(), &name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if data == nil || len(data) != 0 {
+			t.Fatalf("service %q attack data = %#v, want empty object", name, data)
+		}
+		if len(flags.requested) != 0 {
+			t.Fatalf("service %q queried flags for task IDs %v", name, flags.requested)
+		}
 	}
 }
 

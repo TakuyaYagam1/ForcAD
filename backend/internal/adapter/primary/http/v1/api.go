@@ -15,7 +15,7 @@ type Handler struct {
 	*eventsHandler
 }
 
-func NewHandler(game GameService, auth AuthService, flags FlagService) *Handler {
+func NewHandler(game GameService, auth AuthService, flags FlagService, events EventService) *Handler {
 	return &Handler{
 		authHandler:       &authHandler{auth: auth},
 		gameHandler:       &gameHandler{game: game},
@@ -26,7 +26,7 @@ func NewHandler(game GameService, auth AuthService, flags FlagService) *Handler 
 		flagsHandler:      &flagsHandler{flags: flags},
 		healthHandler:     &healthHandler{},
 		metricsHandler:    &metricsHandler{},
-		eventsHandler:     &eventsHandler{},
+		eventsHandler:     &eventsHandler{events: events},
 	}
 }
 

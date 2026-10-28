@@ -17,6 +17,10 @@ paths:
     "$ref": "./routes/client-attack-data.yml"
   "/api/client/teams/{team_id}/":
     "$ref": "./routes/client-teams-by-team-id.yml"
+  "/api/client/teams/{team_id}/tasks/{task_id}/logs/":
+    "$ref": "./routes/client-checker-logs.yml"
+  "/api/client/events/":
+    "$ref": "./routes/client-events.yml"
   "/api/client/ctftime/":
     "$ref": "./routes/client-ctftime.yml"
   "/api/client/health/":
@@ -45,6 +49,8 @@ paths:
     "$ref": "./routes/admin-status.yml"
   "/api/admin/logout/":
     "$ref": "./routes/admin-logout.yml"
+  "/api/admin/events/":
+    "$ref": "./routes/admin-events.yml"
   "/api/admin/health/":
     "$ref": "./routes/admin-health.yml"
   "/flags/":

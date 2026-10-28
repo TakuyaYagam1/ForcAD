@@ -19,6 +19,8 @@ schemas:
     - task_id
     - attacker_delta
     - generation
+    - event_id
+    - created_at
     properties:
       attacker_id:
         "$ref": "#/schemas/Uuid"
@@ -31,3 +33,8 @@ schemas:
       generation:
         type: integer
         format: int64
+      event_id:
+        type: string
+      created_at:
+        type: string
+        format: date-time

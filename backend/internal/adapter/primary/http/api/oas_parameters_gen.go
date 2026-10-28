@@ -5,9 +5,9 @@ package api
 import (
 	"net/http"
 	"net/url"
+	"uuid"
 
 	"github.com/go-faster/errors"
-	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
@@ -129,7 +129,7 @@ func decodeDeleteAdminTaskParams(args [1]string, argsEscaped bool, r *http.Reque
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -194,7 +194,7 @@ func decodeDeleteAdminTeamParams(args [1]string, argsEscaped bool, r *http.Reque
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -259,7 +259,7 @@ func decodeDeleteAdminTeamTaskParams(args [1]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -324,7 +324,7 @@ func decodeGetAdminTaskParams(args [1]string, argsEscaped bool, r *http.Request)
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -389,7 +389,7 @@ func decodeGetAdminTeamParams(args [1]string, argsEscaped bool, r *http.Request)
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -454,7 +454,7 @@ func decodeGetAdminTeamTaskParams(args [1]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -521,7 +521,7 @@ func decodeGetAdminTeamTaskHistoryParams(args [0]string, argsEscaped bool, r *ht
 						return err
 					}
 
-					c, err := conv.ToUUID(val)
+					c, err := uuid.Parse(val)
 					if err != nil {
 						return err
 					}
@@ -564,7 +564,7 @@ func decodeGetAdminTeamTaskHistoryParams(args [0]string, argsEscaped bool, r *ht
 						return err
 					}
 
-					c, err := conv.ToUUID(val)
+					c, err := uuid.Parse(val)
 					if err != nil {
 						return err
 					}
@@ -586,6 +586,465 @@ func decodeGetAdminTeamTaskHistoryParams(args [0]string, argsEscaped bool, r *ht
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
 			Name: "task_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetClientAttackDataParams is parameters of getClientAttackData operation.
+type GetClientAttackDataParams struct {
+	// Return public flag data for the exact task name. If omitted, return all services.
+	Service OptString `json:",omitempty,omitzero"`
+	// Return 304 when the current representation matches this validator.
+	IfNoneMatch OptString `json:",omitempty,omitzero"`
+}
+
+func unpackGetClientAttackDataParams(packed middleware.Parameters) (params GetClientAttackDataParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "service",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Service = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "If-None-Match",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IfNoneMatch = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeGetClientAttackDataParams(args [0]string, argsEscaped bool, r *http.Request) (params GetClientAttackDataParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode query: service.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "service",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotServiceVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotServiceVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Service.SetTo(paramsDotServiceVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "service",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: If-None-Match.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "If-None-Match",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIfNoneMatchVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIfNoneMatchVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IfNoneMatch.SetTo(paramsDotIfNoneMatchVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "If-None-Match",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetClientCheckerLogsParams is parameters of getClientCheckerLogs operation.
+type GetClientCheckerLogsParams struct {
+	TeamID   uuid.UUID
+	TaskID   uuid.UUID
+	Limit    OptInt32  `json:",omitempty,omitzero"`
+	BeforeID OptString `json:",omitempty,omitzero"`
+}
+
+func unpackGetClientCheckerLogsParams(packed middleware.Parameters) (params GetClientCheckerLogsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "team_id",
+			In:   "path",
+		}
+		params.TeamID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "task_id",
+			In:   "path",
+		}
+		params.TaskID = packed[key].(uuid.UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "limit",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Limit = v.(OptInt32)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "before_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.BeforeID = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeGetClientCheckerLogsParams(args [2]string, argsEscaped bool, r *http.Request) (params GetClientCheckerLogsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode path: team_id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "team_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := uuid.Parse(val)
+				if err != nil {
+					return err
+				}
+
+				params.TeamID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "team_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: task_id.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "task_id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := uuid.Parse(val)
+				if err != nil {
+					return err
+				}
+
+				params.TaskID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "task_id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Set default value for query: limit.
+	{
+		val := int32(100)
+		params.Limit.SetTo(val)
+	}
+	// Decode query: limit.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "limit",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotLimitVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotLimitVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Limit.SetTo(paramsDotLimitVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Limit.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        true,
+							Max:           500,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "limit",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: before_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "before_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotBeforeIDVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotBeforeIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.BeforeID.SetTo(paramsDotBeforeIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "before_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetClientEventsParams is parameters of getClientEvents operation.
+type GetClientEventsParams struct {
+	// Stable event ID returned by an earlier response.
+	After OptString `json:",omitempty,omitzero"`
+}
+
+func unpackGetClientEventsParams(packed middleware.Parameters) (params GetClientEventsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "after",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.After = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeGetClientEventsParams(args [0]string, argsEscaped bool, r *http.Request) (params GetClientEventsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: after.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "after",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotAfterVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotAfterVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.After.SetTo(paramsDotAfterVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.After.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     1,
+							MinLengthSet:  true,
+							MaxLength:     100,
+							MaxLengthSet:  true,
+							Email:         false,
+							Hostname:      false,
+							Regex:         nil,
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "after",
 			In:   "query",
 			Err:  err,
 		}
@@ -634,7 +1093,7 @@ func decodeGetClientTeamHistoryParams(args [1]string, argsEscaped bool, r *http.
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -699,7 +1158,7 @@ func decodeUpdateAdminTaskParams(args [1]string, argsEscaped bool, r *http.Reque
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -764,7 +1223,7 @@ func decodeUpdateAdminTeamParams(args [1]string, argsEscaped bool, r *http.Reque
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}
@@ -829,7 +1288,7 @@ func decodeUpdateAdminTeamTaskParams(args [1]string, argsEscaped bool, r *http.R
 					return err
 				}
 
-				c, err := conv.ToUUID(val)
+				c, err := uuid.Parse(val)
 				if err != nil {
 					return err
 				}

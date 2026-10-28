@@ -31,7 +31,7 @@ func (g *scoreboardGame) Scoreboard(context.Context) (domain.Scoreboard, error) 
 
 func TestScoreboardResponsePreservesJSONAcrossPooledWrites(t *testing.T) {
 	game := &scoreboardGame{}
-	handler := NewHandler(game, nil, nil)
+	handler := NewHandler(game, nil, nil, nil)
 	server, err := api.NewServer(handler, handler, handler)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestScoreboardResponsePreservesJSONAcrossPooledWrites(t *testing.T) {
 func TestScoreboardServiceFailureUsesErrorHandler(t *testing.T) {
 	want := errors.New("scoreboard unavailable")
 	game := &scoreboardGame{err: want}
-	handler := NewHandler(game, nil, nil)
+	handler := NewHandler(game, nil, nil, nil)
 	var handled error
 	server, err := api.NewServer(handler, handler, handler, api.WithErrorHandler(func(_ context.Context, w http.ResponseWriter, _ *http.Request, err error) {
 		handled = err

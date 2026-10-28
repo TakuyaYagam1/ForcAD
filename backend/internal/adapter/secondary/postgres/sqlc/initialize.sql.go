@@ -87,7 +87,7 @@ func (q *Queries) LockInitialization(ctx context.Context) error {
 }
 
 const resetGameTables = `-- name: ResetGameTables :exec
-TRUNCATE TABLE GameRoundSnapshots, CheckerJobs, DispatchRuns, StolenFlags, Flags,
+TRUNCATE TABLE GameRoundSnapshots, CheckerJobs, DispatchRuns, PublicAnnouncements, StolenFlags, Flags,
     TeamTasksLog, TeamTasks, ScheduleHistory, GameSession, GameConfig, Tasks, Teams
 `
 

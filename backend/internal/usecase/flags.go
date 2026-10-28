@@ -231,12 +231,14 @@ func (f *Flags) Run(ctx context.Context) {
 			return
 		case event := <-f.events:
 			data := struct {
+				EventID       string    `json:"event_id"`
+				CreatedAt     time.Time `json:"created_at"`
 				AttackerID    uuid.UUID `json:"attacker_id"`
 				VictimID      uuid.UUID `json:"victim_id"`
 				TaskID        uuid.UUID `json:"task_id"`
 				AttackerDelta float64   `json:"attacker_delta"`
 				Generation    int64     `json:"generation"`
-			}{event.AttackerID, event.VictimID, event.TaskID, event.AttackerDelta, event.Generation}
+			}{event.EventID, event.CreatedAt, event.AttackerID, event.VictimID, event.TaskID, event.AttackerDelta, event.Generation}
 			if err := f.publisher.Publish(ctx, "flag_stolen", map[string]any{"data": data}); err != nil && ctx.Err() == nil {
 				f.logger.Warn("live flag event unavailable", "error", err)
 			}

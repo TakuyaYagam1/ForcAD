@@ -64,9 +64,10 @@ type CheckerJobState struct {
 }
 
 type CheckerResult struct {
-	Round          int32  `json:"round"`
-	Status         int32  `json:"status"`
-	PublicMessage  string `json:"public_message"`
-	PrivateMessage string `json:"private_message"`
-	Command        string `json:"command"`
+	Round          int32        `json:"round"`
+	Status         int32        `json:"status"`
+	PublicMessage  string       `json:"public_message"`
+	PrivateMessage string       `json:"private_message"`
+	Command        string       `json:"command"`
+	Logs           []CheckerLog `json:"-"`
 }

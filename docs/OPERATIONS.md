@@ -209,8 +209,11 @@ and start the services:
 Use a fresh PostgreSQL database for the first Go installation. The initial schema
 uses UUIDs for entity IDs. Databases from the Python platform or earlier integer-ID
 development builds are not upgraded. The single initial migration includes
-extra-CHECK scheduling; an older applied schema without those columns is also
-incompatible. The initializer rejects these schemas without resetting their data.
+extra-CHECK scheduling, public checker logs and announcements. Databases
+initialized by earlier development builds need a fresh schema. The initializer
+rejects older development schemas missing those tables, columns or the event
+index without resetting their data. Databases that already applied development
+migrations 2-4 should be reinitialized before using the squashed baseline.
 Back up PostgreSQL before updates. Released schema
 changes require new versioned migrations rather than edits to an applied one.
 

@@ -27,6 +27,12 @@ type Handler interface {
 	//
 	// POST /api/admin/game/{action}/
 	ChangeAdminGameState(ctx context.Context, req OptGameActionRequest, params ChangeAdminGameStateParams) (ChangeAdminGameStateRes, error)
+	// CreateAdminEvent implements createAdminEvent operation.
+	//
+	// Publish an organizer announcement.
+	//
+	// POST /api/admin/events/
+	CreateAdminEvent(ctx context.Context, req *AnnouncementCreate) (CreateAdminEventRes, error)
 	// CreateAdminTask implements createAdminTask operation.
 	//
 	// Create a task.
@@ -117,12 +123,12 @@ type Handler interface {
 	//
 	// GET /api/admin/teams/
 	GetAdminTeams(ctx context.Context) (GetAdminTeamsRes, error)
-	// GetClientAttackData implements getClientAttackData operation.
+	// GetClientCheckerLogs implements getClientCheckerLogs operation.
 	//
-	// Get public flag data grouped by task and team address.
+	// Get public checker results for one team and service.
 	//
-	// GET /api/client/attack_data/
-	GetClientAttackData(ctx context.Context) (NilAttackData, error)
+	// GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
+	GetClientCheckerLogs(ctx context.Context, params GetClientCheckerLogsParams) (GetClientCheckerLogsRes, error)
 	// GetClientConfig implements getClientConfig operation.
 	//
 	// Get the current game configuration.
@@ -135,6 +141,12 @@ type Handler interface {
 	//
 	// GET /api/client/ctftime/
 	GetClientCtftimeScoreboard(ctx context.Context) (GetClientCtftimeScoreboardRes, error)
+	// GetClientEvents implements getClientEvents operation.
+	//
+	// Read recent public events or events after a cursor.
+	//
+	// GET /api/client/events/
+	GetClientEvents(ctx context.Context, params GetClientEventsParams) (GetClientEventsRes, error)
 	// GetClientHealth implements getClientHealth operation.
 	//
 	// Check the client API service.
@@ -224,6 +236,12 @@ type Handler interface {
 
 // RawHandler handles raw response operations described by OpenAPI v3 specification.
 type RawHandler interface {
+	// GetClientAttackData implements getClientAttackData operation.
+	//
+	// Get public flag data grouped by task and team address.
+	//
+	// GET /api/client/attack_data/
+	GetClientAttackData(ctx context.Context, params GetClientAttackDataParams, w http.ResponseWriter) error
 	// GetScoreboard implements getScoreboard operation.
 	//
 	// Used to initialize and resynchronize clients after event-stream reconnects.

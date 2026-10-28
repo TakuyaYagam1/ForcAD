@@ -52,6 +52,14 @@ function commandFor(mode, apiRoot, backendRoot, frontendRoot) {
       ],
       cwd: backendRoot,
     });
+    commands.push({
+      command: process.execPath,
+      args: [
+        path.join(scriptDirectory, "patch-ogen-uuid.mjs"),
+        path.join(backendRoot, "internal", "adapter", "primary", "http", "api"),
+      ],
+      cwd: backendRoot,
+    });
   }
 
   if (mode === "frontend" || mode === "all") {

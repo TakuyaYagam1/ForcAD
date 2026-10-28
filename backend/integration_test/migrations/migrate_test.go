@@ -24,7 +24,8 @@ func TestMigrateFreshSchema(t *testing.T) {
 
 	var version, tables, sessions, snapshots, dispatchColumns int
 	var uuidColumns, uuidDefaults int
-	var actionNullable, snapshotIndex, historyIndex, configSingleton, integerSession, scheduleHistoryText bool
+	var actionNullable, snapshotIndex, historyIndex, checkerIndex, feedIndex bool
+	var deltaColumn, configSingleton, integerSession, scheduleHistoryText bool
 	err := fixture.conn.QueryRow(fixture.ctx, `
 		SELECT (SELECT max(version_id)::INTEGER FROM goose_db_version WHERE is_applied),
 		       (SELECT count(*) FROM pg_class
@@ -32,7 +33,8 @@ func TestMigrateFreshSchema(t *testing.T) {
 		          AND relkind IN ('r', 'p')
 		          AND relname IN ('gameconfig', 'teams', 'tasks', 'flags', 'stolenflags',
 		                          'teamtasks', 'teamtaskslog', 'schedulehistory', 'gamesession',
-		                          'dispatchruns', 'checkerjobs', 'gameroundsnapshots')),
+		                          'dispatchruns', 'checkerjobs', 'gameroundsnapshots',
+		                          'checkeractionlogs', 'publicannouncements')),
 		       (SELECT count(*) FROM GameSession WHERE id = 1),
 		       (SELECT count(*) FROM GameRoundSnapshots),
 	       (SELECT count(*) FROM information_schema.columns
@@ -48,12 +50,15 @@ func TestMigrateFreshSchema(t *testing.T) {
 	              ('teamtaskslog', 'id'), ('teamtaskslog', 'team_id'), ('teamtaskslog', 'task_id'),
 	              ('dispatchruns', 'id'),
 	              ('checkerjobs', 'id'), ('checkerjobs', 'run_id'),
-	              ('checkerjobs', 'team_id'), ('checkerjobs', 'task_id'))),
+	              ('checkerjobs', 'team_id'), ('checkerjobs', 'task_id'),
+	              ('checkeractionlogs', 'id'), ('checkeractionlogs', 'team_id'),
+	              ('checkeractionlogs', 'task_id'), ('publicannouncements', 'id'))),
 	       (SELECT count(*) FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND column_default LIKE '%uuidv7()%'
 	          AND (table_name, column_name) IN (
 	              ('teams', 'id'), ('tasks', 'id'), ('flags', 'id'), ('teamtaskslog', 'id'),
-	              ('dispatchruns', 'id'), ('checkerjobs', 'id'))),
+	              ('dispatchruns', 'id'), ('checkerjobs', 'id'),
+	              ('checkeractionlogs', 'id'), ('publicannouncements', 'id'))),
 	       (SELECT is_nullable = 'YES' FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND table_name = 'checkerjobs'
 	          AND column_name = 'action'),
@@ -61,6 +66,11 @@ func TestMigrateFreshSchema(t *testing.T) {
 	       to_regclass('idx_teamtaskslog_history') IS NOT NULL
 	         AND pg_get_indexdef(to_regclass('idx_teamtaskslog_history')::oid)
 	             LIKE '%(team_id, ts DESC, id DESC)%',
+	       to_regclass('idx_checker_action_logs_team_task_id') IS NOT NULL,
+	       to_regclass('idx_stolenflags_public_feed') IS NOT NULL,
+	       (SELECT is_nullable = 'YES' FROM information_schema.columns
+	        WHERE table_schema = current_schema() AND table_name = 'stolenflags'
+	          AND column_name = 'attacker_delta'),
 	       (SELECT data_type = 'integer' FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND table_name = 'gameconfig' AND column_name = 'id'
 	          AND EXISTS (SELECT 1 FROM pg_constraint
@@ -71,17 +81,20 @@ func TestMigrateFreshSchema(t *testing.T) {
 	       (SELECT data_type = 'text' FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND table_name = 'schedulehistory' AND column_name = 'id')`).Scan(
 		&version, &tables, &sessions, &snapshots, &dispatchColumns, &uuidColumns, &uuidDefaults,
-		&actionNullable, &snapshotIndex, &historyIndex, &configSingleton, &integerSession, &scheduleHistoryText,
+		&actionNullable, &snapshotIndex, &historyIndex, &checkerIndex, &feedIndex, &deltaColumn,
+		&configSingleton, &integerSession, &scheduleHistoryText,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 1 || tables != 12 || sessions != 1 || snapshots != 0 || dispatchColumns != 3 ||
-		uuidColumns != 17 || uuidDefaults != 6 || !actionNullable || !snapshotIndex || !historyIndex ||
+	if version != 1 || tables != 14 || sessions != 1 || snapshots != 0 || dispatchColumns != 3 ||
+		uuidColumns != 21 || uuidDefaults != 8 || !actionNullable || !snapshotIndex || !historyIndex ||
+		!checkerIndex || !feedIndex || !deltaColumn ||
 		!configSingleton || !integerSession || !scheduleHistoryText {
-		t.Fatalf("fresh schema: version=%d tables=%d sessions=%d snapshots=%d dispatch_columns=%d uuid_columns=%d uuid_defaults=%d action_nullable=%t snapshot_index=%t history_index=%t config_singleton=%t integer_session=%t schedule_history_text=%t",
+		t.Fatalf("fresh schema: version=%d tables=%d sessions=%d snapshots=%d dispatch_columns=%d uuid_columns=%d uuid_defaults=%d action_nullable=%t snapshot_index=%t history_index=%t checker_index=%t feed_index=%t delta_column=%t config_singleton=%t integer_session=%t schedule_history_text=%t",
 			version, tables, sessions, snapshots, dispatchColumns, uuidColumns, uuidDefaults, actionNullable,
-			snapshotIndex, historyIndex, configSingleton, integerSession, scheduleHistoryText)
+			snapshotIndex, historyIndex, checkerIndex, feedIndex, deltaColumn,
+			configSingleton, integerSession, scheduleHistoryText)
 	}
 }
 
@@ -213,6 +226,88 @@ func TestMigrateRejectsAppliedIntegerIDSchemaWithoutChangingIt(t *testing.T) {
 		t.Fatalf("refusal changed existing schema: teams.id=%s team_rows=%d marker_preserved=%t ledger_rows=%d version=%d gameconfig_created=%t",
 			teamIDType, teamRows, markerPreserved, versionRows, maxVersion, configCreated)
 	}
+}
+
+func TestMigrateRejectsPreSquashVersionOneSchemaWithoutChangingData(t *testing.T) {
+	fixture := newMigrationFixture(t)
+	if err := db.Migrate(fixture.ctx, fixture.dsn); err != nil {
+		t.Fatalf("migrate fresh schema: %v", err)
+	}
+	teamID := uuid.NewV7()
+	if _, err := fixture.conn.Exec(fixture.ctx, `
+		INSERT INTO Teams (id, name, ip, token)
+		VALUES ($1, 'legacy-team', '127.0.0.1', '0123456789abcdef')`, teamID); err != nil {
+		t.Fatalf("insert legacy team: %v", err)
+	}
+	if _, err := fixture.conn.Exec(fixture.ctx, `
+		DROP INDEX idx_stolenflags_public_feed;
+		DROP TABLE PublicAnnouncements;
+		ALTER TABLE StolenFlags DROP COLUMN attacker_delta;
+		DROP INDEX idx_checker_action_logs_team_task_id;
+		DROP TABLE CheckerActionLogs`); err != nil {
+		t.Fatalf("prepare pre-squash version-one schema: %v", err)
+	}
+
+	before := migrationSchemaState(t, fixture)
+	err := db.Migrate(fixture.ctx, fixture.dsn)
+	if err == nil || !strings.Contains(err.Error(), "applied migration version 1 has incompatible schema") ||
+		!strings.Contains(err.Error(), "initialize a fresh database") {
+		t.Fatalf("migration error = %v, want pre-squash version-one schema refusal", err)
+	}
+	if after := migrationSchemaState(t, fixture); after != before {
+		t.Fatalf("refusal changed schema, ledger or team data:\nbefore: %s\nafter: %s", before, after)
+	}
+}
+
+func TestMigrateRejectsPreSquashVersionThreeWithoutIndex(t *testing.T) {
+	fixture := newMigrationFixture(t)
+	if err := db.Migrate(fixture.ctx, fixture.dsn); err != nil {
+		t.Fatalf("migrate fresh schema: %v", err)
+	}
+	teamID := uuid.NewV7()
+	if _, err := fixture.conn.Exec(fixture.ctx, `
+		INSERT INTO Teams (id, name, ip, token)
+		VALUES ($1, 'legacy-team', '127.0.0.1', '0123456789abcdef')`, teamID); err != nil {
+		t.Fatalf("insert legacy team: %v", err)
+	}
+	if _, err := fixture.conn.Exec(fixture.ctx, `DROP INDEX idx_stolenflags_public_feed`); err != nil {
+		t.Fatalf("prepare pre-squash version-three schema: %v", err)
+	}
+	if _, err := fixture.conn.Exec(fixture.ctx, `
+		INSERT INTO goose_db_version (version_id, is_applied) VALUES (2, TRUE), (3, TRUE)`); err != nil {
+		t.Fatalf("prepare pre-squash version-three ledger: %v", err)
+	}
+
+	before := migrationSchemaState(t, fixture)
+	err := db.Migrate(fixture.ctx, fixture.dsn)
+	if err == nil || !strings.Contains(err.Error(), "applied migration version 1 has incompatible schema") ||
+		!strings.Contains(err.Error(), "initialize a fresh database") {
+		t.Fatalf("migration error = %v, want pre-squash version-three schema refusal", err)
+	}
+	if after := migrationSchemaState(t, fixture); after != before {
+		t.Fatalf("refusal changed schema, ledger or team data:\nbefore: %s\nafter: %s", before, after)
+	}
+}
+
+func migrationSchemaState(t *testing.T, fixture *migrationFixture) string {
+	t.Helper()
+	var result string
+	if err := fixture.conn.QueryRow(fixture.ctx, `
+		SELECT jsonb_build_object(
+		    'teams', (SELECT jsonb_agg(t ORDER BY t.id) FROM Teams AS t),
+		    'ledger', (SELECT jsonb_agg(v ORDER BY v.id) FROM goose_db_version AS v),
+		    'action_logs_table', to_regclass('checkeractionlogs') IS NOT NULL,
+		    'announcements_table', to_regclass('publicannouncements') IS NOT NULL,
+		    'attacker_delta', EXISTS (
+		        SELECT 1 FROM information_schema.columns
+		        WHERE table_schema = current_schema()
+		          AND table_name = 'stolenflags' AND column_name = 'attacker_delta'
+		    ),
+		    'feed_index', to_regclass('idx_stolenflags_public_feed') IS NOT NULL
+		)::TEXT`).Scan(&result); err != nil {
+		t.Fatal(err)
+	}
+	return result
 }
 
 func TestMigrateRepeatPreservesCurrentRows(t *testing.T) {

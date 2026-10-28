@@ -1,4 +1,19 @@
 schemas:
+  AnnouncementCreate:
+    type: object
+    additionalProperties: false
+    required:
+    - title
+    - markdown
+    properties:
+      title:
+        type: string
+        minLength: 1
+        maxLength: 160
+      markdown:
+        type: string
+        minLength: 1
+        maxLength: 4000
   AdminTeam:
     type: object
     additionalProperties: false

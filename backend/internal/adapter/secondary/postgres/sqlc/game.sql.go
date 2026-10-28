@@ -111,6 +111,48 @@ func (q *Queries) InsertGameTeam(ctx context.Context, arg InsertGameTeamParams) 
 	return id, err
 }
 
+const insertPublicCheckerLog = `-- name: InsertPublicCheckerLog :exec
+INSERT INTO CheckerActionLogs
+    (team_id, task_id, round, action, stage, started_at, finished_at,
+     duration_ms, timed_out, status, public_message)
+VALUES
+    ($1, $2, $3, $4,
+     $5, $6, $7,
+     $8, $9, $10,
+     $11)
+`
+
+type InsertPublicCheckerLogParams struct {
+	TeamID        uuid.UUID          `json:"team_id"`
+	TaskID        uuid.UUID          `json:"task_id"`
+	Round         int32              `json:"round"`
+	Action        string             `json:"action"`
+	Stage         string             `json:"stage"`
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	FinishedAt    pgtype.Timestamptz `json:"finished_at"`
+	DurationMs    int64              `json:"duration_ms"`
+	TimedOut      bool               `json:"timed_out"`
+	Status        int32              `json:"status"`
+	PublicMessage string             `json:"public_message"`
+}
+
+func (q *Queries) InsertPublicCheckerLog(ctx context.Context, arg InsertPublicCheckerLogParams) error {
+	_, err := q.db.Exec(ctx, insertPublicCheckerLog,
+		arg.TeamID,
+		arg.TaskID,
+		arg.Round,
+		arg.Action,
+		arg.Stage,
+		arg.StartedAt,
+		arg.FinishedAt,
+		arg.DurationMs,
+		arg.TimedOut,
+		arg.Status,
+		arg.PublicMessage,
+	)
+	return err
+}
+
 const insertTaskCells = `-- name: InsertTaskCells :exec
 INSERT INTO TeamTasks(team_id,task_id,status,score)
 SELECT team.id AS team_id,task.id AS task_id,-1,task.default_score FROM Teams AS team CROSS JOIN Tasks AS task WHERE task.id=$1
@@ -440,6 +482,73 @@ func (q *Queries) ReadGameLifecycle(ctx context.Context, withSnapshot bool) (Rea
 		&i.Pending,
 	)
 	return i, err
+}
+
+const readPublicCheckerLogs = `-- name: ReadPublicCheckerLogs :many
+SELECT id, round, action, stage, started_at, finished_at, duration_ms,
+       timed_out, status, public_message
+FROM CheckerActionLogs
+WHERE team_id = $1::UUID
+  AND task_id = $2::UUID
+  AND ($3::UUID IS NULL OR id < $3::UUID)
+ORDER BY id DESC
+LIMIT $4::INTEGER
+`
+
+type ReadPublicCheckerLogsParams struct {
+	TeamID   uuid.UUID  `json:"team_id"`
+	TaskID   uuid.UUID  `json:"task_id"`
+	BeforeID *uuid.UUID `json:"before_id"`
+	LogLimit int32      `json:"log_limit"`
+}
+
+type ReadPublicCheckerLogsRow struct {
+	ID            uuid.UUID          `json:"id"`
+	Round         int32              `json:"round"`
+	Action        string             `json:"action"`
+	Stage         string             `json:"stage"`
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	FinishedAt    pgtype.Timestamptz `json:"finished_at"`
+	DurationMs    int64              `json:"duration_ms"`
+	TimedOut      bool               `json:"timed_out"`
+	Status        int32              `json:"status"`
+	PublicMessage string             `json:"public_message"`
+}
+
+func (q *Queries) ReadPublicCheckerLogs(ctx context.Context, arg ReadPublicCheckerLogsParams) ([]ReadPublicCheckerLogsRow, error) {
+	rows, err := q.db.Query(ctx, readPublicCheckerLogs,
+		arg.TeamID,
+		arg.TaskID,
+		arg.BeforeID,
+		arg.LogLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReadPublicCheckerLogsRow{}
+	for rows.Next() {
+		var i ReadPublicCheckerLogsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Round,
+			&i.Action,
+			&i.Stage,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.DurationMs,
+			&i.TimedOut,
+			&i.Status,
+			&i.PublicMessage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const readPublicGameHistory = `-- name: ReadPublicGameHistory :many

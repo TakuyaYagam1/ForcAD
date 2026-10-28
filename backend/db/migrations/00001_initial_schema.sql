@@ -110,9 +110,10 @@ CREATE TABLE Flags
 
 CREATE TABLE StolenFlags
 (
-    flag_id     UUID NOT NULL REFERENCES Flags(id) ON DELETE RESTRICT,
-    attacker_id UUID NOT NULL REFERENCES Teams(id) ON DELETE RESTRICT,
-    submit_time TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    flag_id        UUID NOT NULL REFERENCES Flags(id) ON DELETE RESTRICT,
+    attacker_id    UUID NOT NULL REFERENCES Teams(id) ON DELETE RESTRICT,
+    submit_time    TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    attacker_delta DOUBLE PRECISION,
     PRIMARY KEY (flag_id, attacker_id)
 );
 
@@ -217,6 +218,31 @@ CREATE TABLE GameRoundSnapshots
     created_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT clock_timestamp()
 );
 
+CREATE TABLE CheckerActionLogs
+(
+    id              UUID PRIMARY KEY DEFAULT uuidv7(),
+    team_id         UUID NOT NULL,
+    task_id         UUID NOT NULL,
+    round           INTEGER NOT NULL CHECK (round >= 0),
+    action          TEXT NOT NULL CHECK (action IN ('check', 'put', 'get')),
+    stage           TEXT NOT NULL CHECK (stage IN ('classic', 'puts_only', 'check_gets', 'check_only')),
+    started_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+    finished_at     TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration_ms     BIGINT NOT NULL CHECK (duration_ms >= 0),
+    timed_out       BOOLEAN NOT NULL DEFAULT FALSE,
+    status          INTEGER NOT NULL CHECK (status IN (101, 102, 103, 104, 110)),
+    public_message  TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE PublicAnnouncements
+(
+    id         UUID PRIMARY KEY DEFAULT uuidv7(),
+    title      VARCHAR(160) NOT NULL CHECK (char_length(btrim(title)) BETWEEN 1 AND 160),
+    markdown   TEXT NOT NULL CHECK (char_length(btrim(markdown)) BETWEEN 1 AND 4000),
+    author     VARCHAR(160) NOT NULL CHECK (char_length(btrim(author)) BETWEEN 1 AND 160),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT clock_timestamp()
+);
+
 INSERT INTO GameSession (id) VALUES (1);
 
 CREATE INDEX idx_flags_round_team ON Flags (round, team_id);
@@ -240,8 +266,17 @@ CREATE INDEX checker_jobs_not_before
     ON CheckerJobs (not_before, id) WHERE sent_at IS NULL AND finished_at IS NULL;
 CREATE INDEX game_round_snapshots_created
     ON GameRoundSnapshots (created_at, round);
+CREATE INDEX idx_checker_action_logs_team_task_id
+    ON CheckerActionLogs (team_id, task_id, id DESC);
+CREATE INDEX idx_stolenflags_public_feed
+    ON StolenFlags (submit_time DESC, flag_id DESC, attacker_id DESC)
+    WHERE submit_time IS NOT NULL;
 
 -- +goose Down
+
+-- This rollback drops the full schema and all application data.
+DROP TABLE PublicAnnouncements;
+DROP TABLE CheckerActionLogs;
 
 DROP TABLE GameRoundSnapshots;
 DROP TABLE CheckerJobs;

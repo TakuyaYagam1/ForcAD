@@ -58,6 +58,8 @@ type AttackResult struct {
 	AttackerDelta float64
 	VictimDelta   float64
 	Generation    int64
+	EventID       string
+	CreatedAt     time.Time
 }
 
 type FlagSubmission struct {

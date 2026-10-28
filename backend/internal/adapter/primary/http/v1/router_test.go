@@ -108,7 +108,7 @@ func testRouter(t *testing.T, role string, g GameService, a AuthService, f FlagS
 	t.Helper()
 	cfg := config.Config{Role: role, HTTPMaxInflight: 1, RequestTimeout: time.Second}
 	noop := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
-	r, err := NewRouter(cfg, NewHandler(g, a, f), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
+	r, err := NewRouter(cfg, NewHandler(g, a, f, nil), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}

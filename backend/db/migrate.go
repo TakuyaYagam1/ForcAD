@@ -90,6 +90,11 @@ func validateAppliedSchema(ctx context.Context, database *sql.DB) error {
 				('dispatchruns', 'id', 'uuid'),
 				('checkerjobs', 'id', 'uuid'), ('checkerjobs', 'run_id', 'uuid'),
 				('checkerjobs', 'team_id', 'uuid'), ('checkerjobs', 'task_id', 'uuid'),
+				('checkeractionlogs', 'id', 'uuid'),
+				('checkeractionlogs', 'team_id', 'uuid'),
+				('checkeractionlogs', 'task_id', 'uuid'),
+				('publicannouncements', 'id', 'uuid'),
+				('stolenflags', 'attacker_delta', 'double precision'),
 				('gameconfig', 'extra_checks', 'integer'),
 				('checkerjobs', 'not_before', 'timestamp with time zone'),
 				('checkerjobs', 'expires_at', 'timestamp with time zone'),
@@ -103,10 +108,17 @@ func validateAppliedSchema(ctx context.Context, database *sql.DB) error {
 		 AND actual.table_name = expected.table_name
 		 AND actual.column_name = expected.column_name
 		WHERE actual.data_type IS DISTINCT FROM expected.data_type
-		ORDER BY expected.data_type <> 'uuid', expected.table_name, expected.column_name
+		ORDER BY actual.data_type IS NULL, expected.data_type <> 'uuid', expected.table_name, expected.column_name
 		LIMIT 1
 	`).Scan(&tableName, &columnName, &dataType)
 	if errors.Is(err, sql.ErrNoRows) {
+		var feedIndexExists bool
+		if err := database.QueryRowContext(ctx, `SELECT to_regclass('idx_stolenflags_public_feed') IS NOT NULL`).Scan(&feedIndexExists); err != nil {
+			return fmt.Errorf("%s - inspect public event index: %w", location, err)
+		}
+		if !feedIndexExists {
+			return fmt.Errorf("%s - applied migration version 1 has incompatible schema: missing idx_stolenflags_public_feed; initialize a fresh database", location)
+		}
 		return nil
 	}
 	if err != nil {

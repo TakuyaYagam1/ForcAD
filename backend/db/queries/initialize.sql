@@ -15,7 +15,7 @@ SELECT team.id AS team_id,task.id AS task_id,-1,task.default_score FROM Teams AS
 ON CONFLICT(team_id,task_id) DO NOTHING;
 
 -- name: ResetGameTables :exec
-TRUNCATE TABLE GameRoundSnapshots, CheckerJobs, DispatchRuns, StolenFlags, Flags,
+TRUNCATE TABLE GameRoundSnapshots, CheckerJobs, DispatchRuns, PublicAnnouncements, StolenFlags, Flags,
     TeamTasksLog, TeamTasks, ScheduleHistory, GameSession, GameConfig, Tasks, Teams;
 
 -- name: InitializeEmptySession :exec

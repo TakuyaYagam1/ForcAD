@@ -77,6 +77,15 @@ func (q *Queries) CreateSchedulerRun(ctx context.Context, arg CreateSchedulerRun
 	return i, err
 }
 
+const deletePracticeAnnouncements = `-- name: DeletePracticeAnnouncements :exec
+DELETE FROM PublicAnnouncements
+`
+
+func (q *Queries) DeletePracticeAnnouncements(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deletePracticeAnnouncements)
+	return err
+}
+
 const deletePracticeFlags = `-- name: DeletePracticeFlags :exec
 DELETE FROM Flags
 `

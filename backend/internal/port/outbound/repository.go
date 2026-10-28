@@ -46,3 +46,8 @@ type OutboxRepository interface {
 	ClaimPending(ctx context.Context, ownerToken string, at, claimDeadline time.Time, limit int32) ([]domain.CheckerJob, error)
 	MarkPublished(ctx context.Context, jobID uuid.UUID, ownerToken string, at, deadline time.Time) (bool, error)
 }
+
+type EventRepository interface {
+	ListEvents(ctx context.Context, after string, limit int) ([]domain.Event, error)
+	CreateAnnouncement(ctx context.Context, title, markdown, author string) (domain.Event, error)
+}

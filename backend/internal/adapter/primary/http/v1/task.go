@@ -34,7 +34,7 @@ func (h *tasksHandler) GetAdminTask(ctx context.Context, params api.GetAdminTask
 		return nil, fmt.Errorf("%s - list tasks: %w", location, err)
 	}
 	for _, task := range tasks {
-		if task.ID == uuid.UUID(params.TaskID) {
+		if task.ID == params.TaskID {
 			return adminTask(task), nil
 		}
 	}
@@ -66,7 +66,7 @@ func (h *tasksHandler) UpdateAdminTask(ctx context.Context, req *api.AdminTaskWr
 	if err := validateTaskInput(req); err != nil {
 		return nil, fmt.Errorf("%s - validate task input: %w", location, err)
 	}
-	task, err := h.game.SaveTask(ctx, taskInput(req, uuid.UUID(params.TaskID)), false)
+	task, err := h.game.SaveTask(ctx, taskInput(req, params.TaskID), false)
 	if err != nil {
 		return nil, fmt.Errorf("%s - update task: %w", location, err)
 	}
@@ -75,7 +75,7 @@ func (h *tasksHandler) UpdateAdminTask(ctx context.Context, req *api.AdminTaskWr
 
 func (h *tasksHandler) DeleteAdminTask(ctx context.Context, params api.DeleteAdminTaskParams) (api.DeleteAdminTaskRes, error) {
 	const location = "httpv1.tasksHandler.DeleteAdminTask"
-	if err := h.game.DeleteTask(ctx, uuid.UUID(params.TaskID)); err != nil {
+	if err := h.game.DeleteTask(ctx, params.TaskID); err != nil {
 		return nil, fmt.Errorf("%s - deactivate task: %w", location, err)
 	}
 	return new(api.DeleteAdminTaskOK("ok")), nil

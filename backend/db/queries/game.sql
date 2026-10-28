@@ -54,6 +54,26 @@ WHERE l.team_id = sqlc.arg(team_id)::UUID
   AND (sqlc.narg(task_id)::UUID IS NULL OR l.task_id = sqlc.narg(task_id)::UUID)
 ORDER BY l.ts DESC, l.id DESC LIMIT 1000;
 
+-- name: ReadPublicCheckerLogs :many
+SELECT id, round, action, stage, started_at, finished_at, duration_ms,
+       timed_out, status, public_message
+FROM CheckerActionLogs
+WHERE team_id = sqlc.arg(team_id)::UUID
+  AND task_id = sqlc.arg(task_id)::UUID
+  AND (sqlc.narg(before_id)::UUID IS NULL OR id < sqlc.narg(before_id)::UUID)
+ORDER BY id DESC
+LIMIT sqlc.arg(log_limit)::INTEGER;
+
+-- name: InsertPublicCheckerLog :exec
+INSERT INTO CheckerActionLogs
+    (team_id, task_id, round, action, stage, started_at, finished_at,
+     duration_ms, timed_out, status, public_message)
+VALUES
+    (sqlc.arg(team_id), sqlc.arg(task_id), sqlc.arg(round), sqlc.arg(action),
+     sqlc.arg(stage), sqlc.arg(started_at), sqlc.arg(finished_at),
+     sqlc.arg(duration_ms), sqlc.arg(timed_out), sqlc.arg(status),
+     sqlc.arg(public_message));
+
 -- name: ReadPublicGameHistory :many
 SELECT snapshots.round, snapshots.round_start, cell::JSONB AS cell
 FROM (

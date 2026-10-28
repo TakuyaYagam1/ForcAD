@@ -4,10 +4,44 @@ get:
   - client
   summary: Get public flag data grouped by task and team address.
   security: []
+  parameters:
+  - name: service
+    in: query
+    required: false
+    description: Return public flag data for the exact task name. If omitted, return all services.
+    schema:
+      type: string
+  - name: If-None-Match
+    in: header
+    required: false
+    description: Return 304 when the current representation matches this validator.
+    schema:
+      type: string
   responses:
     '200':
       description: Public attack data, or null before data is available.
+      headers:
+        ETag:
+          description: Strong validator for the returned JSON representation.
+          schema:
+            type: string
+        Cache-Control:
+          description: Response may be stored but must be revalidated for each request.
+          schema:
+            type: string
       content:
         application/json:
+          x-ogen-raw-response: true
           schema:
             "$ref": "../components/schemas.yml#/AttackData"
+    '304':
+      description: The current attack data matches If-None-Match.
+      headers:
+        ETag:
+          description: Strong validator for the current representation.
+          schema:
+            type: string
+        Cache-Control:
+          description: Response may be stored but must be revalidated for each request.
+          schema:
+            type: string

@@ -9,6 +9,10 @@ type ChangeAdminGameStateRes interface {
 	changeAdminGameStateRes()
 }
 
+type CreateAdminEventRes interface {
+	createAdminEventRes()
+}
+
 type CreateAdminTaskRes interface {
 	createAdminTaskRes()
 }
@@ -61,8 +65,20 @@ type GetAdminTeamsRes interface {
 	getAdminTeamsRes()
 }
 
+type GetClientAttackDataRes interface {
+	getClientAttackDataRes()
+}
+
+type GetClientCheckerLogsRes interface {
+	getClientCheckerLogsRes()
+}
+
 type GetClientCtftimeScoreboardRes interface {
 	getClientCtftimeScoreboardRes()
+}
+
+type GetClientEventsRes interface {
+	getClientEventsRes()
 }
 
 type GetScoreboardRes interface {

@@ -35,8 +35,11 @@ func newGame(repo *postgres.GameStore, storage *postgres.Repository, events *web
 func newFlags(cfg config.Config, storage *postgres.Repository, game *postgres.GameStore, cache *redisadapter.Store, events *websocket.Events, logger *slog.Logger) *usecase.Flags {
 	return usecase.NewFlags(storage, storage, game, cache, events, logger, cfg.FlagRate, cfg.FlagBurst)
 }
-func newHandler(game *usecase.Game, auth *usecase.Auth, flags *usecase.Flags) *httpv1.Handler {
-	return httpv1.NewHandler(game, auth, flags)
+func newEventFeed(storage *postgres.Repository, events *websocket.Events, logger *slog.Logger) *usecase.Events {
+	return usecase.NewEvents(storage, events, logger)
+}
+func newHandler(game *usecase.Game, auth *usecase.Auth, flags *usecase.Flags, feed *usecase.Events) *httpv1.Handler {
+	return httpv1.NewHandler(game, auth, flags, feed)
 }
 func newRouter(cfg config.Config, handler *httpv1.Handler, events *websocket.Events, metrics *prometheus.Metrics, cache *redisadapter.Store, logger *slog.Logger, traffic *prometheus.TeamTraffic) (apiHandler, error) {
 	const location = "bootstrap.newRouter"

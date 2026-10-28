@@ -9,6 +9,21 @@ import (
 	"uuid"
 )
 
+type Checkeractionlog struct {
+	ID            uuid.UUID          `json:"id"`
+	TeamID        uuid.UUID          `json:"team_id"`
+	TaskID        uuid.UUID          `json:"task_id"`
+	Round         int32              `json:"round"`
+	Action        string             `json:"action"`
+	Stage         string             `json:"stage"`
+	StartedAt     pgtype.Timestamptz `json:"started_at"`
+	FinishedAt    pgtype.Timestamptz `json:"finished_at"`
+	DurationMs    int64              `json:"duration_ms"`
+	TimedOut      bool               `json:"timed_out"`
+	Status        int32              `json:"status"`
+	PublicMessage string             `json:"public_message"`
+}
+
 type Checkerjob struct {
 	ID                uuid.UUID          `json:"id"`
 	RunID             uuid.UUID          `json:"run_id"`
@@ -92,15 +107,24 @@ type Gamesession struct {
 	Snapshot              []byte             `json:"snapshot"`
 }
 
+type Publicannouncement struct {
+	ID        uuid.UUID          `json:"id"`
+	Title     string             `json:"title"`
+	Markdown  string             `json:"markdown"`
+	Author    string             `json:"author"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Schedulehistory struct {
 	ID      string             `json:"id"`
 	LastRun pgtype.Timestamptz `json:"last_run"`
 }
 
 type Stolenflag struct {
-	FlagID     uuid.UUID          `json:"flag_id"`
-	AttackerID uuid.UUID          `json:"attacker_id"`
-	SubmitTime pgtype.Timestamptz `json:"submit_time"`
+	FlagID        uuid.UUID          `json:"flag_id"`
+	AttackerID    uuid.UUID          `json:"attacker_id"`
+	SubmitTime    pgtype.Timestamptz `json:"submit_time"`
+	AttackerDelta *float64           `json:"attacker_delta"`
 }
 
 type Task struct {

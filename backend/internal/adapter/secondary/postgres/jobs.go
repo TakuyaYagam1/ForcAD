@@ -274,6 +274,29 @@ func (r *Repository) Complete(
 	}
 	defer rollbackTransaction(ctx, tx)
 	queries := r.queries.WithTx(tx)
+	completed, err := completeJobAndApply(ctx, queries, jobID, ownerToken, at, result, encodedResult)
+	if err != nil {
+		return false, err
+	}
+	if !completed {
+		return false, nil
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return false, fmt.Errorf("%s - commit job completion: %w", location, err)
+	}
+	return true, nil
+}
+
+func completeJobAndApply(
+	ctx context.Context,
+	queries *sqlc.Queries,
+	jobID uuid.UUID,
+	ownerToken string,
+	at time.Time,
+	result domain.CheckerResult,
+	encodedResult []byte,
+) (bool, error) {
+	const location = "postgres.Repository.Complete"
 	if err := lockJobLifecycle(ctx, queries); err != nil {
 		if errors.Is(err, domain.ErrGameUnavailable) {
 			return false, nil
@@ -293,13 +316,28 @@ func (r *Repository) Complete(
 	if err != nil {
 		return false, fmt.Errorf("%s - complete checker job claim: %w", location, err)
 	}
+	if err := persistCheckerLogs(ctx, queries, row, result.Logs); err != nil {
+		return false, fmt.Errorf("%s - persist checker action logs: %w", location, err)
+	}
 	if err := applyCheckerResult(ctx, queries, row, result); err != nil {
 		return false, fmt.Errorf("%s - update task result: %w", location, err)
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return false, fmt.Errorf("%s - commit job completion: %w", location, err)
-	}
 	return true, nil
+}
+
+func persistCheckerLogs(
+	ctx context.Context,
+	queries *sqlc.Queries,
+	row sqlc.CompleteCheckerJobClaimRow,
+	logs []domain.CheckerLog,
+) error {
+	if len(logs) == 0 {
+		return nil
+	}
+	if row.TeamID == nil || row.TaskID == nil {
+		return fmt.Errorf("validate checker log team and task: %w", domain.ErrTeamTaskMissing)
+	}
+	return insertCheckerLogs(ctx, queries, *row.TeamID, *row.TaskID, row.Round, logs)
 }
 
 func applyCheckerResult(

@@ -35,10 +35,12 @@ test("generation removes its temporary bundle and lock after success", async (t)
     },
   });
 
-  assert.equal(commands.length, 3);
+  assert.equal(commands.length, 4);
   assert.match(commands[0].command, /[\\/]\.venv[\\/]bin[\\/]python$/);
   assert.equal(commands[1].command, process.execPath);
   assert.equal(commands[2].command, "go");
+  assert.equal(commands[3].command, process.execPath);
+  assert.match(commands[3].args[0], /[\\/]patch-ogen-uuid\.mjs$/);
   await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), { code: "ENOENT" });
   await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), { code: "ENOENT" });
   await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });

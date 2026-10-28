@@ -3,8 +3,9 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound = errors.New("not found")
-	ErrConflict = errors.New("data conflicts with existing state")
+	ErrNotFound           = errors.New("not found")
+	ErrConflict           = errors.New("data conflicts with existing state")
+	ErrEventCursorInvalid = errors.New("event cursor is invalid")
 )
 
 type ValidationError struct{ Message string }

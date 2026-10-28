@@ -42,6 +42,15 @@ func (UnimplementedHandler) ChangeAdminGameState(ctx context.Context, req OptGam
 	return r, ht.ErrNotImplemented
 }
 
+// CreateAdminEvent implements createAdminEvent operation.
+//
+// Publish an organizer announcement.
+//
+// POST /api/admin/events/
+func (UnimplementedHandler) CreateAdminEvent(ctx context.Context, req *AnnouncementCreate) (r CreateAdminEventRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateAdminTask implements createAdminTask operation.
 //
 // Create a task.
@@ -182,7 +191,16 @@ func (UnimplementedHandler) GetAdminTeams(ctx context.Context) (r GetAdminTeamsR
 // Get public flag data grouped by task and team address.
 //
 // GET /api/client/attack_data/
-func (UnimplementedHandler) GetClientAttackData(ctx context.Context) (r NilAttackData, _ error) {
+func (UnimplementedHandler) GetClientAttackData(ctx context.Context, params GetClientAttackDataParams, w http.ResponseWriter) error {
+	return ht.ErrNotImplemented
+}
+
+// GetClientCheckerLogs implements getClientCheckerLogs operation.
+//
+// Get public checker results for one team and service.
+//
+// GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
+func (UnimplementedHandler) GetClientCheckerLogs(ctx context.Context, params GetClientCheckerLogsParams) (r GetClientCheckerLogsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -201,6 +219,15 @@ func (UnimplementedHandler) GetClientConfig(ctx context.Context) (r *GameConfig,
 //
 // GET /api/client/ctftime/
 func (UnimplementedHandler) GetClientCtftimeScoreboard(ctx context.Context) (r GetClientCtftimeScoreboardRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetClientEvents implements getClientEvents operation.
+//
+// Read recent public events or events after a cursor.
+//
+// GET /api/client/events/
+func (UnimplementedHandler) GetClientEvents(ctx context.Context, params GetClientEventsParams) (r GetClientEventsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

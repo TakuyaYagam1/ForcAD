@@ -39,6 +39,7 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 // operationRolesSessionCookie is a private map storing roles per operation.
 var operationRolesSessionCookie = map[string][]string{
 	ChangeAdminGameStateOperation:    []string{},
+	CreateAdminEventOperation:        []string{},
 	CreateAdminTaskOperation:         []string{},
 	CreateAdminTeamOperation:         []string{},
 	CreateAdminTeamTaskOperation:     []string{},

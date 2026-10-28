@@ -121,6 +121,9 @@ func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domai
 	if err := b.saveScores(ctx, queries); err != nil {
 		return nil, fmt.Errorf("%s - save scores: %w", location, err)
 	}
+	if err := b.saveEventDeltas(ctx, queries, results); err != nil {
+		return nil, fmt.Errorf("%s - save event deltas: %w", location, err)
+	}
 	return results, nil
 }
 
@@ -152,7 +155,38 @@ func (b *attackBatch) scoreFlag(value string, inserted map[uuid.UUID]bool) (doma
 	return domain.SubmissionResult{Attack: domain.AttackResult{
 		AttackerID: b.submission.TeamID, VictimID: flag.row.TeamID, TaskID: flag.row.TaskID,
 		AttackerDelta: change.Attacker, VictimDelta: change.Victim, Generation: b.state.generation,
+		EventID: domain.FlagEventID(flag.row.ID, b.submission.TeamID), CreatedAt: b.submission.ReceivedAt,
 	}}, nil
+}
+
+func (b *attackBatch) saveEventDeltas(ctx context.Context, queries *sqlc.Queries, results []domain.SubmissionResult) error {
+	const location = "postgres.attackBatch.saveEventDeltas"
+	params := sqlc.UpdateStolenFlagDeltasParams{AttackerID: b.submission.TeamID}
+	for i, result := range results {
+		if result.Err != nil {
+			continue
+		}
+		flag := b.flags[b.submission.Values[i]]
+		if flag == nil {
+			return fmt.Errorf("%s - find accepted flag: %w", location, domain.ErrFlagNotFound)
+		}
+		params.FlagIds = append(params.FlagIds, flag.row.ID)
+		params.Deltas = append(params.Deltas, result.Attack.AttackerDelta)
+	}
+	if len(params.FlagIds) == 0 {
+		return nil
+	}
+	if len(params.FlagIds) != len(params.Deltas) {
+		return fmt.Errorf("%s - pair accepted flags with deltas: lengths differ", location)
+	}
+	rows, err := queries.UpdateStolenFlagDeltas(ctx, params)
+	if err != nil {
+		return fmt.Errorf("%s - update accepted flag events: %w", location, err)
+	}
+	if rows != int64(len(params.FlagIds)) {
+		return fmt.Errorf("%s - update all accepted flag events: %w", location, domain.ErrNotFound)
+	}
+	return nil
 }
 
 func (b *attackBatch) saveScores(ctx context.Context, queries *sqlc.Queries) error {

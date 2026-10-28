@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
@@ -51,15 +52,12 @@ func (h *gameHandler) GetClientStatus(ctx context.Context) (*api.GameRuntimeStat
 	return runtimeStatus(runtime), nil
 }
 
-func (h *gameHandler) GetClientAttackData(ctx context.Context) (api.NilAttackData, error) {
-	const location = "httpv1.gameHandler.GetClientAttackData"
-	data, err := h.game.AttackData(ctx)
-	if err != nil {
-		return api.NilAttackData{}, fmt.Errorf("%s - load public attack data: %w", location, err)
+func (h *gameHandler) GetClientAttackData(ctx context.Context, params api.GetClientAttackDataParams, w http.ResponseWriter) error {
+	service, hasService := params.Service.Get()
+	var filter *string
+	if hasService {
+		filter = &service
 	}
-	result := make(api.AttackData, len(data))
-	for name, teams := range data {
-		result[name] = api.AttackDataItem(teams)
-	}
-	return api.NewNilAttackData(result), nil
+	ifNoneMatch, _ := params.IfNoneMatch.Get()
+	return writeAttackData(ctx, h.game, filter, ifNoneMatch, w)
 }

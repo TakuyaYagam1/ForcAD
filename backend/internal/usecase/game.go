@@ -187,7 +187,7 @@ func (g *Game) Standings(ctx context.Context) ([]Standing, error) {
 	return result, nil
 }
 
-func (g *Game) AttackData(ctx context.Context) (map[string]map[string][]string, error) {
+func (g *Game) AttackData(ctx context.Context, service *string) (map[string]map[string][]string, error) {
 	const location = "usecase.Game.AttackData"
 	life, err := g.repo.Lifecycle(ctx)
 	if err != nil {
@@ -201,11 +201,12 @@ func (g *Game) AttackData(ctx context.Context) (map[string]map[string][]string, 
 	names := make(map[uuid.UUID]string, len(tasks))
 	data := map[string]map[string][]string{}
 	for _, task := range tasks {
-		if hasTag(task.CheckerType, "pfr") {
-			ids = append(ids, task.ID)
-			names[task.ID] = task.Name
-			data[task.Name] = map[string][]string{}
+		if !hasTag(task.CheckerType, "pfr") || service != nil && task.Name != *service {
+			continue
 		}
+		ids = append(ids, task.ID)
+		names[task.ID] = task.Name
+		data[task.Name] = map[string][]string{}
 	}
 	if len(ids) == 0 {
 		return data, nil

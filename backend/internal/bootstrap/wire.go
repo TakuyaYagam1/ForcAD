@@ -18,7 +18,7 @@ import (
 func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Application, func(), error) {
 	wire.Build(postgres.NewPool, postgres.New, postgres.NewGameStore,
 		redisadapter.New, prometheus.New,
-		newBroker, newEvents, newAuth, newGame, newFlags,
+		newBroker, newEvents, newAuth, newGame, newFlags, newEventFeed,
 		newHandler, newRouter, newChecker, newScheduler, newTeamTraffic, NewApplication)
 	return nil, nil, nil
 }

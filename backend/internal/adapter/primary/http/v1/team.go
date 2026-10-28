@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"fmt"
-	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
@@ -33,7 +32,7 @@ func (h *teamsHandler) GetAdminTeam(ctx context.Context, params api.GetAdminTeam
 		return nil, fmt.Errorf("%s - list teams: %w", location, err)
 	}
 	for _, team := range teams {
-		if team.ID == uuid.UUID(params.TeamID) {
+		if team.ID == params.TeamID {
 			return adminTeam(team), nil
 		}
 	}
@@ -51,7 +50,7 @@ func (h *teamsHandler) CreateAdminTeam(ctx context.Context, req *api.AdminTeamCr
 
 func (h *teamsHandler) UpdateAdminTeam(ctx context.Context, req *api.AdminTeamUpdate, params api.UpdateAdminTeamParams) (api.UpdateAdminTeamRes, error) {
 	const location = "httpv1.teamsHandler.UpdateAdminTeam"
-	team, err := h.game.SaveTeam(ctx, domain.Team{ID: uuid.UUID(params.TeamID), Name: req.Name, IP: req.IP, Token: req.Token, Highlighted: req.Highlighted.Or(false), Active: req.Active.Or(true), LogoPath: req.LogoPath.Or("")}, false)
+	team, err := h.game.SaveTeam(ctx, domain.Team{ID: params.TeamID, Name: req.Name, IP: req.IP, Token: req.Token, Highlighted: req.Highlighted.Or(false), Active: req.Active.Or(true), LogoPath: req.LogoPath.Or("")}, false)
 	if err != nil {
 		return nil, fmt.Errorf("%s - update team: %w", location, err)
 	}
@@ -60,7 +59,7 @@ func (h *teamsHandler) UpdateAdminTeam(ctx context.Context, req *api.AdminTeamUp
 
 func (h *teamsHandler) DeleteAdminTeam(ctx context.Context, params api.DeleteAdminTeamParams) (api.DeleteAdminTeamRes, error) {
 	const location = "httpv1.teamsHandler.DeleteAdminTeam"
-	if err := h.game.DeleteTeam(ctx, uuid.UUID(params.TeamID)); err != nil {
+	if err := h.game.DeleteTeam(ctx, params.TeamID); err != nil {
 		return nil, fmt.Errorf("%s - deactivate team: %w", location, err)
 	}
 	return new(api.DeleteAdminTeamOK("ok")), nil

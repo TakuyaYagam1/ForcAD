@@ -218,6 +218,7 @@ func (w *Worker) finish(ctx context.Context, guard *leaseGuard, result domain.Ch
 			PrivateMessage: "Checker workflow exceeded CHECKER_WORKFLOW_TIMEOUT",
 		}
 	}
+	result.Logs = guard.completedCheckerLogs()
 
 	var completed bool
 	var completeErr error
@@ -496,43 +497,127 @@ func (w *Worker) runAction(ctx context.Context, guard *leaseGuard, job domain.Ch
 	if err := guard.checkWorkflowWindow(); err != nil {
 		return verdict{}, fmt.Errorf("%s - check workflow deadline: %w", location, err)
 	}
+	request := checkerRequest(payload, action, flag)
+	started := time.Now()
+	result, err := w.runner.Run(ctx, request)
+	finished := time.Now()
+	guard.appendCheckerLog(checkerActionLog(job, action, flag, started, finished, result, err))
+	if err != nil {
+		return checkerActionFailure(ctx, location, action, err)
+	}
+	return w.acceptCheckerResult(ctx, guard, job, payload, ownerToken, action, flag, result)
+}
+
+func checkerRequest(payload domain.JobPayload, action processchecker.Action, flag *domain.Flag) processchecker.Request {
 	request := processchecker.Request{
 		Executable: payload.Task.Checker, Action: action, TeamIP: payload.Team.IP,
 		Timeout: time.Duration(payload.Task.CheckerTimeout) * time.Second,
 		EnvPath: payload.Task.EnvPath,
 	}
+	if flag == nil {
+		return request
+	}
+	request.PrivateFlagData = flag.PrivateData
+	request.Flag = flag.Value
+	if flag.VulnerabilityID != nil {
+		request.VulnNumber = int(*flag.VulnerabilityID)
+	}
+	return request
+}
+
+func checkerActionLog(
+	job domain.CheckerJob,
+	action processchecker.Action,
+	flag *domain.Flag,
+	started, finished time.Time,
+	result processchecker.Result,
+	runErr error,
+) domain.CheckerLog {
+	timedOut := result.TimedOut || errors.Is(runErr, context.DeadlineExceeded) || errors.Is(runErr, ErrWorkflowDeadline)
+	status := result.Status
+	publicMessage := result.PublicMessage
+	if !validStatus(status) {
+		status = processchecker.StatusCheckFailed
+	}
+	if timedOut {
+		status = processchecker.StatusDown
+		if publicMessage == "" || runErr != nil {
+			publicMessage = actionName(action) + " timed out"
+			if errors.Is(runErr, ErrWorkflowDeadline) {
+				publicMessage = "Checker workflow timed out"
+			}
+		}
+	} else if runErr != nil {
+		status = processchecker.StatusCheckFailed
+		publicMessage = actionName(action) + " failed"
+	}
 	if flag != nil {
-		request.PrivateFlagData = flag.PrivateData
-		request.Flag = flag.Value
-		if flag.VulnerabilityID != nil {
-			request.VulnNumber = int(*flag.VulnerabilityID)
-		}
+		publicMessage = redactCheckerSecrets(publicMessage, flag.Value, flag.PrivateData)
 	}
-	result, err := w.runner.Run(ctx, request)
-	if err != nil {
-		if ctx.Err() != nil {
-			return verdict{}, fmt.Errorf("%s - run checker action: %w", location, context.Cause(ctx))
-		}
-		return verdict{
-			action: action, status: processchecker.StatusCheckFailed,
-			public: actionName(action) + " failed", private: "Checker process error: " + err.Error(),
-		}, nil
+	duration := finished.Sub(started)
+	if duration < 0 {
+		duration = 0
 	}
+	startedAt, finishedAt := started.UTC(), finished.UTC()
+	if finishedAt.Before(startedAt) {
+		finishedAt = startedAt
+	}
+	return domain.CheckerLog{
+		Round: job.Round, Action: string(action), Stage: string(job.Action),
+		StartedAt: startedAt, FinishedAt: finishedAt, DurationMS: duration.Milliseconds(),
+		TimedOut: timedOut, Status: statusCode(status), PublicMessage: publicMessage,
+	}
+}
+
+func checkerActionFailure(ctx context.Context, location string, action processchecker.Action, err error) (verdict, error) {
+	if ctx.Err() != nil {
+		return verdict{}, fmt.Errorf("%s - run checker action: %w", location, context.Cause(ctx))
+	}
+	return verdict{
+		action: action, status: processchecker.StatusCheckFailed,
+		public: actionName(action) + " failed", private: "Checker process error: " + err.Error(),
+	}, nil
+}
+
+func (w *Worker) acceptCheckerResult(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	payload domain.JobPayload,
+	ownerToken string,
+	action processchecker.Action,
+	flag *domain.Flag,
+	result processchecker.Result,
+) (verdict, error) {
 	v := verdict{action: action, status: result.Status, public: result.PublicMessage, private: result.PrivateMessage, command: result.Command}
 	if !validStatus(v.status) {
 		v.status, v.public = processchecker.StatusCheckFailed, "Check failed"
 		v.private = fmt.Sprintf("Checker returned unsupported status %d", result.Status)
 	}
-	if v.status == processchecker.StatusUp && action == processchecker.ActionPut {
-		flagData := flagForStorage(*flag, payload.Task, v)
-		_, err := w.flags.Create(ctx, flagData, &domain.CheckerJobOwner{JobID: job.ID, ClaimToken: ownerToken})
-		if errors.Is(err, domain.ErrCheckerJobClosed) {
-			guard.abort(ErrLeaseLost)
-			return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, ErrLeaseLost)
-		}
-		if err != nil {
-			return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, err)
-		}
+	if v.status != processchecker.StatusUp || action != processchecker.ActionPut {
+		return v, nil
+	}
+	return w.persistPutFlag(ctx, guard, job, payload.Task, ownerToken, flag, v)
+}
+
+func (w *Worker) persistPutFlag(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	task domain.Task,
+	ownerToken string,
+	flag *domain.Flag,
+	v verdict,
+) (verdict, error) {
+	const location = "checker.Worker.runAction"
+	flagData := flagForStorage(*flag, task, v)
+	_, err := w.flags.Create(ctx, flagData, &domain.CheckerJobOwner{JobID: job.ID, ClaimToken: ownerToken})
+	if errors.Is(err, domain.ErrCheckerJobClosed) {
+		guard.abort(ErrLeaseLost)
+		return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, ErrLeaseLost)
+	}
+	if err != nil {
+		return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, err)
 	}
 	return v, nil
 }
@@ -813,6 +898,28 @@ type leaseGuard struct {
 	actionTimeout    time.Duration
 	workflowDeadline time.Time
 	recoveryDeadline time.Time
+	checkerLogs      []domain.CheckerLog
+}
+
+func (g *leaseGuard) appendCheckerLog(log domain.CheckerLog) {
+	g.mu.Lock()
+	g.checkerLogs = append(g.checkerLogs, log)
+	g.mu.Unlock()
+}
+
+func (g *leaseGuard) completedCheckerLogs() []domain.CheckerLog {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return append([]domain.CheckerLog(nil), g.checkerLogs...)
+}
+
+func redactCheckerSecrets(message string, secrets ...string) string {
+	for _, secret := range secrets {
+		if secret != "" {
+			message = strings.ReplaceAll(message, secret, "[redacted]")
+		}
+	}
+	return message
 }
 
 func (g *leaseGuard) run() {

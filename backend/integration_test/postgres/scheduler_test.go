@@ -199,6 +199,8 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 		{`INSERT INTO GameRoundSnapshots(round,round_start,snapshot)
 		 VALUES(1,0,'{"team_tasks":[]}'::JSONB)`, nil},
 		{`INSERT INTO ScheduleHistory(id,last_run) VALUES('practice_test',now())`, nil},
+		{`INSERT INTO PublicAnnouncements(title,markdown,author)
+			 VALUES('Practice update','Practice closes soon.','admin')`, nil},
 	}
 	for _, row := range practiceRows {
 		if _, err := pool.Exec(ctx, row.statement, row.args...); err != nil {
@@ -210,17 +212,18 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 	if err != nil || !reset {
 		t.Fatalf("practice maintenance reset = %t, %v; want true, nil", reset, err)
 	}
-	var practiceFlags, practiceLogs, practiceSnapshots, practiceSchedules, teamCount, taskCount int
+	var practiceFlags, practiceLogs, practiceSnapshots, practiceSchedules, practiceAnnouncements, teamCount, taskCount int
 	if err := pool.QueryRow(ctx, `SELECT
 		(SELECT count(*) FROM Flags), (SELECT count(*) FROM TeamTasksLog),
 		(SELECT count(*) FROM GameRoundSnapshots), (SELECT count(*) FROM ScheduleHistory),
+		(SELECT count(*) FROM PublicAnnouncements),
 		(SELECT count(*) FROM Teams), (SELECT count(*) FROM Tasks)`).
-		Scan(&practiceFlags, &practiceLogs, &practiceSnapshots, &practiceSchedules, &teamCount, &taskCount); err != nil {
+		Scan(&practiceFlags, &practiceLogs, &practiceSnapshots, &practiceSchedules, &practiceAnnouncements, &teamCount, &taskCount); err != nil {
 		t.Fatal(err)
 	}
-	if practiceFlags != 0 || practiceLogs != 0 || practiceSnapshots != 0 || practiceSchedules != 0 || teamCount != 1 || taskCount != 1 {
-		t.Fatalf("practice cleanup kept flags/logs/snapshots/schedules=%d/%d/%d/%d, teams/tasks=%d/%d",
-			practiceFlags, practiceLogs, practiceSnapshots, practiceSchedules, teamCount, taskCount)
+	if practiceFlags != 0 || practiceLogs != 0 || practiceSnapshots != 0 || practiceSchedules != 0 || practiceAnnouncements != 0 || teamCount != 1 || taskCount != 1 {
+		t.Fatalf("practice cleanup kept flags/logs/snapshots/schedules/announcements=%d/%d/%d/%d/%d, teams/tasks=%d/%d",
+			practiceFlags, practiceLogs, practiceSnapshots, practiceSchedules, practiceAnnouncements, teamCount, taskCount)
 	}
 	started, err := repository.StartScheduled(ctx, start)
 	if err != nil || !started {
