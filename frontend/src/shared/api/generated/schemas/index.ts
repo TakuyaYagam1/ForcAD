@@ -6,6 +6,8 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './adminMessageEvent.zod';
+export * from './adminMessageEventPayload.zod';
 export * from './apiError.zod';
 export * from './flagNotification.zod';
 export * from './flagStolenEvent.zod';
@@ -13,6 +15,7 @@ export * from './flagStolenEventPayload.zod';
 export * from './gameRuntimeStatus.zod';
 export * from './initScoreboardEvent.zod';
 export * from './initScoreboardEventPayload.zod';
+export * from './publicEvent.zod';
 export * from './realtimeEvent.zod';
 export * from './statusResponse.zod';
 export * from './updateScoreboardEvent.zod';

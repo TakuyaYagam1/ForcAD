@@ -65,6 +65,8 @@ test("event facade dispatches validated payloads and supports off", () => {
         task_id: "0199f7c0-0000-7000-8000-000000000008",
         attacker_delta: 125,
         generation: 4,
+        event_id: "flag_stolen:0199f7c0-0000-7000-8000-000000000009:0199f7c0-0000-7000-8000-000000000003",
+        created_at: "2026-10-11T12:00:00Z",
       },
     },
     timestamp: "2026-10-11T12:00:00Z",
@@ -78,6 +80,42 @@ test("event facade dispatches validated payloads and supports off", () => {
   socket.disconnect();
   assert.equal(sockets[0]!.closed, true);
   assert.equal(socket.connected, false);
+});
+
+test("event facade dispatches public announcements", () => {
+  const sockets: FakeSocket[] = [];
+  const socket = new EventSocket({
+    url: "ws://localhost/api/events/ws",
+    parseMessage: parseRealtimeEvent,
+    createSocket: () => {
+      const created = new FakeSocket();
+      sockets.push(created);
+      return created as unknown as WebSocket;
+    },
+    schedule: (() => 1) as typeof setTimeout,
+    cancel: (() => {}) as typeof clearTimeout,
+  });
+  const received: unknown[] = [];
+  socket.on("admin_message", (payload) => received.push(payload));
+  socket.connect();
+  sockets[0]!.fire("open");
+  const announcement = {
+    type: "admin_message",
+    payload: {
+      data: {
+        id: "admin_message:01912345-6789-7000-8000-000000000001",
+        kind: "admin_message",
+        created_at: "2026-10-28T12:00:00Z",
+        title: "Round update",
+        markdown: "Starts soon.",
+        author: "admin",
+      },
+    },
+    timestamp: "2026-10-28T12:00:00Z",
+  };
+  sockets[0]!.fire("message", { data: JSON.stringify(announcement) });
+  assert.deepEqual(received, [announcement.payload]);
+  socket.disconnect();
 });
 
 test("reconnect uses jitter and resynchronizes the full scoreboard", async () => {

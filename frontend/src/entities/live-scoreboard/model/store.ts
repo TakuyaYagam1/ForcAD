@@ -1,72 +1,54 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import {
+  mergeLiveEvents,
+  notificationToLiveEvent,
+  publicEventToLiveEvent,
+  type FlagNotification,
+  type LiveEvent,
+  type PublicEventRecord,
+} from "./events";
 
-export interface LiveEvent {
-  id: string;
-  ts: number;
-  attackerId: string;
-  victimId: string;
-  taskId: string;
-  attackerName: string;
-  victimName: string;
-  taskName: string;
-  delta: number;
-}
-
-export interface FlagNotificationPayload {
-  generation?: number;
-  attacker_id: string;
-  victim_id: string;
-  task_id: string;
-  attacker_delta: number;
-}
+export type { LiveEvent } from "./events";
+export type { FlagNotification as FlagNotificationPayload } from "./events";
 
 interface LiveScoreboardState {
   events: LiveEvent[];
   error: "connectionLost" | null;
 
-  pushNotification: (payload: FlagNotificationPayload) => void;
+  hydrateEvents: (feed: PublicEventRecord[], replace?: boolean) => void;
+  pushNotification: (payload: FlagNotification) => void;
   setError: (error: "connectionLost" | null) => void;
   clear: () => void;
 }
 
 export const useLiveScoreboardStore = create<LiveScoreboardState>()(
-  devtools((set, get) => ({
+  devtools((set) => ({
     events: [],
     error: null,
 
     setError: (error) => set({ error }),
     clear: () => set({ events: [], error: null }),
 
-    pushNotification: ({ attacker_id, victim_id, task_id, attacker_delta, generation }) => {
-      const { events } = get();
-      const { teams, tasks, generation: currentGeneration } = useScoreboardStore.getState();
-      if ((generation ?? 0) !== currentGeneration) return;
+    hydrateEvents: (feed, replace = false) => {
+      const incoming = feed
+        .map(publicEventToLiveEvent)
+        .filter((event): event is LiveEvent => event !== null);
+      set((state) => ({
+        events: mergeLiveEvents(replace ? [] : state.events, incoming),
+        error: null,
+      }));
+    },
 
-      const attackerName =
-        teams?.find((t) => t.id === attacker_id)?.name ?? `#${attacker_id}`;
-      const victimName =
-        teams?.find((t) => t.id === victim_id)?.name ?? `#${victim_id}`;
-      const taskName =
-        tasks?.find((t) => t.id === task_id)?.name ?? `task ${task_id}`;
-
-      const now = Date.now();
-
-      const next: LiveEvent = {
-        id: crypto.randomUUID(),
-        ts: now,
-        attackerId: attacker_id,
-        victimId: victim_id,
-        taskId: task_id,
-        attackerName,
-        victimName,
-        taskName,
-        delta: attacker_delta,
-      };
-
-      const newEvents = [next, ...events].slice(0, 100);
-      set({ events: newEvents, error: null });
+    pushNotification: (payload) => {
+      const { generation: currentGeneration } = useScoreboardStore.getState();
+      if ((payload.generation ?? currentGeneration) !== currentGeneration) return;
+      const event = notificationToLiveEvent(payload);
+      set((state) => ({
+        events: mergeLiveEvents(state.events, [event]),
+        error: null,
+      }));
     },
   })),
 );
@@ -79,17 +61,20 @@ useScoreboardStore.subscribe((state, previous) => {
   }
   if (state.teams === previous.teams && state.tasks === previous.tasks) return;
   useLiveScoreboardStore.setState((current) => ({
-    events: current.events.map((event) => ({
-      ...event,
-      attackerName:
-        state.teams?.find((team) => team.id === event.attackerId)?.name ??
-        event.attackerName,
-      victimName:
-        state.teams?.find((team) => team.id === event.victimId)?.name ??
-        event.victimName,
-      taskName:
-        state.tasks?.find((task) => task.id === event.taskId)?.name ??
-        event.taskName,
-    })),
+    events: current.events.map((event) => {
+      if (event.kind === "admin_message") return event;
+      return {
+        ...event,
+        attackerName:
+          state.teams?.find((team) => team.id === event.attackerId)?.name ??
+          event.attackerName,
+        victimName:
+          state.teams?.find((team) => team.id === event.victimId)?.name ??
+          event.victimName,
+        taskName:
+          state.tasks?.find((task) => task.id === event.taskId)?.name ??
+          event.taskName,
+      };
+    }),
   }));
 });

@@ -14,11 +14,12 @@ export function LiveScoreboardFrame() {
   const [filter, setFilter] = useState("");
   const locale = getLocale();
   const query = filter.trim().toLocaleLowerCase(locale);
-  const filtered = events.filter((event) =>
-    `${event.attackerName} ${event.victimName} ${event.taskName}`
-      .toLocaleLowerCase(locale)
-      .includes(query),
-  );
+  const filtered = events.filter((event) => {
+    const text = event.kind === "admin_message"
+      ? `${event.title} ${event.markdown} ${event.author ?? ""}`
+      : `${event.attackerName} ${event.victimName} ${event.taskName}`;
+    return text.toLocaleLowerCase(locale).includes(query);
+  });
   return (
     <div className="w-full">
       <PageHero

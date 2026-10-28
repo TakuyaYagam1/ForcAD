@@ -99,7 +99,30 @@ export const RealtimeEvent = zod.union([zod.object({
   "victim_id": zod.uuid(),
   "task_id": zod.uuid(),
   "attacker_delta": zod.number(),
-  "generation": zod.int()
+  "generation": zod.int(),
+  "event_id": zod.string(),
+  "created_at": zod.iso.datetime({"offset":true})
+})
+}),
+  "timestamp": zod.string()
+}),zod.object({
+  "type": zod.enum(['admin_message']),
+  "payload": zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "kind": zod.enum(['flag_stolen', 'admin_message']),
+  "created_at": zod.iso.datetime({"offset":true}),
+  "attacker_id": zod.uuid().optional(),
+  "attacker_name": zod.string().optional(),
+  "victim_id": zod.uuid().optional(),
+  "victim_name": zod.string().optional(),
+  "task_id": zod.uuid().optional(),
+  "task_name": zod.string().optional(),
+  "round": zod.int().optional(),
+  "attacker_delta": zod.number().optional(),
+  "title": zod.string().optional(),
+  "markdown": zod.string().optional(),
+  "author": zod.string().optional()
 })
 }),
   "timestamp": zod.string()

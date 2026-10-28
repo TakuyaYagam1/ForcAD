@@ -20,10 +20,28 @@ export function EventItem({
 }) {
   const { t } = useTranslation("common");
   const teams = useScoreboardStore((state) => state.teams);
+  const timestamp = new Date(event.ts);
+  if (event.kind === "admin_message") {
+    return (
+      <li className={`event-item event-item--announcement${compact ? " event-item--compact" : ""}`}>
+        <time dateTime={timestamp.toISOString()}>
+          {timestamp.toLocaleTimeString(getLocale(), {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: compact ? undefined : "2-digit",
+          })}
+        </time>
+        <div className="event-announcement">
+          <strong>{event.title}</strong>
+          <p>{event.markdown}</p>
+          {event.author && <small>{event.author}</small>}
+        </div>
+      </li>
+    );
+  }
   const attacker = teams?.find((team) => team.id === event.attackerId);
   const victim = teams?.find((team) => team.id === event.victimId);
   const delta = event.delta;
-  const timestamp = new Date(event.ts);
   if (compact)
     return (
       <li className="event-item event-item--compact">
@@ -64,12 +82,12 @@ export function EventItem({
           </div>
           <div className="event-details">
             <span className="event-service">{event.taskName}</span>
-            <span
-              className={`event-gain ${delta < 0 ? "event-gain--negative" : ""}`}
-            >
-              {delta >= 0 ? "+" : ""}
-              {formatScore(delta)}
-            </span>
+            {delta !== undefined && (
+              <span className={`event-gain ${delta < 0 ? "event-gain--negative" : ""}`}>
+                {delta >= 0 ? "+" : ""}
+                {formatScore(delta)}
+              </span>
+            )}
           </div>
         </div>
       </li>
@@ -103,10 +121,12 @@ export function EventItem({
         </Link>
       </div>
       <span className="event-service">{event.taskName}</span>
-      <span className="event-gain">
-        {event.delta >= 0 ? "+" : ""}
-        {formatScore(event.delta)} <small>{t("events.points")}</small>
-      </span>
+      {delta !== undefined && (
+        <span className="event-gain">
+          {delta >= 0 ? "+" : ""}
+          {formatScore(delta)} <small>{t("events.points")}</small>
+        </span>
+      )}
     </li>
   );
 }
@@ -118,7 +138,10 @@ export function RecentEvents({ teamId }: { teamId?: string }) {
     teamId === undefined
       ? events
       : events.filter(
-          (event) => event.attackerId === teamId || event.victimId === teamId,
+          (event) =>
+            event.kind === "admin_message" ||
+            event.attackerId === teamId ||
+            event.victimId === teamId,
         )
   ).slice(0, 3);
   return (

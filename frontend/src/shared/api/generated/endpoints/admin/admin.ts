@@ -33,12 +33,14 @@ import type {
   AdminTeamCreate,
   AdminTeamTaskLogEntry,
   AdminTeamUpdate,
+  AnnouncementCreate,
   ApiError,
   DeleteAdminTask200,
   DeleteAdminTeam200,
   GameActionRequest,
   GameRuntimeStatus,
   GetAdminTeamTaskHistoryParams,
+  PublicEvent,
   StatusResponse
 } from '../../schemas';
 
@@ -1509,6 +1511,73 @@ export const useAdminLogout = <TError = unknown,
         TContext
       > => {
       return useMutation(getAdminLogoutMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Publish an organizer announcement.
+ */
+export const createAdminEvent = (
+    announcementCreate: AnnouncementCreate,
+ signal?: AbortSignal
+) => {
+
+
+      return axiosMutator<PublicEvent>(
+      {url: `/api/admin/events/`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: announcementCreate, signal
+    },
+      );
+    }
+
+
+
+
+export const getCreateAdminEventMutationKey = () => ['createAdminEvent'] as const;
+
+export const getCreateAdminEventMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminEventMutationKey();
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminEvent>>, CreateAdminEventMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminEvent(data,)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminEventMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminEvent>>>
+    export type CreateAdminEventMutationBody = AnnouncementCreate
+    export type CreateAdminEventMutationError = ApiError
+    export type CreateAdminEventMutationVariables = {data: AnnouncementCreate}
+
+    /**
+ * @summary Publish an organizer announcement.
+ */
+export const useCreateAdminEvent = <TError = ApiError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminEvent>>,
+        TError,
+        CreateAdminEventMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminEventMutationOptions(options), queryClient);
     }
     /**
  * @summary Check the administration API service.

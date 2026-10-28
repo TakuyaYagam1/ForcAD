@@ -11,6 +11,7 @@ interface SocketEventMap {
   init_scoreboard: EventData<"init_scoreboard">;
   update_scoreboard: EventData<"update_scoreboard">;
   flag_stolen: EventData<"flag_stolen">;
+  admin_message: EventData<"admin_message">;
 }
 
 type SocketEvent = keyof SocketEventMap;

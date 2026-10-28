@@ -13,7 +13,9 @@ export const FlagStolenEventPayload = zod.object({
   "victim_id": zod.uuid(),
   "task_id": zod.uuid(),
   "attacker_delta": zod.number(),
-  "generation": zod.int()
+  "generation": zod.int(),
+  "event_id": zod.string(),
+  "created_at": zod.iso.datetime({"offset":true})
 })
 })
 

@@ -66,6 +66,27 @@ body {
   background: transparent;
   min-width: 0;
 }
+.event-item--announcement {
+  grid-template-columns: 80px minmax(0, 1fr);
+}
+.event-announcement {
+  grid-column: 2;
+  min-width: 0;
+}
+.event-announcement p {
+  margin: 5px 0 0;
+  color: #b5c5d5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.event-announcement small {
+  display: block;
+  margin-top: 5px;
+  color: #8293a6;
+}
+.event-item--compact.event-item--announcement {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
 .event-item--compact time {
   font-size: 15px;
 }
