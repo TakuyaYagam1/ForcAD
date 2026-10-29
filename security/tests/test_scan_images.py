@@ -188,6 +188,7 @@ class ImageScanTest(TestCase):
         self.assertIn("summary for runtime", table)
         build = next(call for call in self.docker.calls if call[0] == "build")
         self.assertIn("--pull", build)
+        self.assertIn("--no-cache", build)
         self.assertEqual(build[build.index("--file") + 1], "backend/Dockerfile")
         self.assertEqual(build[build.index("--target") + 1], "runtime")
         saved = next(

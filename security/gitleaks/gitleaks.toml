@@ -28,10 +28,18 @@ condition = "AND"
 targetRules = ["generic-api-key"]
 regexTarget = "secret"
 paths = [
-    '''^backend/internal/(adapter/primary/http/router_test|worker/checker/worker(_integration)?_test|operator/setup_test|bootstrap/(maintenance|network)_test)\.go$''',
+    '''^backend/internal/(adapter/primary/http(/v1)?/router_test|worker/checker/worker(_integration)?_test|operator/setup_test|bootstrap/(maintenance|network)_test)\.go$''',
     '''^backend/integration_test/checker/worker_test\.go$''',
 ]
 regexes = ['''^0123456789abcdef$''']
+
+[[allowlists]]
+description = "Synthetic checker integration token"
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+paths = ['''^backend/integration_test/checker/worker_test\.go$''']
+regexes = ['''^1123456789abcdef$''']
 
 [[allowlists]]
 description = "Malformed-session test identifier with no corresponding credentials"

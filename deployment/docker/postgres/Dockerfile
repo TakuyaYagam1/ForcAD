@@ -10,6 +10,8 @@ RUN wget -O gosu.tar.gz https://codeload.github.com/tianon/gosu/tar.gz/6456aaa0f
 
 FROM postgres:18.6-alpine3.24@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
 
+RUN apk upgrade --no-cache
+
 COPY --from=gosu /gosu /usr/local/bin/gosu
 COPY deployment/docker/scripts/postgres/prepare_data.sh /usr/local/bin/prepare-data
 RUN chmod 0755 /usr/local/bin/gosu /usr/local/bin/prepare-data \

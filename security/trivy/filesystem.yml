@@ -13,6 +13,8 @@ scan:
     - 'dockerfile:(^|/)([^/]+\.Dockerfile|Dockerfile(\.fast)?)$'
   skip-dirs:
     - '**/.git'
+    - config/runtime
+    - infrastracture/runtime
     - '**/.agents'
     - '**/.codex'
     - '**/.claude'

@@ -169,6 +169,7 @@ def build_image(
             args = [
                 "build",
                 "--pull",
+                "--no-cache",
                 "--iidfile",
                 str(iidfile),
                 "--file",
