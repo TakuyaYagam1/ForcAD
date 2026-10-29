@@ -82,7 +82,7 @@ cleanup() {
         if (( result != 0 )); then
             "${compose[@]}" logs --tail 40 initializer pgbouncer api receiver ticker worker rabbitmq >&2 || true
             if (( run_monitoring )); then
-                "${compose[@]}" logs --tail 40 prometheus grafana >&2 || true
+                "${compose[@]}" logs --tail 40 prometheus grafana checker-db-access >&2 || true
             fi
         fi
         "${compose[@]}" down --volumes --remove-orphans --timeout 15 >/dev/null 2>&1 || true
@@ -129,7 +129,8 @@ unset FORCAD_NGINX_BIND PUBLIC_ORIGIN TRUSTED_PROXY_CIDRS CHECKER_JOB_GRACE \
     FORCAD_SERVICE_MEMORY_RESERVATION FORCAD_SERVICE_PIDS \
     FORCAD_RECEIVER_MEMORY FORCAD_RECEIVER_MEMORY_RESERVATION \
     FORCAD_WORKER_MEMORY FORCAD_WORKER_MEMORY_RESERVATION FORCAD_WORKER_PIDS PUBLIC_SCHEME \
-    VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT
+    VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT \
+    FORCAD_POSTGRES_IMAGE
 
 install -d -m 0700 "$test_root/deployment/docker" "$test_root/config" \
     "$test_root/checkers" "$test_root/public/teams" "$test_root/bin" \
@@ -140,8 +141,13 @@ if (( run_monitoring )); then
     # Provisioning contains no secrets; the non-root collectors must read it.
     chmod -R a+rX "$test_root/deployment/monitoring"
     install -m 0600 "$repo_root/deployment/docker/compose.monitoring.yml" "$test_root/deployment/docker/compose.monitoring.yml"
+    install -d -m 0755 "$test_root/backend/db/migrations"
+    install -m 0644 "$repo_root/backend/db/migrations/00001_initial_schema.sql" \
+        "$test_root/backend/db/migrations/00001_initial_schema.sql"
     export FORCAD_GRAFANA_PORT= FORCAD_PROMETHEUS_PORT=
+    export FORCAD_POSTGRES_IMAGE="$image_prefix-postgres"
     export GRAFANA_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+    export GRAFANA_CHECKER_DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 fi
 install -m 0600 "$repo_root/backend/integration_test/fixtures/config.yml" "$test_root/config/config.yml"
 if (( run_load )); then

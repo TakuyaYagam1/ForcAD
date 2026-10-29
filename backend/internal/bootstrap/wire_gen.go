@@ -53,7 +53,7 @@ func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*A
 		cleanup()
 		return nil, nil, err
 	}
-	worker := newChecker(cfg, repository, gameStore, logger)
+	worker := newChecker(cfg, repository, gameStore, metrics, logger)
 	bootstrapScheduledWorker := newScheduler(cfg, repository, gameStore, broker, logger)
 	application := NewApplication(cfg, bootstrapApiHandler, metrics, logger, events, game, flags, broker, worker, bootstrapScheduledWorker, teamTraffic)
 	return application, func() {

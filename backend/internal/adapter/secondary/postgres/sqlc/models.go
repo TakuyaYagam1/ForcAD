@@ -9,6 +9,32 @@ import (
 	"uuid"
 )
 
+type CheckerActionEvent struct {
+	ID            uuid.UUID          `json:"id"`
+	ServiceID     uuid.UUID          `json:"service_id"`
+	TeamID        uuid.UUID          `json:"team_id"`
+	Time          pgtype.Timestamptz `json:"time"`
+	Round         int32              `json:"round"`
+	Service       interface{}        `json:"service"`
+	Team          interface{}        `json:"team"`
+	Action        string             `json:"action"`
+	Stage         string             `json:"stage"`
+	Status        int32              `json:"status"`
+	DurationMs    int64              `json:"duration_ms"`
+	TimedOut      bool               `json:"timed_out"`
+	PublicMessage *string            `json:"public_message"`
+}
+
+type CheckerService struct {
+	ID   uuid.UUID   `json:"id"`
+	Name interface{} `json:"name"`
+}
+
+type CheckerTeam struct {
+	ID   uuid.UUID   `json:"id"`
+	Name interface{} `json:"name"`
+}
+
 type Checkeractionlog struct {
 	ID            uuid.UUID          `json:"id"`
 	TeamID        uuid.UUID          `json:"team_id"`

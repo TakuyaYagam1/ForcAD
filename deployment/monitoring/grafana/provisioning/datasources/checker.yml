@@ -1,0 +1,19 @@
+apiVersion: 1
+
+datasources:
+  - name: Checker logs
+    uid: checker-postgres
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    user: forcad_checker_reader
+    editable: false
+    secureJsonData:
+      password: ${GRAFANA_CHECKER_DB_PASSWORD}
+    jsonData:
+      database: ${GRAFANA_CHECKER_DB_NAME}
+      sslmode: disable
+      timescaledb: false
+      maxOpenConns: 2
+      maxIdleConns: 1
+      connMaxLifetime: 3600

@@ -49,9 +49,13 @@ services:
     depends_on:
       prometheus:
         condition: service_healthy
+      checker-db-access:
+        condition: service_completed_successfully
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before starting monitoring}"
+      GRAFANA_CHECKER_DB_NAME: "${GRAFANA_CHECKER_DB_NAME:-forcad}"
+      GRAFANA_CHECKER_DB_PASSWORD: "${GRAFANA_CHECKER_DB_PASSWORD:?Set GRAFANA_CHECKER_DB_PASSWORD before starting monitoring}"
       GF_USERS_ALLOW_SIGN_UP: "false"
     ports:
       - "127.0.0.1:${FORCAD_GRAFANA_PORT-3000}:3000"
@@ -71,6 +75,29 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+  checker-db-access:
+    image: ${FORCAD_POSTGRES_IMAGE:-forcad_postgres:local}
+    profiles: [monitoring]
+    entrypoint: ["/bin/sh", "/setup-checker-reader.sh"]
+    env_file:
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+    environment:
+      GRAFANA_CHECKER_DB_PASSWORD: "${GRAFANA_CHECKER_DB_PASSWORD:?Set GRAFANA_CHECKER_DB_PASSWORD before starting monitoring}"
+    volumes:
+      - ../monitoring/grafana/setup_checker_reader.sh:/setup-checker-reader.sh:ro
+      - ../../backend/db/migrations/00001_initial_schema.sql:/initial-schema.sql:ro
+    read_only: true
+    restart: "no"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    depends_on:
+      postgres:
+        condition: service_healthy
+      initializer:
+        condition: service_completed_successfully
 
 volumes:
   prometheus-data: {}

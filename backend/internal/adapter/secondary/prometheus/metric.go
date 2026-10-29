@@ -30,6 +30,7 @@ type Metrics struct {
 	Registry  *prometheus.Registry
 	Export    http.Handler
 	Control   http.Handler
+	Checker   *CheckerMetrics
 	draining  atomic.Bool
 	drain     chan struct{}
 	drainOnce sync.Once
@@ -37,7 +38,9 @@ type Metrics struct {
 
 func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broker *rabbitmq.Broker) *Metrics {
 	m := &Metrics{Registry: prometheus.NewRegistry(), drain: make(chan struct{})}
+	m.Checker = newCheckerMetrics(m.Registry)
 	m.Registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	registerRoleMetrics(m.Registry, cfg.Role, pool)
 	for name, sample := range map[string]func() float64{
 		"forcad_database_connections":        func() float64 { return float64(pool.Stat().TotalConns()) },
 		"forcad_database_connections_in_use": func() float64 { return float64(pool.Stat().AcquiredConns()) },
@@ -111,6 +114,15 @@ func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broke
 	})
 	m.Control = mux
 	return m
+}
+
+func registerRoleMetrics(registry *prometheus.Registry, role string, pool *pgxpool.Pool) {
+	if role == "ticker" || role == "all" {
+		registerCheckerJobs(registry, pool)
+	}
+	if role == "worker" || role == "all" {
+		registerWorkerCgroup(registry)
+	}
 }
 
 func (m *Metrics) Drain()                          { m.draining.Store(true); m.drainOnce.Do(func() { close(m.drain) }) }

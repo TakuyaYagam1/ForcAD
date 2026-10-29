@@ -184,6 +184,8 @@ def main():
                             "$__interval": "15s",
                             "$__range": "1h",
                             "${team}": ".*",
+                            "${team:regex}": ".*",
+                            "${service:regex}": ".*",
                             "${source}": ".*",
                             "${target}": ".*",
                             "${component}": ".*",

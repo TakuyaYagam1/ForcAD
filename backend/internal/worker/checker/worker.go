@@ -66,6 +66,15 @@ type LifecycleReader interface {
 	Lifecycle(ctx context.Context) (domain.Lifecycle, error)
 }
 
+// Observer records checker activity without affecting job completion.
+type Observer interface {
+	WorkflowStarted()
+	WorkflowEnded()
+	ActionStarted()
+	ActionEnded()
+	ObserveCompleted(service, team string, result domain.CheckerResult, timedOut bool)
+}
+
 // Options controls durable claim renewal, bounded recovery and workflow runtime.
 type Options struct {
 	LeaseDuration       time.Duration
@@ -73,6 +82,7 @@ type Options struct {
 	RecoveryGrace       time.Duration
 	MaxWorkflowDuration time.Duration
 	WorkConcurrency     int
+	Observer            Observer
 }
 
 // Worker executes one complete durable checker workflow per queue delivery.
@@ -83,6 +93,7 @@ type Worker struct {
 	runner    Runner
 	logger    *slog.Logger
 	options   Options
+	observer  Observer
 	actions   chan struct{}
 }
 
@@ -116,6 +127,7 @@ func New(repo Repository, flags FlagStore, lifecycle LifecycleReader, runner Run
 	return &Worker{
 		repo: repo, flags: flags, lifecycle: lifecycle, runner: runner, logger: logger,
 		options: options, actions: make(chan struct{}, options.WorkConcurrency),
+		observer: options.Observer,
 	}
 }
 
@@ -140,6 +152,10 @@ func (w *Worker) Handle(ctx context.Context, jobID uuid.UUID) error {
 	if !claimed {
 		return nil
 	}
+	if w.observer != nil {
+		w.observer.WorkflowStarted()
+		defer w.observer.WorkflowEnded()
+	}
 
 	workCtx, cancel := context.WithCancelCause(ctx)
 	workflowDeadline := claim.claimedAt.Add(w.options.MaxWorkflowDuration)
@@ -161,7 +177,7 @@ func (w *Worker) Handle(ctx context.Context, jobID uuid.UUID) error {
 	workflowCtx, cancelWorkflow := context.WithDeadlineCause(workCtx, workflowDeadline, ErrWorkflowDeadline)
 	result, executeErr := w.execute(workflowCtx, guard, claim.job, claim.ownerToken)
 	cancelWorkflow()
-	if err := w.finish(ctx, guard, result, executeErr); err != nil {
+	if err := w.finish(ctx, guard, claim.job, result, executeErr); err != nil {
 		return fmt.Errorf("%s - finish checker job: %w", location, err)
 	}
 	return nil
@@ -193,7 +209,7 @@ func (w *Worker) claimJob(ctx context.Context, jobID uuid.UUID) (jobClaim, bool,
 	return jobClaim{job: job, ownerToken: ownerToken, claimedAt: now}, true, nil
 }
 
-func (w *Worker) finish(ctx context.Context, guard *leaseGuard, result domain.CheckerResult, executeErr error) error {
+func (w *Worker) finish(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, result domain.CheckerResult, executeErr error) error {
 	const location = "checker.Worker.finish"
 	if leaseErr := guard.failure(); leaseErr != nil {
 		guard.cancelFn(leaseErr)
@@ -233,7 +249,11 @@ func (w *Worker) finish(ctx context.Context, guard *leaseGuard, result domain.Ch
 	guard.cancelFn(context.Canceled)
 	<-guard.done
 	if completed {
-		w.logger.Info("checker workflow completed", "job_id", guard.jobID, "round", result.Round, "status", result.Status)
+		payload, _ := decodePayload(job.Payload)
+		if w.observer != nil {
+			w.observer.ObserveCompleted(payload.Task.Name, payload.Team.Name, result, workflowTimedOut)
+		}
+		w.logger.Info("checker workflow completed", "job_id", guard.jobID, "checker_service", payload.Task.Name, "team", payload.Team.Name, "round", result.Round, "status", result.Status)
 		return nil
 	}
 	closed, stateErr := w.confirmClosed(ctx, guard.jobID)
@@ -491,6 +511,10 @@ func (w *Worker) runAction(ctx context.Context, guard *leaseGuard, job domain.Ch
 		return verdict{}, fmt.Errorf("%s - wait for checker action capacity: %w", location, context.Cause(ctx))
 	}
 	defer func() { <-w.actions }()
+	if w.observer != nil {
+		w.observer.ActionStarted()
+		defer w.observer.ActionEnded()
+	}
 	if err := guard.renewNow(); err != nil {
 		return verdict{}, fmt.Errorf("%s - renew job ownership before action: %w", location, err)
 	}

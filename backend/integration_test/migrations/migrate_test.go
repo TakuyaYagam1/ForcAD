@@ -242,6 +242,9 @@ func TestMigrateRejectsPreSquashVersionOneSchemaWithoutChangingData(t *testing.T
 	if _, err := fixture.conn.Exec(fixture.ctx, `
 		DROP INDEX idx_stolenflags_public_feed;
 		DROP TABLE PublicAnnouncements;
+		DROP VIEW checker_teams;
+		DROP VIEW checker_services;
+		DROP VIEW checker_action_events;
 		ALTER TABLE StolenFlags DROP COLUMN attacker_delta;
 		DROP INDEX idx_checker_action_logs_team_task_id;
 		DROP TABLE CheckerActionLogs`); err != nil {

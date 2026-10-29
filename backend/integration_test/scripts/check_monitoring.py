@@ -112,6 +112,7 @@ def main():
         "forcad-errors",
         "forcad-infrastructure",
         "forcad-game-traffic",
+        "forcad-checker",
     }, "Monitoring dashboards are missing"
     auth = "admin:" + os.environ["GRAFANA_ADMIN_PASSWORD"]
     for dashboard in dashboards.values():

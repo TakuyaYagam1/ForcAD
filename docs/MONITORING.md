@@ -4,7 +4,9 @@
 
 ## Start
 
-Set `GRAFANA_ADMIN_PASSWORD` in `deployment/docker/.env` or the environment:
+Set `GRAFANA_ADMIN_PASSWORD` and a separate 32-character-or-longer lowercase
+hexadecimal `GRAFANA_CHECKER_DB_PASSWORD` in `deployment/docker/.env` or the
+environment:
 
 ```sh
 ./control.sh monitoring up -d
@@ -14,6 +16,9 @@ Run the full overlay so API, receiver, worker and ticker expose metrics too.
 Containers may be recreated; volumes are preserved. Grafana uses `admin` and the
 configured password, independently of the ForcAD login. The setting initializes
 new Grafana storage; changing it does not reset an existing account's password.
+The monitoring overlay also provisions a PostgreSQL reader for the Checker log
+tables. It can select only the public checker views, not team tokens or flags.
+The local demo generates its own reader password in `config/runtime/demo.env`.
 
 Keep the overlay when recreating or scaling services:
 
@@ -69,11 +74,12 @@ endpoints have no authentication; keep them private. `/drain` still requires
 | ForcAD | Per-team board RPS, flags, errors, latency, WS and router traffic |
 | Traffic | Selected-team totals for board traffic; router packets/bytes and top source IPs |
 | Game traffic | Source team -> target team activity, HTTP/WS, TCP/UDP and capture health |
+| Checker | Checker action results, duration, timeouts and unfinished jobs |
 | Errors | Recent HTTP errors by route, error ratio, latency, WS drops and pool errors |
 | Infrastructure | Current pools by component, busiest DB pool, Redis waits and per-replica details |
 
 The main UID is `forcad-monitoring`; others are `forcad-traffic`,
-`forcad-game-traffic`, `forcad-errors` and `forcad-infrastructure`.
+`forcad-game-traffic`, `forcad-checker`, `forcad-errors` and `forcad-infrastructure`.
 Links preserve the time range. All sections start expanded. Table heights are
 fixed; long tables use pagination. Short graph legends do not use value tables.
 
@@ -89,6 +95,30 @@ into `api`, `receiver`, `worker` and `ticker`; maximum DB utilization uses the
 busiest replica. The Errors Team filter affects HTTP panels only. Pool counts
 are application connections, not PostgreSQL sessions or Redis server clients.
 For capacity defaults, see [Operations](OPERATIONS.md#resource-limits).
+
+**Checker:** the first table counts CHECK, PUT and GET actions and result codes
+for each configured service in the selected time range. The second table shows
+the newest persisted action logs with service, team, round, action, code,
+duration and timeout. Service and Team filters narrow both tables. Codes are
+101 UP, 102 CORRUPT, 103 MUMBLE, 104 DOWN and 110 CHECK
+FAILED. The table does not expose flags or private checker output. The worker
+panels below show open jobs, running workflows, occupied action slots, scraped
+replicas, container CPU and container memory. CPU and memory include Python
+checker subprocesses and require Linux cgroup v2.
+
+Worker metrics count workflows and actions after a confirmed
+commit. Retries of an already completed job do not add another sample. A worker
+crash or lost commit response can cause an undercount, so these counters are
+operational signals rather than authoritative job totals.
+Actions from a failed or uncommitted workflow are absent; counters reset when
+workers restart. The unfinished-job count includes queued and running jobs and
+is collected by ticker from PostgreSQL. A database read failure leaves a gap.
+The database reader selects views defined in the initial schema. Checker
+messages are withheld because successful PUT messages can contain tokens.
+On an existing installation, `checker-db-access` installs or refreshes the
+views from that same initial schema before granting access. It stops if the
+views are partially present. New services appear in the filter as soon as they
+exist in the game database.
 
 ## Router counters
 
@@ -171,7 +201,7 @@ inventory, router collection failures and sensor health. An empty router/sensor
 target list has no down alert. Alerts stay in Prometheus: no Alertmanager or
 automatic bans are configured.
 
-Not collected: checker backlog/SLA/rounds, PostgreSQL sessions, PgBouncer queues,
+Not collected: checker per-round SLA, PostgreSQL sessions, PgBouncer queues,
 Redis server limits and Nginx rejections. Backend disappearance has no dedicated
 alert; an empty graph does not establish health.
 

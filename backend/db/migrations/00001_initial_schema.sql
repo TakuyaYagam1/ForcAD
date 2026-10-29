@@ -234,6 +234,32 @@ CREATE TABLE CheckerActionLogs
     public_message  TEXT NOT NULL DEFAULT ''
 );
 
+CREATE VIEW checker_action_events AS
+SELECT log.id,
+       log.task_id AS service_id,
+       log.team_id,
+       log.finished_at AS time,
+       log.round,
+       COALESCE(NULLIF(task.name, ''), log.task_id::TEXT) AS service,
+       COALESCE(NULLIF(team.name, ''), log.team_id::TEXT) AS team,
+       log.action,
+       log.stage,
+       log.status,
+       log.duration_ms,
+       log.timed_out,
+       NULL::TEXT AS public_message
+FROM CheckerActionLogs AS log
+LEFT JOIN Tasks AS task ON task.id = log.task_id
+LEFT JOIN Teams AS team ON team.id = log.team_id;
+
+CREATE VIEW checker_services AS
+SELECT id, COALESCE(NULLIF(name, ''), id::TEXT) AS name
+FROM Tasks WHERE active;
+
+CREATE VIEW checker_teams AS
+SELECT id, COALESCE(NULLIF(name, ''), id::TEXT) AS name
+FROM Teams WHERE active;
+
 CREATE TABLE PublicAnnouncements
 (
     id         UUID PRIMARY KEY DEFAULT uuidv7(),
@@ -276,6 +302,9 @@ CREATE INDEX idx_stolenflags_public_feed
 
 -- This rollback drops the full schema and all application data.
 DROP TABLE PublicAnnouncements;
+DROP VIEW checker_teams;
+DROP VIEW checker_services;
+DROP VIEW checker_action_events;
 DROP TABLE CheckerActionLogs;
 
 DROP TABLE GameRoundSnapshots;
