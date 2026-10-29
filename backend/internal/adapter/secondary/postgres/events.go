@@ -118,7 +118,7 @@ func (r *Repository) CreateAnnouncement(ctx context.Context, title, markdown, au
 	id := domain.AnnouncementEventID(row.ID)
 	return domain.Event{
 		ID: id, Kind: domain.EventAdminMessage, CreatedAt: row.CreatedAt.Time,
-		Title: eventString(row.Title), Markdown: eventString(row.Markdown), Author: eventString(row.Author),
+		Title: new(row.Title), Markdown: new(row.Markdown), Author: new(row.Author),
 	}, nil
 }
 
@@ -146,7 +146,5 @@ func decodeEvent(data string) (domain.Event, error) {
 	}
 	return event, nil
 }
-
-func eventString(value string) *string { return &value }
 
 var _ outbound.EventRepository = (*Repository)(nil)

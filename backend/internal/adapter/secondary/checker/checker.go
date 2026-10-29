@@ -600,7 +600,7 @@ func executableCandidates(directory, executable string, env []string) []string {
 	if pathExt == "" {
 		pathExt = ".COM;.EXE;.BAT;.CMD"
 	}
-	for _, extension := range strings.Split(pathExt, ";") {
+	for extension := range strings.SplitSeq(pathExt, ";") {
 		if extension != "" {
 			candidates = append(candidates, filepath.Join(directory, executable+extension))
 		}

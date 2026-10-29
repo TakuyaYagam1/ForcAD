@@ -69,6 +69,34 @@ func (r *stateErrorRepository) ChangeState(context.Context, string, *int64, time
 
 func (r *boardRepository) Board(context.Context) (domain.BoardData, error) { return r.board, nil }
 
+func TestScoreboardShowsFirstRoundChecks(t *testing.T) {
+	teamID := uuid.MustParse("00000000-0000-7000-8000-000000000001")
+	taskID := uuid.MustParse("00000000-0000-7000-8000-000000000002")
+	snapshot, err := json.Marshal(domain.GameState{Round: 0, TeamTasks: []domain.PublicCell{
+		{TeamID: teamID, TaskID: taskID, Status: -1},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &boardRepository{board: domain.BoardData{
+		Lifecycle: domain.Lifecycle{
+			Config:  domain.GameConfig{RealRound: 1, GameRunning: true},
+			Session: domain.Session{Snapshot: snapshot},
+		},
+		Teams: []domain.Team{{ID: teamID}},
+		Tasks: []domain.Task{{ID: taskID}},
+		Cells: []domain.Cell{{TeamID: teamID, TaskID: taskID, Status: 102, Checks: 1}},
+	}}
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
+	board, err := service.Scoreboard(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if board.Runtime.Round != 1 || len(board.State.TeamTasks) != 1 || board.State.TeamTasks[0].Status != 102 {
+		t.Fatalf("first round CHECK hidden by round zero snapshot: %+v", board)
+	}
+}
+
 func TestScoreboardRetainsCompletedResultsDuringNextRound(t *testing.T) {
 	firstID := uuid.MustParse("00000000-0000-7000-8000-000000000001")
 	secondID := uuid.MustParse("00000000-0000-7000-8000-000000000002")

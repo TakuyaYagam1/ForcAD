@@ -8,7 +8,7 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -161,7 +161,7 @@ teams:
 		if len(samples) != 20 {
 			t.Fatalf("only %d of 20 requests completed", len(samples))
 		}
-		sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+		slices.Sort(samples)
 		t.Logf("20 teams x 100 flags, 2 receivers, 4 DB connections each, attempt=%d elapsed=%s p95=%s max=%s", attempt+1, time.Since(began), samples[18], samples[19])
 	}
 	var stolen, lost, records int

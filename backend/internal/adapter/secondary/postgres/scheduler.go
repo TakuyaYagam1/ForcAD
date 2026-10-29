@@ -527,7 +527,7 @@ func maintainPracticeSession(
 	if err := queries.MarkPracticeResetPending(ctx); err != nil {
 		return false, fmt.Errorf("%s - mark rehearsal reset pending: %w", location, err)
 	}
-	for _, clear := range []struct {
+	for _, step := range []struct {
 		operation string
 		apply     func(context.Context) error
 	}{
@@ -543,8 +543,8 @@ func maintainPracticeSession(
 		{"reset rehearsal game", queries.ResetPracticeGame},
 		{"reset rehearsal session", queries.ResetPracticeSession},
 	} {
-		if err := clear.apply(ctx); err != nil {
-			return false, fmt.Errorf("%s - %s: %w", location, clear.operation, err)
+		if err := step.apply(ctx); err != nil {
+			return false, fmt.Errorf("%s - %s: %w", location, step.operation, err)
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {

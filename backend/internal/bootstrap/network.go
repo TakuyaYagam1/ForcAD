@@ -149,7 +149,9 @@ func serveNetworkMetricsWithListener(ctx context.Context, listener net.Listener,
 	go func() { serveResult <- server.Serve(listener) }()
 	if _, err := fmt.Fprintf(out, "Serving network metrics on %s\n", listener.Addr()); err != nil {
 		_ = server.Close()
-		<-serveResult
+		if serveErr := <-serveResult; serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+			return errors.Join(fmt.Errorf("%s - write server status: %w", location, err), fmt.Errorf("%s - serve network metrics: %w", location, serveErr))
+		}
 		return fmt.Errorf("%s - write server status: %w", location, err)
 	}
 	select {
@@ -164,7 +166,9 @@ func serveNetworkMetricsWithListener(ctx context.Context, listener net.Listener,
 		cancel()
 		if shutdownErr != nil {
 			_ = server.Close()
-			<-serveResult
+			if serveErr := <-serveResult; serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
+				return errors.Join(fmt.Errorf("%s - shut down network metrics server: %w", location, shutdownErr), fmt.Errorf("%s - serve network metrics: %w", location, serveErr))
+			}
 			return fmt.Errorf("%s - shut down network metrics server: %w", location, shutdownErr)
 		}
 		if serveErr := <-serveResult; serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {

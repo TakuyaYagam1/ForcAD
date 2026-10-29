@@ -186,8 +186,7 @@ func gameDBError(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("%s - map missing database row: %w", location, domain.ErrNotFound)
 	}
-	var pgerr *pgconn.PgError
-	if errors.As(err, &pgerr) {
+	if pgerr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgerr.Code {
 		case "23505", "23503", "23514", "23502":
 			return fmt.Errorf("%s - map database constraint violation: %w", location, domain.ErrConflict)

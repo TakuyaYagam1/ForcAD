@@ -47,7 +47,7 @@ func writeAttackData(
 }
 
 func matchesIfNoneMatch(header, etag string) bool {
-	for _, candidate := range strings.Split(header, ",") {
+	for candidate := range strings.SplitSeq(header, ",") {
 		candidate = strings.TrimSpace(candidate)
 		if candidate == "*" {
 			return true

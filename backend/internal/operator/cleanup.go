@@ -278,7 +278,7 @@ func ensureNoMountedPaths(dataPath string) error {
 func hasMountedPath(dataPath string, contents []byte) error {
 	const location = "operator.hasMountedPath"
 	dataPath = filepath.Clean(dataPath)
-	for _, line := range strings.Split(string(contents), "\n") {
+	for line := range strings.SplitSeq(string(contents), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) < 6 {
 			continue
@@ -333,7 +333,7 @@ func rejectSymlinkComponents(path string) error {
 	volume := filepath.VolumeName(absolute)
 	remainder := strings.TrimPrefix(absolute, volume)
 	current := volume + string(os.PathSeparator)
-	for _, part := range strings.Split(strings.TrimLeft(remainder, string(os.PathSeparator)), string(os.PathSeparator)) {
+	for part := range strings.SplitSeq(strings.TrimLeft(remainder, string(os.PathSeparator)), string(os.PathSeparator)) {
 		if part == "" {
 			continue
 		}

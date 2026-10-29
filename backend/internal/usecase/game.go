@@ -134,8 +134,10 @@ func (g *Game) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
 		}
 	}
 	previous := make(map[[2]uuid.UUID]domain.PublicCell, len(state.TeamTasks))
-	for _, cell := range state.TeamTasks {
-		previous[[2]uuid.UUID{cell.TeamID, cell.TaskID}] = cell
+	if state.Round > 0 {
+		for _, cell := range state.TeamTasks {
+			previous[[2]uuid.UUID{cell.TeamID, cell.TaskID}] = cell
+		}
 	}
 	state.TeamTasks = make([]domain.PublicCell, 0, len(cells))
 	for _, cell := range cells {

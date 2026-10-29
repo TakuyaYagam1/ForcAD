@@ -66,16 +66,14 @@ func TestStartScheduledStartsDueWaitingSessionOnlyOnce(t *testing.T) {
 	errorsFound := make(chan error, callers)
 	var wait sync.WaitGroup
 	for range callers {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
+		wait.Go(func() {
 			changed, err := repository.StartScheduled(ctx, start)
 			if err != nil {
 				errorsFound <- err
 				return
 			}
 			started <- changed
-		}()
+		})
 	}
 	wait.Wait()
 	close(started)
@@ -134,16 +132,14 @@ func TestConcurrentTickersPrepareOnlyOneRound(t *testing.T) {
 	errorsFound := make(chan error, callers)
 	var wait sync.WaitGroup
 	for range callers {
-		wait.Add(1)
-		go func() {
-			defer wait.Done()
+		wait.Go(func() {
 			run, err := repository.Prepare(ctx, request)
 			if err != nil {
 				errorsFound <- err
 				return
 			}
 			runs <- run
-		}()
+		})
 	}
 	wait.Wait()
 	close(runs)

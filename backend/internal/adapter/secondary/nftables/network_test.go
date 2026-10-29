@@ -83,7 +83,7 @@ func TestRenderRulesSupportsBothFamiliesAndRefusesRepeatedApply(t *testing.T) {
 			t.Errorf("rules do not contain %q", expected)
 		}
 	}
-	for _, line := range strings.Split(first, "\n") {
+	for line := range strings.SplitSeq(first, "\n") {
 		if strings.HasPrefix(line, "add rule ") && (strings.Contains(line, " accept") || strings.Contains(line, " drop")) {
 			t.Errorf("rule has a terminal verdict: %q", line)
 		}

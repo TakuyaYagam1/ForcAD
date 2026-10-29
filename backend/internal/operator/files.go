@@ -79,7 +79,7 @@ func backupConfig(path string) (string, error) {
 	}
 	directory := filepath.Dir(path)
 	base := "config_backup_" + strconv.FormatInt(time.Now().Unix(), 10)
-	for suffix := 0; suffix < 1000; suffix++ {
+	for suffix := range 1000 {
 		name := base + ".yml"
 		if suffix != 0 {
 			name = base + "_" + strconv.Itoa(suffix) + ".yml"

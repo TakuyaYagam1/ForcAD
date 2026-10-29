@@ -378,7 +378,7 @@ func applyCheckerResult(
 	updated, err := queries.UpdateTeamTaskResult(ctx, sqlc.UpdateTeamTaskResultParams{
 		Status: &result.Status, PublicMessage: result.PublicMessage,
 		PrivateMessage: result.PrivateMessage, Command: result.Command,
-		PassedDelta: &passedDelta, CheckDelta: int32Pointer(checkDelta),
+		PassedDelta: &passedDelta, CheckDelta: new(checkDelta),
 		TeamID: *row.TeamID, TaskID: *row.TaskID,
 	})
 	if err != nil {
@@ -448,9 +448,9 @@ func expireCheckerJobInTx(ctx context.Context, queries *sqlc.Queries, jobID uuid
 		return false, fmt.Errorf("%s - record prior task result: %w", location, err)
 	}
 	updated, err := queries.UpdateTeamTaskResult(ctx, sqlc.UpdateTeamTaskResultParams{
-		Status:        int32Pointer(domain.TaskStatusCheckFailed),
+		Status:        new(domain.TaskStatusCheckFailed),
 		PublicMessage: "", PrivateMessage: "", Command: "",
-		PassedDelta: int32Pointer(0), CheckDelta: int32Pointer(0),
+		PassedDelta: new(int32(0)), CheckDelta: new(int32(0)),
 		TeamID: *row.TeamID, TaskID: *row.TaskID,
 	})
 	if err != nil {
@@ -568,8 +568,6 @@ func logTaskResult(ctx context.Context, queries *sqlc.Queries, round int32, team
 	}
 	return nil
 }
-
-func int32Pointer(value int32) *int32 { return &value }
 
 var errInvalidCheckerJobIdentity = errors.New("checker job identity is invalid")
 

@@ -250,9 +250,10 @@ func (b *Broker) consume(ctx context.Context, handle Handler) error {
 		workers.Go(func() { b.consumeDeliveries(runCtx, deliveries, handle, cancel) })
 	}
 
+	var closeErr *amqp.Error
 	select {
 	case <-runCtx.Done():
-	case <-closed:
+	case closeErr = <-closed:
 	case <-b.draining:
 		// Cancel intake, but keep current handlers and their acknowledgement
 		// channel alive until the application shutdown deadline.
@@ -263,6 +264,9 @@ func (b *Broker) consume(ctx context.Context, handle Handler) error {
 	cancel()
 	closeConnection(conn)
 	workers.Wait()
+	if closeErr != nil {
+		return fmt.Errorf("%s - checker consumer connection closed: %w", location, closeErr)
+	}
 	return fmt.Errorf("%s - checker consumer connection closed", location)
 }
 

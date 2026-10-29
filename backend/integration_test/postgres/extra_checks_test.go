@@ -272,8 +272,7 @@ func TestExtraChecksRejectTaskTimeoutThatWouldBlockScheduling(t *testing.T) {
 	task.CheckerTimeout = 57
 	for _, save := range []func(context.Context, domain.Task) (domain.Task, error){game.CreateTask, game.UpdateTask} {
 		_, err := save(ctx, task)
-		var validation *domain.ValidationError
-		if !errors.As(err, &validation) {
+		if _, ok := errors.AsType[*domain.ValidationError](err); !ok {
 			t.Fatalf("unsafe timeout accepted: %v", err)
 		}
 	}
