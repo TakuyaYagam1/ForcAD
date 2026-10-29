@@ -33,13 +33,13 @@ const statusDefinitions: StatusDefinition[] = [
   {
     code: 102,
     label: "CORRUPT",
-    color: "#ffd078",
+    color: "#ffe066",
     badgeClassName: "bg-amber-500/15 text-amber-300 border-amber-500/40",
   },
   {
     code: 103,
     label: "MUMBLE",
-    color: "#ffa35e",
+    color: "#ff8c42",
     badgeClassName: "bg-orange-500/15 text-orange-300 border-orange-500/40",
   },
   {

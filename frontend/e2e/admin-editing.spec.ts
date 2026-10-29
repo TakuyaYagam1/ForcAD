@@ -8,15 +8,15 @@ test("admin validates and restores team and service edits", async ({ browser }) 
 
   try {
     await loginAsAdmin(page, credentials);
-    const teamLink = page.getByRole("link", { name: "first", exact: true });
-    const taskLink = page.getByRole("link", { name: "example", exact: true });
-    await expect(teamLink).toBeVisible();
-    await expect(taskLink).toBeVisible();
-
-    const teamPath = await teamLink.getAttribute("href");
-    const taskPath = await taskLink.getAttribute("href");
-    const teamId = /^\/admin\/team\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(teamPath ?? "")?.[1];
-    const taskId = /^\/admin\/task\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(taskPath ?? "")?.[1];
+    const teamButton = page.locator(".scoreboard-row").filter({ hasText: "first" }).locator(".team-identity");
+    await expect(teamButton).toBeVisible();
+    await teamButton.click();
+    const teamId = /^\/admin\/team\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(new URL(page.url()).pathname)?.[1];
+    await page.goto("/admin/scoreboard");
+    const taskButton = page.getByRole("columnheader", { name: "example", exact: true }).getByRole("button");
+    await expect(taskButton).toBeVisible();
+    await taskButton.click();
+    const taskId = /^\/admin\/task\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i.exec(new URL(page.url()).pathname)?.[1];
     expect(teamId).toBeDefined();
     expect(taskId).toBeDefined();
 

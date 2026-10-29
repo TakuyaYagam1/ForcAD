@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Task } from "@/entities/task/model/types";
 import {
   createTaskAdmin,
@@ -14,7 +14,7 @@ import {
 } from "@/shared/lib/adminValidation";
 import type { TaskValidationIssue } from "@/shared/lib/adminValidation";
 import { queryClient } from "@/shared/lib/queryClient";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { ArrowLeft } from "lucide-react";
 import { TaskForm } from "./TaskForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
 import { useTranslation } from "react-i18next";
@@ -166,13 +166,16 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
   return (
     <AdminShell>
       <div className="admin-page">
+        <Link to="/admin/scoreboard" className="back-link admin-back-link">
+          <ArrowLeft size={18} aria-hidden="true" />
+          {t("common.backToDashboard")}
+        </Link>
         <div className="admin-heading">
           <div>
             <p className="eyebrow">{t("common.organizerPanel")}</p>
             <h1>{isCreate ? t("task.createTitle") : t("task.editTitle")}</h1>
             <p className="text-xs text-slate-400">{t("task.pageDescription")}</p>
           </div>
-          <BrandIcon name="terminal" />
         </div>
 
         {loading ? (
@@ -195,7 +198,7 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
               canSave={canSave}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onCancel={() => navigate(-1)}
+              onCancel={() => navigate("/admin/scoreboard")}
             />
           </>
         )}

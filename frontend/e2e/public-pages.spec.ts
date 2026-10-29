@@ -12,7 +12,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     await page.goto("/teams");
     expect((await scoreboardResponse).status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Команды", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Топ команд" })).toBeVisible();
 
     const teamLinks = page.locator('a[href^="/team/"]');
     await expect(teamLinks).toHaveCount(2);

@@ -71,23 +71,6 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
         return;
       }
 
-      const art = main.querySelector<HTMLElement>(".hero-art");
-
-      if (art && !played.has("art")) {
-        const style = window.getComputedStyle(art);
-        const base = style.transform === "none" ? "" : style.transform;
-
-        reveal(
-          "art",
-          ".hero-art",
-          0,
-          0,
-          950,
-          { opacity: 0, transform: `${base} rotate(-6deg) scale(.96)` },
-          { opacity: style.opacity, transform: style.transform },
-        );
-      }
-
       reveal(
         "title",
         ".hero-copy h1, .team-header h1",

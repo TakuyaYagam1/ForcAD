@@ -6,11 +6,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
+import { STATUS_META_BY_CODE, STATUS_OK } from "@/shared/config/statuses";
 import { formatScore } from "@/shared/lib/formatScore";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { BrandIcon } from "./BrandIcon";
 
 interface ServiceValue {
   status: number;
@@ -34,31 +33,42 @@ export function ServiceCell({
   const [open, setOpen] = useState(false);
   const meta = value ? STATUS_META_BY_CODE[value.status] : undefined;
   const sla = value && value.checks > 0 ? `${formatScore(value.sla)}%` : "-";
+  const score = value ? formatScore(value.score) : "-";
+  const flags = `+${formatScore(value?.stolen ?? 0)}/-${formatScore(value?.lost ?? 0)}`;
+  const wideValues =
+    (value?.score ?? 0) >= 10000 ||
+    (value?.stolen ?? 0) >= 1000 ||
+    (value?.lost ?? 0) >= 1000;
+  const checkerResponse =
+    value?.message ||
+    (value?.status === STATUS_OK ? "OK" : meta?.label) ||
+    t("service.noCheckerMessage");
   const trigger = (
     <button
       type="button"
-      className="service-cell"
+      className={`service-cell${meta ? " service-cell--active" : ""}${wideValues ? " service-cell--wide-values" : ""}`}
+      style={meta ? { backgroundColor: meta.color } : undefined}
       onClick={onClick}
       aria-label={t("service.ariaLabel", {
         name,
         description: meta?.description ?? t("service.waitingData"),
       })}
     >
-      <span className="service-score">
-        <i
-          className="status-dot"
-          style={{
-            background: meta?.color ?? "#626b78",
-            color: meta?.color ?? "#626b78",
-          }}
-        />
-        <span>{value ? formatScore(value.score) : "-"}</span>
-      </span>
-      <span className="service-meta">
-        <span>SLA {sla}</span>
-        <span className="flag-count">
-          <b>+{value?.stolen ?? 0}</b>
-          <em>−{value?.lost ?? 0}</em>
+      {!meta && (
+        <span className="service-state">{t("service.noDataShort")}</span>
+      )}
+      <span className="service-metrics">
+        <span className="service-metric service-metric--sla">
+          <span>SLA</span>
+          <strong>{sla}</strong>
+        </span>
+        <span className="service-metric">
+          <span>FP</span>
+          <strong>{score}</strong>
+        </span>
+        <span className="service-metric">
+          <span>FLAGS</span>
+          <strong>{flags}</strong>
         </span>
       </span>
     </button>
@@ -67,11 +77,10 @@ export function ServiceCell({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="brand-dialog">
+      <DialogContent className="brand-dialog service-dialog">
         <DialogHeader>
-          <BrandIcon name="terminal" />
           <DialogTitle>{name}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="sr-only">
             {meta?.description ?? t("service.noData")}
           </DialogDescription>
         </DialogHeader>
@@ -95,7 +104,12 @@ export function ServiceCell({
         </div>
         <div className="checker-message">
           <span className="eyebrow">{t("service.checkerResponse")}</span>
-          <pre>{value?.message || t("service.noCheckerMessage")}</pre>
+          <pre
+            className={meta ? "checker-result--status" : undefined}
+            style={meta ? { backgroundColor: meta.color } : undefined}
+          >
+            {checkerResponse}
+          </pre>
         </div>
       </DialogContent>
     </Dialog>

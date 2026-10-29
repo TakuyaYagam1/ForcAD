@@ -86,12 +86,15 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       }],
     });
     const firstTaskScore = publicPage.locator(
-      `[data-team-id="${firstTeam.id}"] .service-score > span`,
-    ).first();
+      `[data-team-id="${firstTeam.id}"] .service-column`,
+    ).first().locator(".service-metric").nth(1).locator("strong");
     await expect.poll(async () =>
       (await firstTaskScore.textContent() ?? "").replace(/\D/g, ""),
     ).toBe(String(staleScore));
-    await expect(adminPage.getByText(/Пробная игра\./)).toBeVisible();
+    await expect(adminPage.getByRole("button", {
+      name: "Завершить тестовую игру",
+      exact: true,
+    })).toBeEnabled();
     await expect(adminPage.getByRole("button", {
       name: "Приостановить",
       exact: true,

@@ -63,14 +63,11 @@ function playEntrance(steps: EntranceStep[]) {
 
 export function useScoreboardEntrance(
   enabled: boolean,
-  filter: string,
   hasTeams: boolean,
-  locale: string,
 ) {
   const pageRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   const startedAt = useRef(0);
-  const query = filter.trim().toLocaleLowerCase(locale);
 
   useLayoutEffect(() => {
     if (!enabled || !pageRef.current) return;
@@ -78,11 +75,6 @@ export function useScoreboardEntrance(
     startedAt.current = performance.now();
 
     const page = pageRef.current;
-    const art = page.querySelector<HTMLElement>(".hero-art");
-    const artStyle = art ? getComputedStyle(art) : null;
-    const artTransform = artStyle?.transform ?? "none";
-    const artOpacity = artStyle?.opacity ?? "1";
-
     const step = (
       selector: string,
       name: string,
@@ -100,19 +92,6 @@ export function useScoreboardEntrance(
     });
 
     return playEntrance([
-      {
-        element: art,
-        name: "page-art",
-        from: {
-          opacity: 0,
-          transform: `${artTransform === "none" ? "" : artTransform} translateY(8px) scale(.98)`,
-        },
-        to: {
-          opacity: artOpacity,
-          transform: artTransform,
-        },
-        duration: 1000,
-      },
       step(
         ".hero-copy h1",
         "title",
@@ -154,8 +133,8 @@ export function useScoreboardEntrance(
         step(
           selector,
           `details-${index}`,
-          { opacity: 0, transform: "translateY(12px)" },
-          { opacity: 1, transform: "translateY(0)" },
+          { opacity: 0 },
+          { opacity: 1 },
           400,
           650,
         ),
@@ -166,7 +145,7 @@ export function useScoreboardEntrance(
   useLayoutEffect(() => {
     if (!enabled || !tableRef.current) return;
 
-    // Delay only while the page is opening; filtering later starts immediately.
+    // Delay only while the page is opening.
     const delay = Math.max(0, 320 - (performance.now() - startedAt.current));
 
     return playEntrance([
@@ -185,7 +164,7 @@ export function useScoreboardEntrance(
         delay,
       },
     ]);
-  }, [enabled, query, hasTeams]);
+  }, [enabled, hasTeams]);
 
   return { pageRef, tableRef };
 }

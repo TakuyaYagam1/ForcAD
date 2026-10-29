@@ -6,9 +6,6 @@ import { formatScore } from "@/shared/lib/formatScore";
 import { getCombinedSlaPercent } from "@/shared/lib/sla";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { normalizeUuid } from "@/shared/lib/uuid";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { HeroArt } from "@/shared/ui/brand/PageHero";
-import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
@@ -76,7 +73,6 @@ export function TeamScoreboardView() {
   if (!team) {
     return (
       <div className="empty-state mt-8">
-        <BrandIcon name="team" />
 
         <h2>
           {teams === null
@@ -114,7 +110,7 @@ export function TeamScoreboardView() {
           <div className="team-header-identity">
             <TeamAvatar name={team.name} src={team.logo_path} size="large" />
 
-            <div>
+            <div className="team-header-copy">
               <h1>{team.name}</h1>
 
               <div className="team-header-meta">
@@ -123,29 +119,11 @@ export function TeamScoreboardView() {
               </div>
             </div>
           </div>
-
-          <div
-            className="team-current-rank"
-            aria-label={t("teamScoreboard.rankAriaLabel", {
-              rank: formatNumber((place ?? -1) + 1),
-            })}
-          >
-            {place !== undefined && place >= 0 ? (
-              <RankBadge rank={place + 1} />
-            ) : (
-              "-"
-            )}
-
-            <span>{t("teamScoreboard.place")}</span>
-          </div>
-
-          <HeroArt />
         </section>
       </div>
 
       <div className="stats-grid">
         <StatCard
-          icon="podium"
           label={t("teamScoreboard.place")}
           value={
             place !== undefined && place >= 0
@@ -155,13 +133,11 @@ export function TeamScoreboardView() {
         />
 
         <StatCard
-          icon="score"
           label={t("teamScoreboard.score")}
           value={<ScoreValue value={team.score ?? 0} />}
         />
 
         <StatCard
-          icon="check"
           label={t("teamScoreboard.availability")}
           value={
             sla === null ? (
@@ -175,7 +151,6 @@ export function TeamScoreboardView() {
         />
 
         <StatCard
-          icon="check"
           label={t("teamScoreboard.captured")}
           value={formatNumber(stolen)}
           detail={
@@ -194,21 +169,11 @@ export function TeamScoreboardView() {
             </div>
 
             <div className="services-grid">
-              {(tasks ?? []).map((task, index) => {
+              {(tasks ?? []).map((task) => {
                 const value = values.find((item) => item.taskId === task.id);
 
                 return (
                   <div className="service-card" key={task.id}>
-                    <BrandIcon
-                      name={
-                        index % 4 === 2
-                          ? "check"
-                          : index % 4 === 3
-                            ? "team"
-                            : "terminal"
-                      }
-                    />
-
                     <div className="service-card-copy">
                       <div className="service-card-header">
                         <span>{task.name}</span>
@@ -263,10 +228,18 @@ export function TeamScoreboardView() {
                 aria-label={t("teamScoreboard.historyRegionLabel")}
                 tabIndex={0}
               >
-                <table className="scoreboard-table history-table">
+                <table
+                  className="scoreboard-table history-table"
+                  style={{ minWidth: `${Math.max(650, 182 + tasks.length * 210)}px` }}
+                >
                   <caption className="sr-only">
                     {t("teamScoreboard.historyCaption")}
                   </caption>
+                  <colgroup>
+                    <col style={{ width: "72px" }} />
+                    <col style={{ width: "110px" }} />
+                    {tasks.map((task) => <col key={task.id} />)}
+                  </colgroup>
 
                   <thead>
                     <tr>

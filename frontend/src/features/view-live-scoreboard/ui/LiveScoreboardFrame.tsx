@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Search, WifiOff } from "lucide-react";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { PageHero } from "@/shared/ui/brand/PageHero";
 import { EventItem } from "@/shared/ui/brand/RecentEvents";
 import { useTranslation } from "react-i18next";
 import { getLocale } from "@/shared/i18n";
@@ -22,19 +20,7 @@ export function LiveScoreboardFrame() {
   });
   return (
     <div className="w-full">
-      <PageHero
-        compact
-        title={t("liveScoreboard.title")}
-        subtitle={t("liveScoreboard.subtitle")}
-      >
-        <div className="hero-metadata">
-          <span>
-            <BrandIcon name="activity" />
-            {t("liveScoreboard.flagCaptures")}
-          </span>
-          <span>{t("liveScoreboard.recentCompetitionEvents")}</span>
-        </div>
-      </PageHero>
+      <h1 className="sr-only">{t("liveScoreboard.title")}</h1>
       {error && (
         <div className="notice" role="status">
           <WifiOff size={16} />
@@ -52,12 +38,6 @@ export function LiveScoreboardFrame() {
             placeholder={t("liveScoreboard.searchPlaceholder")}
           />
         </label>
-        <p className="events-caption">
-          {t("liveScoreboard.eventCount", {
-            count: events.length,
-            formattedCount: new Intl.NumberFormat(locale).format(events.length),
-          })}
-        </p>
       </div>
       {filtered.length ? (
         <ul className="events-list">
@@ -67,7 +47,6 @@ export function LiveScoreboardFrame() {
         </ul>
       ) : (
         <div className="empty-state mt-5">
-          <BrandIcon name="activity" />
           <h2>
             {query
               ? t("liveScoreboard.notFoundTitle")

@@ -35,6 +35,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
   return (
     <AppShell
+      showNavigation={false}
       headerActions={(
         <Button
           type="button"

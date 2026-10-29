@@ -90,6 +90,26 @@ export function notificationToLiveEvent(
   };
 }
 
+export function resolveEventNames(
+  event: LiveEvent,
+  teams: readonly { id: string; name: string }[] | null,
+  tasks: readonly { id: string; name: string }[] | null,
+): LiveEvent {
+  if (event.kind === "admin_message") return event;
+  return {
+    ...event,
+    attackerName:
+      teams?.find((team) => team.id === event.attackerId)?.name ??
+      event.attackerName,
+    victimName:
+      teams?.find((team) => team.id === event.victimId)?.name ??
+      event.victimName,
+    taskName:
+      tasks?.find((task) => task.id === event.taskId)?.name ??
+      event.taskName,
+  };
+}
+
 export function mergeLiveEvents(current: LiveEvent[], incoming: LiveEvent[]): LiveEvent[] {
   const byID = new Map(current.map((event) => [event.id, event]));
   for (const event of incoming) {

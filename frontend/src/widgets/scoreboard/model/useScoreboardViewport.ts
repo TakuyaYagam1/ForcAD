@@ -14,12 +14,12 @@ function verticalChrome(element: HTMLElement): number {
   );
 }
 
-function outerHeight(element: HTMLElement, ignoreTopMargin = false): number {
+function outerHeight(element: HTMLElement): number {
   const style = window.getComputedStyle(element);
   if (style.display === "none") return 0;
   return (
     element.offsetHeight +
-    (ignoreTopMargin ? 0 : pixels(style.marginTop)) +
+    pixels(style.marginTop) +
     pixels(style.marginBottom)
   );
 }
@@ -36,8 +36,7 @@ export function useScoreboardViewport(
     const main = page?.closest<HTMLElement>(".site-main");
     const shell = main?.closest<HTMLElement>(".brand-app");
     const header = shell?.querySelector<HTMLElement>(".site-header");
-    const footer = shell?.querySelector<HTMLElement>(".site-footer");
-    if (!page || !main || !shell || !header || !footer) return;
+    if (!page || !main || !shell || !header) return;
 
     const desktop = window.matchMedia("(min-width: 901px)");
     let frame = 0;
@@ -68,8 +67,7 @@ export function useScoreboardViewport(
           !element.classList.contains("scoreboard-reveal"),
       );
       const fixedHeight = blocks.reduce(
-        (total, block) =>
-          total + outerHeight(block, block.classList.contains("recent-events")),
+        (total, block) => total + outerHeight(block),
         0,
       );
       const reveal = page.querySelector<HTMLElement>(".scoreboard-reveal");
@@ -86,7 +84,6 @@ export function useScoreboardViewport(
         window.innerHeight -
         offset -
         outerHeight(header) -
-        outerHeight(footer) -
         verticalChrome(shell) -
         verticalChrome(main) -
         verticalChrome(page) -
@@ -137,7 +134,6 @@ export function useScoreboardViewport(
         page,
         main,
         header,
-        footer,
         ...page.children,
         ...page.querySelectorAll(
           ".table-frame, .table-scroll, thead, tbody tr",

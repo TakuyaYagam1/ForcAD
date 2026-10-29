@@ -13,26 +13,8 @@
   position: static;
 }
 
-.team-header > .hero-art {
-  z-index: 0;
-}
-
-.teams-page .leaders-heading {
-  margin: 8px 0 20px;
-}
-
-.teams-page .leaders-heading h2 {
-  font-family: "Spectral", serif;
-  font-size: 24px;
-  font-weight: 400;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--ivory);
-}
-
-.teams-page .leaders-caption {
-  color: var(--soft);
-  font-size: 12px;
+.teams-page .teams-leaders {
+  margin-top: 16px;
 }
 
 .teams-page .teams-podium {
@@ -85,25 +67,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
   margin: 4px auto 20px;
 }
 
-.teams-page .team-podium-head .rank-number {
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgb(var(--brand-primary-rgb) / 28%);
-  border-radius: 12px;
-  background: rgb(var(--brand-primary-rgb) / 10%);
-  color: var(--brand-primary);
-  font-family: "Inter Tight", Arial, sans-serif;
-  font-size: 21px;
-  font-weight: 600;
-}
-
 .teams-page .team-podium-head .team-avatar {
-  width: 56px;
-  height: 56px;
+  width: 68px;
+  height: 68px;
   border-color: #355064;
   border-radius: 12px;
   background: #07131e;
@@ -132,9 +101,12 @@
 .teams-page .team-podium-place {
   order: -1;
   margin-bottom: 8px;
-  color: var(--brand-accent);
-  font-size: 10px;
-  letter-spacing: 1.2px;
+  color: var(--brand-primary);
+  font-family: system-ui, sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -216,16 +188,7 @@
 
   .teams-page .team-podium-head {
     grid-row: 1 / 3;
-    flex-direction: column;
-    gap: 9px;
     margin: 0;
-  }
-
-  .teams-page .team-podium-head .rank-number {
-    width: 38px;
-    height: 34px;
-    border-radius: 9px;
-    font-size: 16px;
   }
 
   .teams-page .team-podium-head .team-avatar {
@@ -244,6 +207,7 @@
 
   .teams-page .team-podium-place {
     margin-bottom: 4px;
+    font-size: 20px;
   }
 
   .teams-page .team-card--podium .team-card-bottom {

@@ -3,7 +3,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-left: auto;
+  grid-column: 3;
+  justify-self: end;
   padding: 4px;
   min-width: 28px;
   min-height: 28px;
@@ -17,6 +18,26 @@
 .scoreboard-page .banner-toggle:focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
+}
+
+.scoreboard-page .scoreboard-table th {
+  text-align: center !important;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.scoreboard-page .scoreboard-table th.team-column {
+  text-align: left !important;
+  padding-left: 72px;
+}
+
+.scoreboard-page--admin .scoreboard-table {
+  table-layout: fixed;
+  min-width: max(100%, 1380px);
+}
+
+.scoreboard-page .scoreboard-table td.total-column {
+  text-align: center !important;
 }
 
 @media (max-width: 900px) {
@@ -34,26 +55,105 @@
     font-size: 0.75rem;
   }
 
-  .scoreboard-page--compact .search-field input,
-  .scoreboard-page--compact .team-name,
-  .scoreboard-page--compact .service-score {
+  .scoreboard-page--compact .team-name {
     font-size: 1rem;
   }
 
-  .scoreboard-page--compact .status-legend,
   .scoreboard-page--compact .scoreboard-table th,
-  .scoreboard-page--compact .team-ip,
-  .scoreboard-page--compact .service-meta,
-  .scoreboard-page--compact .flag-count {
+  .scoreboard-page--compact .team-ip {
     font-size: 0.875rem;
   }
 
-  .scoreboard-page--compact .status-legend {
-    flex-wrap: wrap;
+  .scoreboard-page .scoreboard-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .scoreboard-page--compact .status-legend span {
-    white-space: nowrap;
+  .scoreboard-page .status-legend {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .scoreboard-page .banner-toggle {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .scoreboard-page--compact .table-scroll {
+    overflow: visible;
+    max-height: none;
+  }
+
+  .scoreboard-page--compact .scoreboard-table {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .scoreboard-page--compact .scoreboard-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody tr {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody td {
+    position: static;
+    width: auto;
+    min-width: 0;
+    height: auto;
+    padding: 10px 6px;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .place-column {
+    grid-column: 1;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .team-column {
+    grid-column: 2;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .total-column {
+    grid-column: 3;
+    padding-right: 12px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .score-value {
+    font-size: 16px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .service-column {
+    grid-column: 1 / -1;
+    display: block;
+    padding: 0 8px 8px;
+  }
+
+  .scoreboard-page--compact .service-cell-name {
+    display: block;
+    padding: 4px 2px 6px;
+    color: var(--soft);
+    font-size: 12px;
+  }
+
+  .scoreboard-page--compact .service-cell {
+    min-width: 0;
+    min-height: 82px;
   }
 }
 
@@ -119,69 +219,8 @@
     flex-shrink: 0;
   }
 
-  .scoreboard-page:not(.scoreboard-page--admin) > .recent-events {
-    margin: auto 0 0;
-    padding-top: 8px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .header-inner {
-    min-height: 56px;
-    padding: 0 24px;
-    gap: 24px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .brand-lockup {
-    gap: 12px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .brand-lockup img {
-    width: 32px;
-    height: 38px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .brand-lockup span {
-    font-size: clamp(1.375rem, 1rem + 0.5vw, 1.75rem);
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .brand-lockup b {
-    font-size: 14px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .main-nav {
-    gap: 28px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .main-nav a {
-    font-size: var(--scoreboard-text-size);
-    gap: 8px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .main-nav .brand-icon {
-    width: 26px;
-    height: 26px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .header-round {
-    font-size: var(--scoreboard-text-size);
-    margin-right: 8px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .header-status {
-    font-size: var(--scoreboard-label-size);
-  }
-
   .brand-app:has(.scoreboard-page--compact) .site-main {
     padding: 0 24px 6px;
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .site-footer {
-    margin: 0 24px;
-    padding: 6px 0;
-    font-size: var(--scoreboard-label-size);
-  }
-
-  .brand-app:has(.scoreboard-page--compact) .language-switch button {
-    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .page-hero {
@@ -219,11 +258,6 @@
     height: 14px;
   }
 
-  .scoreboard-page--compact .hero-art {
-    height: 110px;
-    top: -15px;
-  }
-
   .scoreboard-page--compact .round-line {
     margin: 0 -24px;
     min-height: 48px;
@@ -254,42 +288,21 @@
 
   .scoreboard-page--compact .scoreboard-toolbar {
     min-height: 44px;
-    padding: 4px 0;
-    gap: 8px 16px;
-    flex-wrap: wrap;
-  }
-
-  .scoreboard-page--compact .search-field {
-    height: 36px;
-    width: clamp(16rem, 20vw, 24rem);
-    padding: 0 10px;
-  }
-
-  .scoreboard-page--compact .search-field input {
-    font-size: var(--scoreboard-text-size);
-  }
-
-  .scoreboard-page--compact .search-field svg {
-    width: 16px;
-    height: 16px;
+    padding: 8px 0;
   }
 
   .scoreboard-page--compact .status-legend {
-    font-size: var(--scoreboard-label-size);
-    gap: 12px;
-    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .scoreboard-page--compact .status-legend span {
-    white-space: nowrap;
-  }
-
-  .scoreboard-page--compact .status-dot {
-    width: 0.65em;
-    height: 0.65em;
+    min-width: 96px;
+    min-height: 30px;
+    font-size: var(--scoreboard-label-size);
   }
 
   .scoreboard-page--compact .scoreboard-table {
+    table-layout: fixed;
     min-width: 1080px;
   }
 
@@ -299,8 +312,8 @@
   }
 
   .scoreboard-page--compact .scoreboard-table td {
-    height: var(--scoreboard-row-height, 32px);
-    padding: 1px 8px;
+    height: var(--scoreboard-row-height, 92px);
+    padding: 5px 6px;
   }
 
   .scoreboard-page--compact .place-column {
@@ -310,8 +323,12 @@
 
   .scoreboard-page--compact .team-column {
     left: var(--scoreboard-place-width);
-    min-width: 20rem;
-    width: 26%;
+    min-width: 18rem;
+    width: 15%;
+  }
+
+  .scoreboard-page--compact .scoreboard-table th.team-column {
+    padding-left: 64px;
   }
 
   .scoreboard-page--compact .team-identity {
@@ -319,10 +336,7 @@
   }
 
   .scoreboard-page--compact .team-identity > span:last-child {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    display: block;
     flex: 1;
     min-width: 0;
   }
@@ -353,7 +367,8 @@
   }
 
   .scoreboard-page--compact .total-column {
-    min-width: 80px;
+    min-width: 6.5rem;
+    width: 6%;
   }
 
   .scoreboard-page--compact .score-value {
@@ -361,28 +376,24 @@
   }
 
   .scoreboard-page--compact .service-cell {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
     min-width: 150px;
-    white-space: nowrap;
+    min-height: 82px;
   }
 
-  .scoreboard-page--compact .service-score {
-    font-size: clamp(1rem, calc(var(--scoreboard-row-height, 32px) * 0.45), var(--scoreboard-team-size));
-    gap: 6px;
+  .scoreboard-page--compact .service-state {
+    font-size: 13px;
   }
 
-  .scoreboard-page--compact .service-meta {
-    flex: 1;
-    padding-left: 0;
-    font-size: var(--scoreboard-label-size);
-    gap: 8px;
+  .scoreboard-page--compact .service-metric {
+    font-size: 17px;
   }
 
-  .scoreboard-page--compact .flag-count {
-    font-size: var(--scoreboard-label-size);
-    gap: 4px;
+  .scoreboard-page--compact .service-metric > span {
+    font-size: 15px;
+  }
+
+  .scoreboard-page--compact .service-metric strong {
+    font-size: 17px;
   }
 
   .scoreboard-page--compact .recent-events .section-heading h2 {
@@ -444,5 +455,47 @@
     flex-basis: 100%;
     justify-content: center;
     min-height: 44px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 2000px) {
+  .scoreboard-page--compact .service-cell {
+    min-width: 0;
+    min-height: 92px;
+    padding: 6px 8px;
+  }
+
+  .scoreboard-page--compact .service-metrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .scoreboard-page--compact .service-metric {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .scoreboard-page--compact .service-metric:last-child {
+    flex-direction: row;
+  }
+
+  .scoreboard-page--compact .service-metric > span {
+    font-size: 13px;
+  }
+
+  .scoreboard-page--compact .service-metric strong {
+    overflow: visible;
+    font-size: 17px;
+    text-overflow: clip;
+  }
+}
+
+@container (max-width: 205px) {
+  .scoreboard-page--compact .service-cell .service-metric:last-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
   }
 }

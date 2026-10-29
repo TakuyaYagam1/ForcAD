@@ -88,26 +88,9 @@ export function GameControls() {
     : isAxiosError(error) && error.response?.status === 409
       ? t("game.errors.stateChanged")
       : apiErrorMessage(error, t("game.errors.commandFailed"));
-  const statusDescription = resetPending || (practice && phase === "finished")
-    ? t("game.practiceFinished")
-    : practice
-      ? t("game.practiceRunning")
-      : phase === "finished"
-        ? t("game.finalFinished")
-        : canStart
-          ? t("game.canStartFinal")
-          : phase === "paused"
-            ? t("game.paused")
-            : t("game.running");
   return (
-    <section className="mb-5 rounded-lg border border-amber-200/15 p-4" aria-label={t("game.sectionLabel")}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="max-w-xl text-sm text-muted-foreground">
-          <p>{statusDescription}</p>
-          {scheduleLabel && (canStart || practice || resetPending) && (
-            <p className="mt-1">{t("game.scheduledStart", { date: scheduleLabel })}</p>
-          )}
-        </div>
+    <section className="mb-5" aria-label={t("game.sectionLabel")}>
+      <div className="flex flex-wrap items-center justify-end gap-4">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={disabled || !playing} onClick={() => mutation.mutate(action)}>
             {mutation.isPending && (mutation.variables === "pause" || mutation.variables === "resume")

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Team } from "@/entities/team/model/types";
 import {
   createTeamAdmin,
@@ -14,7 +14,7 @@ import {
 } from "@/shared/lib/adminValidation";
 import type { TeamValidationIssue } from "@/shared/lib/adminValidation";
 import { queryClient } from "@/shared/lib/queryClient";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
+import { ArrowLeft } from "lucide-react";
 import { TeamForm } from "./TeamForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
 import { useTranslation } from "react-i18next";
@@ -161,13 +161,16 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
   return (
     <AdminShell>
       <div className="admin-page">
+        <Link to="/admin/scoreboard" className="back-link admin-back-link">
+          <ArrowLeft size={18} aria-hidden="true" />
+          {t("common.backToDashboard")}
+        </Link>
         <div className="admin-heading">
           <div>
             <p className="eyebrow">{t("common.organizerPanel")}</p>
             <h1>{isCreate ? t("team.createTitle") : t("team.editTitle")}</h1>
             <p className="text-xs text-slate-400">{t("team.pageDescription")}</p>
           </div>
-          <BrandIcon name="team" />
         </div>
 
         {loading ? (
@@ -190,7 +193,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
               canSave={canSave}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onCancel={() => navigate(-1)}
+              onCancel={() => navigate("/admin/scoreboard")}
             />
           </>
         )}

@@ -11,12 +11,7 @@ body {
   background: var(--ink);
 }
 .brand-app {
-  background:
-    radial-gradient(ellipse at 80% 4%, rgb(var(--brand-primary-rgb) / 8%), transparent 48%),
-    #07111b;
-}
-.brand-app::before {
-  opacity: 0.75;
+  background: #07111b;
 }
 .brand-icon svg {
   width: 100%;
@@ -190,34 +185,13 @@ body {
   position: relative;
   justify-content: flex-start;
 }
+.team-header-copy {
+  min-width: 0;
+}
 .team-header-identity,
-.team-current-rank,
 .team-hero .back-link {
   position: relative;
   z-index: 2;
-}
-.team-current-rank {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 110px;
-  margin-left: 38px;
-  color: var(--brand-primary);
-}
-.team-current-rank .rank-number {
-  width: 84px;
-  height: 64px;
-  border: 1px solid rgb(var(--brand-primary-rgb) / 38%);
-  border-radius: 14px;
-  background: rgb(var(--brand-primary-rgb) / 12%);
-  box-shadow: 0 10px 30px rgb(var(--brand-primary-rgb) / 9%);
-  font-size: 42px;
-  color: var(--brand-primary);
-}
-.team-current-rank > span {
-  font-size: 16px;
-  text-transform: uppercase;
-  letter-spacing: 1.3px;
 }
 .stats-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -287,9 +261,7 @@ body {
 }
 .service-card {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  display: block;
   padding: 0 14px;
   border: 0;
   border-radius: 0;
@@ -298,10 +270,6 @@ body {
 }
 .service-card + .service-card {
   border-left: 1px solid var(--line);
-}
-.service-card > .brand-icon {
-  width: 86px;
-  height: 86px;
 }
 .service-card-copy {
   min-width: 0;
@@ -343,6 +311,7 @@ body {
 }
 .history-panel .scoreboard-table {
   min-width: 650px;
+  table-layout: fixed;
 }
 .history-panel .scoreboard-table th {
   padding: 7px 14px;
@@ -364,7 +333,6 @@ body {
   border-color: var(--line);
 }
 .history-panel .total-column {
-  min-width: 110px;
   text-align: center !important;
 }
 .history-panel .history-round {
@@ -501,12 +469,7 @@ body {
   .site-main {
     max-width: none;
     padding: 0 32px 24px;
-    min-height: calc(100vh - 145px);
-  }
-  .site-footer {
-    max-width: none;
-    margin: 0 32px;
-    padding: 15px 0;
+    min-height: calc(100vh - 88px);
   }
   .page-hero {
     min-height: 174px;
@@ -677,18 +640,12 @@ body {
   .scoreboard-row {
     background: #02131e;
   }
-  .scoreboard-row:hover {
-    background: #082331;
-  }
   .scoreboard-row.is-leader {
     background: linear-gradient(
       90deg,
       rgb(var(--brand-primary-rgb) / 18%),
       #02131e 70%
     );
-  }
-  .scoreboard-row.is-highlighted {
-    background: #071e29;
   }
   .place-column {
     width: 108px;
@@ -974,14 +931,9 @@ body {
   }
   .service-card {
     padding: 0 10px;
-    gap: 8px;
   }
   .service-card + .service-card {
     border-left: 1px solid var(--line);
-  }
-  .service-card > .brand-icon {
-    width: 66px;
-    height: 66px;
   }
   .service-card-header {
     font-size: 16px;
@@ -1051,25 +1003,13 @@ body {
   }
   .team-header-identity {
     gap: 20px;
-    max-width: 65%;
+    max-width: 100%;
   }
   .team-header h1 {
     font-size: 46px;
   }
   .team-header-meta {
     font-size: 18px;
-  }
-  .team-current-rank {
-    margin-left: 0;
-    min-width: 75px;
-  }
-  .team-current-rank .rank-number {
-    font-size: 38px;
-    width: 60px;
-    height: 50px;
-  }
-  .team-current-rank > span {
-    font-size: 11px;
   }
   .services-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1078,10 +1018,6 @@ body {
   }
   .service-card:nth-child(2n + 1) {
     border-left: 0;
-  }
-  .service-card > .brand-icon {
-    width: 76px;
-    height: 76px;
   }
   .service-card-header {
     font-size: 17px;
@@ -1186,7 +1122,7 @@ body {
   }
   .team-header-identity {
     gap: 15px;
-    max-width: 75%;
+    max-width: 100%;
   }
   .team-header h1 {
     font-size: clamp(27px, 8vw, 38px);
@@ -1199,17 +1135,6 @@ body {
     width: 70px;
     height: 70px;
     border-radius: 4px;
-  }
-  .team-current-rank {
-    min-width: 48px;
-  }
-  .team-current-rank .rank-number {
-    width: 44px;
-    height: 40px;
-    font-size: 30px;
-  }
-  .team-current-rank > span {
-    font-size: 9px;
   }
   .stats-grid {
     margin: 18px 0;
@@ -1267,12 +1192,7 @@ body {
     padding: 13px 0;
   }
   .service-card {
-    gap: 5px;
     padding: 0 7px;
-  }
-  .service-card > .brand-icon {
-    width: 52px;
-    height: 52px;
   }
   .service-card-header {
     font-size: 15px;

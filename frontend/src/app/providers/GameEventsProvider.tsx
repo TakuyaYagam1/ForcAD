@@ -62,6 +62,7 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
     const onConnect = () => {
       latestUpdate.current = null;
       useScoreboardStore.getState().setConnected(true);
+      useScoreboardStore.getState().setError(null);
       void queryClient.refetchQueries({ queryKey: ["scoreboardInit"], exact: true });
       void queryClient.refetchQueries({ queryKey: ["game-runtime"], exact: true });
       refreshGameQueries(queryClient);

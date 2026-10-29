@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  undici: 7.30.1
+
 importers:
 
   .:
@@ -205,9 +208,6 @@ importers:
       lucide-react:
         specifier: 1.55.0
         version: 1.55.0(@types/react@19.3.0)(react@19.3.0)
-      ogl:
-        specifier: 1.0.11
-        version: 1.0.11
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -2146,9 +2146,6 @@ packages:
     resolution: {integrity: sha512-9qny7Z9DsQU8Ou39ERsPU4OZQlSTP47ShQzuKZ6PRXpYLtIFgl/DEBYEXKlvcEa+9tHVcK8CF81Y2V72qaZhWA==}
     engines: {node: '>=18'}
 
-  ogl@1.0.11:
-    resolution: {integrity: sha512-kUpC154AFfxi16pmZUK4jk3J+8zxwTWGPo03EoYA8QPbzikHoaC82n6pNTbd+oEaJonaE8aPWBlX7ad9zrqLsA==}
-
   optionator@0.9.4:
     resolution: {integrity: sha512-6IpQ7mKUxRcZNLIObR0hz7lxsapSSIYNZJwXPGeF0mTVqGKFIXj1DQcMoT22S3ROcLyY/rz0PWaWZ9ayWmad9g==}
     engines: {node: '>= 0.8.0'}
@@ -2558,8 +2555,8 @@ packages:
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
-  undici@7.29.1:
-    resolution: {integrity: sha512-RYONW2MeafgYlkVOKYKkA/Ag7BmXqgIWCa8t1m0JcxrQg9pI9lEqRhAOruOBCbAohOa/gkCF+iPi9hrgvTzu6Q==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   unicorn-magic@0.3.0:
@@ -3452,7 +3449,7 @@ snapshots:
     dependencies:
       '@scalar/helpers': 0.16.2
       pathe: 2.0.3
-      undici: 7.29.1
+      undici: 7.30.1
       yaml: 2.9.1
 
   '@scalar/json-schema-validator@0.1.11':
@@ -4303,8 +4300,6 @@ snapshots:
       path-key: 4.0.0
       unicorn-magic: 0.3.0
 
-  ogl@1.0.11: {}
-
   optionator@0.9.4:
     dependencies:
       deep-is: 0.1.4
@@ -4674,7 +4669,7 @@ snapshots:
 
   undici-types@8.9.0: {}
 
-  undici@7.29.1: {}
+  undici@7.30.1: {}
 
   unicorn-magic@0.3.0: {}
 

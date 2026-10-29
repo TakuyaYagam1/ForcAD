@@ -1,13 +1,11 @@
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import { useTranslation } from "react-i18next";
-import { getLocale } from "@/shared/i18n";
-import { useLayoutEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./ScoreboardTable.css";
 
 export interface ScoreboardTeam {
@@ -41,7 +39,6 @@ interface ScoreboardTableProps {
   teams: ScoreboardTeam[];
   tasks: ScoreboardTask[];
   teamTasks: ScoreboardTeamTask[];
-  filter?: string;
   onTeamClick?: (teamId: string) => void;
   onTaskClick?: (taskId: string) => void;
   onCellClick?: (teamId: string, taskId: string) => void;
@@ -51,24 +48,21 @@ export function ScoreboardTable({
   teams,
   tasks,
   teamTasks,
-  filter = "",
   onTeamClick,
   onTaskClick,
   onCellClick,
 }: ScoreboardTableProps) {
   const { t } = useTranslation("public");
   const navigate = useNavigate();
+  const { search } = useLocation();
   const frameRef = useRef<HTMLDivElement>(null);
-  const rows = useRef(new Map<string, HTMLTableRowElement>());
-  const previous = useRef(new Map<string, { rank: number; top: number }>());
+  const previewLarge =
+    !onCellClick &&
+    ["127.0.0.1", "localhost"].includes(window.location.hostname) &&
+    new URLSearchParams(search).get("preview") === "large";
 
-  const locale = getLocale();
-  const query = filter.trim().toLocaleLowerCase(locale);
-  const visible = teams.filter((team) =>
-    `${team.name} ${team.ip}`.toLocaleLowerCase(locale).includes(query),
-  );
   const ranks = new Map(teams.map((team, index) => [team.id, index + 1]));
-  useViewportAnimations(frameRef, visible.length > 0);
+  useViewportAnimations(frameRef, teams.length > 0);
 
   const cells = useMemo(
     () =>
@@ -78,79 +72,11 @@ export function ScoreboardTable({
     [teamTasks],
   );
 
-  useLayoutEffect(() => {
-    const next = new Map<string, { rank: number; top: number }>();
-    const animations: Animation[] = [];
-    const timers: number[] = [];
-    const animatedRows: HTMLTableRowElement[] = [];
-
-    const reduced =
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      document.documentElement.dataset.motion === "off";
-
-    teams.forEach((team, index) => {
-      const row = rows.current.get(team.id);
-      if (!row) return;
-
-      const top = row.offsetTop;
-      const rank = index + 1;
-      const old = previous.current.get(team.id);
-
-      next.set(team.id, { rank, top });
-
-      if (!old || old.rank === rank || reduced) return;
-
-      if (old.top !== top)
-        animations.push(
-          row.animate(
-            [
-              { transform: `translateY(${old.top - top}px)` },
-              { transform: "translateY(0)" },
-            ],
-            { duration: 600, easing: "cubic-bezier(.22,1,.36,1)" },
-          ),
-        );
-
-      row.style.setProperty(
-        "--glint-delay",
-        `${80 + Math.min(index, 6) * 25}ms`,
-      );
-      row.style.setProperty("--glint-travel", `${row.offsetWidth + 150}px`);
-
-      row.classList.remove("is-sweeping");
-      void row.offsetWidth;
-      row.classList.add("is-sweeping");
-
-      animatedRows.push(row);
-      timers.push(
-        window.setTimeout(() => row.classList.remove("is-sweeping"), 1100),
-      );
-    });
-
-    previous.current = next;
-
-    return () => {
-      animations.forEach((animation) => animation.cancel());
-      timers.forEach(window.clearTimeout);
-      animatedRows.forEach((row) => row.classList.remove("is-sweeping"));
-    };
-  }, [teams, filter]);
-
   if (!teams.length)
     return (
       <div className="empty-state">
-        <BrandIcon name="podium" />
         <h2>{t("scoreboard.table.noTeamsTitle")}</h2>
         <p>{t("scoreboard.table.noTeamsDescription")}</p>
-      </div>
-    );
-
-  if (!visible.length)
-    return (
-      <div className="empty-state">
-        <BrandIcon name="team" />
-        <h2>{t("scoreboard.table.noMatchTitle")}</h2>
-        <p>{t("scoreboard.table.noMatchDescription")}</p>
       </div>
     );
 
@@ -170,6 +96,21 @@ export function ScoreboardTable({
           <caption className="sr-only">
             {t("scoreboard.table.caption")}
           </caption>
+          <colgroup>
+            <col style={{ width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)" }} />
+            <col style={{ width: onCellClick ? "18rem" : "15%" }} />
+            <col style={{ width: onCellClick ? "9rem" : "6%" }} />
+            {tasks.map((task) => (
+              <col
+                key={task.id}
+                style={{
+                  width: onCellClick
+                    ? `calc((100% - 506px) / ${tasks.length})`
+                    : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
+                }}
+              />
+            ))}
+          </colgroup>
 
           <thead>
             <tr>
@@ -198,17 +139,12 @@ export function ScoreboardTable({
           </thead>
 
           <tbody>
-            {visible.map((team) => {
+            {teams.map((team) => {
               const rank = ranks.get(team.id) ?? 0;
-
               return (
                 <tr
                   key={team.id}
                   data-team-id={team.id}
-                  ref={(row) => {
-                    if (row) rows.current.set(team.id, row);
-                    else rows.current.delete(team.id);
-                  }}
                   className={`scoreboard-row ${rank === 1 ? "is-leader" : ""} ${team.highlighted ? "is-highlighted" : ""}`}
                 >
                   <td className="place-column">
@@ -237,19 +173,27 @@ export function ScoreboardTable({
                     <ScoreValue value={team.score} />
                   </td>
 
-                  {tasks.map((task) => (
-                    <td key={task.id}>
-                      <ServiceCell
-                        value={cells.get(`${team.id}:${task.id}`)}
-                        name={`${team.name} · ${task.name}`}
-                        onClick={
-                          onCellClick
-                            ? () => onCellClick(team.id, task.id)
-                            : undefined
-                        }
-                      />
-                    </td>
-                  ))}
+                  {tasks.map((task, taskIndex) => {
+                    const value = cells.get(`${team.id}:${task.id}`);
+                    return (
+                      <td key={task.id} className="service-column">
+                        <span className="service-cell-name">{task.name}</span>
+                        <ServiceCell
+                          value={
+                            previewLarge && rank === 1 && taskIndex === 0 && value
+                              ? { ...value, score: 12345.67, stolen: 1234, lost: 1234 }
+                              : value
+                          }
+                          name={`${team.name} · ${task.name}`}
+                          onClick={
+                            onCellClick
+                              ? () => onCellClick(team.id, task.id)
+                              : undefined
+                          }
+                        />
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}

@@ -1,21 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { createE2EContext, observePublicStream } from "./support";
 
-test("language switching preserves page state, survives reload and translates validation", async ({ browser }) => {
+test("language switching preserves the team list, survives reload and translates validation", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   const stream = await observePublicStream(page);
 
   try {
     await page.goto("/teams");
-    await expect(page.getByRole("heading", { name: "Команды", exact: true })).toBeVisible();
-    const search = page.getByRole("searchbox");
-    await search.fill("first");
+    await expect(page.getByRole("region", { name: "Топ команд" })).toBeVisible();
+    await expect(page.locator('a[href^="/team/"]').filter({ hasText: "first" })).toBeVisible();
     await expect.poll(() => stream.connections).toBeGreaterThan(0);
     const connections = stream.connections;
     await page.getByRole("button", { name: "English", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Teams", exact: true })).toBeVisible();
-    await expect(search).toHaveValue("first");
+    await expect(page.getByRole("region", { name: "Top teams" })).toBeVisible();
+    await expect(page.locator('a[href^="/team/"]').filter({ hasText: "first" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByRole("button", { name: "English", exact: true })).toHaveAttribute("aria-pressed", "true");
     expect(stream.connections).toBe(connections);
@@ -25,7 +24,7 @@ test("language switching preserves page state, survives reload and translates va
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Teams", exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Top teams" })).toBeVisible();
     await expect(page).toHaveTitle("ForcAD - team standings");
     await page.goto("/admin/login");
     await expect(page.getByRole("heading", { name: "Admin sign in", exact: true })).toBeVisible();

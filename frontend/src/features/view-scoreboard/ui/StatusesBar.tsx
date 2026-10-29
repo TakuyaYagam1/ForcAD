@@ -1,7 +1,7 @@
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
+import { roundTimerSeconds } from "../model/roundTimer";
 
 export function StatusesBar({
   round,
@@ -50,14 +50,21 @@ export function StatusesBar({
               pausedSeconds,
           ),
         );
+  const timerSeconds =
+    elapsed === null || !roundTime
+      ? null
+      : roundTimerSeconds(elapsed, roundTime);
   const progress =
-    elapsed === null || !roundTime || !displayRound
+    timerSeconds === null || !roundTime || !displayRound
       ? 0
-      : Math.min(100, (elapsed / roundTime) * 100);
+      : (timerSeconds / roundTime) * 100;
   const time =
-    elapsed === null
+    timerSeconds === null
       ? "-:-"
-      : `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+      : `${String(Math.floor(timerSeconds / 60)).padStart(2, "0")}:${String(timerSeconds % 60).padStart(2, "0")}`;
+  const waitingForResults =
+    phase === "running" &&
+    (roundWaiting || (elapsed !== null && roundTime !== null && elapsed >= roundTime));
   return (
     <section className="round-line" aria-label={t("scoreboard.round.current")}>
       <span className="round-label">{t("scoreboard.round.timeline")}</span>
@@ -83,12 +90,11 @@ export function StatusesBar({
         />
       </div>
       <div className="round-timer">
-        <BrandIcon name="timer" plain />
         <div>
           <strong>{time}</strong>
           <small
             className={
-              phase === "running" && roundWaiting
+              waitingForResults
                 ? "round-waiting-label"
                 : undefined
             }
@@ -98,7 +104,7 @@ export function StatusesBar({
               ? t("scoreboard.round.finished")
               : phase === "paused"
                 ? t("scoreboard.round.paused")
-                : phase === "running" && roundWaiting
+                : waitingForResults
                   ? t("scoreboard.round.waitingResults")
                   : phase === "unknown"
                     ? t("scoreboard.round.unavailable")

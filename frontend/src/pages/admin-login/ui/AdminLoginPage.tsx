@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 export function AdminLoginPage() {
   const { t } = useTranslation("admin");
   return (
-    <AppShell>
+    <AppShell showNavigation={false}>
       <div className="login-layout">
         <div className="login-intro">
           <span className="eyebrow">{brand.name} / {t("login.brand")}</span>

@@ -1,17 +1,5 @@
 export function isMotionAllowed(preference: MediaQueryList): boolean {
-  if (
-    preference.matches ||
-    document.documentElement.dataset.motion === "off" ||
-    document.visibilityState === "hidden"
-  ) {
-    return false;
-  }
-
-  try {
-    return localStorage.getItem("cf-motion") !== "off";
-  } catch {
-    return true;
-  }
+  return !preference.matches && document.visibilityState !== "hidden";
 }
 
 export function watchMotionDisable(
@@ -21,11 +9,6 @@ export function watchMotionDisable(
   const checkPreference = () => {
     if (!isMotionAllowed(preference)) onDisable();
   };
-  const observer = new MutationObserver(checkPreference);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ["data-motion"],
-  });
   preference.addEventListener("change", checkPreference);
   document.addEventListener("visibilitychange", checkPreference);
 
@@ -33,7 +16,6 @@ export function watchMotionDisable(
   return () => {
     if (!active) return;
     active = false;
-    observer.disconnect();
     preference.removeEventListener("change", checkPreference);
     document.removeEventListener("visibilitychange", checkPreference);
   };

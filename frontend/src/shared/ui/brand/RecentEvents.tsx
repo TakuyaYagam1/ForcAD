@@ -6,7 +6,6 @@ import {
   type LiveEvent,
 } from "@/entities/live-scoreboard/model/store";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { BrandIcon } from "./BrandIcon";
 import { TeamAvatar } from "./TeamAvatar";
 import { formatScore } from "@/shared/lib/formatScore";
 import { getLocale } from "@/shared/i18n";
@@ -93,40 +92,36 @@ export function EventItem({
       </li>
     );
   return (
-    <li className={`event-item ${compact ? "event-item--compact" : ""}`}>
-      <time dateTime={new Date(event.ts).toISOString()}>
-        {new Date(event.ts).toLocaleTimeString(getLocale(), {
+    <li className="event-item event-item--full">
+      <time dateTime={timestamp.toISOString()}>
+        {timestamp.toLocaleTimeString(getLocale(), {
           hour: "2-digit",
           minute: "2-digit",
-          second: compact ? undefined : "2-digit",
+          second: "2-digit",
         })}
       </time>
-      <div className="event-match">
-        <Link to={`/team/${event.attackerId}`}>
-          <TeamAvatar
-            name={event.attackerName}
-            src={attacker?.logo_path}
-            size="small"
-          />
-          <span>{event.attackerName}</span>
-        </Link>
-        <ArrowRight aria-label={t("events.capturedFrom")} size={16} />
-        <Link to={`/team/${event.victimId}`}>
-          <TeamAvatar
-            name={event.victimName}
-            src={victim?.logo_path}
-            size="small"
-          />
-          <span>{event.victimName}</span>
-        </Link>
-      </div>
-      <span className="event-service">{event.taskName}</span>
-      {delta !== undefined && (
-        <span className="event-gain">
-          {delta >= 0 ? "+" : ""}
-          {formatScore(delta)} <small>{t("events.points")}</small>
-        </span>
-      )}
+      <p className="event-sentence">
+        {t("events.captureLead")}{" "}
+        <Link className="event-team" to={`/team/${event.attackerId}`}>
+          <span aria-hidden="true"><TeamAvatar name={event.attackerName} src={attacker?.logo_path} size="small" /></span>
+          <span className="event-team-name">{event.attackerName}</span>
+        </Link>{" "}
+        {t("events.capturedFrom")}{" "}
+        <Link className="event-team" to={`/team/${event.victimId}`}>
+          <span aria-hidden="true"><TeamAvatar name={event.victimName} src={victim?.logo_path} size="small" /></span>
+          <span className="event-team-name">{event.victimName}</span>
+        </Link>{" "}
+        {t("events.onService")}{" "}
+        <strong>{event.taskName}</strong>
+        {delta !== undefined && (
+          <>
+            {" "}{t("events.earned")}{" "}
+            <span className={delta < 0 ? "event-points event-points--negative" : "event-points"}>
+              {delta >= 0 ? "+" : ""}{formatScore(delta)} FP
+            </span>
+          </>
+        )}
+      </p>
     </li>
   );
 }
@@ -149,10 +144,7 @@ export function RecentEvents({ teamId }: { teamId?: string }) {
       className={`recent-events ${teamId === undefined ? "recent-events--strip" : "recent-events--team team-panel"}`}
     >
       <div className="section-heading">
-        <h2>
-          <BrandIcon name="activity" plain />
-          {teamId === undefined ? t("events.latest") : t("events.team")}
-        </h2>
+        <h2>{teamId === undefined ? t("events.latest") : t("events.team")}</h2>
         <Link to="/live" className="text-link">
           {t("events.all")} <ArrowUpRight size={15} />
         </Link>

@@ -1,16 +1,13 @@
 import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import { PageHero } from "@/shared/ui/brand/PageHero";
-import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import { AppShell } from "@/shared/ui/layout/AppShell";
-import { ArrowUpRight, Search } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getLocale } from "@/shared/i18n";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import "./TeamsPage.css";
 
@@ -29,7 +26,6 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
       {podium ? (
         <>
           <div className="team-podium-head">
-            <RankBadge rank={rank} />
             <TeamAvatar name={team.name} src={team.logo_path} />
           </div>
           <div className="team-podium-copy">
@@ -42,7 +38,9 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
         </>
       ) : (
         <>
-          <span className="team-card-place">#{formattedRank}</span>
+          <span className="team-card-place">
+            {t("teams.podiumPlace", { rank: formattedRank })}
+          </span>
           <div className="team-card-top">
             <TeamAvatar name={team.name} src={team.logo_path} />
             <div>
@@ -70,74 +68,24 @@ export function TeamsPage() {
   const { t } = useTranslation("public");
   const leadersRef = useRef<HTMLElement>(null);
   const teams = useScoreboardStore((state) => state.teams) ?? [];
-  const [filter, setFilter] = useState("");
-  const locale = getLocale();
-  const query = filter.trim().toLocaleLowerCase(locale);
-
-  const filtered = teams
-    .map((team, index) => ({ team, rank: index + 1 }))
-    .filter(({ team }) =>
-      `${team.name} ${team.ip}`.toLocaleLowerCase(locale).includes(query),
-    );
-
-  const leaders = filtered.filter(({ rank }) => rank <= 3);
-  const others = filtered.filter(({ rank }) => rank > 3);
+  const ranked = teams.map((team, index) => ({ team, rank: index + 1 }));
+  const leaders = ranked.slice(0, 3);
+  const others = ranked.slice(3);
   useViewportAnimations(leadersRef, leaders.length > 0);
 
   return (
     <AppShell>
       <div className="teams-page">
-        <PageHero
-          compact
-          title={t("teams.title")}
-          subtitle={t("teams.subtitle")}
-        >
-          <div className="hero-metadata">
-            <span>
-              <BrandIcon name="team" />
-              {teams.length
-                ? t("teams.participantCount", {
-                    count: teams.length,
-                    formattedCount: new Intl.NumberFormat(locale).format(
-                      teams.length,
-                    ),
-                  })
-                : t("teams.participantCountEmpty")}
-            </span>
-            <span>{t("teams.profilesAndResults")}</span>
-          </div>
-        </PageHero>
-
-        <div className="events-toolbar">
-          <label className="search-field">
-            <Search size={17} />
-            <input
-              type="search"
-              aria-label={t("teams.searchLabel")}
-              placeholder={t("teams.searchPlaceholder")}
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-            />
-          </label>
-          <p className="events-caption">{t("teams.currentRankingOrder")}</p>
-        </div>
-
-        {filtered.length ? (
+        <h1 className="sr-only">{t("teams.leaders")}</h1>
+        {ranked.length ? (
           <>
             {leaders.length > 0 && (
               <section
                 ref={leadersRef}
                 data-viewport-animation="running"
                 className="teams-leaders"
-                aria-labelledby="teams-leaders-title"
+                aria-label={t("teams.leaders")}
               >
-                <div className="section-heading leaders-heading">
-                  <h2 id="teams-leaders-title">
-                    <BrandIcon name="podium" plain />
-                    {t("teams.leaders")}
-                  </h2>
-                  <span className="leaders-caption">{t("teams.topThree")}</span>
-                </div>
                 <div className="teams-podium">
                   {leaders.map(({ team, rank }) => (
                     <TeamCard key={team.id} team={team} rank={rank} />
@@ -153,10 +101,7 @@ export function TeamsPage() {
               >
                 {leaders.length > 0 && (
                   <div className="section-heading">
-                    <h2>
-                      <BrandIcon name="team" plain />
-                      {t("teams.otherTeams")}
-                    </h2>
+                    <h2>{t("teams.otherTeams")}</h2>
                   </div>
                 )}
                 <div className="teams-grid">
@@ -169,15 +114,8 @@ export function TeamsPage() {
           </>
         ) : (
           <div className="empty-state mt-5">
-            <BrandIcon name="team" />
-            <h2>
-              {query ? t("teams.notFoundTitle") : t("teams.waitingTitle")}
-            </h2>
-            <p>
-              {query
-                ? t("teams.notFoundDescription")
-                : t("teams.waitingDescription")}
-            </p>
+            <h2>{t("teams.waitingTitle")}</h2>
+            <p>{t("teams.waitingDescription")}</p>
           </div>
         )}
       </div>

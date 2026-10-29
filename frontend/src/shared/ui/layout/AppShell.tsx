@@ -1,16 +1,13 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
-import SideRays from "@/components/SideRays";
 import { usePageEntrance } from "@/shared/lib/usePageEntrance";
 import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
 import { LanguageSwitch } from "./LanguageSwitch";
 
-export function AppShell({ children, headerActions }: { children: ReactNode; headerActions?: ReactNode }) {
+export function AppShell({ children, headerActions, showNavigation = true }: { children: ReactNode; headerActions?: ReactNode; showNavigation?: boolean }) {
   const { t } = useTranslation("shell");
   const location = useLocation();
   const mainRef = usePageEntrance(location.pathname, location.key);
@@ -24,43 +21,8 @@ export function AppShell({ children, headerActions }: { children: ReactNode; hea
   const phase = useScoreboardStore((state) => state.phase);
   const resultsPending = useScoreboardStore((state) => state.resultsPending);
 
-  const [motion, setMotion] = useState(() => {
-    try {
-      return localStorage.getItem("cf-motion") !== "off";
-    } catch {
-      return true;
-    }
-  });
-
-  useEffect(() => {
-    document.documentElement.dataset.motion = motion ? "on" : "off";
-
-    try {
-      localStorage.setItem("cf-motion", motion ? "on" : "off");
-    } catch {
-      /* Storage may be unavailable in private browsers. */
-    }
-  }, [motion]);
-
   return (
     <div className="brand-app">
-      <div className="brand-background" aria-hidden="true">
-        <SideRays
-          enabled={motion}
-          origin="bottom-right"
-          rayColor1={brand.primary}
-          rayColor2={brand.accent}
-          speed={2.5}
-          intensity={3}
-          spread={2.2}
-          tilt={-10}
-          saturation={1.05}
-          blend={0.4}
-          falloff={1.35}
-          opacity={0.35}
-        />
-      </div>
-
       <a href="#main-content" className="skip-link">
         {t("skip")}
       </a>
@@ -76,22 +38,15 @@ export function AppShell({ children, headerActions }: { children: ReactNode; hea
             <span>{brand.name}</span>
           </Link>
 
-          <nav className="main-nav" aria-label={t("navigation")}>
-            <NavLink to="/" end>
-              <BrandIcon name="podium" plain />
-              {t("scoreboard")}
-            </NavLink>
-            <NavLink to="/live">
-              <BrandIcon name="activity" plain />
-              {t("events")}
-            </NavLink>
-            <NavLink to="/teams">
-              <BrandIcon name="team" plain />
-              {t("teams")}
-            </NavLink>
-          </nav>
+          {showNavigation && (
+            <nav className="main-nav" aria-label={t("navigation")}>
+              <NavLink to="/live">{t("events")}</NavLink>
+              <NavLink to="/" end className="main-nav__scoreboard">{t("scoreboard")}</NavLink>
+              <NavLink to="/teams">{t("teams")}</NavLink>
+            </nav>
+          )}
 
-          <div className="header-tools">
+          <div className={`header-tools${showNavigation ? "" : " header-tools--admin"}`}>
             <div className="header-status">
               {teams && !error && round > 0 && (
                 <span className="header-round">{t("round", { round })}</span>
@@ -133,26 +88,6 @@ export function AppShell({ children, headerActions }: { children: ReactNode; hea
         {children}
       </main>
 
-      <footer className="site-footer">
-        <div>
-          <BrandLogo />
-          <span>
-            {brand.name}<span className="footer-divider">/</span>Attack-Defense
-          </span>
-        </div>
-
-        <div className="footer-actions">
-          <button
-            type="button"
-            onClick={() => setMotion(!motion)}
-            aria-pressed={motion}
-            title={t("animationsHint")}
-          >
-            <Sparkles size={14} />
-            {t("animations", { state: motion ? t("on") : t("off") })}
-          </button>
-        </div>
-      </footer>
     </div>
   );
 }

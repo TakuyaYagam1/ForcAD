@@ -2,17 +2,6 @@ import { useRef, type ReactNode } from "react";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import "./PageHero.css";
 
-export function HeroArt() {
-  return (
-    <div className="hero-art" aria-hidden="true">
-      <span className="hero-orbit hero-orbit--outer" />
-      <span className="hero-orbit hero-orbit--inner" />
-      <span className="hero-signal hero-signal--one" />
-      <span className="hero-signal hero-signal--two" />
-    </div>
-  );
-}
-
 export function PageHero({
   title,
   eyebrow,
@@ -42,7 +31,6 @@ export function PageHero({
         {children}
       </div>
 
-      <HeroArt />
     </section>
   );
 }

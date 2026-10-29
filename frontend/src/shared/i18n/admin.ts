@@ -19,6 +19,7 @@ export const adminRu = {
   },
   common: {
     organizerPanel: "Панель организатора",
+    backToDashboard: "К управлению соревнованием",
     checkingSession: "Проверяем админ-сессию...",
     loading: "Загружаем...",
     loadingData: "Загружаем данные...",
@@ -40,6 +41,17 @@ export const adminRu = {
     addService: "Добавить сервис",
     logout: "Выйти",
     loggingOut: "Выходим...",
+  },
+  checkerStatus: {
+    title: "Чекеры",
+    basis: "По ответам проверок",
+    waiting: "Ожидаем ответы",
+    reporting: "Ответы поступают",
+    failed: "CHECK FAILED",
+    stalled: "Нет новых ответов",
+    reports: "Ответы: {{reported}}/{{total}}",
+    failedCount: "ошибок: {{count}}",
+    noServices: "Сервисы еще не загружены",
   },
   entities: {
     teamsTitle: "Все команды",
@@ -212,6 +224,7 @@ export const adminEn: typeof adminRu = {
   },
   common: {
     organizerPanel: "Organizer panel",
+    backToDashboard: "Back to competition management",
     checkingSession: "Checking admin session...",
     loading: "Loading...",
     loadingData: "Loading data...",
@@ -233,6 +246,17 @@ export const adminEn: typeof adminRu = {
     addService: "Add service",
     logout: "Sign out",
     loggingOut: "Signing out...",
+  },
+  checkerStatus: {
+    title: "Checkers",
+    basis: "Based on check results",
+    waiting: "Waiting for results",
+    reporting: "Results arriving",
+    failed: "CHECK FAILED",
+    stalled: "No new results",
+    reports: "Results: {{reported}}/{{total}}",
+    failedCount: "failed: {{count}}",
+    noServices: "Services have not loaded yet",
   },
   entities: {
     teamsTitle: "All teams",

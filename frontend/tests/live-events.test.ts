@@ -4,6 +4,7 @@ import {
   mergeLiveEvents,
   notificationToLiveEvent,
   publicEventToLiveEvent,
+  resolveEventNames,
 } from "../src/entities/live-scoreboard/model/events.ts";
 
 test("feed hydration replaces a matching live notification with its durable event", () => {
@@ -36,6 +37,30 @@ test("feed hydration replaces a matching live notification with its durable even
   assert.equal(events.length, 1);
   assert.equal(events[0]?.attackerName, "Red team");
   assert.equal(events[0]?.id, notification.id);
+});
+
+test("live notification uses names from an already loaded scoreboard", () => {
+  const notification = notificationToLiveEvent({
+    event_id: "flag_stolen:known:team",
+    attacker_id: "attacker",
+    victim_id: "victim",
+    task_id: "task",
+    attacker_delta: 12.5,
+  });
+  const named = resolveEventNames(
+    notification,
+    [
+      { id: "attacker", name: "Red team" },
+      { id: "victim", name: "Blue team" },
+    ],
+    [{ id: "task", name: "Web" }],
+  );
+
+  assert.equal(named.kind, "flag_stolen");
+  if (named.kind === "admin_message") return;
+  assert.equal(named.attackerName, "Red team");
+  assert.equal(named.victimName, "Blue team");
+  assert.equal(named.taskName, "Web");
 });
 
 test("old flag events without a stored delta keep the delta absent", () => {

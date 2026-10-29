@@ -5,6 +5,7 @@ import {
   mergeLiveEvents,
   notificationToLiveEvent,
   publicEventToLiveEvent,
+  resolveEventNames,
   type FlagNotification,
   type LiveEvent,
   type PublicEventRecord,
@@ -42,9 +43,13 @@ export const useLiveScoreboardStore = create<LiveScoreboardState>()(
     },
 
     pushNotification: (payload) => {
-      const { generation: currentGeneration } = useScoreboardStore.getState();
+      const {
+        generation: currentGeneration,
+        teams,
+        tasks,
+      } = useScoreboardStore.getState();
       if ((payload.generation ?? currentGeneration) !== currentGeneration) return;
-      const event = notificationToLiveEvent(payload);
+      const event = resolveEventNames(notificationToLiveEvent(payload), teams, tasks);
       set((state) => ({
         events: mergeLiveEvents(state.events, [event]),
         error: null,
@@ -61,20 +66,8 @@ useScoreboardStore.subscribe((state, previous) => {
   }
   if (state.teams === previous.teams && state.tasks === previous.tasks) return;
   useLiveScoreboardStore.setState((current) => ({
-    events: current.events.map((event) => {
-      if (event.kind === "admin_message") return event;
-      return {
-        ...event,
-        attackerName:
-          state.teams?.find((team) => team.id === event.attackerId)?.name ??
-          event.attackerName,
-        victimName:
-          state.teams?.find((team) => team.id === event.victimId)?.name ??
-          event.victimName,
-        taskName:
-          state.tasks?.find((task) => task.id === event.taskId)?.name ??
-          event.taskName,
-      };
-    }),
+    events: current.events.map((event) =>
+      resolveEventNames(event, state.teams, state.tasks),
+    ),
   }));
 });
