@@ -10,8 +10,8 @@ import tomllib
 from check import COMPOSE, inventory
 
 
-def collect(rounds, team_count, extra_checks):
-    jobs_per_round = team_count * (1 + extra_checks)
+def collect(rounds, team_count, task_count, extra_checks):
+    jobs_per_round = team_count * task_count * (1 + extra_checks)
     sql = f"""
     WITH complete AS (
         SELECT r.id, r.round, r.round_start
@@ -57,6 +57,7 @@ def collect(rounds, team_count, extra_checks):
         )
     return {
         "teams": team_count,
+        "tasks": task_count,
         "extra_checks": extra_checks,
         "rounds": rounds,
         "jobs": len(samples),
@@ -80,7 +81,10 @@ def main():
         parser.error("Use 1..20 rounds")
     settings = tomllib.loads((Path(__file__).with_name("settings.toml")).read_text())
     report = collect(
-        args.rounds, len(inventory()), settings["game"].get("extra_checks", 0)
+        args.rounds,
+        len(inventory()),
+        len(settings["tasks"]["entries"]),
+        settings["game"].get("extra_checks", 0),
     )
     output = Path(__file__).resolve().parents[2] / "config/runtime/demo/timing.json"
     output.write_text(json.dumps(report, indent=2) + "\n")

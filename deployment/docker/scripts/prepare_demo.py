@@ -218,6 +218,12 @@ def main():
     grafana = runtime / "demo.env"
     if not grafana.exists():
         grafana.write_text("GRAFANA_ADMIN_PASSWORD=" + secrets.token_hex(24) + "\n")
+    grafana_settings = grafana.read_text()
+    if not any(line.startswith("GRAFANA_CHECKER_DB_PASSWORD=") for line in grafana_settings.splitlines()):
+        separator = "" if grafana_settings.endswith("\n") else "\n"
+        with grafana.open("a") as settings:
+            settings.write(separator + "GRAFANA_CHECKER_DB_PASSWORD=" + secrets.token_hex(24) + "\n")
+    grafana.chmod(0o600)
     for index, team in enumerate(teams):
         (runtime / f"demo-team{index + 1}.env").write_text(
             f"DEMO_TOKEN={team['token']}\nDEMO_PEER={teams[(index + 1) % len(teams)]['ip']}\n"

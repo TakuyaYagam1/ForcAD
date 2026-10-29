@@ -1,9 +1,13 @@
 # Local network demo
 
-The Docker Compose demo runs five notes services, flag farms, participant and
+The Docker Compose demo runs ten notes services, flag farms, participant and
 admin WireGuard, generated router rules, Zeek, ForcAD, Prometheus, and Grafana.
 Published ports bind to localhost. Demo services intentionally expose
-`/demo/flags` to their farms. The diagram shows two of the five team segments.
+`/demo/flags` to their farms. The diagram shows two of the ten team segments.
+
+The board has five service columns. Only `example_service` writes flags. The
+other four services return fixed CORRUPT, CHECK FAILED, MUMBLE, and DOWN
+statuses so every board color is visible.
 
 ```mermaid
 flowchart LR
@@ -44,6 +48,10 @@ runtime files under `config/runtime/demo/`, rebuilds the stack, and recreates
 its containers while retaining volumes. The settings use the same schema as
 the infrastructure renderer.
 
+The board binds to `127.0.0.1:8080` by default. Set
+`FORCAD_DEMO_HTTP_PORT` in `config/runtime/demo.env` when that host port is
+occupied, then use the selected port in the board URL.
+
 The demo supports 2 to 32 teams. Append entries to `teams.entries` to add teams
 through the admin API and extend the VPN without rotating existing keys.
 Existing teams, scores, and tokens stay in place. Reordering or removing teams,
@@ -53,7 +61,7 @@ Use `demo.sh` for this stack so every Compose overlay remains enabled.
 | Service | URL | Credentials |
 | --- | --- | --- |
 | Board and admin | [localhost:8080](http://localhost:8080/) / [admin login](http://localhost:8080/admin/login) | `config/runtime/admin.env` |
-| Grafana dashboards | [Game traffic](http://localhost:3000/d/forcad-game-traffic) / [board traffic](http://localhost:3000/d/forcad-traffic) | `admin`; password in `config/runtime/demo.env` |
+| Grafana dashboards | [Checker](http://localhost:3000/d/forcad-checker) / [Game traffic](http://localhost:3000/d/forcad-game-traffic) / [board traffic](http://localhost:3000/d/forcad-traffic) | `admin`; password in `config/runtime/demo.env` |
 | Prometheus targets | [localhost:9090/targets](http://localhost:9090/targets) | None |
 
 Start practice in the board admin panel. Allow two rounds for checker results
@@ -87,19 +95,22 @@ test resistance to service-availability manipulation.
 
 ## Availability experiment
 
-The demo sets `[game] extra_checks = 2` in `settings.toml`. In classic mode,
-these are two additional CHECK-only jobs per team, task, and round. They run at
-random times outside the main workflow and do not add flag writes. All three
-jobs count toward the round result, so a later UP cannot clear an earlier
-failure.
+The demo sets `[game] extra_checks = 0` in `settings.toml` so the board shows
+each main CHECK result as soon as it completes. To exercise the availability
+experiment, set this value to `2` before creating a fresh demo. In classic
+mode, this schedules two additional CHECK-only jobs per team, task, and round.
+They run at random times outside the main workflow and do not add flag writes.
+All three jobs count toward the round result, so a later UP cannot clear an
+earlier failure. The board receives the aggregate result after all three jobs
+finish.
 
 Normal installations default to `0`, so extra checks are opt-in. They add
-checker load and make the round SLA stricter. The five-team demo does not show
+checker load and make the round SLA stricter. The ten-team demo does not show
 that `2` is a suitable general default; test real checkers at the expected
 team and service count before enabling them. See
 [configuration](../../docs/CONFIGURATION.md#game) for limits and setup.
 
-With a running practice session, 60-second rounds, and `extra_checks = 2`, run:
+With a fresh practice session, 60-second rounds, and `extra_checks = 2`, run:
 
 ```sh
 api/.venv/bin/python deployment/demo/availability.py healthy --rounds 3
@@ -109,7 +120,7 @@ api/.venv/bin/python deployment/demo/availability.py pause
 
 `healthy` checks that every team passes. `fault` blocks team 3's notes port for
 22 seconds after each 15-second available interval. The fault schedule does
-not read checker timing; the other four teams act as controls. The script
+not read checker timing; the other nine teams act as controls. The script
 removes its temporary nftables table on exit. `pause` pauses through the admin
 API, restarts the ticker and worker, resumes the game, and checks that pending
 job IDs and times survive the restart and that the jobs complete. Reports are
@@ -167,7 +178,7 @@ later starts use the persistent volumes.
 
 - Generated host rules define router and VPN behavior. Internal Docker bridges
   model VLANs, but the demo does not test 802.1Q tags. Interfaces are named
-  `eth3.101` through `eth3.105`. VPN transit uses `/29` to accommodate the
+  `eth3.101` through `eth3.110`. VPN transit uses `/29` to accommodate the
   Docker bridge gateway.
 - Nginx, one worker, and Prometheus share the ForcAD namespace. Setup routes
   traffic through the router and redirects TCP/80 to Nginx on port 8080. Worker

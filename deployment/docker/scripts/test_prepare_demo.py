@@ -56,16 +56,20 @@ class PrepareDemoTests(unittest.TestCase):
         self.assertEqual(
             [t["name"] for t in actual["teams"]], [t["name"] for t in expected["teams"]]
         )
-        self.assertEqual(len({t["token"] for t in actual["teams"]}), 5)
+        self.assertEqual(len({t["token"] for t in actual["teams"]}), 10)
+        self.assertEqual(
+            [(task["puts"], task["gets"]) for task in actual["tasks"]],
+            [(2, 2), (0, 0), (0, 0), (0, 0), (0, 0)],
+        )
         compose = yaml.safe_load((self.output / "compose.yml").read_text())
-        for number in range(1, 6):
+        for number in range(1, 11):
             self.assertIn(f"demo-team{number}", compose["networks"])
             self.assertIn(f"demo-farm{number}", compose["services"])
             self.assertTrue((self.output / f"players/team{number}.conf").is_file())
-        self.assertIn("demo-team1", compose["services"]["demo-farm5"]["depends_on"])
+        self.assertIn("demo-team1", compose["services"]["demo-farm10"]["depends_on"])
         self.assertIn(
             "DEMO_PEER=10.183.101.2",
-            (self.root / "config/runtime/demo-team5.env").read_text(),
+            (self.root / "config/runtime/demo-team10.env").read_text(),
         )
 
     def test_existing_database_rejects_game_config_drift(self):

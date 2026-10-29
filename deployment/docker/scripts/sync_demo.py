@@ -87,6 +87,20 @@ def sync_teams(request, configured, output):
 
 def main():
     root = Path(sys.argv[1])
+    port = os.environ.get("FORCAD_DEMO_HTTP_PORT")
+    if port is None:
+        demo_env = root / "config/runtime/demo.env"
+        port = next(
+            (
+                line.split("=", 1)[1]
+                for line in demo_env.read_text().splitlines()
+                if line.startswith("FORCAD_DEMO_HTTP_PORT=")
+            ),
+            "8080",
+        )
+    if not port.isdecimal() or not 1 <= int(port) <= 65535:
+        raise SystemExit("FORCAD_DEMO_HTTP_PORT must be a valid TCP port")
+    origin = f"http://localhost:{port}"
     configured = yaml.safe_load((root / "config/config.yml").read_text())["teams"]
     credentials = dict(
         line.split("=", 1)
@@ -99,12 +113,12 @@ def main():
 
     def request(path, data=None, method="GET"):
         req = urllib.request.Request(
-            "http://localhost:8080" + path,
+            origin + path,
             data=json.dumps(data).encode() if data is not None else None,
             method=method,
             headers={
                 "Content-Type": "application/json",
-                "Origin": "http://localhost:8080",
+                "Origin": origin,
             },
         )
         try:

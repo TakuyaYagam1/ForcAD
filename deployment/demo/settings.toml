@@ -61,6 +61,31 @@ name = "CUT"
 logo = ""
 highlighted = false
 
+[[teams.entries]]
+name = "B4"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "BunkyoWesterns"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "0xFUN"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "r3kapig"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "FR13NDS"
+logo = ""
+highlighted = false
+
 [env]
 public_host = "10.183.2.10"
 public_scheme = "http"
@@ -75,8 +100,8 @@ game_metrics = true
 [game]
 mode = "classic"
 round_time = 60
-# Experimental extra CHECKs per round, classic only; 0 disables them.
-extra_checks = 2
+# Show the main CHECK result as soon as it completes.
+extra_checks = 0
 rounds = 300
 start_time = "2027-01-01 12:00:00"
 timezone = "Europe/Moscow"
@@ -99,6 +124,54 @@ checker_type = "hackerdom"
 puts = 2
 gets = 2
 places = 2
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+[[tasks.entries]]
+name = "corrupt_demo"
+checker = "examples/demo/corrupt.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 0
+gets = 0
+places = 1
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+[[tasks.entries]]
+name = "check_failed_demo"
+checker = "examples/demo/check_failed.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 0
+gets = 0
+places = 1
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+[[tasks.entries]]
+name = "mumble_demo"
+checker = "examples/demo/mumble.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 0
+gets = 0
+places = 1
+default_score = 2500
+env_path = "/opt/checkers/bin"
+get_period = 60
+
+[[tasks.entries]]
+name = "down_demo"
+checker = "examples/demo/down.py"
+checker_timeout = 10
+checker_type = "hackerdom"
+puts = 0
+gets = 0
+places = 1
 default_score = 2500
 env_path = "/opt/checkers/bin"
 get_period = 60

@@ -90,7 +90,7 @@ services:
     <<: *network
     command: [forcad]
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${FORCAD_DEMO_HTTP_PORT:-8080}:8080"
       - "127.0.0.1:9090:9090"
     networks:
       default:
