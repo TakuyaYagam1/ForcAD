@@ -107,7 +107,7 @@ services:
     mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
     pids_limit: ${FORCAD_WORKER_PIDS:-2048}
     deploy:
-      replicas: 2
+      replicas: ${FORCAD_WORKER_REPLICAS:-2}
 
   ticker:
     <<: *app-service

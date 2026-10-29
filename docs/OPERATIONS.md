@@ -58,7 +58,7 @@ Use `--rounds 0` to remove the limit. The change preserves game state and does
 not resume or reset a session. Editing `game.rounds` in YAML affects initial
 game setup only.
 
-Nginx allows 50 REST API requests per second per source IP, with a burst of 60.
+Nginx allows 150 REST API requests per second per source IP, with a burst of 60.
 When that budget is exhausted, it returns `429` with `Retry-After: 2` (seconds).
 The WebSocket endpoint and `/flags` have separate admission rules; this REST
 limit does not apply to them. Configure trusted proxies correctly so the limit
@@ -70,6 +70,13 @@ ticker. Scale services with Compose, for example:
 ```bash
 ./control.sh compose up -d --scale receiver=3 --scale worker=3
 ```
+
+Set `FORCAD_WORKER_REPLICAS=3` before `start` to keep three worker replicas as
+the Compose default. Workers consume jobs from one queue; a second worker does
+not repeat the same checker action or vote on its result. Increase replicas
+when unfinished jobs rise while action slots are busy, then watch worker CPU,
+memory, timeouts and per-service result rates in the Checker dashboard. The
+local network demo has one worker because its containers share a metrics port.
 
 `runtime-capacity` runs inside the deployed API container and reads its settings.
 Pass current replica counts because it does not discover them. Compose shares the configured per-role pool limits with every process. If you
