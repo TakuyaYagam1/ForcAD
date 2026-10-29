@@ -435,6 +435,7 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 				if index >= count {
 					return
 				}
+				//nolint:gosec // The modulo result plus one is within positive int32 Places.
 				place := int32((firstPlace+int64(index))%int64(payload.Task.Places) + 1)
 				flag, err := generateFlag(payload.Team.ID, payload.Task, job.Round, place)
 				if err != nil {
