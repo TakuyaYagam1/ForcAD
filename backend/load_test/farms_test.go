@@ -57,14 +57,16 @@ func (c *catalog) wait(ctx context.Context, d *deployment) error {
 		if err != nil {
 			return err
 		}
-		if count == teamCount*3 && len(c.flags) >= teamCount*3 {
+		if count == int64(teamCount*3) && len(c.flags) >= teamCount*3 {
 			return nil
 		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-deadline.C:
-			return fmt.Errorf("load.catalog.wait - all 60 checker workflows must reach UP")
+			statuses, statusErr := d.query(ctx, `SELECT status, count(*) FROM TeamTasks GROUP BY status ORDER BY status`)
+			actions, actionErr := d.query(ctx, `SELECT action, status, timed_out, count(*) FROM CheckerActionLogs GROUP BY action, status, timed_out ORDER BY action, status, timed_out`)
+			return fmt.Errorf("load.catalog.wait - all %d checker workflows must reach UP: cells=%q actions=%q details=%v", teamCount*3, strings.TrimSpace(string(statuses)), strings.TrimSpace(string(actions)), errors.Join(statusErr, actionErr))
 		case <-tick.C:
 		}
 	}
@@ -97,8 +99,8 @@ func (f *farm) target(target *vegeta.Target) error {
 	defer f.mu.Unlock()
 	n := f.next
 	f.next++
-	team := int(n%teamCount) + 1
-	request := f.batch(team, n/teamCount)
+	team := int(n%uint64(teamCount)) + 1
+	request := f.batch(team, n/uint64(teamCount))
 	body, err := json.Marshal(request.values)
 	if err != nil {
 		return fmt.Errorf("load.farm.target - encode flags: %w", err)

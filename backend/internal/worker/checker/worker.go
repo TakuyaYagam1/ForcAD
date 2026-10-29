@@ -405,6 +405,11 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 	if count <= 0 {
 		return nil, nil
 	}
+	firstPlace, err := randomBelow(int64(payload.Task.Places))
+	if err != nil {
+		return []verdict{{action: processchecker.ActionPut, status: processchecker.StatusCheckFailed,
+			public: "PUT failed", private: "PUT setup failed: " + err.Error()}}, nil
+	}
 	putCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(context.Canceled)
 	results := make([]verdict, count)
@@ -430,7 +435,8 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 				if index >= count {
 					return
 				}
-				flag, err := generateFlag(payload.Team.ID, payload.Task, job.Round)
+				place := int32((firstPlace+int64(index))%int64(payload.Task.Places) + 1)
+				flag, err := generateFlag(payload.Team.ID, payload.Task, job.Round, place)
 				if err != nil {
 					results[index] = verdict{action: processchecker.ActionPut, status: processchecker.StatusCheckFailed, public: "PUT failed", private: "PUT setup failed: " + err.Error()}
 					continue
@@ -744,10 +750,10 @@ func validWorkflowActionCount(workflow domain.JobAction, task domain.Task) bool 
 	return count <= maxWorkflowActions
 }
 
-func generateFlag(teamID uuid.UUID, task domain.Task, round int32) (domain.Flag, error) {
+func generateFlag(teamID uuid.UUID, task domain.Task, round int32, place int32) (domain.Flag, error) {
 	const location = "checker.generateFlag"
-	if task.Name == "" || task.Places <= 0 {
-		return domain.Flag{}, fmt.Errorf("%s - task name and positive place count are required for PUT", location)
+	if task.Name == "" || place < 1 || place > task.Places {
+		return domain.Flag{}, fmt.Errorf("%s - task name and valid place are required for PUT", location)
 	}
 	r, _ := utf8.DecodeRuneInString(task.Name)
 	prefix := unicode.ToUpper(r)
@@ -771,16 +777,9 @@ func generateFlag(teamID uuid.UUID, task domain.Task, round int32) (domain.Flag,
 	if _, err := io.ReadFull(cryptorand.Reader, seed); err != nil {
 		return domain.Flag{}, fmt.Errorf("%s - generate private flag seed: %w", location, err)
 	}
-	place, err := randomBelow(int64(task.Places))
-	if err != nil {
-		return domain.Flag{}, fmt.Errorf("%s - choose vulnerability place: %w", location, err)
-	}
-	// place is less than the positive int32 task.Places bound.
-	//nolint:gosec // The selected one-based place cannot exceed task.Places.
-	vulnerability := int32(place + 1)
 	return domain.Flag{
 		Value: randomFlag.String(), TeamID: teamID, TaskID: task.ID, Round: round,
-		PrivateData: hex.EncodeToString(seed), VulnerabilityID: &vulnerability,
+		PrivateData: hex.EncodeToString(seed), VulnerabilityID: &place,
 	}, nil
 }
 

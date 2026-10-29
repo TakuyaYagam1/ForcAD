@@ -47,6 +47,16 @@ if (( run_load )); then
         default|local) ;;
         *) echo 'LOAD_CONTAINER_LOGGING must be default or local.' >&2; exit 2 ;;
     esac
+    worker_replicas="${LOAD_WORKER_REPLICAS:-2}"
+    if [[ ! "$worker_replicas" =~ ^([1-9]|1[0-9]|20)$ ]]; then
+        echo 'LOAD_WORKER_REPLICAS must be an integer between 1 and 20.' >&2
+        exit 2
+    fi
+    team_count="${LOAD_TEAM_COUNT:-20}"
+    if [[ ! "$team_count" =~ ^([2-9]|1[0-9]|2[0-8])$ ]]; then
+        echo 'LOAD_TEAM_COUNT must be an integer between 2 and 28.' >&2
+        exit 2
+    fi
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
@@ -129,6 +139,7 @@ unset FORCAD_NGINX_BIND PUBLIC_ORIGIN TRUSTED_PROXY_CIDRS CHECKER_JOB_GRACE \
     FORCAD_SERVICE_MEMORY_RESERVATION FORCAD_SERVICE_PIDS \
     FORCAD_RECEIVER_MEMORY FORCAD_RECEIVER_MEMORY_RESERVATION \
     FORCAD_WORKER_MEMORY FORCAD_WORKER_MEMORY_RESERVATION FORCAD_WORKER_PIDS PUBLIC_SCHEME \
+    FORCAD_WORKER_REPLICAS \
     VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT \
     FORCAD_POSTGRES_IMAGE
 
@@ -193,13 +204,21 @@ export FORCAD_E2E_GID="$e2e_gid"
 
 compose_started=1
 if ! "${compose[@]}" up -d --build --wait --wait-timeout 180 \
-    --scale "api=$api_replicas" --scale receiver=2 --scale worker=2; then
+    --scale "api=$api_replicas" --scale receiver=2 --scale "worker=${worker_replicas:-2}"; then
     "${compose[@]}" ps -a >&2
     for container in $("${compose[@]}" ps -aq pgbouncer initializer); do
         docker inspect "$container" --format '{{.Name}} {{.State.Error}} {{if .State.Health}}{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}{{end}}' >&2
         docker logs --tail 30 "$container" >&2
     done
     exit 1
+fi
+if (( run_load )); then
+    running_workers="$("${compose[@]}" ps --status running -q worker | wc -l)"
+    if (( running_workers != worker_replicas )); then
+        echo "Expected $worker_replicas running workers, found $running_workers." >&2
+        exit 1
+    fi
+    echo "Healthy worker replicas: $running_workers"
 fi
 
 "${compose[@]}" exec -T worker python - < "$repo_root/backend/integration_test/scripts/check_worker.py"

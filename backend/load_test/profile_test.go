@@ -8,12 +8,14 @@ import (
 )
 
 const (
-	teamCount          = 20
+	defaultTeamCount   = 20
 	batchSize          = 100
 	requestTimeout     = 3 * time.Second
 	latencyBudget      = time.Second
 	generatorLagBudget = 100 * time.Millisecond
 )
+
+var teamCount = defaultTeamCount
 
 type stage struct {
 	Name     string
@@ -46,17 +48,21 @@ func loadProfile() (string, []stage, error) {
 	if err != nil {
 		return name, nil, err
 	}
-	stages := []stage{{Name: "warmup", Duration: warmup, ReadRPS: 50, FlagRPS: 20}}
+	warmupFlagRPS, steadyFlagRPS, recoveryFlagRPS := 20, 40, 20
+	if name == "checker" {
+		warmupFlagRPS, steadyFlagRPS, recoveryFlagRPS = 2, 2, 2
+	}
+	stages := []stage{{Name: "warmup", Duration: warmup, ReadRPS: 50, FlagRPS: warmupFlagRPS}}
 	appendStage := func(label string, duration time.Duration, rps int, overload bool, path string) {
-		stages = append(stages, stage{Name: label, Duration: duration, ReadRPS: rps, FlagRPS: 40, Overload: overload, Path: path})
+		stages = append(stages, stage{Name: label, Duration: duration, ReadRPS: rps, FlagRPS: steadyFlagRPS, Overload: overload, Path: path})
 	}
 	switch name {
-	case "smoke", "load", "soak":
+	case "checker", "smoke", "load", "soak":
 		checkpoint, checkpointErr := durationSetting("LOAD_CHECKPOINT_INTERVAL", 5*time.Minute)
 		if checkpointErr != nil {
 			return name, nil, checkpointErr
 		}
-		duration := map[string]time.Duration{"smoke": 30 * time.Second, "load": 15 * time.Minute, "soak": 4 * time.Hour}[name]
+		duration := map[string]time.Duration{"checker": 90 * time.Second, "smoke": 30 * time.Second, "load": 15 * time.Minute, "soak": 4 * time.Hour}[name]
 		duration, err = durationSetting("LOAD_DURATION", duration)
 		for part := 1; duration > 0 && err == nil; part++ {
 			chunk := min(duration, checkpoint)
@@ -86,7 +92,7 @@ func loadProfile() (string, []stage, error) {
 	if err != nil {
 		return name, nil, err
 	}
-	stages = append(stages, stage{Name: "recovery", Duration: recovery, ReadRPS: 100, FlagRPS: 20})
+	stages = append(stages, stage{Name: "recovery", Duration: recovery, ReadRPS: 100, FlagRPS: recoveryFlagRPS})
 	var total time.Duration
 	for _, s := range stages {
 		total += s.Duration
@@ -103,9 +109,9 @@ func restRPSSetting(profile string) (int, error) {
 		return 500, nil
 	}
 	switch profile {
-	case "smoke", "load", "soak":
+	case "checker", "smoke", "load", "soak":
 	default:
-		return 0, fmt.Errorf("load.restRPSSetting - LOAD_REST_RPS is only supported by smoke, load and soak profiles")
+		return 0, fmt.Errorf("load.restRPSSetting - LOAD_REST_RPS is only supported by checker, smoke, load and soak profiles")
 	}
 	rps, err := strconv.Atoi(raw)
 	if err != nil || rps < 1 || rps > 100000 {

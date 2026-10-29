@@ -607,6 +607,66 @@ func TestClassicRunsParallelPutsAndSequentialGetsAfterCheck(t *testing.T) {
 	}
 }
 
+func TestPutsCoverEachPlaceBeforeRepeating(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		puts   int32
+		places int32
+		want   int
+	}{
+		{name: "ten places", puts: 10, places: 10, want: 1},
+		{name: "twenty puts", puts: 20, places: 10, want: 2},
+		{name: "one put", puts: 1, places: 10, want: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			task := defaultTask()
+			task.Puts, task.Places = tc.puts, tc.places
+			repo := newFakeRepository(payloadJSON(t, "puts_only", task), domain.JobActionPutsOnly)
+			flags := &fakeFlagStore{}
+			runner := &fakeRunner{fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
+				return success(request.Action), nil
+			}}
+			worker := makeWorker(t, repo, flags, runner, Options{WorkConcurrency: 4})
+			if err := worker.Handle(t.Context(), testJobID); err != nil {
+				t.Fatal(err)
+			}
+			created, _ := flags.snapshot()
+			if len(created) != int(tc.puts) {
+				t.Fatalf("stored %d flags, want %d", len(created), tc.puts)
+			}
+			requests, _ := runner.snapshot()
+			if len(requests) != int(tc.puts) {
+				t.Fatalf("checker received %d PUT requests, want %d", len(requests), tc.puts)
+			}
+			requestPlaces := make(map[string]int)
+			for _, request := range requests {
+				if request.Action != processchecker.ActionPut {
+					t.Fatalf("unexpected checker action %q", request.Action)
+				}
+				requestPlaces[request.Flag] = request.VulnNumber
+			}
+			counts := make(map[int32]int)
+			for _, flag := range created {
+				if flag.VulnerabilityID == nil || *flag.VulnerabilityID < 1 || *flag.VulnerabilityID > tc.places {
+					t.Fatalf("invalid vulnerability ID: %v", flag.VulnerabilityID)
+				}
+				if requestPlaces[flag.Value] != int(*flag.VulnerabilityID) {
+					t.Errorf("checker received place %d for stored place %d", requestPlaces[flag.Value], *flag.VulnerabilityID)
+				}
+				counts[*flag.VulnerabilityID]++
+			}
+			if tc.want == 0 {
+				return
+			}
+			for place := int32(1); place <= tc.places; place++ {
+				if counts[place] != tc.want {
+					t.Errorf("place %d received %d flags, want %d", place, counts[place], tc.want)
+				}
+			}
+		})
+	}
+}
+
 func TestCheckFailureSkipsAllFollowupActions(t *testing.T) {
 	task := defaultTask()
 	task.Puts, task.Gets = 2, 2

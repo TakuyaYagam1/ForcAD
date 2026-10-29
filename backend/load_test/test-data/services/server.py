@@ -39,7 +39,7 @@ class Handler(BaseHTTPRequestHandler):
                 status, response = 200, {"status": "ok"}
             else:
                 team, _, path = self.path.strip("/").partition("/")
-                if not re.fullmatch(r"192\.0\.2\.([1-9]|1[0-9]|20)", team):
+                if not re.fullmatch(r"192\.0\.2\.([1-9]|1[0-9]|2[0-8])", team):
                     raise ValueError("unknown test team")
                 length = int(self.headers.get("Content-Length", "0"))
                 if not 0 <= length <= 4096:

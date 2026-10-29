@@ -11,7 +11,7 @@ func TestRecoveryRunsAfterFailedMeasurement(t *testing.T) {
 	measurementErr := errors.New("flag request timed out")
 	recoveryErr := errors.New("recovery still unavailable")
 	var observed []string
-	err := runStages(t.Context(), []stage{{Name: "baseline"}, {Name: "spike"}, {Name: "recovery"}}, func(s stage) error {
+	err := runStages(t.Context(), []stage{{Name: "baseline"}, {Name: "spike"}, {Name: "recovery"}}, true, func(s stage) error {
 		observed = append(observed, s.Name)
 		if s.Name == "recovery" {
 			return recoveryErr
@@ -29,7 +29,7 @@ func TestRecoveryRunsAfterFailedMeasurement(t *testing.T) {
 func TestSuccessfulRecoveryPreservesBurstFailure(t *testing.T) {
 	burstErr := errors.New("burst response did not match committed flags")
 	var observed []string
-	err := runStages(t.Context(), []stage{{Name: "steady"}, {Name: "recovery"}}, func(s stage) error {
+	err := runStages(t.Context(), []stage{{Name: "steady"}, {Name: "recovery"}}, true, func(s stage) error {
 		observed = append(observed, s.Name)
 		if s.Name == "flag-burst" {
 			return burstErr
@@ -45,7 +45,7 @@ func TestCanceledMeasurementDoesNotStartRecovery(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	calls := 0
-	err := runStages(ctx, []stage{{Name: "steady"}, {Name: "recovery"}}, func(stage) error {
+	err := runStages(ctx, []stage{{Name: "steady"}, {Name: "recovery"}}, true, func(stage) error {
 		calls++
 		cancel()
 		return context.Canceled

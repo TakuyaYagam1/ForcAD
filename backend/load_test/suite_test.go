@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +15,13 @@ import (
 func TestLoad(t *testing.T) {
 	if os.Getenv("FORCAD_LOAD_ROOT") == "" {
 		t.Skip("use make test-load for the isolated production deployment")
+	}
+	if raw := os.Getenv("LOAD_TEAM_COUNT"); raw != "" {
+		count, parseErr := strconv.Atoi(raw)
+		if parseErr != nil || count < 2 || count > 28 {
+			t.Fatal("LOAD_TEAM_COUNT must be an integer between 2 and 28")
+		}
+		teamCount = count
 	}
 	if raceEnabled {
 		t.Fatal("load.TestLoad - performance measurements require a build without -race")
@@ -74,17 +82,17 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		after, countErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
 		if countErr == nil {
 			report.CheckerResults = after - before
-			if runErr == nil && report.CheckerResults < teamCount*3 {
+			if runErr == nil && report.CheckerResults < int64(teamCount*3) {
 				runErr = fmt.Errorf("load.runSuite - checker rounds stopped progressing")
 			}
 		} else {
 			runErr = errors.Join(runErr, countErr)
 		}
-		if report.WebSockets.Failures > 0 || report.WebSockets.Connections < teamCount || report.WebSockets.Messages < teamCount {
+		if report.WebSockets.Failures > 0 || report.WebSockets.Connections < int64(teamCount) || report.WebSockets.Messages < int64(teamCount) {
 			runErr = errors.Join(runErr, fmt.Errorf("load.runSuite - incomplete or failed WebSocket observations: %+v", report.WebSockets))
 		}
 	}()
-	if err := runStages(ctx, stages, func(s stage) error {
+	if err := runStages(ctx, stages, report.Profile != "checker", func(s stage) error {
 		return measure(ctx, d, flags, s, report, directory, logf)
 	}); err != nil {
 		return err
@@ -108,14 +116,14 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 
 // Stop increasing pressure after a failed stage, but still observe recovery.
 // Its success must not erase an earlier availability or correctness failure.
-func runStages(ctx context.Context, stages []stage, measureStage func(stage) error) error {
+func runStages(ctx context.Context, stages []stage, withBurst bool, measureStage func(stage) error) error {
 	var measurementErr error
 	for _, s := range stages[:len(stages)-1] {
 		if measurementErr = measureStage(s); measurementErr != nil {
 			break
 		}
 	}
-	if measurementErr == nil {
+	if measurementErr == nil && withBurst {
 		burst := stage{Name: "flag-burst", Duration: 3 * time.Second, ReadRPS: 100, FlagRPS: 400, Overload: true}
 		measurementErr = measureStage(burst)
 		if !waitContext(ctx, 3*time.Second) {
@@ -156,7 +164,7 @@ func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report
 	integrityErr := f.reconcile(ctx, d, before)
 	result.Committed = f.committed
 	checksAfter, progressErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
-	if progressErr == nil && s.Duration >= 20*time.Second && checksAfter-checksBefore < teamCount*3 {
+	if progressErr == nil && s.Duration >= 20*time.Second && checksAfter-checksBefore < int64(teamCount*3) {
 		progressErr = fmt.Errorf("load.measure - checker rounds stopped progressing during %s", s.Name)
 	}
 	result.IntegrityPassed = integrityErr == nil

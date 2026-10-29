@@ -10,6 +10,21 @@ Python checkers, and 20 WebSocket observers. Flag traffic sends 40 batches per
 second with 100 values per batch, including duplicates. The stack runs two
 receivers and two workers with eight checker slots each.
 
+Set `LOAD_TEAM_COUNT=28 LOAD_WORKER_REPLICAS=20` to check 20 worker replicas
+against 28 synthetic teams. This retains three fixture services and one PUT
+and GET per service by default. It verifies the worker pool and result
+persistence, but does not model the final services.
+Set `LOAD_PUTS=10,12,13` to exercise 35 synthetic PUT actions per team per
+round across the three fixtures, with matching possible place counts. Places
+are covered once before any place is reused. The fixture behavior and latency
+still differ from the final checkers.
+Set `LOAD_ROUND_TIME=60 LOAD_CHECKER_TIMEOUT=20` for a final-style schedule;
+the default fast harness uses a 10-second round and 5-second action timeout.
+Use `LOAD_PROFILE=checker` to run the worker-focused check with two flag batches
+per second and without the flag burst. It checks that all fixture checker
+results stay at 101 across the run. It does not replace the separate flag
+submission capacity test.
+
 ## Run
 
 From the repository root:

@@ -96,8 +96,8 @@ func (d *deployment) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if count != teamCount {
-		return fmt.Errorf("%s - expected exactly 20 synthetic teams", location)
+	if count != int64(teamCount) {
+		return fmt.Errorf("%s - expected exactly %d synthetic teams", location, teamCount)
 	}
 	data, err := os.ReadFile(filepath.Join(d.root, "config/runtime/admin.env"))
 	if err != nil {
