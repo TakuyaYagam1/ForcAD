@@ -57,7 +57,9 @@ func newRouter(cfg config.Config, handler *httpv1.Handler, events *websocket.Eve
 }
 func newChecker(cfg config.Config, repo *postgres.Repository, game *postgres.GameStore, metrics *prometheus.Metrics, logger *slog.Logger) *checkerworker.Worker {
 	runner := processchecker.NewRunner(processchecker.Options{MemoryLimitMB: cfg.CheckerMemoryMB, DisableMemoryLimit: cfg.CheckerMemoryMB == 0, MaxOutputBytes: cfg.CheckerOutputBytes})
-	return checkerworker.New(repo, repo, game, runner, checkerworker.Options{WorkConcurrency: cfg.WorkerConcurrency, LeaseDuration: cfg.JobGrace, RecoveryGrace: cfg.JobGrace, MaxWorkflowDuration: cfg.CheckerWorkflowTimeout, Observer: metrics.Checker}, logger)
+	worker := checkerworker.New(repo, repo, game, runner, checkerworker.Options{WorkConcurrency: cfg.WorkerConcurrency, LeaseDuration: cfg.JobGrace, RecoveryGrace: cfg.JobGrace, MaxWorkflowDuration: cfg.CheckerWorkflowTimeout, Observer: metrics.Checker, OnDegraded: metrics.Drain}, logger)
+	registerCheckerProcessMetrics(metrics.Registry, worker)
+	return worker
 }
 
 func newScheduler(cfg config.Config, repo *postgres.Repository, game *postgres.GameStore, broker *rabbitmq.Broker, logger *slog.Logger) scheduledWorker {

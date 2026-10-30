@@ -24,12 +24,13 @@ func (g *GameStore) CheckerLogs(
 	}
 	result := make([]domain.CheckerLog, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, domain.CheckerLog{
+		log := domain.CheckerLog{
 			ID: row.ID, Round: row.Round, Action: row.Action, Stage: row.Stage,
 			StartedAt: row.StartedAt.Time, FinishedAt: row.FinishedAt.Time,
 			DurationMS: row.DurationMs, TimedOut: row.TimedOut, Status: row.Status,
 			PublicMessage: row.PublicMessage,
-		})
+		}
+		result = append(result, log.PublicView())
 	}
 	return result, nil
 }
@@ -46,6 +47,7 @@ func insertCheckerLogs(
 		if !validCheckerLog(log, round) {
 			return fmt.Errorf("%s - validate checker log %d: %w", location, index, domain.ErrInvalidCheckerResult)
 		}
+		log = log.PublicView()
 		if err := queries.InsertPublicCheckerLog(ctx, sqlc.InsertPublicCheckerLogParams{
 			TeamID: teamID, TaskID: taskID, Round: log.Round,
 			Action: log.Action, Stage: log.Stage, StartedAt: gameStamp(log.StartedAt),

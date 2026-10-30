@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 
 	promclient "github.com/prometheus/client_golang/prometheus"
 
@@ -45,7 +46,7 @@ func NewApplication(cfg config.Config, handler apiHandler, metrics *prometheus.M
 	return &Application{config: cfg, handler: handler, metrics: metrics, logger: logger, events: events, game: game, flags: flags, broker: broker, checker: checker, scheduler: scheduler, traffic: traffic}
 }
 
-func RunApplication(cfg config.Config, logger *Logger) error {
+func RunApplication(cfg config.Config, logger *Logger) (runErr error) {
 	const location = "bootstrap.RunApplication"
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -53,11 +54,27 @@ func RunApplication(cfg config.Config, logger *Logger) error {
 	if err != nil {
 		return fmt.Errorf("%s - initialize application: %w", location, err)
 	}
-	defer cleanup()
+	defer func() { runErr = errors.Join(runErr, cleanupResources(cleanup, cfg.ShutdownTimeout)) }()
 	app.metrics.Registry.MustRegister(promclient.NewCounterFunc(promclient.CounterOpts{
 		Name: "forcad_log_dropped_total", Help: "Log entries dropped because the bounded output queue was full.",
 	}, func() float64 { return float64(logger.dropped.Load()) }))
 	return app.Run(ctx)
+}
+
+// Pool cleanup normally finishes immediately after handlers drain. A broken
+// dependency retaining a connection must not prevent the process supervisor
+// from replacing an unhealthy worker forever.
+func cleanupResources(cleanup func(), timeout time.Duration) error {
+	done := make(chan struct{})
+	go func() { cleanup(); close(done) }()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case <-done:
+		return nil
+	case <-timer.C:
+		return errors.New("bootstrap.RunApplication - resource cleanup deadline exceeded")
+	}
 }
 
 func (a *Application) Run(ctx context.Context) error {
@@ -92,7 +109,11 @@ func (a *Application) Run(ctx context.Context) error {
 	case <-ctx.Done():
 	case <-a.metrics.DrainRequested():
 	case runErr = <-failures:
+	case runErr = <-checkerFailures(a.checker):
 	}
+	// Drain readiness and the failure notification can become ready together.
+	// Preserve a nonzero exit for replacement even when the drain case wins.
+	runErr = errors.Join(runErr, checkerFailure(a.checker))
 	a.logger.Info("draining application", "role", a.config.Role)
 	a.metrics.Drain()
 	a.broker.Drain()
@@ -102,16 +123,39 @@ func (a *Application) Run(ctx context.Context) error {
 	force := context.AfterFunc(shutdownCtx, forceStop)
 	defer force()
 	shutdown := shutdownHTTP(shutdownCtx, servers)
-	jobs.Wait()
-	shutdown.Wait()
+	if !waitGroups(shutdownCtx, jobs, shutdown) {
+		forceStop()
+	}
 	stopBackground()
-	background.Wait()
-	httpServers.Wait()
+	if !waitGroups(shutdownCtx, background, httpServers) {
+		forceStop()
+	}
 	if shutdownCtx.Err() != nil {
 		runErr = errors.Join(runErr, fmt.Errorf("%s - shutdown deadline exceeded; unfinished work will be recovered: %w", location, shutdownCtx.Err()))
 	}
 	a.logger.Info("application stopped", "role", a.config.Role)
-	return runErr
+	// A process can fail cleanup while an operator-requested drain is already
+	// running. Replacement must still produce a nonzero result in that case.
+	return errors.Join(runErr, checkerFailure(a.checker))
+}
+
+// Waits are bounded even when a dependency violates context cancellation.
+// The process exits with an error after the deadline; it must not stay healthy
+// forever waiting for a stuck handler during worker replacement.
+func waitGroups(ctx context.Context, groups ...*sync.WaitGroup) bool {
+	done := make(chan struct{})
+	go func() {
+		for _, group := range groups {
+			group.Wait()
+		}
+		close(done)
+	}()
+	select {
+	case <-done:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 // boundHTTP keeps each server with the listener it owns.

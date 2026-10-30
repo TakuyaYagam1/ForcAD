@@ -12,9 +12,16 @@ import (
 )
 
 func TestRunnerTimeoutStopsCheckerProcessGroup(t *testing.T) {
+	for _, mode := range []string{"spawn", "spawn-parent-term"} {
+		t.Run(mode, func(t *testing.T) { testRunnerStopsProcessGroup(t, mode) })
+	}
+}
+
+func testRunnerStopsProcessGroup(t *testing.T, mode string) {
+	t.Helper()
 	executable, executableDir := testExecutable(t)
 	heartbeat := filepath.Join(t.TempDir(), "child-heartbeat")
-	t.Setenv(fixtureModeEnv, "spawn")
+	t.Setenv(fixtureModeEnv, mode)
 	t.Setenv(fixtureHeartbeatEnv, heartbeat)
 
 	runner := testRunner(0)

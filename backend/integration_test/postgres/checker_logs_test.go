@@ -112,3 +112,28 @@ func TestCheckerLogTypeContainsOnlyPublicValues(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckerLogsProjectHistoricalSuccessfulPutWithoutPrivateState(t *testing.T) {
+	pool, _ := testutil.Database(t)
+	ctx := t.Context()
+	store := postgres.NewGameStore(pool)
+	if _, err := store.Initialize(ctx, gameDocument(t)); err != nil {
+		t.Fatal(err)
+	}
+	teams, tasks := gameEntityIDs(ctx, t, store)
+	// Insert a synthetic pre-fix row directly to verify safe reads independently
+	// of the one-time migration and current worker persistence.
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO CheckerActionLogs
+		    (team_id, task_id, round, action, stage, started_at, finished_at, duration_ms, status, public_message)
+		VALUES ($1, $2, 4, 'put', 'classic', now(), now(), 0, 101, 'synthetic-old-private-state')`, teams[0], tasks[0]); err != nil {
+		t.Fatal(err)
+	}
+	logs, err := store.CheckerLogs(ctx, teams[0], tasks[0], nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(logs) != 1 || logs[0].Status != 101 || logs[0].PublicMessage != "PUT completed" {
+		t.Fatalf("legacy public log projection = %+v", logs)
+	}
+}

@@ -97,7 +97,7 @@ FOR UPDATE OF job;
 SELECT t.ip, f.task_id, f.public_flag_data
 FROM Flags f
 JOIN Teams t ON f.team_id = t.id
-WHERE f.round::BIGINT >= sqlc.arg(current_round)::BIGINT - sqlc.arg(flag_lifetime)::BIGINT
+WHERE f.round >= sqlc.arg(current_round)::BIGINT - sqlc.arg(flag_lifetime)::BIGINT
   AND f.task_id = ANY(sqlc.arg(task_ids)::UUID[])
 ORDER BY f.task_id, t.ip, f.id;
 
@@ -169,7 +169,7 @@ WITH pending AS (
       AND (job.payload ->> 'generation')::BIGINT = session.generation
     ORDER BY job.id
     LIMIT sqlc.arg(job_limit)
-    FOR UPDATE SKIP LOCKED
+    FOR UPDATE OF job SKIP LOCKED
 )
 UPDATE CheckerJobs job
 SET publish_token = sqlc.arg(owner_token),
@@ -231,6 +231,19 @@ SELECT action AS workflow,
 FROM CheckerJobs
 WHERE id = sqlc.arg(job_id)
 FOR UPDATE;
+
+-- name: ConfirmCheckerJobOwnership :one
+-- A separate connection can resolve an unknown COMMIT without repeating work.
+SELECT job.deadline_at, job.claim_deadline_at, job.expires_at
+FROM CheckerJobs AS job
+JOIN GameSession AS session ON session.id = 1
+WHERE job.id = sqlc.arg(job_id)
+  AND job.claim_token = sqlc.arg(owner_token)
+  AND job.sent_at IS NOT NULL AND job.finished_at IS NULL
+  AND job.deadline_at > clock_timestamp()
+  AND job.claim_deadline_at > clock_timestamp()
+  AND NOT session.reset_pending
+  AND (job.payload ->> 'generation')::BIGINT = session.generation;
 
 -- name: ExtendCheckerJobDeadline :execrows
 UPDATE CheckerJobs

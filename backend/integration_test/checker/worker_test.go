@@ -124,7 +124,7 @@ func TestWorkerPersistsWorkflowAndAcknowledgesRedelivery(t *testing.T) {
 	).Scan(&actionLogCount, &action, &stage, &message); err != nil {
 		t.Fatal(err)
 	}
-	if actionLogCount != 1 || action != "put" || stage != "puts_only" || message != "put-public" {
+	if actionLogCount != 1 || action != "put" || stage != "puts_only" || message != "PUT completed" {
 		t.Fatalf("durable public checker log = %d rows, action %q, stage %q, message %q", actionLogCount, action, stage, message)
 	}
 	var privateColumns int

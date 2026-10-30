@@ -82,6 +82,41 @@ func TestGetClientCheckerLogsRejectsInvalidCursor(t *testing.T) {
 	}
 }
 
+func TestPublicCheckerLogRedactsHistoricalSuccessfulPutOutput(t *testing.T) {
+	const privateState = "synthetic-historical-private-state"
+	for _, test := range []struct {
+		action string
+		status int32
+		want   string
+	}{
+		{action: "put", status: 101, want: "PUT completed"},
+		{action: "put", status: 103, want: "public failure detail"},
+		{action: "check", status: 101, want: "public check detail"},
+	} {
+		t.Run(test.action+test.want, func(t *testing.T) {
+			message := test.want
+			if test.action == "put" && test.status == 101 {
+				message = privateState
+			}
+			game := &checkerLogsGame{page: domain.CheckerLogPage{Logs: []domain.CheckerLog{{
+				Action: test.action, Status: test.status, PublicMessage: message,
+			}}}}
+			handler := NewHandler(game, nil, nil, nil)
+			response, err := handler.GetClientCheckerLogs(t.Context(), api.GetClientCheckerLogsParams{TeamID: httpTeamID, TaskID: httpTaskID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			page, ok := response.(*api.CheckerLogPage)
+			if !ok || len(page.Logs) != 1 || page.Logs[0].PublicMessage != test.want {
+				t.Fatalf("public checker projection = %+v", response)
+			}
+			if game.page.Logs[0].PublicMessage != message {
+				t.Fatal("public projection changed the source row")
+			}
+		})
+	}
+}
+
 func TestClientCheckerLogsRouteEncodesPublicPage(t *testing.T) {
 	teamID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
 	taskID := uuid.MustParse("01912345-6789-7000-8000-000000000002")

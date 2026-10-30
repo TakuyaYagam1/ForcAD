@@ -23,16 +23,21 @@ const (
 	maxRetryDelay          = 10 * time.Second
 	maxPublicationBatch    = 256
 	consumerTag            = "forcad-worker"
+	consumerRecoveryGrace  = 30 * time.Second
+	stableSessionPeriod    = time.Minute
 )
 
+var errConsumerHandlersStuck = errors.New("checker handlers did not stop after cancellation")
+
 type Broker struct {
-	url         string
-	queue       string
-	concurrency int
-	logger      *slog.Logger
-	draining    chan struct{}
-	drainOnce   sync.Once
-	connected   atomic.Bool
+	url           string
+	queue         string
+	concurrency   int
+	logger        *slog.Logger
+	draining      chan struct{}
+	drainOnce     sync.Once
+	connected     atomic.Bool
+	sessionStable atomic.Bool
 }
 
 func New(url, queue string, concurrency int, logger *slog.Logger) *Broker {
@@ -191,6 +196,10 @@ type Handler func(ctx context.Context, jobID uuid.UUID) error
 // Run reconnects on broker failure, with prefetch equal to bounded worker
 // concurrency. Acknowledgement happens only after the handler settles in SQL.
 func (b *Broker) Run(ctx context.Context, handle Handler) error {
+	return b.run(ctx, handle, b.consume)
+}
+
+func (b *Broker) run(ctx context.Context, handle Handler, consume func(context.Context, Handler) error) error {
 	const location = "rabbitmq.Broker.Run"
 	if b.concurrency < 1 {
 		return fmt.Errorf("%s - worker concurrency must be positive", location)
@@ -200,12 +209,19 @@ func (b *Broker) Run(ctx context.Context, handle Handler) error {
 		if b.isDraining() {
 			return nil
 		}
-		err := b.consume(ctx, handle)
+		b.sessionStable.Store(false)
+		err := consume(ctx, handle)
+		if errors.Is(err, errConsumerHandlersStuck) {
+			return fmt.Errorf("%s - replace stuck consumer: %w", location, err)
+		}
 		if b.isDraining() {
 			return nil
 		}
 		if ctx.Err() != nil {
 			return nil //nolint:nilerr // Cancellation ends the consumer normally; unfinished jobs remain recoverable.
+		}
+		if b.sessionStable.Load() {
+			backoff = minRetryDelay
 		}
 		b.logger.Warn("checker broker disconnected", "error", err, "retry_in", backoff)
 		if !sleep(ctx, backoff) {
@@ -236,38 +252,151 @@ func (b *Broker) consume(ctx context.Context, handle Handler) error {
 	if err = ch.Qos(b.concurrency, 0, false); err != nil {
 		return fmt.Errorf("%s - configure consumer prefetch: %w", location, err)
 	}
+	notifications := consumerNotifications{
+		connectionClosed: conn.NotifyClose(make(chan *amqp.Error, 1)),
+		channelClosed:    ch.NotifyClose(make(chan *amqp.Error, 1)),
+		canceled:         ch.NotifyCancel(make(chan string, 1)),
+	}
 	deliveries, err := ch.Consume(b.queue, consumerTag, false, false, false, false, nil)
 	if err != nil {
 		return fmt.Errorf("%s - start checker consumer: %w", location, err)
 	}
+	return b.consumeSession(ctx, deliveries, handle, notifications,
+		func() error { return ch.Cancel(consumerTag, false) },
+		func() { closeConnection(conn) })
+}
+
+type consumerNotifications struct {
+	connectionClosed <-chan *amqp.Error
+	channelClosed    <-chan *amqp.Error
+	canceled         <-chan string
+}
+
+// consumeSession supervises intake independently of the connection: RabbitMQ
+// can cancel a consumer or close its channel while keeping the connection open.
+func (b *Broker) consumeSession(ctx context.Context, deliveries <-chan amqp.Delivery, handle Handler,
+	notifications consumerNotifications, stopIntake func() error, closeTransport func(),
+) error {
+	const location = "rabbitmq.Broker.consumeSession"
 	b.connected.Store(true)
 	defer b.connected.Store(false)
-	runCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	closed := conn.NotifyClose(make(chan *amqp.Error, 1))
-	var workers sync.WaitGroup
-	for range b.concurrency {
-		workers.Go(func() { b.consumeDeliveries(runCtx, deliveries, handle, cancel) })
-	}
+	started := time.Now()
+	session := b.startSessionWorkers(ctx, deliveries, handle)
+	defer session.cancelWork(context.Canceled)
+	defer session.stopIntake()
 
-	var closeErr *amqp.Error
+	var sessionErr error
 	select {
-	case <-runCtx.Done():
-	case closeErr = <-closed:
+	case <-ctx.Done():
+		sessionErr = context.Cause(ctx)
+	case sessionErr = <-session.failures:
+	case err := <-notifications.connectionClosed:
+		sessionErr = consumerClosedError("connection", err)
+	case err := <-notifications.channelClosed:
+		sessionErr = consumerClosedError("channel", err)
+	case tag := <-notifications.canceled:
+		sessionErr = fmt.Errorf("checker consumer canceled by broker: %q", tag)
 	case <-b.draining:
 		// Cancel intake, but keep current handlers and their acknowledgement
 		// channel alive until the application shutdown deadline.
-		_ = ch.Cancel(consumerTag, false)
-		workers.Wait()
+		b.connected.Store(false)
+		session.stopIntake()
+		sessionErr = cancelConsumer(ctx, stopIntake)
+		if sessionErr == nil {
+			if err := session.finish(ctx, 0); err != nil {
+				return fmt.Errorf("%s - drain checker consumer: %w", location, err)
+			}
+			return nil
+		}
+	}
+	b.sessionStable.Store(time.Since(started) >= stableSessionPeriod)
+	b.connected.Store(false)
+	session.stopIntake()
+	closeTransport()
+	// Loss of the acknowledgement transport does not imply loss of the SQL
+	// claim. Let already-started handlers settle durably before reconnecting;
+	// duplicates will then observe the closed job. Lease loss still cancels
+	// work inside the handler, and this recovery window is strictly bounded.
+	drainErr := session.finish(ctx, consumerRecoveryGrace)
+	return fmt.Errorf("%s - stop checker consumer: %w", location, errors.Join(sessionErr, drainErr))
+}
+
+type consumerSession struct {
+	stopIntake context.CancelFunc
+	cancelWork context.CancelCauseFunc
+	done       <-chan struct{}
+	failures   <-chan error
+}
+
+func (b *Broker) startSessionWorkers(ctx context.Context, deliveries <-chan amqp.Delivery, handle Handler) consumerSession {
+	workCtx, cancelWork := context.WithCancelCause(ctx)
+	intakeCtx, stopIntake := context.WithCancel(ctx)
+	failures := make(chan error, b.concurrency)
+	done := make(chan struct{})
+	var workers sync.WaitGroup
+	for range b.concurrency {
+		workers.Go(func() {
+			if err := b.consumeDeliveries(workCtx, intakeCtx, deliveries, handle); err != nil {
+				failures <- err
+			}
+		})
+	}
+	go func() { workers.Wait(); close(done) }()
+	return consumerSession{stopIntake: stopIntake, cancelWork: cancelWork, done: done, failures: failures}
+}
+
+// A zero grace uses the application shutdown context for a deliberate drain.
+func (session consumerSession) finish(ctx context.Context, grace time.Duration) error {
+	var timeout <-chan time.Time
+	if grace > 0 {
+		timer := time.NewTimer(grace)
+		defer timer.Stop()
+		timeout = timer.C
+	}
+	var cause error
+	select {
+	case <-session.done:
 		return nil
+	case <-ctx.Done():
+		cause = context.Cause(ctx)
+	case <-timeout:
+		cause = context.DeadlineExceeded
 	}
-	cancel()
-	closeConnection(conn)
-	workers.Wait()
-	if closeErr != nil {
-		return fmt.Errorf("%s - checker consumer connection closed: %w", location, closeErr)
+	session.cancelWork(cause)
+	timer := time.NewTimer(connectionTimeout)
+	defer timer.Stop()
+	select {
+	case <-session.done:
+		return cause
+	case <-timer.C:
+		return errors.Join(cause, errConsumerHandlersStuck)
 	}
-	return fmt.Errorf("%s - checker consumer connection closed", location)
+}
+
+func consumerClosedError(kind string, err *amqp.Error) error {
+	if err != nil {
+		return fmt.Errorf("checker consumer %s closed: %w", kind, err)
+	}
+	return fmt.Errorf("checker consumer %s closed", kind)
+}
+
+func cancelConsumer(ctx context.Context, stopIntake func() error) error {
+	const location = "rabbitmq.cancelConsumer"
+	done := make(chan error, 1)
+	go func() { done <- stopIntake() }()
+	timer := time.NewTimer(connectionTimeout)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		if err != nil {
+			return fmt.Errorf("%s - cancel checker intake: %w", location, err)
+		}
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("%s - cancel checker intake: %w", location, context.Cause(ctx))
+	case <-timer.C:
+		return fmt.Errorf("%s - cancel checker intake: %w", location, context.DeadlineExceeded)
+	}
 }
 
 func sleep(ctx context.Context, d time.Duration) bool {
@@ -302,25 +431,33 @@ func (b *Broker) isDraining() bool {
 	}
 }
 
-func (b *Broker) consumeDeliveries(ctx context.Context, deliveries <-chan amqp.Delivery, handle Handler, cancel context.CancelFunc) {
+func (b *Broker) consumeDeliveries(ctx, intakeCtx context.Context, deliveries <-chan amqp.Delivery, handle Handler) error {
 	for {
-		if b.isDraining() {
-			return
+		if b.isDraining() || intakeCtx.Err() != nil {
+			return nil //nolint:nilerr // Ending intake is deliberate; existing handler settlement is supervised separately.
 		}
 		select {
 		case <-ctx.Done():
-			return
+			return nil
+		case <-intakeCtx.Done():
+			return nil
+		case <-b.draining:
+			return nil
 		case delivery, open := <-deliveries:
 			if !open {
-				return
+				if b.isDraining() || ctx.Err() != nil {
+					return nil //nolint:nilerr // Cancellation or local drain intentionally ends intake without a delivery failure.
+				}
+				return errors.New("checker consumer deliveries closed unexpectedly")
 			}
-			if b.isDraining() {
-				_ = delivery.Nack(false, true)
-				return
+			if b.isDraining() || intakeCtx.Err() != nil {
+				if err := delivery.Nack(false, true); err != nil {
+					return fmt.Errorf("rabbitmq.Broker.consumeDeliveries - requeue during drain: %w", err)
+				}
+				return nil
 			}
 			if err := b.settleDelivery(ctx, delivery, handle); err != nil {
-				cancel()
-				return
+				return err
 			}
 		}
 	}
@@ -330,8 +467,10 @@ func (b *Broker) settleDelivery(ctx context.Context, delivery amqp.Delivery, han
 	const location = "rabbitmq.Broker.settleDelivery"
 	id, err := parseJobID(string(delivery.Body))
 	if err != nil {
-		_ = delivery.Reject(false)
-		return nil //nolint:nilerr // Invalid IDs are rejected without requeue, so discarding the delivery succeeds.
+		if err := delivery.Reject(false); err != nil {
+			return fmt.Errorf("%s - reject invalid checker job: %w", location, err)
+		}
+		return nil // Invalid IDs were successfully rejected without requeue.
 	}
 	if err := handle(ctx, id); err != nil {
 		b.logger.WarnContext(ctx, "checker job not settled", "job_id", id.String(), "error", err)

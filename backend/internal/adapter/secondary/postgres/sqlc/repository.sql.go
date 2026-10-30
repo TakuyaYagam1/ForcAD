@@ -123,7 +123,7 @@ WITH pending AS (
       AND (job.payload ->> 'generation')::BIGINT = session.generation
     ORDER BY job.id
     LIMIT $4
-    FOR UPDATE SKIP LOCKED
+    FOR UPDATE OF job SKIP LOCKED
 )
 UPDATE CheckerJobs job
 SET publish_token = $1,
@@ -261,6 +261,38 @@ func (q *Queries) CompleteCheckerJobClaim(ctx context.Context, arg CompleteCheck
 	return i, err
 }
 
+const confirmCheckerJobOwnership = `-- name: ConfirmCheckerJobOwnership :one
+SELECT job.deadline_at, job.claim_deadline_at, job.expires_at
+FROM CheckerJobs AS job
+JOIN GameSession AS session ON session.id = 1
+WHERE job.id = $1
+  AND job.claim_token = $2
+  AND job.sent_at IS NOT NULL AND job.finished_at IS NULL
+  AND job.deadline_at > clock_timestamp()
+  AND job.claim_deadline_at > clock_timestamp()
+  AND NOT session.reset_pending
+  AND (job.payload ->> 'generation')::BIGINT = session.generation
+`
+
+type ConfirmCheckerJobOwnershipParams struct {
+	JobID      uuid.UUID `json:"job_id"`
+	OwnerToken *string   `json:"owner_token"`
+}
+
+type ConfirmCheckerJobOwnershipRow struct {
+	DeadlineAt      pgtype.Timestamptz `json:"deadline_at"`
+	ClaimDeadlineAt pgtype.Timestamptz `json:"claim_deadline_at"`
+	ExpiresAt       pgtype.Timestamptz `json:"expires_at"`
+}
+
+// A separate connection can resolve an unknown COMMIT without repeating work.
+func (q *Queries) ConfirmCheckerJobOwnership(ctx context.Context, arg ConfirmCheckerJobOwnershipParams) (ConfirmCheckerJobOwnershipRow, error) {
+	row := q.db.QueryRow(ctx, confirmCheckerJobOwnership, arg.JobID, arg.OwnerToken)
+	var i ConfirmCheckerJobOwnershipRow
+	err := row.Scan(&i.DeadlineAt, &i.ClaimDeadlineAt, &i.ExpiresAt)
+	return i, err
+}
+
 const expireCheckerJob = `-- name: ExpireCheckerJob :one
 UPDATE CheckerJobs
 SET finished_at = $1,
@@ -372,7 +404,7 @@ const getAttackData = `-- name: GetAttackData :many
 SELECT t.ip, f.task_id, f.public_flag_data
 FROM Flags f
 JOIN Teams t ON f.team_id = t.id
-WHERE f.round::BIGINT >= $1::BIGINT - $2::BIGINT
+WHERE f.round >= $1::BIGINT - $2::BIGINT
   AND f.task_id = ANY($3::UUID[])
 ORDER BY f.task_id, t.ip, f.id
 `

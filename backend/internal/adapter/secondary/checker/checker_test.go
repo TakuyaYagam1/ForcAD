@@ -62,8 +62,10 @@ func runCheckerFixture(mode string) int {
 		fixtureIgnoreTermination()
 		time.Sleep(30 * time.Second)
 		return int(StatusUp)
-	case "spawn":
-		fixtureIgnoreTermination()
+	case "spawn", "spawn-parent-term":
+		if mode == "spawn" {
+			fixtureIgnoreTermination()
+		}
 		//nolint:noctx // This fixture child must outlive its parent until group teardown.
 		child := exec.Command(os.Args[0], "child")
 		child.Env = setEnvironmentValue(os.Environ(), fixtureModeEnv, "child")

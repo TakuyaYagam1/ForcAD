@@ -298,6 +298,14 @@ CREATE INDEX idx_stolenflags_public_feed
     ON StolenFlags (submit_time DESC, flag_id DESC, attacker_id DESC)
     WHERE submit_time IS NOT NULL;
 
+-- Consolidated historical PUT-log cleanup; the fresh baseline table is empty.
+-- An already applied version 1 is not replayed. Runtime writes and public HTTP
+-- projection also redact successful PUT output; intentional pfr hints in Flags
+-- are unaffected by this statement.
+UPDATE CheckerActionLogs
+SET public_message = 'PUT completed'
+WHERE action = 'put' AND status = 101 AND public_message <> 'PUT completed';
+
 -- +goose Down
 
 -- This rollback drops the full schema and all application data.

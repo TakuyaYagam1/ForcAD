@@ -82,6 +82,51 @@ func TestCheckerLogsRecordActionsWithoutSecrets(t *testing.T) {
 	mu.Unlock()
 }
 
+func TestSuccessfulPutLogDoesNotPublishReturnedState(t *testing.T) {
+	const returnedState = "synthetic-returned-state-not-the-input-seed"
+	const returnedPrivate = "synthetic-pfr-private-state"
+	for _, checkerType := range []string{"hackerdom", "pfr", "nfr"} {
+		t.Run(checkerType, func(t *testing.T) {
+			task := defaultTask()
+			task.CheckerType, task.Puts, task.Gets = checkerType, 1, 0
+			repo := newFakeRepository(payloadJSON(t, "", task), domain.JobActionPutsOnly)
+			flags := &fakeFlagStore{}
+			var inputState string
+			runner := &fakeRunner{fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
+				inputState = request.PrivateFlagData
+				return processchecker.Result{Action: request.Action, Status: processchecker.StatusUp,
+					PublicMessage: returnedState, PrivateMessage: returnedPrivate}, nil
+			}}
+			worker := makeWorker(t, repo, flags, runner, Options{})
+			if err := worker.Handle(t.Context(), testJobID); err != nil {
+				t.Fatal(err)
+			}
+			_, _, _, _, results := repo.snapshot()
+			if len(results) != 1 || len(results[0].Logs) != 1 {
+				t.Fatalf("completed PUT logs = %+v", results)
+			}
+			log := results[0].Logs[0]
+			if log.Status != 101 || log.PublicMessage != "PUT completed" {
+				t.Fatalf("public PUT result = %+v", log)
+			}
+			stored, _ := flags.snapshot()
+			if len(stored) != 1 {
+				t.Fatalf("stored flags = %d, want 1", len(stored))
+			}
+			wantPublic, wantPrivate := "", returnedState
+			switch checkerType {
+			case "pfr":
+				wantPublic, wantPrivate = returnedState, returnedPrivate
+			case "nfr":
+				wantPrivate = inputState
+			}
+			if stored[0].PublicData != wantPublic || stored[0].PrivateData != wantPrivate {
+				t.Fatal("public hints or private retrieval state changed while sanitizing logs")
+			}
+		})
+	}
+}
+
 func TestCheckerLogRecordsTimeout(t *testing.T) {
 	task := defaultTask()
 	repo := newFakeRepository(payloadJSON(t, "", task), domain.JobActionCheckOnly)
@@ -105,5 +150,30 @@ func TestCheckerLogRecordsTimeout(t *testing.T) {
 	}
 	if log.FinishedAt.IsZero() || log.StartedAt.IsZero() || time.Since(log.FinishedAt) < 0 {
 		t.Fatalf("timeout timing = %+v", log)
+	}
+}
+
+func TestCheckerLogPreservesInitialStopCause(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		result      processchecker.Result
+		wantTimeout bool
+	}{
+		{"output limit before deadline", processchecker.Result{Status: processchecker.StatusCheckFailed, OutputLimited: true}, false},
+		{"cancel before deadline", processchecker.Result{Status: processchecker.StatusDown, Canceled: true}, false},
+		{"timeout before output limit", processchecker.Result{Status: processchecker.StatusDown, TimedOut: true, OutputLimited: true}, true},
+		{"runner only returned a deadline error", processchecker.Result{}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			now := time.Now()
+			log := checkerActionLog(domain.CheckerJob{Round: 1}, processchecker.ActionPut, nil,
+				now, now, test.result, context.DeadlineExceeded)
+			if log.TimedOut != test.wantTimeout {
+				t.Fatalf("log timeout = %v, want %v: %+v", log.TimedOut, test.wantTimeout, log)
+			}
+			if test.result.OutputLimited && !test.wantTimeout && log.Status != 110 {
+				t.Fatalf("output limit became a service timeout: %+v", log)
+			}
+		})
 	}
 }

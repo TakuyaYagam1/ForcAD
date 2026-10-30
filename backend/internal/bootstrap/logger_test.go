@@ -5,9 +5,13 @@ import (
 	jsonv2 "encoding/json/v2"
 	"errors"
 	"io"
+	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	processchecker "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/checker"
 )
 
 func TestLoggerFlushesStructuredChildFields(t *testing.T) {
@@ -29,6 +33,42 @@ func TestLoggerFlushesStructuredChildFields(t *testing.T) {
 	}
 	if _, ok := entry["request"]; ok {
 		t.Fatalf("logkit group should use a flat key: %v", entry)
+	}
+}
+
+func TestLoggerPreservesNestedCheckerProcessDiagnostic(t *testing.T) {
+	var output bytes.Buffer
+	logger, err := NewLogger(&output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	timestamp := time.Date(2026, time.October, 30, 9, 22, 18, 123456789, time.UTC)
+	diagnostic := processchecker.ProcessDiagnostic{
+		Phase: "unreaped", PID: 2307, RequestedAt: timestamp, CollectedAt: timestamp.Add(time.Millisecond),
+		FinishedAt: timestamp.Add(2 * time.Millisecond), TimedOut: true, ExitCode: -1, SnapshotComplete: true,
+		Signals: []processchecker.ProcessSignal{
+			{Time: timestamp, Signal: "SIGTERM", Target: "process_group", PID: 2307, PGID: 2307, Outcome: "success"},
+			{Time: timestamp, Signal: "SIGKILL", Target: "process_group", PID: 2307, PGID: 2307, Outcome: "ESRCH", Error: "no such process"},
+		},
+		Proc: &processchecker.ProcessSnapshot{PID: 2307, PPID: 1, PGID: 2307, State: "D", StartTimeTicks: 29757,
+			Status: map[string]string{"Threads": "1"}, Wchan: "__vma_start_write", Errors: map[string]string{"stack": "permission_denied"}},
+		Goroutines: "goroutine 2048 [syscall]:\nos.(*Process).pidfdWait\n",
+	}
+	logger.Warn("checker process diagnostic", "job_id", "test-job", "diagnostic", diagnostic)
+	if err := logger.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var entry struct {
+		JobID      string                           `json:"job_id"`
+		Diagnostic processchecker.ProcessDiagnostic `json:"diagnostic"`
+	}
+	if err := jsonv2.Unmarshal(output.Bytes(), &entry); err != nil {
+		t.Fatalf("diagnostic must be a JSON object with nested process and signal data: %v", err)
+	}
+	// logkit intentionally normalizes control characters in every string field.
+	diagnostic.Goroutines = strings.ReplaceAll(diagnostic.Goroutines, "\n", " ")
+	if entry.JobID != "test-job" || !reflect.DeepEqual(entry.Diagnostic, diagnostic) {
+		t.Fatalf("diagnostic lost nested fields or stack content: got %+v, want %+v", entry.Diagnostic, diagnostic)
 	}
 }
 

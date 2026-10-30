@@ -53,6 +53,7 @@ func parseCheckerLogCursor(value string) (uuid.UUID, bool) {
 }
 
 func publicCheckerLog(log domain.CheckerLog) api.CheckerLog {
+	log = log.PublicView()
 	return api.CheckerLog{
 		ID: api.UUID(log.ID), Round: log.Round, Action: log.Action, Stage: log.Stage,
 		StartedAt: log.StartedAt, FinishedAt: log.FinishedAt, DurationMs: log.DurationMS,

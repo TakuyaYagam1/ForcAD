@@ -52,6 +52,9 @@ func (r *Repository) Claim(
 		return domain.CheckerJob{}, fmt.Errorf("%s - decode claimed job: %w", location, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
+		if r.confirmJobCommit(ctx, err, jobID, ownerToken, claimDeadline, "claim") {
+			return job, nil
+		}
 		return domain.CheckerJob{}, fmt.Errorf("%s - commit job claim: %w", location, err)
 	}
 	return job, nil
@@ -149,6 +152,9 @@ func (r *Repository) Renew(
 		return false, fmt.Errorf("%s - renew checker job lease: %w", location, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
+		if rows == 1 && r.confirmJobCommit(ctx, err, jobID, ownerToken, claimDeadline, "renew") {
+			return true, nil
+		}
 		return false, fmt.Errorf("%s - commit lease renewal: %w", location, err)
 	}
 	return rows == 1, nil
@@ -224,6 +230,9 @@ func (r *Repository) SetDeadline(
 		return false, fmt.Errorf("%s - set checker job deadline: %w", location, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
+		if rows == 1 && r.confirmJobCommit(ctx, err, jobID, ownerToken, deadline, "deadline") {
+			return true, nil
+		}
 		return false, fmt.Errorf("%s - commit job deadline: %w", location, err)
 	}
 	return rows == 1, nil

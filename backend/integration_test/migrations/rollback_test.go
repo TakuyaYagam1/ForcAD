@@ -23,7 +23,7 @@ func TestInitialMigrationRollbackAndReapply(t *testing.T) {
 	}
 
 	provider := newMigrationProvider(t, fixture)
-	if _, err := provider.Down(fixture.ctx); err != nil {
+	if _, err := provider.DownTo(fixture.ctx, 0); err != nil {
 		t.Fatalf("roll back initial migration: %v", err)
 	}
 	version, err := provider.GetDBVersion(fixture.ctx)
