@@ -2,6 +2,32 @@
 
 See the [README documentation index](../README.md#documentation).
 
+Runtime controls include administrative session authentication, bounded JSON
+requests, parameterized SQL, public DTO projections, shared rate budgets and
+restricted database credentials. The [OWASP Top 10](https://top10.owasp.org/2025/)
+describes risks; it is not a certification that every vulnerability is excluded.
+
+Administrative mutations require a session-bound `X-CSRF-Token` from login or
+session status. The frontend keeps it in memory and sends it only to same-origin
+administrative endpoints. HttpOnly cookies and Origin/Fetch Metadata checks
+remain enabled. Old sessions without a CSRF token must log in again after
+upgrading. See [OWASP CSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html).
+
+Nginx supplies CSP and framing/security headers on the SPA document as well as
+the API's own headers. Scripts are limited to the same origin without inline
+scripts or eval; inline CSS remains permitted for React/Radix layout. Zod uses
+`jitless` mode to avoid its eval capability probe. Browser tests cover the actual
+login/admin flow and CSP violations. Public deployments
+need HTTPS and consistent `PUBLIC_ORIGIN`/trusted-proxy settings; configure HSTS
+at the public HTTPS edge.
+
+The public API has no general user-supplied URL fetch. Operator health/drain
+clients validate HTTP(S) endpoints, connect without an environment proxy and
+refuse redirects. Private addresses remain valid for organizer-controlled game
+networks. Checkers are trusted code, not a sandbox; see
+[checker boundaries](../docs/CHECKERS.md) and
+[OWASP SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
+
 Run checks from the repository root. They inspect local source, dependencies,
 and images. They do not start a game or contact participant services. Trivy and
 `govulncheck` may access vulnerability data. Trivy may download checks on its
@@ -71,11 +97,9 @@ scanner cleanup/error cases. It does not run the source scanners. Reports and
 caches default to `security/reports/` and `security/.cache/`; set `REPORTS` and
 `CACHE` to use other paths.
 
-GitHub Actions runs the security workflow monthly on the 1st at 09:17
-Europe/Moscow (`17 6 1 * *`) and supports manual dispatch; it does not run on
-pushes, pull requests, or merges, and it does not create pull requests. Findings
-or scanner errors fail the run; inspect output in `Actions` -> `security` run
-logs.
+GitHub Actions runs the full `security` workflow monthly on the 1st at 09:17
+Europe/Moscow (`17 6 1 * *`) and supports manual dispatch. This includes the
+container image builds and scans. Findings or scanner errors fail the workflow.
 The separate `tests` workflow runs on pushes and pull requests targeting `main`
 and supports manual dispatch. Dependabot uses one cross-ecosystem group for all
 six ecosystems, including major versions, every Monday at 09:00 Europe/Moscow;

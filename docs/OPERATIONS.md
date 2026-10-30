@@ -28,6 +28,69 @@ file. `tokens` prints every team's token from the
 database; give each team only its own token. Editing team tokens in the YAML
 does not change an initialized game.
 
+Control readiness/drain clients and host monitoring checks connect directly to
+their configured HTTP(S) endpoint and refuse redirects. They ignore shell proxy
+settings; drain URLs must not contain userinfo or fragments. Keep these operator
+settings trusted. Private management and team addresses remain supported.
+
+### Administrator HTTP clients
+
+Send JSON to `POST /api/admin/login/` and retain its HttpOnly `session` cookie.
+The response also contains `csrf_token`; `GET /api/admin/status/` returns the same
+token for that session. Send it in `X-CSRF-Token` on every authenticated admin
+POST, PUT, PATCH or DELETE, including logout. Login requires `application/json`
+(`415` otherwise); a missing or incorrect mutation token returns `403` before
+the handler runs. Existing sessions created before this protection require login
+again. The built-in frontend and integration clients handle this automatically.
+
+Keep the CSRF token in memory. Do not put it in URLs, cookies, logs or persistent
+browser storage. Login/status responses use `Cache-Control: no-store`. Browser
+requests must come from the configured public origin; cross-site and sibling-site
+Fetch Metadata are rejected. Direct CLI clients may omit browser origin headers,
+but still need both the session cookie and CSRF header. Never automatically replay
+an administrative mutation after a network error: its side effects may have committed.
+This follows the OWASP
+[synchronizer token pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern).
+
+### Database credentials and upgrades
+
+`setup` preserves `storages.db.user/password` as the database owner used only by
+PostgreSQL, migrations and maintenance. It adds a separate persisted
+`storages.db.runtime.username/password`. Applications and PgBouncer receive only
+`config/runtime/postgres_runtime.env`; their shared `config/runtime/game.yml`
+contains gameplay configuration without `admin` or `storages` secrets.
+The privileged `postgres_environment.env` stays with initializer/database services.
+
+On `init`/`migrate`, the initializer provisions the runtime role with CONNECT,
+schema USAGE and SELECT/INSERT/UPDATE/DELETE on application tables. It grants
+no ownership, schema creation, TRUNCATE, role administration or migration-ledger
+access. Repeated initialization preserves game data and credentials. Managed
+roles are bound to one database/schema; unrelated roles, inherited privileges
+and unexpected extra object grants cause a failure instead of being silently
+changed. External databases need an initializer account authorized to create the
+restricted role and grant access. Review existing PUBLIC CREATE grants with the
+DBA; initialization refuses to inherit them.
+
+Upgrade during a maintenance window: back up the database and private host
+configuration, pause the game, stop the old containers, run `./control.sh setup`,
+then `./control.sh start`. Preserve the existing database directory and bootstrap
+credentials. Check initialization and application health before resuming. This
+refreshes the shared configuration volume and replaces old containers holding
+the bootstrap environment; do not keep old workers running alongside the new
+credentials. No data reset or bootstrap-password rotation is required. If an
+explicit runtime username collides or a restore changes the managed scope, choose
+a new runtime username in the private host config and repeat setup/initialization;
+do not repurpose another deployment's role.
+
+Additional worker hosts must copy the updated initialized configuration, including
+the runtime credential, after provisioning on the main host. `worker` refuses a
+legacy configuration missing that credential and never generates a replacement
+password for an existing main database. Protect the copied host config; runtime
+containers receive only the restricted credentials and sanitized YAML. Before
+starting its local PgBouncer and workers, the command runs the config loader once
+and waits for success. It stages the shared YAML without starting external
+storage services or running the initializer/migrations again.
+
 ## Flag submissions
 
 Participants submit a JSON list of up to 100 strings to `PUT /flags` and send the
@@ -119,13 +182,59 @@ Set `FORCAD_<ROLE>_DATABASE_MAX_CONNS` for client pools and
 demand. The default nine application replicas total 168 client slots; one
 PgBouncer instance permits at most 136 server connections across its four aliases.
 Scaling receivers increases client slots while preserving their 64-server budget.
-Each alias admits up to 256 clients, with 1024 clients across the pooler.
+Each alias's client cap defaults to the larger of 256, its server cap, and
+`replicas * pgx_connections + 8` diagnostic connections. Explicit
+`PGBOUNCER_<ROLE>_CLIENTS` and `PGBOUNCER_MAX_CLIENTS` (default 1024) must cover
+declared demand; invalid budgets prevent PgBouncer startup. Twenty workers with
+16 pgx slots allow 328 worker clients while retaining 32 worker server connections
+and the same timeouts. This admits declared clients; it is not a throughput
+guarantee or an increase in PostgreSQL concurrency.
+
+Keep `FORCAD_API_REPLICAS`, `FORCAD_RECEIVER_REPLICAS`, `FORCAD_WORKER_REPLICAS`
+and `FORCAD_TICKER_REPLICAS` aligned with actual Compose replicas (0-1024).
+`control start --workers N` and explicit `start --scale ROLE=N` options also
+set the matching replica budget for that Compose invocation. `control worker`
+does the same for its local pooler. These overrides do not persist: configure
+the environment for subsequent starts without replica options. Explicit
+PgBouncer caps remain unchanged and must still cover the declared demand.
+Scaled `start --no-deps` is refused; use `scale` against the existing pooler.
+`control scale` checks deployed pooler budgets and refuses a scale-up that exceeds
+them; it does not recreate PgBouncer mid-game. Changing environment variables
+does not alter an already running pooler. Plan budget changes and pooler
+recreation during maintenance. Raw Docker `--scale` bypasses the control check;
+keep its counts and declared budgets synchronized.
 
 PgBouncer bounds queue waits to 2s, queries to 6s and transactions to 10s.
 Its server connections use 5s statement, 2s lock and 10s idle-transaction timeouts.
 Protocol prepared statements are enabled; do not add session-level SET, LISTEN or
 session advisory locks to application queries. Native processes use the pooler
 when `DATABASE_POOLER_ADDR` is set; otherwise pgx connects directly.
+
+### Verified database TLS
+
+For an external or untrusted database network, add
+`deployment/docker/compose.database-tls.yml` after the base/generated Compose
+file. Set `FORCAD_DB_TLS_DIR` to an absolute directory containing `ca.crt`,
+`pooler.crt` and `pooler.key`. The CA must trust both server certificates;
+the pooler certificate must include DNS name `pgbouncer`, and the PostgreSQL
+certificate must match `POSTGRES_HOST`. Enable TLS on the external PostgreSQL
+server first. Only PgBouncer mounts its key; application/initializer containers
+mount the CA file alone. Restrict the key on the host and make it readable by
+pooler UID 10001. Do not store private keys in Git.
+
+The overlay requires client-to-pooler encryption and makes applications verify
+the pooler's identity; PgBouncer independently verifies PostgreSQL with
+`server_tls_sslmode=verify-full`. The initializer verifies its direct PostgreSQL
+connection. Missing TLS files fail configuration, and
+`FORCAD_DATABASE_REQUIRE_TLS=1` rejects an explicit insecure `DATABASE_URL`.
+Native clients can use `POSTGRES_SSLMODE=verify-full` and `POSTGRES_SSLROOTCERT`,
+or equivalent URL parameters. Changing an application SSL setting alone does
+not configure PgBouncer's upstream connection.
+
+Use the TLS overlay consistently for every Compose operation, including external
+worker hosts. The default local bridge configuration does not enable TLS; SCRAM
+authentication alone does not encrypt query traffic. Validate valid-CA connections
+and rejection of an untrusted CA/hostname in isolation before rollout.
 
 PostgreSQL keeps a global ceiling of 500 (`FORCAD_POSTGRES_MAX_CONNECTIONS`).
 Additional pooler instances, direct clients and external worker hosts need a
@@ -216,13 +325,17 @@ and start the services:
 Use a fresh PostgreSQL database for the first Go installation. The initial schema
 uses UUIDs for entity IDs. Databases from the Python platform or earlier integer-ID
 development builds are not upgraded. The single initial migration includes
-extra-CHECK scheduling, public checker logs and announcements. Databases
-initialized by earlier development builds need a fresh schema. The initializer
-rejects older development schemas missing those tables, columns or the event
-index without resetting their data. Databases that already applied development
-migrations 2-4 should be reinitialized before using the squashed baseline.
-Back up PostgreSQL before updates. Released schema
-changes require new versioned migrations rather than edits to an applied one.
+extra-CHECK scheduling, public checker logs and announcements. Older development
+schemas missing those tables, columns or the event index require a fresh schema;
+the initializer rejects them without resetting their data. Compatible databases
+retain their existing Goose ledger, including development versions 2-4; the initializer does not
+renumber or replay them. Those version numbers remain reserved for future
+migrations, which must start above 4. The historical PUT-log cleanup is included
+in the consolidated initial migration and is a no-op on a fresh empty table;
+it is not rerun for databases that already applied version 1. Current workers
+redact successful PUT logs on write, and public HTTP responses also redact old
+stored output. Back up PostgreSQL before updates. Released schema changes
+require new versioned migrations rather than edits to an applied one.
 
 The initial Goose migration has a `Down` section that removes all application
 tables and their data. It is for explicitly discarding a schema, not restoring

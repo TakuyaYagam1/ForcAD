@@ -70,6 +70,13 @@ acknowledging queue messages. Duplicate delivery is expected and checked against
 the durable job state. An interrupted workflow that may have performed PUT is
 not blindly replayed; expired work is closed as `CHECK_FAILED`.
 
+If a claim, lease renewal or deadline COMMIT response is lost, the repository
+uses one bounded read on a fresh connection. It accepts only the same token and
+current generation, an open job, valid deadlines and the requested committed
+update. This does not retry PUT or extend the original requested lease window.
+The worker also checks its parent cancellation before continuing. An uncertain
+or expired owner stops; normal expiry recovery still closes interrupted PUT work.
+
 Public score cells use completed-round snapshots. Runtime status reports the
 current phase and waiting checks separately. API replicas broadcast public
 updates through Redis. Event delivery is not part of the scoring transaction;
@@ -87,6 +94,14 @@ pgx limits database connections, and worker slots limit checker processes.
 RabbitMQ prefetch follows worker concurrency. Adding replicas multiplies these
 limits, so their total must fit the database and host capacity.
 
+A checker that remains unreaped after bounded termination keeps its action slot
+until the OS wait actually completes. The worker immediately becomes unready,
+closes action admission and requests a replacement with a nonzero exit after
+bounded drain and resource cleanup. Late reaping releases occupancy but does not
+reopen that worker. Metrics expose outstanding processes, their oldest age,
+lifetime cleanup failures and the latched degraded state. Restart contains the
+worker failure; it does not guarantee that an unhealthy host kernel will recover.
+
 The scoreboard cache combines overlapping loads within one API replica.
 Runtime status uses singleflight without caching completed results. A caller
 can cancel its wait without aborting other callers; shared reads have a timeout
@@ -102,6 +117,13 @@ Drain rejects new HTTP requests, stops scheduling and stops taking checker jobs.
 In-flight work gets the configured shutdown deadline to finish. Unacknowledged
 jobs remain recoverable through RabbitMQ and the stored job state. Drain does
 not empty the shared queue: other worker replicas can continue consuming it.
+On RabbitMQ transport loss, readiness and intake stop immediately while existing
+SQL-fenced workflows have up to 30 seconds to settle. Then cancellation gets a
+5-second cleanup window. A handler still stuck after that forces process
+replacement instead of accumulating more sessions. A lost ACK may redeliver a
+completed job; the SQL state prevents replay. Reconnect backoff resets after a
+session stays connected for at least one minute. These windows never override
+job expiry or loss of SQL ownership.
 Public events are best effort; PostgreSQL remains the source of truth when a
 browser reconnects.
 

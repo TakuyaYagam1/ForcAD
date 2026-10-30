@@ -86,6 +86,34 @@ per-action timeout and the worker's total workflow deadline are separate limits.
 On Linux, timed-out processes receive termination followed by a forced kill of
 the process group if needed. These limits do not make a checker a security sandbox.
 
+Install only trusted organizer checker code and dependencies. A checker runs
+under the worker's operating-system identity and can access files and network
+destinations available to that identity. Do not run participant-supplied programs
+in a worker. Supporting untrusted programs requires a separate execution identity,
+credential-free mounts and a restricted network; process limits alone do not
+provide that boundary.
+
+Team addresses are organizer-managed literal IPv4/IPv6 addresses; private game
+networks intentionally remain valid. Keep checker requests on the assigned
+service endpoint, disable automatic redirects/proxies unless explicitly needed,
+and bound both individual requests and the whole action. The runner cannot
+enforce the HTTP/DNS behavior of arbitrary checker code. Stronger restrictions
+require deployment network isolation, not a blanket ban on private team IPs.
+
+The runner removes reserved platform connection variables (`DATABASE_*`,
+`POSTGRES_*`, `PGBOUNCER_*`, `RABBITMQ_*`, `FORCAD_RUNTIME_DB_*`, AMQP/Redis URLs and passwords), admin
+credentials, the control token, the configuration path and libpq credential-file
+settings from the child environment. OS settings and checker-specific variables
+remain available; `env_path` still prepends the executable search path. Use
+checker-specific names for service configuration. This reduces accidental secret
+propagation but does not prevent a trusted checker from accessing other resources
+of its worker identity.
+
+Successful PUT action logs contain a generic completion message. Retrieval state
+is stored with the flag, and deliberately public `pfr` hints remain available
+through the attack-data API. Never include flags or credentials in CHECK, GET or
+failed-PUT public messages.
+
 See [Operations](OPERATIONS.md) for deployment settings. The implementation is in
 the [process runner](../backend/internal/adapter/secondary/checker/checker.go) and
 [workflow worker](../backend/internal/worker/checker/worker.go).

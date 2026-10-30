@@ -34,7 +34,24 @@ make -C backend test-load                                       # smoke: 500 RPS
 LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # 500 to 10000 RPS
 ```
 
-To reproduce the 10,000 REST RPS stages below, use four API replicas and:
+For the 28-team synthetic checker run (20 workers, eight slots each):
+
+```sh
+LOAD_TEAM_COUNT=28 LOAD_WORKER_REPLICAS=20 LOAD_WORKER_CONCURRENCY=8 \
+LOAD_PUTS=10,12,13 LOAD_ROUND_TIME=60 LOAD_CHECKER_TIMEOUT=20 \
+LOAD_PROFILE=checker LOAD_REST_RPS=50 LOAD_DURATION=10m \
+LOAD_CHECKPOINT_INTERVAL=5m LOAD_DIAGNOSTICS=1 make -C backend test-load
+```
+
+After a passing preflight, repeat with `LOAD_DURATION=5h`. Each full round
+must contain 84 UP results and 980 stored flags. Reports retain the first
+100 failed jobs and actions, including runner errors and action timestamps.
+Worker logs also retain bounded process diagnostics on checker shutdown: PID,
+signal results, Linux process state, and a Go stack if cleanup cannot reap the
+process. Correlate these records by job ID; checker arguments and flag data are
+excluded. A diagnostic rerun alone does not establish that a failure is fixed.
+
+The historical 10,000 REST RPS stages below used four API replicas and:
 
 ```sh
 GOMAXPROCS=32 \
@@ -53,6 +70,19 @@ For a five-minute repeat, set both durations to `5m`. For a five-hour run, use
 profiles pause for reconciliation every five minutes. Warmup, recovery, and
 final checks add time. See [profile_test.go](profile_test.go) and
 [compose.yml](compose.yml) for other settings.
+
+`LOAD_API_DATABASE_MAX_CONNS=16` applies to each API replica: the default two
+replicas allow 32 PgBouncer client connections; four allow 64. PgBouncer's API
+pool separately allows 32 PostgreSQL connections. HTTP RPS is not SQL RPS:
+scoreboard reads use a 500 ms cache, while other routes perform database reads.
+Size pools using acquisition waits, cancellations and PgBouncer queue metrics.
+
+The current Nginx configuration limits REST traffic to 150 requests/s per IP
+(burst 60); the archived 2026-10-13 runs predate that limit. This harness uses
+Nginx too, so the historical command does not establish current end-to-end
+capacity. Flag submissions have a separate 200 values/s budget per team
+(burst 400), including all values in a batch; 4,000 values/s across 20 teams
+is 40 full batches/s, not 4,000 HTTP requests/s.
 
 ## Recorded runs on 2026-10-13
 
