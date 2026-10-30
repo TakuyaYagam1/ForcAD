@@ -10,16 +10,17 @@ import (
 )
 
 type stageReport struct {
-	Name            string       `json:"name"`
-	Started         time.Time    `json:"started"`
-	Finished        time.Time    `json:"finished"`
-	Path            string       `json:"path,omitempty"`
-	Seconds         float64      `json:"seconds"`
-	Reads           attackReport `json:"reads"`
-	Flags           attackReport `json:"flags"`
-	Accepted        int64        `json:"accepted"`
-	Committed       int64        `json:"committed"`
-	IntegrityPassed bool         `json:"integrity_passed"`
+	Name                   string       `json:"name"`
+	Started                time.Time    `json:"started"`
+	Finished               time.Time    `json:"finished"`
+	Path                   string       `json:"path,omitempty"`
+	Seconds                float64      `json:"seconds"`
+	Reads                  attackReport `json:"reads"`
+	Flags                  attackReport `json:"flags"`
+	Accepted               int64        `json:"accepted"`
+	Committed              int64        `json:"committed"`
+	IntegrityPassed        bool         `json:"integrity_passed"`
+	CheckerCompletedRounds int          `json:"checker_completed_rounds,omitempty"`
 }
 
 type suiteReport struct {
@@ -36,6 +37,7 @@ type suiteReport struct {
 	Stages            []stageReport   `json:"stages"`
 	WebSockets        streamReport    `json:"websockets"`
 	CheckerResults    int64           `json:"checker_results"`
+	Checker           *checkerReport  `json:"checker,omitempty"`
 	CorrectnessPassed bool            `json:"correctness_passed"`
 	Error             string          `json:"error,omitempty"`
 }

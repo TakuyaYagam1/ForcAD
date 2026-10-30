@@ -66,10 +66,8 @@ func (c *catalog) wait(ctx context.Context, d *deployment) error {
 		case <-deadline.C:
 			statuses, statusErr := d.query(ctx, `SELECT status, count(*) FROM TeamTasks GROUP BY status ORDER BY status`)
 			actions, actionErr := d.query(ctx, `SELECT action, status, timed_out, count(*) FROM CheckerActionLogs GROUP BY action, status, timed_out ORDER BY action, status, timed_out`)
-			return errors.Join(
-				fmt.Errorf("load.catalog.wait - all %d checker workflows must reach UP: cells=%q actions=%q", teamCount*3, strings.TrimSpace(string(statuses)), strings.TrimSpace(string(actions))),
-				statusErr, actionErr,
-			)
+			failure := fmt.Errorf("load.catalog.wait - all %d checker workflows must reach UP: cells=%q actions=%q", teamCount*3, strings.TrimSpace(string(statuses)), strings.TrimSpace(string(actions)))
+			return errors.Join(failure, statusErr, actionErr)
 		case <-tick.C:
 		}
 	}

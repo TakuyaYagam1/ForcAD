@@ -49,10 +49,12 @@ func loadProfile() (string, []stage, error) {
 		return name, nil, err
 	}
 	warmupFlagRPS, steadyFlagRPS, recoveryFlagRPS := 20, 40, 20
+	warmupReadRPS, recoveryReadRPS := 50, 100
 	if name == "checker" {
 		warmupFlagRPS, steadyFlagRPS, recoveryFlagRPS = 2, 2, 2
+		warmupReadRPS, recoveryReadRPS = readRPS, readRPS
 	}
-	stages := []stage{{Name: "warmup", Duration: warmup, ReadRPS: 50, FlagRPS: warmupFlagRPS}}
+	stages := []stage{{Name: "warmup", Duration: warmup, ReadRPS: warmupReadRPS, FlagRPS: warmupFlagRPS}}
 	appendStage := func(label string, duration time.Duration, rps int, overload bool, path string) {
 		stages = append(stages, stage{Name: label, Duration: duration, ReadRPS: rps, FlagRPS: steadyFlagRPS, Overload: overload, Path: path})
 	}
@@ -92,7 +94,7 @@ func loadProfile() (string, []stage, error) {
 	if err != nil {
 		return name, nil, err
 	}
-	stages = append(stages, stage{Name: "recovery", Duration: recovery, ReadRPS: 100, FlagRPS: recoveryFlagRPS})
+	stages = append(stages, stage{Name: "recovery", Duration: recovery, ReadRPS: recoveryReadRPS, FlagRPS: recoveryFlagRPS})
 	var total time.Duration
 	for _, s := range stages {
 		total += s.Duration

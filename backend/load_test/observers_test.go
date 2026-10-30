@@ -3,6 +3,7 @@ package load_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -57,6 +58,9 @@ func observe(ctx context.Context, d *deployment, flags *catalog, directory strin
 		}
 	})
 	o.wait.Go(func() { o.sample(ctx, d, directory) })
+	if os.Getenv("LOAD_PROFILE") == "checker" {
+		o.wait.Go(func() { o.sampleCheckerLifecycle(ctx, d, directory) })
+	}
 	if os.Getenv("LOAD_DIAGNOSTICS") == "1" {
 		o.wait.Go(func() { o.sampleDatabase(ctx, d, directory) })
 		o.wait.Go(func() { o.samplePool(ctx, d, directory) })
@@ -139,7 +143,14 @@ func (o *observers) sample(ctx context.Context, d *deployment, directory string)
 	for ctx.Err() == nil {
 		if err := sampleResources(ctx, d, json.NewEncoder(file)); err != nil && ctx.Err() == nil {
 			o.fail(err)
-			return
+			// Keep the failure visible without losing every later resource sample.
+			if writeErr := json.NewEncoder(file).Encode(struct {
+				Time  time.Time `json:"time"`
+				Error string    `json:"sample_error"`
+			}{time.Now().UTC(), err.Error()}); writeErr != nil {
+				o.fail(writeErr)
+				return
+			}
 		}
 		if !waitContext(ctx, 10*time.Second) {
 			return
@@ -158,7 +169,7 @@ func sampleResources(ctx context.Context, d *deployment, encoder *json.Encoder) 
 	if len(strings.Fields(string(ids))) == 0 {
 		return fmt.Errorf("load.sampleResources - no test containers")
 	}
-	data, err := exec.CommandContext(bounded, "docker", args...).Output()
+	data, err := resourceCommandOutput(bounded, exec.CommandContext(bounded, "docker", args...))
 	if err != nil {
 		return fmt.Errorf("load.sampleResources - docker stats: %w", err)
 	}
@@ -182,4 +193,23 @@ FROM pg_stat_activity WHERE backend_type='client backend'`)
 		Containers []json.RawMessage `json:"containers"`
 		Database   json.RawMessage   `json:"database"`
 	}{time.Now().UTC(), containers, json.RawMessage(database)})
+}
+
+func resourceCommandOutput(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
+	cmd.WaitDelay = 2 * time.Second
+	started := time.Now()
+	data, err := cmd.Output()
+	if err == nil {
+		return data, nil
+	}
+	var stderr string
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		// Output retains a bounded prefix/suffix of stderr on failure. Keep it:
+		// exit status 1 alone cannot distinguish a Docker error from a Windows
+		// process killed after the command's context deadline.
+		stderr = strings.TrimSpace(string(exitErr.Stderr))
+	}
+	return nil, fmt.Errorf("after %s (context=%s, stderr=%q): %w",
+		time.Since(started).Round(time.Millisecond), fmt.Sprint(ctx.Err()), stderr, errors.Join(err, ctx.Err()))
 }

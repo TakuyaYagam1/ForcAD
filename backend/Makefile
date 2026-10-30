@@ -24,7 +24,7 @@ test-checker:
 	PYTHONDONTWRITEBYTECODE=1 $(GO) test -race -count=1 ./integration_test/checker -run '^TestExample'
 
 test-load:
-	./load_test/scripts/run.sh
+	bash ./load_test/scripts/run.sh
 
 test-contracts:
 	cd ../api && $(PNPM) test

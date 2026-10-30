@@ -3,6 +3,7 @@ package load_test
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,35 @@ import (
 	"strings"
 	"time"
 )
+
+// WaitDelay cannot release a caller blocked in Scan while a descendant retains
+// stdout. Closing our reader on cancellation makes that shutdown bounded too.
+func collectDiagnosticLines(ctx context.Context, cmd *exec.Cmd, consume func(string) error) error {
+	cmd.WaitDelay = 2 * time.Second
+	output, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+	cmd.Stderr = cmd.Stdout
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	stopClose := context.AfterFunc(ctx, func() { _ = output.Close() })
+	defer stopClose()
+	scanner := bufio.NewScanner(output)
+	scanner.Buffer(make([]byte, 64<<10), 1<<20)
+	var consumeErr error
+	for scanner.Scan() {
+		if consumeErr = consume(scanner.Text()); consumeErr != nil {
+			break
+		}
+	}
+	if consumeErr != nil || scanner.Err() != nil {
+		_ = cmd.Process.Kill()
+	}
+	return errors.Join(consumeErr, scanner.Err(), cmd.Wait())
+}
 
 // One persistent psql session samples short lock convoys without starting a
 // Docker process per sample. Only statement names are recorded, never values.
@@ -25,8 +55,41 @@ func (o *observers) sampleDatabase(ctx context.Context, d *deployment, directory
 		return
 	}
 	defer file.Close()
-	args := append(append([]string{}, d.compose...), "exec", "-T", "postgres", "sh", "-ec",
-		`exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1`)
+	ids, err := d.command(ctx, "", "ps", "--status", "running", "-q", "postgres")
+	if err != nil {
+		if ctx.Err() == nil {
+			o.fail(fmt.Errorf("%s - locate PostgreSQL: %w", location, err))
+		}
+		return
+	}
+	container := strings.TrimSpace(string(ids))
+	if len(container) != 64 || strings.IndexFunc(container, func(r rune) bool { return (r < '0' || r > '9') && (r < 'a' || r > 'f') }) != -1 {
+		o.fail(fmt.Errorf("%s - require one full PostgreSQL container ID", location))
+		return
+	}
+	// The Compose plugin can outlive docker.exe on Windows. Use direct exec and
+	// tag this session so cleanup also stops the server-side work after detach.
+	application := "forcad-load-database-" + rand.Text()
+	defer func() {
+		cleanup, cancelCleanup := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancelCleanup()
+		cmd := exec.CommandContext(cleanup, "docker", "exec", "-i", container, "sh", "-ec",
+			`exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1`)
+		cmd.WaitDelay = time.Second
+		cmd.Stdin = strings.NewReader("SELECT pg_terminate_backend(pid, 1000) FROM pg_stat_activity WHERE application_name = " + sqlString(application) + ";\nSELECT count(*) FROM pg_stat_activity WHERE application_name = " + sqlString(application) + ";\n")
+		output, err := cmd.Output()
+		if err == nil {
+			lines := strings.Fields(string(output))
+			if len(lines) == 0 || lines[len(lines)-1] != "0" {
+				err = errors.New("sampler database session remains active")
+			}
+		}
+		if err != nil {
+			o.fail(fmt.Errorf("%s - stop sampler session: %w", location, err))
+		}
+	}()
+	args := []string{"exec", "-i", "--env", "PGAPPNAME=" + application, container, "sh", "-ec",
+		`exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -v ON_ERROR_STOP=1`}
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	cmd.Stdin = strings.NewReader(`SELECT json_build_object('time', clock_timestamp(),
 'wal_bytes',(SELECT wal_bytes FROM pg_stat_wal),
@@ -44,32 +107,18 @@ FROM pg_stat_activity WHERE pid<>pg_backend_pid() AND (
      AND wait_event_type IS DISTINCT FROM 'Activity'))
 \watch 0.25
 `)
-	output, err := cmd.StdoutPipe()
-	if err != nil {
-		o.fail(fmt.Errorf("%s - open sample stream: %w", location, err))
-		return
-	}
-	if err := cmd.Start(); err != nil {
-		o.fail(fmt.Errorf("%s - start sampling: %w", location, err))
-		return
-	}
-	scanner := bufio.NewScanner(output)
-	scanner.Buffer(make([]byte, 64<<10), 1<<20)
-	for scanner.Scan() {
-		if strings.HasPrefix(scanner.Text(), "{") {
-			if _, err := fmt.Fprintln(file, scanner.Text()); err != nil {
-				o.fail(fmt.Errorf("%s - write sample: %w", location, err))
-				cancel()
-				break
-			}
+	err = collectDiagnosticLines(ctx, cmd, func(line string) error {
+		if strings.HasPrefix(line, "{") {
+			_, err := fmt.Fprintln(file, line)
+			return err
 		}
-	}
-	if err := scanner.Err(); err != nil && ctx.Err() == nil {
-		o.fail(fmt.Errorf("load.observers.sampleDatabase - read samples: %w", err))
-		cancel()
-	}
-	if err := cmd.Wait(); err != nil && ctx.Err() == nil {
-		o.fail(fmt.Errorf("load.observers.sampleDatabase - sample PostgreSQL: %w", err))
+		return nil
+	})
+	if ctx.Err() == nil {
+		if err == nil {
+			err = errors.New("sampler exited before cancellation")
+		}
+		o.fail(fmt.Errorf("%s - sample PostgreSQL: %w", location, err))
 	}
 }
 
@@ -90,29 +139,14 @@ func saveFlagLog(ctx context.Context, d *deployment, directory string, elapsed t
 	defer file.Close()
 	args := append(append([]string{}, d.compose...), "logs", "--no-color", "--timestamps", "receiver", "nginx")
 	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("%s - open log stream: %w", location, err)
-	}
-	cmd.Stderr = cmd.Stdout
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("%s - read container logs: %w", location, err)
-	}
-	scanner := bufio.NewScanner(output)
-	scanner.Buffer(make([]byte, 64<<10), 1<<20)
-	var writeErr error
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "/flags") {
-			if _, writeErr = fmt.Fprintln(file, scanner.Text()); writeErr != nil {
-				cancel()
-				break
-			}
+	err = collectDiagnosticLines(ctx, cmd, func(line string) error {
+		if strings.Contains(line, "/flags") {
+			_, err := fmt.Fprintln(file, line)
+			return err
 		}
-	}
-	if scanner.Err() != nil {
-		cancel()
-	}
-	if err := errors.Join(writeErr, scanner.Err(), cmd.Wait()); err != nil {
+		return nil
+	})
+	if err != nil {
 		return fmt.Errorf("%s - collect flag logs: %w", location, err)
 	}
 	return nil

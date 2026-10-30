@@ -64,6 +64,7 @@ func (d *deployment) command(ctx context.Context, input string, args ...string) 
 	bounded, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(bounded, "docker", append(append([]string{}, d.compose...), args...)...)
+	cmd.WaitDelay = 2 * time.Second
 	cmd.Stdin = strings.NewReader(input)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

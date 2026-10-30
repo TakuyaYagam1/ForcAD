@@ -76,6 +76,14 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		var observerErr error
 		report.WebSockets, observerErr = watch.stop()
 		runErr = errors.Join(runErr, observerErr)
+		if report.Profile == "checker" {
+			checker, auditErr := collectCheckerReport(ctx, d)
+			if auditErr == nil {
+				report.Checker = checker
+				auditErr = checker.validate()
+			}
+			runErr = errors.Join(runErr, auditErr)
+		}
 		if os.Getenv("LOAD_DIAGNOSTICS") == "1" {
 			runErr = errors.Join(runErr, saveFlagLog(ctx, d, directory, time.Since(report.Started)))
 		}
@@ -92,26 +100,24 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 			runErr = errors.Join(runErr, fmt.Errorf("load.runSuite - incomplete or failed WebSocket observations: %+v", report.WebSockets))
 		}
 	}()
-	if err := runStages(ctx, stages, report.Profile != "checker", func(s stage) error {
+	measurementErr := runStages(ctx, stages, report.Profile != "checker", func(s stage) error {
 		return measure(ctx, d, flags, s, report, directory, logf)
-	}); err != nil {
-		return err
-	}
+	})
 	bad, err := d.number(ctx, `SELECT count(*) FROM TeamTasks WHERE status<>101 OR checks<2 OR checks_passed<>checks`)
 	if err != nil {
-		return err
+		return errors.Join(measurementErr, err)
 	}
 	if bad != 0 {
-		return fmt.Errorf("load.runSuite - checker rounds failed or stopped progressing")
+		measurementErr = errors.Join(measurementErr, fmt.Errorf("load.runSuite - checker rounds failed or stopped progressing"))
 	}
 	failed, err := d.number(ctx, `SELECT count(*) FROM TeamTasksLog WHERE status IN (102,103,104,110)`)
 	if err != nil {
-		return err
+		return errors.Join(measurementErr, err)
 	}
 	if failed != 0 {
-		return fmt.Errorf("load.runSuite - %d failed checker results in history", failed)
+		measurementErr = errors.Join(measurementErr, fmt.Errorf("load.runSuite - %d failed checker results in history", failed))
 	}
-	return nil
+	return measurementErr
 }
 
 // Stop increasing pressure after a failed stage, but still observe recovery.
@@ -146,6 +152,14 @@ func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report
 	if err != nil {
 		return err
 	}
+	completedBefore := 0
+	if report.Profile == "checker" {
+		count, err := d.number(ctx, completedCheckerRoundsSQL)
+		if err != nil {
+			return err
+		}
+		completedBefore = int(count)
+	}
 	f := newFarm(d.origin, flags)
 	f.allowRateLimit = s.Name == "flag-burst"
 	result := stageReport{Name: s.Name, Path: s.Path, Started: time.Now().UTC(), Seconds: s.Duration.Seconds()}
@@ -164,7 +178,18 @@ func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report
 	integrityErr := f.reconcile(ctx, d, before)
 	result.Committed = f.committed
 	checksAfter, progressErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
-	if progressErr == nil && s.Duration >= 20*time.Second && checksAfter-checksBefore < int64(teamCount*3) {
+	if report.Profile == "checker" {
+		checker, auditErr := collectCheckerReport(ctx, d)
+		if auditErr == nil {
+			report.Checker = checker
+			result.CheckerCompletedRounds = checker.completedRounds()
+			auditErr = checker.validate()
+			if auditErr == nil && result.CheckerCompletedRounds-completedBefore < minimumCompletedRounds(s.Duration, checker.RoundSeconds) {
+				auditErr = fmt.Errorf("load.measure - completed checker rounds stopped progressing during %s", s.Name)
+			}
+		}
+		progressErr = errors.Join(progressErr, auditErr)
+	} else if progressErr == nil && s.Duration >= 20*time.Second && checksAfter-checksBefore < int64(teamCount*3) {
 		progressErr = fmt.Errorf("load.measure - checker rounds stopped progressing during %s", s.Name)
 	}
 	result.IntegrityPassed = integrityErr == nil
