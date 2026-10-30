@@ -3,8 +3,9 @@ post:
   tags:
   - admin
   summary: End the current administrator session.
-  description: Clears the session cookie if one is present.
-  security: []
+  description: Ends the authenticated session. Requires its X-CSRF-Token header.
+  security:
+  - sessionCookie: []
   responses:
     '200':
       description: Session ended.
@@ -17,3 +18,5 @@ post:
         application/json:
           schema:
             "$ref": "../components/schemas.yml#/StatusResponse"
+    default:
+      "$ref": "../components/responses.yml#/ApiError"

@@ -80,7 +80,7 @@ func TestPublicEventsAndAdminAnnouncementRoute(t *testing.T) {
 	if response := request(router, http.MethodPost, "/api/admin/events/", body, nil); response.Code != http.StatusForbidden {
 		t.Fatalf("anonymous announcement: %d %s", response.Code, response.Body.String())
 	}
-	created := request(router, http.MethodPost, "/api/admin/events/", body, map[string]string{"Cookie": "session=valid"})
+	created := request(router, http.MethodPost, "/api/admin/events/", body, map[string]string{"Cookie": "session=valid", "X-CSRF-Token": strings.Repeat("c", 64)})
 	if created.Code != http.StatusCreated {
 		t.Fatalf("admin announcement: %d %s", created.Code, created.Body.String())
 	}

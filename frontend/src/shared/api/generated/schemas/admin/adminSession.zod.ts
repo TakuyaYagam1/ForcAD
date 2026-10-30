@@ -7,9 +7,16 @@
  */
 import * as zod from 'zod';
 
+export const adminSessionCsrfTokenMin = 64;
+export const adminSessionCsrfTokenMax = 64;
+
+
+export const adminSessionCsrfTokenRegExp = new RegExp('^[0-9a-f]{64}$');
+
 export const AdminSession = zod.object({
   "status": zod.enum(['ok']),
-  "username": zod.string()
+  "username": zod.string(),
+  "csrf_token": zod.string().min(adminSessionCsrfTokenMin).max(adminSessionCsrfTokenMax).regex(adminSessionCsrfTokenRegExp).describe('Session-bound CSRF token. Send in X-CSRF-Token for administrative mutations; never put it in a URL.')
 })
 
 export type AdminSession = zod.input<typeof AdminSession>;

@@ -43,6 +43,7 @@ COPY deployment/nginx/http.conf.template /etc/nginx/http.conf.template
 COPY deployment/nginx/proxy_params /etc/nginx/proxy_params
 COPY deployment/nginx/proxy_params_ws /etc/nginx/proxy_params_ws
 COPY deployment/nginx/api_limits.conf /etc/nginx/api_limits.conf
+COPY deployment/nginx/frontend_security_headers.conf /etc/nginx/frontend_security_headers.conf
 COPY deployment/docker/scripts/nginx/05-forcad-proxy-proto.sh /docker-entrypoint.d/05-forcad-proxy-proto.sh
 
 COPY --from=frontend /workspace/frontend/dist/ /var/www/front/

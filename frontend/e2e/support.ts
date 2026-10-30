@@ -1,5 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
-import { expect, type Browser, type BrowserContext, type Page, type WebSocketRoute } from "@playwright/test";
+import { expect, type Browser, type BrowserContext, type Page, type Response, type WebSocketRoute } from "@playwright/test";
 
 export interface AdminCredentials {
   username: string;
@@ -48,6 +48,60 @@ export function createE2EContext(browser: Browser): Promise<BrowserContext> {
   return browser.newContext({
     baseURL: process.env.FORCAD_E2E_BASE_URL || "http://nginx:8080",
   });
+}
+
+interface CSPViolation {
+  directive: string;
+  blocked: string;
+  source: string;
+  line: number;
+  column: number;
+}
+
+export async function observeCSP(page: Page): Promise<CSPViolation[]> {
+  const violations: CSPViolation[] = [];
+  await page.exposeFunction("forcadRecordCSPViolation", (violation: CSPViolation) => {
+    violations.push(violation);
+  });
+  await page.addInitScript(() => {
+    document.addEventListener("securitypolicyviolation", (event) => {
+      const report = (window as unknown as {
+        forcadRecordCSPViolation: (violation: CSPViolation) => Promise<void>;
+      }).forcadRecordCSPViolation;
+      let blocked = "other";
+      if (["inline", "eval", "wasm-eval"].includes(event.blockedURI)) {
+        blocked = event.blockedURI;
+      } else if (/^https?:/.test(event.blockedURI)) {
+        blocked = new URL(event.blockedURI).origin === location.origin
+          ? "same-origin-url" : "other-url";
+      }
+      let source = "<document-or-unknown>";
+      if (event.sourceFile) {
+        try {
+          const basename = new URL(event.sourceFile, location.href).pathname.split("/").pop() ?? "";
+          if (/^[\w.-]{1,100}\.(?:[cm]?js|html)$/.test(basename)) source = basename;
+        } catch { /* Never emit unparsed URLs or script contents. */ }
+      }
+      // No URLs, query strings, script samples or response contents leave the page.
+      void report({ directive: event.effectiveDirective, blocked, source,
+        line: event.lineNumber, column: event.columnNumber });
+    });
+  });
+  return violations;
+}
+
+export function expectDocumentSecurity(response: Response | null): void {
+  expect(response).not.toBeNull();
+  const policy = response!.headers()["content-security-policy"] ?? "";
+  const directives = new Map(policy.split(";").map((directive): [string, string] => {
+    const [name, ...values] = directive.trim().split(/\s+/);
+    return [name, values.join(" ")];
+  }));
+  expect(directives.get("script-src")).toBe("'self'");
+  expect(directives.get("script-src-attr")).toBe("'none'");
+  for (const directive of ["base-uri", "object-src", "frame-src", "frame-ancestors"]) {
+    expect(directives.get(directive)).toBe("'none'");
+  }
 }
 
 export async function readAdminCredentials(): Promise<AdminCredentials> {

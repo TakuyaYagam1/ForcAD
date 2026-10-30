@@ -1,16 +1,17 @@
 import { expect, test } from "@playwright/test";
-import { createE2EContext } from "./support";
+import { createE2EContext, expectDocumentSecurity, observeCSP } from "./support";
 
 test("public team list, direct profile reload, history, and scoreboard load", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
+  const cspViolations = await observeCSP(page);
 
   try {
     const scoreboardResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
     });
-    await page.goto("/teams");
+    expectDocumentSecurity(await page.goto("/teams"));
     expect((await scoreboardResponse).status()).toBe(200);
     await expect(page.getByRole("region", { name: "Топ команд" })).toBeVisible();
 
@@ -50,6 +51,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     await page.goto("/");
     expect((await rootScoreboard).status()).toBe(200);
     await expect(page.getByRole("heading", { name: "Рейтинг команд", exact: true })).toBeVisible();
+    expect(cspViolations).toEqual([]);
   } finally {
     await context.close();
   }

@@ -2,7 +2,7 @@ sessionCookie:
   type: apiKey
   in: cookie
   name: session
-  description: Administrator session cookie. The frontend sends it with credentials included.
+  description: Administrator session cookie. Every POST, PUT, PATCH or DELETE using this cookie also requires X-CSRF-Token with the csrf_token returned by login or session status. Keep that token out of URLs and logs.
 teamToken:
   type: apiKey
   in: header

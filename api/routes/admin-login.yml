@@ -3,7 +3,7 @@ post:
   tags:
   - admin
   summary: Start an administrator session.
-  description: Sets the HttpOnly session cookie on success.
+  description: Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.
   security: []
   requestBody:
     required: true
@@ -27,4 +27,6 @@ post:
     '400':
       "$ref": "../components/responses.yml#/ApiError"
     '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '415':
       "$ref": "../components/responses.yml#/ApiError"

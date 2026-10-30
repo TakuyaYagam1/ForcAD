@@ -32,12 +32,17 @@ func (a testAuth) Status(_ context.Context, token string) (string, error) {
 	if a.err != nil {
 		return "", a.err
 	}
-	if token != "valid" {
+	if token != "valid" && token != "session-value" {
 		return "", usecase.ErrUnauthorized
 	}
 	return "admin", nil
 }
 func (a testAuth) Logout(context.Context, string) error { return a.err }
+
+func (a testAuth) StatusDetails(ctx context.Context, token string) (string, string, error) {
+	username, err := a.Status(ctx, token)
+	return username, strings.Repeat("c", 64), err
+}
 
 type testFlags struct {
 	entered chan struct{}
@@ -384,7 +389,7 @@ func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
 func TestGameActionRequiresConfirmation(t *testing.T) {
 	g := &testGame{}
 	r := testRouter(t, "api", g, testAuth{}, &testFlags{})
-	headers := map[string]string{"Cookie": "session=valid"}
+	headers := map[string]string{"Cookie": "session=valid", "X-CSRF-Token": strings.Repeat("c", 64)}
 	if w := request(r, "POST", "/api/admin/game/finish/", `{}`, headers); w.Code != 400 || g.changed != "" {
 		t.Fatalf("missing confirmation: %d", w.Code)
 	}

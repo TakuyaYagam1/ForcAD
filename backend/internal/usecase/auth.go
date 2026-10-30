@@ -19,6 +19,7 @@ import (
 const SessionTTL = 8 * time.Hour
 
 var ErrUnauthorized = errors.New("invalid credentials or session")
+var ErrInvalidCSRF = errors.New("invalid CSRF token")
 
 type SessionStore interface {
 	Get(ctx context.Context, key string) ([]byte, error)
@@ -33,6 +34,7 @@ type Auth struct {
 type sessionData struct {
 	Username        string `json:"username"`
 	PasswordVersion string `json:"password_version"`
+	CSRFToken       string `json:"csrf_token"`
 }
 
 func NewAuth(store SessionStore, username, password string) *Auth {
@@ -62,12 +64,12 @@ func (a *Auth) Login(ctx context.Context, username, password string) (string, er
 	if !userOK || !passwordOK || a.username == "" || a.password == "" {
 		return "", fmt.Errorf("%s - authenticate administrator: %w", location, ErrUnauthorized)
 	}
-	var random [32]byte
+	var random [64]byte
 	if _, err := rand.Read(random[:]); err != nil {
 		return "", fmt.Errorf("%s - generate session token: %w", location, err)
 	}
-	token := hex.EncodeToString(random[:])
-	data, err := json.Marshal(sessionData{Username: a.username, PasswordVersion: marker(a.password, token, a.username)})
+	token := hex.EncodeToString(random[:32])
+	data, err := json.Marshal(sessionData{Username: a.username, PasswordVersion: marker(a.password, token, a.username), CSRFToken: hex.EncodeToString(random[32:])})
 	if err != nil {
 		return "", fmt.Errorf("%s - encode session: %w", location, err)
 	}
@@ -78,23 +80,34 @@ func (a *Auth) Login(ctx context.Context, username, password string) (string, er
 }
 
 func (a *Auth) Status(ctx context.Context, token string) (string, error) {
+	username, _, err := a.StatusDetails(ctx, token)
+	return username, err
+}
+
+// StatusDetails reads one authenticated session, including its independent
+// random synchronizer token. Old sessions without that token require re-login.
+func (a *Auth) StatusDetails(ctx context.Context, token string) (string, string, error) {
 	const location = "usecase.Auth.Status"
 	if !validToken(token) {
-		return "", fmt.Errorf("%s - validate session token: %w", location, ErrUnauthorized)
+		return "", "", fmt.Errorf("%s - validate session token: %w", location, ErrUnauthorized)
 	}
 	data, err := a.store.Get(ctx, "session:"+token)
 	if err != nil {
 		if errors.Is(err, cachekit.ErrNotFound) {
-			return "", fmt.Errorf("%s - session is unavailable: %w", location, ErrUnauthorized)
+			return "", "", fmt.Errorf("%s - session is unavailable: %w", location, ErrUnauthorized)
 		}
-		return "", fmt.Errorf("%s - load session: %w", location, err)
+		return "", "", fmt.Errorf("%s - load session: %w", location, err)
 	}
 	var session sessionData
-	if json.Unmarshal(data, &session) != nil || !equal(session.Username, a.username) || !equal(session.PasswordVersion, marker(a.password, token, a.username)) {
+	if json.Unmarshal(data, &session) != nil || !validToken(session.CSRFToken) || !equal(session.Username, a.username) || !equal(session.PasswordVersion, marker(a.password, token, a.username)) {
 		_ = a.store.Del(ctx, "session:"+token)
-		return "", fmt.Errorf("%s - validate stored session: %w", location, ErrUnauthorized)
+		return "", "", fmt.Errorf("%s - validate stored session: %w", location, ErrUnauthorized)
 	}
-	return a.username, nil
+	return a.username, session.CSRFToken, nil
+}
+
+func MatchCSRFToken(provided, expected string) bool {
+	return validToken(provided) && validToken(expected) && equal(provided, expected)
 }
 
 func (a *Auth) Logout(ctx context.Context, token string) error {

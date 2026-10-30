@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { createE2EContext, loginAsAdmin, readAdminCredentials } from "./support";
+import { createE2EContext, loginAsAdmin, observeCSP, readAdminCredentials } from "./support";
 
 test("admin validates and restores team and service edits", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   const credentials = await readAdminCredentials();
+  const cspViolations = await observeCSP(page);
 
   try {
     await loginAsAdmin(page, credentials);
@@ -106,6 +107,7 @@ test("admin validates and restores team and service edits", async ({ browser }) 
       name: originalTaskName,
       exact: true,
     })).toBeVisible();
+    expect(cspViolations).toEqual([]);
   } finally {
     await context.close();
   }

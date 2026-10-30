@@ -11,16 +11,17 @@ import (
 type Handler interface {
 	// AdminLogin implements adminLogin operation.
 	//
-	// Sets the HttpOnly session cookie on success.
+	// Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
+	// cross-origin browser requests. Responses are Cache-Control no-store.
 	//
 	// POST /api/admin/login/
 	AdminLogin(ctx context.Context, req *AdminLoginRequest) (AdminLoginRes, error)
 	// AdminLogout implements adminLogout operation.
 	//
-	// Clears the session cookie if one is present.
+	// Ends the authenticated session. Requires its X-CSRF-Token header.
 	//
 	// POST /api/admin/logout/
-	AdminLogout(ctx context.Context) (*StatusResponseHeaders, error)
+	AdminLogout(ctx context.Context) (AdminLogoutRes, error)
 	// ChangeAdminGameState implements changeAdminGameState operation.
 	//
 	// Start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
@@ -83,7 +84,8 @@ type Handler interface {
 	GetAdminMetrics(ctx context.Context) (Metrics, error)
 	// GetAdminSessionStatus implements getAdminSessionStatus operation.
 	//
-	// Check the current administrator session.
+	// Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
+	// no-store.
 	//
 	// GET /api/admin/status/
 	GetAdminSessionStatus(ctx context.Context) (GetAdminSessionStatusRes, error)

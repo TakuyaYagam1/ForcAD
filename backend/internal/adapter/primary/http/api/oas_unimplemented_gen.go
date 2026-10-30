@@ -17,7 +17,8 @@ var _ RawHandler = UnimplementedHandler{}
 
 // AdminLogin implements adminLogin operation.
 //
-// Sets the HttpOnly session cookie on success.
+// Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
+// cross-origin browser requests. Responses are Cache-Control no-store.
 //
 // POST /api/admin/login/
 func (UnimplementedHandler) AdminLogin(ctx context.Context, req *AdminLoginRequest) (r AdminLoginRes, _ error) {
@@ -26,10 +27,10 @@ func (UnimplementedHandler) AdminLogin(ctx context.Context, req *AdminLoginReque
 
 // AdminLogout implements adminLogout operation.
 //
-// Clears the session cookie if one is present.
+// Ends the authenticated session. Requires its X-CSRF-Token header.
 //
 // POST /api/admin/logout/
-func (UnimplementedHandler) AdminLogout(ctx context.Context) (r *StatusResponseHeaders, _ error) {
+func (UnimplementedHandler) AdminLogout(ctx context.Context) (r AdminLogoutRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -125,7 +126,8 @@ func (UnimplementedHandler) GetAdminMetrics(ctx context.Context) (r Metrics, _ e
 
 // GetAdminSessionStatus implements getAdminSessionStatus operation.
 //
-// Check the current administrator session.
+// Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
+// no-store.
 //
 // GET /api/admin/status/
 func (UnimplementedHandler) GetAdminSessionStatus(ctx context.Context) (r GetAdminSessionStatusRes, _ error) {

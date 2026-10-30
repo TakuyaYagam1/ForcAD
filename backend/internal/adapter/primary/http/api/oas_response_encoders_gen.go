@@ -72,42 +72,72 @@ func encodeAdminLoginResponse(response AdminLoginRes, w http.ResponseWriter, spa
 
 		return nil
 
+	case *AdminLoginUnsupportedMediaType:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(415)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
 	default:
 		return errors.Errorf("unexpected response type: %T", response)
 	}
 }
 
-func encodeAdminLogoutResponse(response *StatusResponseHeaders, w http.ResponseWriter, span trace.Span) error {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
-	// Encoding response headers.
-	{
-		h := uri.NewHeaderEncoder(w.Header())
-		// Encode "Set-Cookie" header.
+func encodeAdminLogoutResponse(response AdminLogoutRes, w http.ResponseWriter, span trace.Span) error {
+	switch response := response.(type) {
+	case *ApiError:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(0)
+
+		e := new(jx.Encoder)
+		response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
+
+		return nil
+
+	case *StatusResponseHeaders:
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Expose-Headers", "Set-Cookie")
+		// Encoding response headers.
 		{
-			cfg := uri.HeaderParameterEncodingConfig{
-				Name:    "Set-Cookie",
-				Explode: false,
-			}
-			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-				if val, ok := response.SetCookie.Get(); ok {
-					return e.EncodeValue(conv.StringToString(val))
+			h := uri.NewHeaderEncoder(w.Header())
+			// Encode "Set-Cookie" header.
+			{
+				cfg := uri.HeaderParameterEncodingConfig{
+					Name:    "Set-Cookie",
+					Explode: false,
 				}
-				return nil
-			}); err != nil {
-				return errors.Wrap(err, "encode Set-Cookie header")
+				if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+					if val, ok := response.SetCookie.Get(); ok {
+						return e.EncodeValue(conv.StringToString(val))
+					}
+					return nil
+				}); err != nil {
+					return errors.Wrap(err, "encode Set-Cookie header")
+				}
 			}
 		}
-	}
-	w.WriteHeader(200)
+		w.WriteHeader(200)
 
-	e := new(jx.Encoder)
-	response.Response.Encode(e)
-	if _, err := e.WriteTo(w); err != nil {
-		return errors.Wrap(err, "write")
-	}
+		e := new(jx.Encoder)
+		response.Response.Encode(e)
+		if _, err := e.WriteTo(w); err != nil {
+			return errors.Wrap(err, "write")
+		}
 
-	return nil
+		return nil
+
+	default:
+		return errors.Errorf("unexpected response type: %T", response)
+	}
 }
 
 func encodeChangeAdminGameStateResponse(response ChangeAdminGameStateRes, w http.ResponseWriter, span trace.Span) error {

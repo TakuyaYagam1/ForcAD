@@ -46,10 +46,16 @@ func (s *AdminLoginRequest) SetPassword(val string) {
 	s.Password = val
 }
 
+type AdminLoginUnsupportedMediaType ApiError
+
+func (*AdminLoginUnsupportedMediaType) adminLoginRes() {}
+
 // Ref: #/components/schemas/AdminSession
 type AdminSession struct {
 	Status   AdminSessionStatus `json:"status"`
 	Username string             `json:"username"`
+	// Session-bound CSRF token. Send in X-CSRF-Token for administrative mutations; never put it in a URL.
+	CsrfToken string `json:"csrf_token"`
 }
 
 // GetStatus returns the value of Status.
@@ -62,6 +68,11 @@ func (s *AdminSession) GetUsername() string {
 	return s.Username
 }
 
+// GetCsrfToken returns the value of CsrfToken.
+func (s *AdminSession) GetCsrfToken() string {
+	return s.CsrfToken
+}
+
 // SetStatus sets the value of Status.
 func (s *AdminSession) SetStatus(val AdminSessionStatus) {
 	s.Status = val
@@ -70,6 +81,11 @@ func (s *AdminSession) SetStatus(val AdminSessionStatus) {
 // SetUsername sets the value of Username.
 func (s *AdminSession) SetUsername(val string) {
 	s.Username = val
+}
+
+// SetCsrfToken sets the value of CsrfToken.
+func (s *AdminSession) SetCsrfToken(val string) {
+	s.CsrfToken = val
 }
 
 func (*AdminSession) getAdminSessionStatusRes() {}
@@ -914,6 +930,7 @@ func (s *ApiError) SetError(val string) {
 	s.Error = val
 }
 
+func (*ApiError) adminLogoutRes()                {}
 func (*ApiError) getAdminSessionStatusRes()      {}
 func (*ApiError) getAdminTasksRes()              {}
 func (*ApiError) getAdminTeamsRes()              {}
@@ -3449,6 +3466,8 @@ func (s *StatusResponseHeaders) SetSetCookie(val OptString) {
 func (s *StatusResponseHeaders) SetResponse(val StatusResponse) {
 	s.Response = val
 }
+
+func (*StatusResponseHeaders) adminLogoutRes() {}
 
 type StatusResponseStatus string
 

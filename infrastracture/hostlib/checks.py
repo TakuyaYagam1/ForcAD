@@ -3,11 +3,41 @@
 import re
 import time
 import urllib.request
+from urllib.parse import urlsplit
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # A successful check must describe the configured endpoint itself.
+        return None
+
+
+def _validate_endpoint(url):
+    try:
+        address = urlsplit(url)
+        if (
+            address.scheme not in {"http", "https"}
+            or not address.hostname
+            or address.username is not None
+            or address.password is not None
+            or address.fragment
+            or address.netloc.endswith(":")
+            or address.port == 0
+        ):
+            raise ValueError("invalid endpoint")
+    except ValueError:
+        # Never echo userinfo or other malformed endpoint data into logs.
+        raise ValueError("Expected an HTTP(S) endpoint without userinfo or fragment") from None
 
 
 def http(url, metrics=None):
+    # Addresses are generated from operator configuration. Private game and
+    # management networks are intentional; arbitrary response redirects are not.
+    _validate_endpoint(url)
     # Do not send private management requests through a shell proxy setting.
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler({}), _NoRedirect()
+    )
     with opener.open(url, timeout=5) as response:
         if response.status != 200:
             raise ValueError(f"Endpoint unavailable: {url}")

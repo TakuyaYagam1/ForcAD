@@ -35,7 +35,8 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 
 // handleAdminLoginRequest handles adminLogin operation.
 //
-// Sets the HttpOnly session cookie on success.
+// Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
+// cross-origin browser requests. Responses are Cache-Control no-store.
 //
 // POST /api/admin/login/
 func (s *Server) handleAdminLoginRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -178,7 +179,7 @@ func (s *Server) handleAdminLoginRequest(args [0]string, argsEscaped bool, w htt
 
 // handleAdminLogoutRequest handles adminLogout operation.
 //
-// Clears the session cookie if one is present.
+// Ends the authenticated session. Requires its X-CSRF-Token header.
 //
 // POST /api/admin/logout/
 func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -246,12 +247,60 @@ func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w ht
 
 			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
 		}
-		err error
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: AdminLogoutOperation,
+			ID:   "adminLogout",
+		}
 	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securitySessionCookie(ctx, AdminLogoutOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "SessionCookie",
+					Err:              err,
+				}
+				defer recordError("Security:SessionCookie", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
 
 	var rawBody []byte
 
-	var response *StatusResponseHeaders
+	var response AdminLogoutRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -267,7 +316,7 @@ func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w ht
 		type (
 			Request  = struct{}
 			Params   = struct{}
-			Response = *StatusResponseHeaders
+			Response = AdminLogoutRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -2046,7 +2095,8 @@ func (s *Server) handleGetAdminMetricsRequest(args [0]string, argsEscaped bool, 
 
 // handleGetAdminSessionStatusRequest handles getAdminSessionStatus operation.
 //
-// Check the current administrator session.
+// Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
+// no-store.
 //
 // GET /api/admin/status/
 func (s *Server) handleGetAdminSessionStatusRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {

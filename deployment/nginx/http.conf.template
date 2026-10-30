@@ -14,6 +14,14 @@ map $uri $team_logo_csp {
     ~*\.svg$ "default-src 'none'; style-src 'unsafe-inline'; sandbox";
 }
 
+# Explicit same-host WebSocket sources cover browsers that do not map 'self'
+# to ws/wss. Reflect only an ordinary Host authority, never arbitrary header text.
+map $http_host $frontend_websocket_sources {
+    default "";
+    "~^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?(?::[0-9]{1,5})?$" "ws://$http_host wss://$http_host";
+    "~^\[[0-9a-fA-F:]+\](?::[0-9]{1,5})?$" "ws://$http_host wss://$http_host";
+}
+
 limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=150r/s;
 
 resolver ${DNS_RESOLVER} valid=10s ipv6=off;
@@ -114,6 +122,7 @@ server {
     }
 
     location / {
+        include /etc/nginx/frontend_security_headers.conf;
         gzip on;
         gzip_static on;
         gzip_types text/plain text/css text/javascript application/javascript;

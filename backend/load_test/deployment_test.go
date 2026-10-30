@@ -117,17 +117,23 @@ func (d *deployment) start(ctx context.Context) error {
 	}
 	client := &http.Client{Jar: jar, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	defer client.CloseIdleConnections()
-	if err := d.post(ctx, client, "/api/admin/login/", map[string]any{"username": credentials["ADMIN_USERNAME"], "password": credentials["ADMIN_PASSWORD"]}); err != nil {
+	var session struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := d.post(ctx, client, "/api/admin/login/", map[string]any{"username": credentials["ADMIN_USERNAME"], "password": credentials["ADMIN_PASSWORD"]}, "", &session); err != nil {
 		return err
+	}
+	if len(session.CSRFToken) != 64 {
+		return fmt.Errorf("%s - login did not return a CSRF token", location)
 	}
 	generation, err := d.number(ctx, `SELECT generation FROM GameSession`)
 	if err != nil {
 		return err
 	}
-	return d.post(ctx, client, "/api/admin/game/start_final/", map[string]any{"confirm": true, "generation": generation})
+	return d.post(ctx, client, "/api/admin/game/start_final/", map[string]any{"confirm": true, "generation": generation}, session.CSRFToken, nil)
 }
 
-func (d *deployment) post(ctx context.Context, client *http.Client, path string, body any) error {
+func (d *deployment) post(ctx context.Context, client *http.Client, path string, body any, csrfToken string, result any) error {
 	const location = "load.deployment.post"
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -139,15 +145,23 @@ func (d *deployment) post(ctx context.Context, client *http.Client, path string,
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", d.origin)
+	if csrfToken != "" {
+		req.Header.Set("X-CSRF-Token", csrfToken)
+	}
 	response, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("%s - send request: %w", location, err)
 	}
 	defer response.Body.Close()
-	_, _ = io.Copy(io.Discard, response.Body)
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s - %s returned HTTP %d", location, path, response.StatusCode)
 	}
+	if result != nil {
+		if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(result); err != nil {
+			return fmt.Errorf("%s - decode response: %w", location, err)
+		}
+	}
+	_, _ = io.Copy(io.Discard, response.Body)
 	return nil
 }
 

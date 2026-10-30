@@ -202,6 +202,44 @@ func (s *AdminLoginRequest) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes AdminLoginUnsupportedMediaType as json.
+func (s *AdminLoginUnsupportedMediaType) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes AdminLoginUnsupportedMediaType from json.
+func (s *AdminLoginUnsupportedMediaType) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminLoginUnsupportedMediaType to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = AdminLoginUnsupportedMediaType(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminLoginUnsupportedMediaType) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminLoginUnsupportedMediaType) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode implements json.Marshaler.
 func (s *AdminSession) Encode(e *jx.Encoder) {
 	e.ObjStart()
@@ -219,11 +257,16 @@ func (s *AdminSession) encodeFields(e *jx.Encoder) {
 		e.FieldStart("username")
 		e.Str(s.Username)
 	}
+	{
+		e.FieldStart("csrf_token")
+		e.Str(s.CsrfToken)
+	}
 }
 
-var jsonFieldsNameOfAdminSession = [2]string{
+var jsonFieldsNameOfAdminSession = [3]string{
 	0: "status",
 	1: "username",
+	2: "csrf_token",
 }
 
 // Decode decodes AdminSession from json.
@@ -257,6 +300,18 @@ func (s *AdminSession) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"username\"")
 			}
+		case "csrf_token":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.CsrfToken = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"csrf_token\"")
+			}
 		default:
 			return errors.Errorf("unexpected field %q", k)
 		}
@@ -267,7 +322,7 @@ func (s *AdminSession) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00000011,
+		0b00000111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { createE2EContext, readAdminCredentials } from "./support";
+import { createE2EContext, expectDocumentSecurity, observeCSP, readAdminCredentials } from "./support";
 
 test("admin access, login persistence, and logout use the live session", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   const credentials = await readAdminCredentials();
+  const cspViolations = await observeCSP(page);
 
   try {
-    await page.goto("/admin/scoreboard");
+    expectDocumentSecurity(await page.goto("/admin/scoreboard"));
     await expect(page).toHaveURL(/\/admin\/login$/);
     await expect(page.getByRole("heading", { name: "Вход в управление" })).toBeVisible();
 
@@ -18,7 +19,14 @@ test("admin access, login persistence, and logout use the live session", async (
     await expect(page).toHaveURL(/\/admin\/login$/);
 
     await page.getByLabel("Пароль", { exact: true }).fill(credentials.password);
+    const loginResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/admin/login/"
+      && response.request().method() === "POST");
     await page.getByRole("button", { name: "Войти", exact: true }).click();
+    const login = await loginResponse;
+    expect(login.status()).toBe(200);
+    const csrfToken = (await login.json() as { csrf_token?: unknown }).csrf_token;
+    expect(typeof csrfToken === "string" && /^[0-9a-f]{64}$/.test(csrfToken)).toBe(true);
     await expect(page).toHaveURL(/\/admin\/scoreboard$/);
     await expect(page.getByRole("heading", { name: "Управление соревнованием" })).toBeVisible();
 
@@ -59,10 +67,37 @@ test("admin access, login persistence, and logout use the live session", async (
       return url.pathname === "/api/admin/status/" && response.request().method() === "GET";
     });
     await page.reload();
-    expect((await sessionAfterReload).status()).toBe(200);
+    const session = await sessionAfterReload;
+    expect(session.status()).toBe(200);
+    expect((await session.json() as { csrf_token?: unknown }).csrf_token === csrfToken).toBe(true);
     await expect(page.getByRole("heading", { name: "Управление соревнованием" })).toBeVisible();
 
+    const rejected = await page.evaluate(async () => {
+      const status = await fetch("/api/admin/status/", { cache: "no-store" });
+      const { csrf_token: token } = await status.json() as { csrf_token: string };
+      const wrong = (token[0] === "0" ? "1" : "0") + token.slice(1);
+      const statuses: number[] = [];
+      const headerCases: Record<string, string>[] = [
+        { "Content-Type": "application/json" },
+        { "Content-Type": "application/json", "X-CSRF-Token": wrong },
+      ];
+      for (const headers of headerCases) {
+        const response = await fetch("/api/admin/logout/", {
+          method: "POST", headers, body: "{}",
+        });
+        statuses.push(response.status);
+      }
+      statuses.push((await fetch("/api/admin/status/", { cache: "no-store" })).status);
+      return statuses;
+    });
+    expect(rejected).toEqual([403, 403, 200]);
+    const logoutResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/admin/logout/"
+      && response.request().method() === "POST");
     await page.getByRole("button", { name: "Выйти", exact: true }).click();
+    const logout = await logoutResponse;
+    expect(logout.status()).toBe(200);
+    expect((await logout.request().headerValue("X-CSRF-Token")) === csrfToken).toBe(true);
     await expect(page).toHaveURL(/\/admin\/login$/);
 
     const invalidatedSession = page.waitForResponse((response) => {
@@ -72,6 +107,7 @@ test("admin access, login persistence, and logout use the live session", async (
     await page.goto("/admin/task/create");
     expect((await invalidatedSession).status()).toBe(403);
     await expect(page).toHaveURL(/\/admin\/login$/);
+    expect(cspViolations).toEqual([]);
   } finally {
     await context.close();
   }

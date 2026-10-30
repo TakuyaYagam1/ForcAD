@@ -27,6 +27,7 @@ def check_public(request, team_id):
         serialized = json.dumps(payload)
         for private_field in (
             "token",
+            "csrf_token",
             "private_message",
             "private_flag_data",
             "command",
@@ -59,10 +60,28 @@ def check_unauthorized(request, team_id):
         for method in ("GET", "PUT", "DELETE"):
             expect(request, f"/api/admin/{collection}/{team_id}/", 403, method=method)
     expect(request, "/api/admin/game/start_practice/", 403, {}, "POST")
+    expect(request, "/api/admin/logout/", 403, {}, "POST")
 
 
-def check_admin(request):
-    expect(request, "/api/admin/status/")
+def check_admin(request, csrf_token):
+    session = expect(request, "/api/admin/status/")
+    assert re.fullmatch(r"[0-9a-f]{64}", csrf_token), "invalid session CSRF token"
+    assert session["csrf_token"] == csrf_token, "session CSRF token changed"
+    wrong_csrf = ("0" if csrf_token[0] != "0" else "1") + csrf_token[1:]
+    # Invalid input keeps this rejection check harmless even if the guard regresses.
+    for path in ("/api/admin/teams/", "/api/admin/logout/"):
+        expect(request, path, 403, {}, "POST", csrf=False)
+        expect(
+            request,
+            path,
+            403,
+            {},
+            "POST",
+            extra_headers={"X-CSRF-Token": wrong_csrf},
+        )
+    assert expect(request, "/api/admin/status/")["csrf_token"] == csrf_token, (
+        "rejected mutation changed the session"
+    )
     teams = expect(request, "/api/admin/teams/")
     tasks = expect(request, "/api/admin/tasks/")
     assert teams and tasks, "deployment fixture has no team or task"

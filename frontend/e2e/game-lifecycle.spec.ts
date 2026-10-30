@@ -4,6 +4,7 @@ import {
   currentRuntime,
   expectNewPhase,
   loginAsAdmin,
+  observeCSP,
   observePublicStream,
   readAdminCredentials,
   resetPractice,
@@ -22,6 +23,8 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
   const adminContext = await createE2EContext(browser);
   const publicPage = await publicContext.newPage();
   const adminPage = await adminContext.newPage();
+  const publicCSPViolations = await observeCSP(publicPage);
+  const adminCSPViolations = await observeCSP(adminPage);
   const pageErrors: string[] = [];
   publicPage.on("pageerror", (error) => pageErrors.push(error.message));
   adminPage.on("pageerror", (error) => pageErrors.push(error.message));
@@ -198,6 +201,8 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     await expect(publicPage.getByRole("banner")
       .getByText("Ожидание старта", { exact: true })).toBeVisible();
     expect(pageErrors).toEqual([]);
+    expect(publicCSPViolations).toEqual([]);
+    expect(adminCSPViolations).toEqual([]);
   } finally {
     try {
       if (adminAuthenticated) await resetPractice(adminPage);

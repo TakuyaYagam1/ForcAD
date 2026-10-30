@@ -297,6 +297,7 @@ schemas:
     required:
     - status
     - username
+    - csrf_token
     properties:
       status:
         type: string
@@ -304,3 +305,9 @@ schemas:
         - ok
       username:
         type: string
+      csrf_token:
+        type: string
+        minLength: 64
+        maxLength: 64
+        pattern: '^[0-9a-f]{64}$'
+        description: Session-bound CSRF token. Send in X-CSRF-Token for administrative mutations; never put it in a URL.

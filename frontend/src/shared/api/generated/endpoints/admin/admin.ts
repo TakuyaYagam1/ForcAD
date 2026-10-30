@@ -1287,7 +1287,7 @@ export const useChangeAdminGameState = <TError = ApiError,
       return useMutation(getChangeAdminGameStateMutationOptions(options), queryClient);
     }
     /**
- * Sets the HttpOnly session cookie on success.
+ * Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.
  * @summary Start an administrator session.
  */
 export const adminLogin = (
@@ -1355,6 +1355,7 @@ export const useAdminLogin = <TError = ApiError,
       return useMutation(getAdminLoginMutationOptions(options), queryClient);
     }
     /**
+ * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
  * @summary Check the current administrator session.
  */
 export const getAdminSessionStatus = (
@@ -1447,7 +1448,7 @@ export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAd
 
 
 /**
- * Clears the session cookie if one is present.
+ * Ends the authenticated session. Requires its X-CSRF-Token header.
  * @summary End the current administrator session.
  */
 export const adminLogout = (
@@ -1467,7 +1468,7 @@ export const adminLogout = (
 
 export const getAdminLogoutMutationKey = () => ['adminLogout'] as const;
 
-export const getAdminLogoutMutationOptions = <TError = unknown,
+export const getAdminLogoutMutationOptions = <TError = ApiError,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext> => {
 
@@ -1496,13 +1497,13 @@ const {mutation: mutationOptions} = options ?
 
     export type AdminLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogout>>>
 
-    export type AdminLogoutMutationError = unknown
+    export type AdminLogoutMutationError = ApiError
 
 
     /**
  * @summary End the current administrator session.
  */
-export const useAdminLogout = <TError = unknown,
+export const useAdminLogout = <TError = ApiError,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminLogout>>,

@@ -61,6 +61,7 @@ client = urllib.request.build_opener(
 ACCEPTANCE_API_RPS = 25
 ACCEPTANCE_API_INTERVAL = 1 / ACCEPTANCE_API_RPS
 last_api_request_at = None
+csrf_token = ""
 
 
 def pace_api_request():
@@ -73,10 +74,18 @@ def pace_api_request():
     last_api_request_at = time.monotonic()
 
 
-def request(path, data=None, method="GET", token=None, extra_headers=None):
+def request(path, data=None, method="GET", token=None, extra_headers=None, csrf=True):
     headers = {"Content-Type": "application/json", "Origin": origin}
     if token:
         headers["X-Team-Token"] = token
+    if (
+        csrf
+        and csrf_token
+        and path.startswith("/api/admin/")
+        and path != "/api/admin/login/"
+        and method not in ("GET", "HEAD", "OPTIONS")
+    ):
+        headers["X-CSRF-Token"] = csrf_token
     headers.update(extra_headers or {})
     req = urllib.request.Request(
         origin + path,
@@ -146,7 +155,15 @@ expect(
     {"username": "invalid", "password": "invalid"},
     "POST",
 )
-status, _ = request(
+expect(
+    request,
+    "/api/admin/login/",
+    415,
+    {"username": "invalid", "password": "invalid"},
+    "POST",
+    extra_headers={"Content-Type": "text/plain"},
+)
+status, body = request(
     "/api/admin/login/",
     {
         "username": credentials["ADMIN_USERNAME"],
@@ -155,7 +172,8 @@ status, _ = request(
     "POST",
 )
 assert status == 200, "admin login failed"
-check_admin(request)
+csrf_token = json.loads(body)["csrf_token"]
+check_admin(request, csrf_token)
 
 # The optional browser flow runs first and returns the game to waiting. Read the
 # current generation from persisted state instead of assuming prior transitions.
@@ -240,7 +258,9 @@ assert (
     request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410
 ), "finished game accepts flags"
 expect(request, "/api/admin/logout/", data={}, method="POST")
+csrf_token = ""
 expect(request, "/api/admin/status/", 403)
+expect(request, "/api/admin/logout/", 403, {}, "POST")
 print(
-    "Deployment checks passed: public reads, admin CRUD/auth/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics."
+    "Deployment checks passed: public reads, admin CRUD/auth/CSRF/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics."
 )

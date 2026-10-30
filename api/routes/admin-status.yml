@@ -3,6 +3,7 @@ get:
   tags:
   - admin
   summary: Check the current administrator session.
+  description: Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
   security:
   - sessionCookie: []
   responses:

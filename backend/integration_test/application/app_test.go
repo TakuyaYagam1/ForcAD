@@ -114,6 +114,7 @@ teams:
 	})
 	app := startApplication(t, values)
 	client := &http.Client{Timeout: 3 * time.Second}
+	var csrfToken string
 	request := func(method, path string, body []byte, cookie *http.Cookie, token string) (int, []byte, []*http.Cookie) {
 		t.Helper()
 		req, err := http.NewRequestWithContext(t.Context(), method, app.URL+path, bytes.NewReader(body))
@@ -123,6 +124,9 @@ teams:
 		req.Header.Set("Content-Type", "application/json")
 		if cookie != nil {
 			req.AddCookie(cookie)
+			if method != http.MethodGet && strings.HasPrefix(path, "/api/admin/") {
+				req.Header.Set("X-CSRF-Token", csrfToken)
+			}
 		}
 		if token != "" {
 			req.Header.Set("X-Team-Token", token)
@@ -142,6 +146,13 @@ teams:
 	if status != 200 || len(cookies) == 0 {
 		t.Fatalf("login: %d %s", status, body)
 	}
+	var session struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	if err := json.Unmarshal(body, &session); err != nil || len(session.CSRFToken) != 64 {
+		t.Fatal("login did not return a CSRF token")
+	}
+	csrfToken = session.CSRFToken
 	status, body, _ = request("POST", "/api/admin/game/start_final/", []byte(`{"confirm":true,"generation":0}`), cookies[0], "")
 	if status != 200 {
 		t.Fatalf("start final: %d %s", status, body)

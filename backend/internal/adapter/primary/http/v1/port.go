@@ -28,7 +28,7 @@ type GameService interface {
 
 type AuthService interface {
 	Login(ctx context.Context, username, password string) (string, error)
-	Status(ctx context.Context, token string) (string, error)
+	StatusDetails(ctx context.Context, token string) (username, csrfToken string, err error)
 	Logout(ctx context.Context, token string) error
 }
 

@@ -15,12 +15,18 @@ type authHandler struct {
 	auth AuthService
 }
 
+type csrfContextKey struct{}
+
 func (h *authHandler) HandleSessionCookie(ctx context.Context, _ api.OperationName, token api.SessionCookie) (context.Context, error) {
 	const location = "httpv1.authHandler.HandleSessionCookie"
-	username, err := h.auth.Status(ctx, token.APIKey)
+	username, csrf, err := h.auth.StatusDetails(ctx, token.APIKey)
 	if err != nil {
 		return ctx, fmt.Errorf("%s - validate session cookie: %w", location, err)
 	}
+	if provided, mutation := middleware.CSRFRequest(ctx); mutation && !usecase.MatchCSRFToken(provided, csrf) {
+		return ctx, fmt.Errorf("%s - validate administrative mutation: %w", location, usecase.ErrInvalidCSRF)
+	}
+	ctx = context.WithValue(ctx, csrfContextKey{}, csrf)
 	return context.WithValue(ctx, usernameKey, username), nil
 }
 
@@ -40,10 +46,14 @@ func (h *authHandler) AdminLogin(ctx context.Context, req *api.AdminLoginRequest
 	if err != nil {
 		return nil, fmt.Errorf("%s - authenticate administrator: %w", location, err)
 	}
-	return &api.AdminSessionHeaders{SetCookie: api.NewOptString(sessionCookie(ctx, token, false)), Response: api.AdminSession{Status: api.AdminSessionStatusOk, Username: req.Username}}, nil
+	username, csrf, err := h.auth.StatusDetails(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("%s - read created session: %w", location, err)
+	}
+	return &api.AdminSessionHeaders{SetCookie: api.NewOptString(sessionCookie(ctx, token, false)), Response: api.AdminSession{Status: api.AdminSessionStatusOk, Username: username, CsrfToken: csrf}}, nil
 }
 
-func (h *authHandler) AdminLogout(ctx context.Context) (*api.StatusResponseHeaders, error) {
+func (h *authHandler) AdminLogout(ctx context.Context) (api.AdminLogoutRes, error) {
 	const location = "httpv1.authHandler.AdminLogout"
 	if err := h.auth.Logout(ctx, middleware.Session(ctx)); err != nil {
 		return nil, fmt.Errorf("%s - end administrator session: %w", location, err)
@@ -53,5 +63,6 @@ func (h *authHandler) AdminLogout(ctx context.Context) (*api.StatusResponseHeade
 
 func (h *authHandler) GetAdminSessionStatus(ctx context.Context) (api.GetAdminSessionStatusRes, error) {
 	username, _ := ctx.Value(usernameKey).(string)
-	return &api.AdminSession{Status: api.AdminSessionStatusOk, Username: username}, nil
+	csrf, _ := ctx.Value(csrfContextKey{}).(string)
+	return &api.AdminSession{Status: api.AdminSessionStatusOk, Username: username, CsrfToken: csrf}, nil
 }

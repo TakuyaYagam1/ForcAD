@@ -42,6 +42,8 @@ func commonRequestError(err error) (int, string, bool) {
 	var validation *domain.ValidationError
 	var state *domain.StateError
 	switch {
+	case errors.Is(err, usecase.ErrInvalidCSRF):
+		return http.StatusForbidden, "Invalid CSRF token", true
 	case errors.Is(err, usecase.ErrUnauthorized):
 		return http.StatusForbidden, "Invalid credentials or session", true
 	case errors.Is(err, domain.ErrTeamTokenInvalid):

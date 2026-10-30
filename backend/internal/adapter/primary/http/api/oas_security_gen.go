@@ -14,7 +14,9 @@ import (
 // SecurityHandler is handler for security parameters.
 type SecurityHandler interface {
 	// HandleSessionCookie handles sessionCookie security.
-	// Administrator session cookie. The frontend sends it with credentials included.
+	// Administrator session cookie. Every POST, PUT, PATCH or DELETE using this cookie also requires
+	// X-CSRF-Token with the csrf_token returned by login or session status. Keep that token out of URLs
+	// and logs.
 	HandleSessionCookie(ctx context.Context, operationName OperationName, t SessionCookie) (context.Context, error)
 	// HandleTeamToken handles teamToken security.
 	// Team token required by the flag receiver.
@@ -38,6 +40,7 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 
 // operationRolesSessionCookie is a private map storing roles per operation.
 var operationRolesSessionCookie = map[string][]string{
+	AdminLogoutOperation:             []string{},
 	ChangeAdminGameStateOperation:    []string{},
 	CreateAdminEventOperation:        []string{},
 	CreateAdminTaskOperation:         []string{},

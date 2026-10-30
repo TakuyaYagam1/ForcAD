@@ -5,6 +5,10 @@ type AdminLoginRes interface {
 	adminLoginRes()
 }
 
+type AdminLogoutRes interface {
+	adminLogoutRes()
+}
+
 type ChangeAdminGameStateRes interface {
 	changeAdminGameStateRes()
 }

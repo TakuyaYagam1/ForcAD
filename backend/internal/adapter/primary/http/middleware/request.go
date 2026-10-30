@@ -50,7 +50,13 @@ func RequestContext(publicOrigin string, trusted []*net.IPNet) func(http.Handler
 			if strings.HasPrefix(r.URL.Path, "/api/admin/") {
 				w.Header().Set("Cache-Control", "no-store")
 			}
-			next.ServeHTTP(w, r.WithContext(WithRequestInfo(r.Context(), session, secure)))
+			ctx := WithRequestInfo(r.Context(), session, secure)
+			csrf := ""
+			if values := r.Header.Values("X-CSRF-Token"); len(values) == 1 {
+				csrf = values[0]
+			}
+			ctx = withCSRFRequest(ctx, csrf, unsafeMethod(r.Method))
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
