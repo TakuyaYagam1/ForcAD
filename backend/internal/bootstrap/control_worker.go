@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TakuyaYagam1/ForcAD/config"
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
 )
 
@@ -25,8 +26,23 @@ func runWorkerCommand(ctx context.Context, root string, args []string, out io.Wr
 	if err := localoperator.ValidateConfig(filepath.Join(root, "config", "config.yml"), true); err != nil {
 		return fmt.Errorf("%s - copy the initialized deployment configuration before adding workers: %w", location, err)
 	}
+	document, err := config.LoadDocument(filepath.Join(root, "config", "config.yml"))
+	if err != nil {
+		return err
+	}
+	if document.Storages == nil || document.Storages.DB.Runtime == nil {
+		return fmt.Errorf("%s - provision runtime database credentials on the main host, then copy the updated configuration before adding workers", location)
+	}
 	if err := localoperator.Setup(root, settings); err != nil {
 		return err
+	}
+	runner = withReplicaEnvironment(runner, map[string]int{"worker": workers})
+	// A fresh worker host has no shared config volume yet. Stage the sanitized
+	// document before starting applications, without starting external storages
+	// or running the main host's initializer/migrations.
+	stage := []string{"--project-root", root, "run", "--rm", "--no-deps", "--build", "config-loader"}
+	if err := runOperatorCommand(ctx, "compose", stage, out, runner, nil); err != nil {
+		return fmt.Errorf("%s - stage worker configuration: %w", location, err)
 	}
 	compose := []string{"--project-root", root, "up", "-d", "--build", "--no-deps", "--scale", "worker=" + strconv.Itoa(workers), "pgbouncer", "worker"}
 	return runOperatorCommand(ctx, "compose", compose, out, runner, nil)

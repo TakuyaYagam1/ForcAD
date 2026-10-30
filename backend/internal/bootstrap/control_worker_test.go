@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,7 +14,8 @@ import (
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
 )
 
-func TestWorkerReusesCredentialsAndStartsNoDependencies(t *testing.T) {
+func workerCommandProject(t *testing.T) string {
+	t.Helper()
 	root := t.TempDir()
 	configPath := filepath.Join(root, "config", "config.yml")
 	for _, path := range []string{filepath.Dir(configPath), filepath.Join(root, "deployment", "docker")} {
@@ -24,27 +26,41 @@ func TestWorkerReusesCredentialsAndStartsNoDependencies(t *testing.T) {
 	if err := os.WriteFile(configPath, []byte(operatorProjectConfig), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services:\n  worker: {}\n  postgres: {}\n  redis: {}\n  rabbitmq: {}\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services:\n  config-loader: {}\n  pgbouncer: {}\n  worker: {}\n  postgres: {}\n  redis: {}\n  rabbitmq: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := localoperator.Setup(root, localoperator.SetupOptions{}); err != nil {
 		t.Fatal(err)
 	}
+	return root
+}
+
+func TestWorkerReusesCredentialsAndStagesBeforeStartingNoDependencies(t *testing.T) {
+	root := workerCommandProject(t)
+	configPath := filepath.Join(root, "config", "config.yml")
 	before, err := config.LoadDocument(configPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("TEST", "")
-	var got []string
-	runner := func(_ context.Context, name string, args []string, _ io.Reader, _, _ io.Writer) error {
-		got = append([]string{name}, args...)
+	t.Setenv("FORCAD_WORKER_REPLICAS", "2")
+	var got [][]string
+	runner := func(_ context.Context, name string, args, environment []string, _ io.Reader, _, _ io.Writer) error {
+		got = append(got, append([]string{name}, args...))
+		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
+			t.Fatalf("worker child environment = %q", environment)
+		}
 		return nil
 	}
-	args := []string{"--redis", "cache.example:6380", "--database", "db.example:5433", "--rabbitmq", "broker.example:5673", "-w", "3", "--fast"}
+	args := []string{"--redis", "cache.example:6380", "--database", "db.example:5433", "--rabbitmq", "broker.example:5673", "-w", "20", "--fast"}
 	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"docker", "compose", "--project-directory", filepath.Join(root, "deployment", "docker"), "-f", filepath.Join(root, "config", "runtime", "compose.external.yml"), "up", "-d", "--build", "--no-deps", "--scale", "worker=3", "pgbouncer", "worker"}
+	prefix := []string{"docker", "compose", "--project-directory", filepath.Join(root, "deployment", "docker"), "-f", filepath.Join(root, "config", "runtime", "compose.external.yml")}
+	want := [][]string{
+		append(append([]string(nil), prefix...), "run", "--rm", "--no-deps", "--build", "config-loader"),
+		append(append([]string(nil), prefix...), "up", "-d", "--build", "--no-deps", "--scale", "worker=20", "pgbouncer", "worker"),
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("worker deployment = %q, want %q", got, want)
 	}
@@ -52,11 +68,40 @@ func TestWorkerReusesCredentialsAndStartsNoDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if *after.Admin != *before.Admin || after.Storages.DB.Password != before.Storages.DB.Password || after.Storages.Redis.Password != before.Storages.Redis.Password || after.Storages.RabbitMQ.Password != before.Storages.RabbitMQ.Password {
+	if *after.Admin != *before.Admin || after.Storages.DB.Password != before.Storages.DB.Password ||
+		*after.Storages.DB.Runtime != *before.Storages.DB.Runtime ||
+		after.Storages.Redis.Password != before.Storages.Redis.Password || after.Storages.RabbitMQ.Password != before.Storages.RabbitMQ.Password {
 		t.Fatal("worker command replaced deployment credentials")
 	}
 	if after.Storages.DB.Host != "db.example" || after.Storages.Redis.Port != 6380 || after.Storages.RabbitMQ.Port != 5673 {
 		t.Fatal("worker command did not apply external addresses")
+	}
+	if os.Getenv("FORCAD_WORKER_REPLICAS") != "2" {
+		t.Fatal("worker command changed the caller's environment")
+	}
+}
+
+func TestWorkerConfigStagingFailurePreventsApplications(t *testing.T) {
+	root := workerCommandProject(t)
+	t.Setenv("TEST", "")
+	failure := errors.New("config staging failed")
+	calls := 0
+	runner := func(_ context.Context, _ string, args, environment []string, _ io.Reader, _, _ io.Writer) error {
+		calls++
+		if calls != 1 || !reflect.DeepEqual(args[len(args)-5:], []string{"run", "--rm", "--no-deps", "--build", "config-loader"}) {
+			t.Fatalf("unexpected command after staging failure: %q", args)
+		}
+		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
+			t.Fatalf("staging child environment = %q", environment)
+		}
+		return failure
+	}
+	args := []string{"--redis", "cache.example", "--database", "db.example", "--rabbitmq", "broker.example", "-w", "20"}
+	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); !errors.Is(err, failure) {
+		t.Fatalf("staging failure = %v, want %v", err, failure)
+	}
+	if calls != 1 {
+		t.Fatalf("staging called %d commands, want only the config-loader", calls)
 	}
 }
 

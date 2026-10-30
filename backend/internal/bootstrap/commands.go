@@ -34,6 +34,9 @@ func commandConfig(path string) (config.Config, error) {
 		}
 		if document.Storages != nil {
 			s := document.Storages
+			if s.DB.Runtime != nil {
+				fallback["FORCAD_RUNTIME_DB_USER"], fallback["FORCAD_RUNTIME_DB_PASSWORD"] = s.DB.Runtime.Username, s.DB.Runtime.Password
+			}
 			fallback["POSTGRES_HOST"], fallback["POSTGRES_PORT"], fallback["POSTGRES_USER"], fallback["POSTGRES_PASSWORD"], fallback["POSTGRES_DB"] = s.DB.Host, strconv.Itoa(s.DB.Port), s.DB.User, s.DB.Password, s.DB.DBName
 			fallback["REDIS_HOST"], fallback["REDIS_PORT"], fallback["REDIS_PASSWORD"], fallback["REDIS_DB"] = s.Redis.Host, strconv.Itoa(s.Redis.Port), s.Redis.Password, strconv.Itoa(s.Redis.DB)
 			fallback["RABBITMQ_HOST"], fallback["RABBITMQ_PORT"], fallback["RABBITMQ_USER"], fallback["RABBITMQ_PASSWORD"], fallback["RABBITMQ_VHOST"] = s.RabbitMQ.Host, strconv.Itoa(s.RabbitMQ.Port), s.RabbitMQ.User, s.RabbitMQ.Password, s.RabbitMQ.VHost
@@ -83,13 +86,12 @@ func RunDrainCommand(ctx context.Context, args []string, out io.Writer) error {
 	if token == "" {
 		return fmt.Errorf("%s - CONTROL_TOKEN is required", location)
 	}
-	// #nosec G704 -- The operator supplies this control endpoint; redirects are disabled.
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, *endpoint, nil)
+	req, err := controlHTTPRequest(ctx, http.MethodPost, *endpoint)
 	if err != nil {
 		return fmt.Errorf("%s - create drain request", location)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	client := &http.Client{Timeout: drainRequestTimeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	client := controlHTTPClient(drainRequestTimeout)
 	// #nosec G704 -- This CLI probes the configured control endpoint and refuses redirects.
 	response, err := client.Do(req)
 	if err != nil {
@@ -123,12 +125,11 @@ func RunHealthCommand(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	// #nosec G704 -- The operator supplies this control endpoint; redirects are disabled.
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	req, err := controlHTTPRequest(ctx, http.MethodGet, endpoint)
 	if err != nil {
 		return fmt.Errorf("%s - create readiness request: %w", location, err)
 	}
-	client := &http.Client{Timeout: healthProbeTimeout, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	client := controlHTTPClient(healthProbeTimeout)
 	// #nosec G704 -- This CLI probes the configured control endpoint and refuses redirects.
 	response, err := client.Do(req)
 	if err != nil {

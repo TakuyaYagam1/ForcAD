@@ -15,35 +15,37 @@ import (
 // Config contains process settings. Game settings are stored in PostgreSQL
 // after initialization and are changed through organizer controls.
 type Config struct {
-	Role                   string
-	HTTPAddr               string
-	HTTPMaxInflight        int
-	PublicOrigin           string
-	TrustedProxyCIDRs      []string
-	MetricsAddr            string
-	DatabaseURL            string
-	DatabasePoolerAddr     string
-	DatabaseMaxConns       int32
-	DatabaseMinConns       int32
-	DatabaseTimeout        time.Duration
-	RedisAddr              string
-	RedisPassword          string
-	RedisDB                int
-	BrokerURL              string
-	CheckerQueue           string
-	AdminUsername          string
-	AdminPassword          string
-	ControlToken           string
-	ConfigPath             string
-	ShutdownTimeout        time.Duration
-	RequestTimeout         time.Duration
-	WorkerConcurrency      int
-	CheckerMemoryMB        int
-	CheckerOutputBytes     int
-	CheckerWorkflowTimeout time.Duration
-	JobGrace               time.Duration
-	FlagRate               int
-	FlagBurst              int
+	Role                    string
+	HTTPAddr                string
+	HTTPMaxInflight         int
+	PublicOrigin            string
+	TrustedProxyCIDRs       []string
+	MetricsAddr             string
+	DatabaseURL             string
+	DatabasePoolerAddr      string
+	DatabaseMaxConns        int32
+	DatabaseMinConns        int32
+	DatabaseTimeout         time.Duration
+	DatabaseRuntimeUser     string
+	DatabaseRuntimePassword string
+	RedisAddr               string
+	RedisPassword           string
+	RedisDB                 int
+	BrokerURL               string
+	CheckerQueue            string
+	AdminUsername           string
+	AdminPassword           string
+	ControlToken            string
+	ConfigPath              string
+	ShutdownTimeout         time.Duration
+	RequestTimeout          time.Duration
+	WorkerConcurrency       int
+	CheckerMemoryMB         int
+	CheckerOutputBytes      int
+	CheckerWorkflowTimeout  time.Duration
+	JobGrace                time.Duration
+	FlagRate                int
+	FlagBurst               int
 }
 
 type LookupEnv func(string) (string, bool)
@@ -69,28 +71,25 @@ func Load(lookup LookupEnv) (Config, error) {
 		return fallback
 	}
 	c := Config{
-		Role:               value("FORCAD_ROLE", "api"),
-		HTTPAddr:           value("HTTP_ADDR", ":5000"),
-		PublicOrigin:       strings.TrimRight(value("PUBLIC_ORIGIN", ""), "/"),
-		MetricsAddr:        value("METRICS_ADDR", ":9090"),
-		DatabaseURL:        value("DATABASE_URL", ""),
-		DatabasePoolerAddr: value("DATABASE_POOLER_ADDR", ""),
-		RedisAddr:          value("REDIS_ADDR", net.JoinHostPort(value("REDIS_HOST", "redis"), value("REDIS_PORT", "6379"))),
-		RedisPassword:      value("REDIS_PASSWORD", ""),
-		BrokerURL:          value("AMQP_URL", ""),
-		CheckerQueue:       value("CHECKER_QUEUE", "forcad.checker.jobs"),
-		AdminUsername:      value("ADMIN_USERNAME", ""),
-		AdminPassword:      value("ADMIN_PASSWORD", ""),
-		ControlToken:       value("CONTROL_TOKEN", ""),
-		ConfigPath:         value("FORCAD_CONFIG", "/run/forcad-config/config.yml"),
+		Role:                    value("FORCAD_ROLE", "api"),
+		HTTPAddr:                value("HTTP_ADDR", ":5000"),
+		PublicOrigin:            strings.TrimRight(value("PUBLIC_ORIGIN", ""), "/"),
+		MetricsAddr:             value("METRICS_ADDR", ":9090"),
+		DatabaseURL:             value("DATABASE_URL", ""),
+		DatabasePoolerAddr:      value("DATABASE_POOLER_ADDR", ""),
+		DatabaseRuntimeUser:     value("FORCAD_RUNTIME_DB_USER", ""),
+		DatabaseRuntimePassword: value("FORCAD_RUNTIME_DB_PASSWORD", ""),
+		RedisAddr:               value("REDIS_ADDR", net.JoinHostPort(value("REDIS_HOST", "redis"), value("REDIS_PORT", "6379"))),
+		RedisPassword:           value("REDIS_PASSWORD", ""),
+		BrokerURL:               value("AMQP_URL", ""),
+		CheckerQueue:            value("CHECKER_QUEUE", "forcad.checker.jobs"),
+		AdminUsername:           value("ADMIN_USERNAME", ""),
+		AdminPassword:           value("ADMIN_PASSWORD", ""),
+		ControlToken:            value("CONTROL_TOKEN", ""),
+		ConfigPath:              value("FORCAD_CONFIG", "/run/forcad-config/config.yml"),
 	}
 	if c.DatabaseURL == "" {
-		u := url.URL{Scheme: "postgres", Host: net.JoinHostPort(value("POSTGRES_HOST", "postgres"), value("POSTGRES_PORT", "5432")), Path: "/" + value("POSTGRES_DB", "forcad")}
-		u.User = url.UserPassword(value("POSTGRES_USER", "forcad"), value("POSTGRES_PASSWORD", ""))
-		q := u.Query()
-		q.Set("sslmode", value("POSTGRES_SSLMODE", "prefer"))
-		u.RawQuery = q.Encode()
-		c.DatabaseURL = u.String()
+		c.DatabaseURL = databaseURL(value)
 	}
 	if c.BrokerURL == "" {
 		u := url.URL{Scheme: "amqp", Host: net.JoinHostPort(value("RABBITMQ_HOST", "rabbitmq"), value("RABBITMQ_PORT", "5672")), Path: "/" + value("RABBITMQ_VHOST", value("RABBITMQ_DEFAULT_VHOST", "forcad"))}
@@ -142,7 +141,34 @@ func Load(lookup LookupEnv) (Config, error) {
 			errs = append(errs, err)
 		}
 	}
+	errs = append(errs, validateDatabaseTLS(c.DatabaseURL, value("FORCAD_DATABASE_REQUIRE_TLS", "0")))
 	return c, errors.Join(errs...)
+}
+
+func databaseURL(value func(string, string) string) string {
+	u := url.URL{Scheme: "postgres", Host: net.JoinHostPort(value("POSTGRES_HOST", "postgres"), value("POSTGRES_PORT", "5432")), Path: "/" + value("POSTGRES_DB", "forcad")}
+	u.User = url.UserPassword(value("POSTGRES_USER", "forcad"), value("POSTGRES_PASSWORD", ""))
+	q := u.Query()
+	q.Set("sslmode", value("POSTGRES_SSLMODE", "prefer"))
+	if root := value("POSTGRES_SSLROOTCERT", ""); root != "" {
+		q.Set("sslrootcert", root)
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func validateDatabaseTLS(raw, required string) error {
+	if required == "0" {
+		return nil
+	}
+	if required != "1" {
+		return fmt.Errorf("config.validateDatabaseTLS - FORCAD_DATABASE_REQUIRE_TLS must be 0 or 1")
+	}
+	address, err := url.Parse(raw)
+	if err != nil || address.Query().Get("sslmode") != "verify-full" || address.Query().Get("sslrootcert") == "" {
+		return fmt.Errorf("config.validateDatabaseTLS - verified database TLS requires sslmode=verify-full and an explicit sslrootcert")
+	}
+	return nil
 }
 
 func defaultDatabaseMaxConns(role string) int32 {

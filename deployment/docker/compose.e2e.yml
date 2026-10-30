@@ -23,7 +23,7 @@ services:
     healthcheck:
       disable: true
     volumes: !override
-      - ${FORCAD_TEST_PROJECT_ROOT:?required}/config/config.yml:/source/config.yml:ro
+      - ${FORCAD_TEST_PROJECT_ROOT:?required}/config/runtime/game.yml:/source/config.yml:ro
       - forcad-config:/run/forcad-config
 
   initializer:

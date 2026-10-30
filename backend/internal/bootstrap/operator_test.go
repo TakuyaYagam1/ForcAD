@@ -26,7 +26,7 @@ func TestRunOperatorCommandForwardsComposeArgsAndStdio(t *testing.T) {
 	var gotArgs []string
 	var gotStdin io.Reader
 	var gotStdout, gotStderr io.Writer
-	runner := func(commandCtx context.Context, name string, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	runner := func(commandCtx context.Context, name string, args []string, _ []string, stdin io.Reader, stdout, stderr io.Writer) error {
 		if commandCtx != ctx {
 			t.Fatal("Compose runner did not receive the command context")
 		}
@@ -60,7 +60,7 @@ func TestRunOperatorCommandUsesWorkingDirectoryAndTestCompose(t *testing.T) {
 	t.Setenv("TEST", "1")
 	root := t.TempDir()
 	var gotArgs []string
-	runner := func(_ context.Context, _ string, args []string, _ io.Reader, _, _ io.Writer) error {
+	runner := func(_ context.Context, _ string, args []string, _ []string, _ io.Reader, _, _ io.Writer) error {
 		gotArgs = append([]string(nil), args...)
 		return nil
 	}
@@ -86,7 +86,7 @@ func TestRunOperatorCommandPreservesComposeArguments(t *testing.T) {
 	t.Setenv("TEST", "")
 	root := t.TempDir()
 	var gotArgs []string
-	runner := func(_ context.Context, _ string, args []string, _ io.Reader, _, _ io.Writer) error {
+	runner := func(_ context.Context, _ string, args []string, _ []string, _ io.Reader, _, _ io.Writer) error {
 		gotArgs = append([]string(nil), args...)
 		return nil
 	}
@@ -107,7 +107,7 @@ func TestRunOperatorCommandPassesCancellationToComposeRunner(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	started := make(chan struct{})
-	runner := func(ctx context.Context, _ string, _ []string, _ io.Reader, _, _ io.Writer) error {
+	runner := func(ctx context.Context, _ string, _ []string, _ []string, _ io.Reader, _, _ io.Writer) error {
 		close(started)
 		<-ctx.Done()
 		return ctx.Err()

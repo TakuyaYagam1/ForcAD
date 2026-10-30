@@ -1,6 +1,7 @@
 package operator
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -59,13 +60,7 @@ func ensureRuntimeDirectory(paths projectPaths) error {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("%s - inspect runtime directory: %w", location, err)
 	}
-	if errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(paths.runtime, 0o700); err != nil {
-			return fmt.Errorf("%s - create runtime directory: %w", location, err)
-		}
-	}
-	// #nosec G302 -- This is a private directory; its owner needs traversal permission.
-	if err := os.Chmod(paths.runtime, 0o700); err != nil {
+	if err := ensurePrivateDirectory(paths.runtime); err != nil {
 		return fmt.Errorf("%s - secure runtime directory: %w", location, err)
 	}
 	return nil
@@ -85,17 +80,12 @@ func backupConfig(path string) (string, error) {
 			name = base + "_" + strconv.Itoa(suffix) + ".yml"
 		}
 		backup := filepath.Join(directory, name)
-		file, err := os.OpenFile(backup, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		file, err := createPrivateFile(backup)
 		if errors.Is(err, os.ErrExist) {
 			continue
 		}
 		if err != nil {
 			return "", fmt.Errorf("%s - create config backup: %w", location, err)
-		}
-		if err := file.Chmod(0o600); err != nil {
-			_ = file.Close()
-			_ = os.Remove(backup)
-			return "", fmt.Errorf("%s - secure config backup: %w", location, err)
 		}
 		written, err := file.Write(data)
 		if err != nil || written != len(data) {
@@ -125,16 +115,12 @@ func writePrivateFile(path string, data []byte) error {
 	if err := checkRegularOrMissing(path); err != nil {
 		return err
 	}
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".forcad-setup-*")
+	temporary, err := createPrivateTemp(filepath.Dir(path))
 	if err != nil {
 		return fmt.Errorf("%s - create temporary file: %w", location, err)
 	}
 	temporaryPath := temporary.Name()
 	defer func() { _ = os.Remove(temporaryPath) }()
-	if err := temporary.Chmod(0o600); err != nil {
-		_ = temporary.Close()
-		return fmt.Errorf("%s - secure temporary file: %w", location, err)
-	}
 	if _, err := temporary.Write(data); err != nil {
 		_ = temporary.Close()
 		return fmt.Errorf("%s - write temporary file: %w", location, err)
@@ -153,6 +139,17 @@ func writePrivateFile(path string, data []byte) error {
 		return fmt.Errorf("%s - replace file: %w", location, err)
 	}
 	return nil
+}
+
+func createPrivateTemp(directory string) (*os.File, error) {
+	for range 10 {
+		file, err := createPrivateFile(filepath.Join(directory, ".forcad-setup-"+rand.Text()))
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		return file, err
+	}
+	return nil, fmt.Errorf("operator.createPrivateTemp - cannot allocate unique private file: %w", os.ErrExist)
 }
 
 func checkRegularOrMissing(path string) error {

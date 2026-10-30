@@ -11,7 +11,7 @@ x-service: &service
     dockerfile: backend/Dockerfile
     target: runtime
   env_file:
-    - path: ../../config/runtime/postgres_environment.env
+    - path: ../../config/runtime/postgres_runtime.env
       format: raw
     - path: ../../config/runtime/redis_environment.env
       format: raw
@@ -79,14 +79,14 @@ services:
     env_file:
       - path: ../../config/runtime/admin.env
         format: raw
-      - path: ../../config/runtime/postgres_environment.env
+      - path: ../../config/runtime/postgres_runtime.env
         format: raw
       - path: ../../config/runtime/redis_environment.env
         format: raw
       - path: ../../config/runtime/rabbitmq_environment.env
         format: raw
     deploy:
-      replicas: 4
+      replicas: ${FORCAD_API_REPLICAS:-4}
 
   receiver:
     <<: *app-service
@@ -96,7 +96,7 @@ services:
       <<: *runtime-settings
       FORCAD_ROLE: receiver
     deploy:
-      replicas: 2
+      replicas: ${FORCAD_RECEIVER_REPLICAS:-2}
 
   worker:
     <<: *worker-service
@@ -114,6 +114,8 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: ticker
+    deploy:
+      replicas: ${FORCAD_TICKER_REPLICAS:-1}
 
   initializer:
     <<: *service
@@ -136,6 +138,7 @@ services:
       FORCAD_ROLE: api
       FORCAD_CONFIG: /run/forcad-config/config.yml
       DATABASE_POOLER_ADDR: ""
+      FORCAD_REQUIRE_RUNTIME_DB: "1"
     volumes:
       - forcad-config:/run/forcad-config:ro
     restart: "no"
@@ -159,7 +162,7 @@ services:
       - DAC_OVERRIDE
       - FOWNER
     volumes:
-      - ../../config/config.yml:/source/config.yml:ro
+      - ../../config/runtime/game.yml:/source/config.yml:ro
       - forcad-config:/run/forcad-config
     restart: "no"
     healthcheck:
@@ -244,9 +247,19 @@ services:
       context: ../..
       dockerfile: deployment/docker/pgbouncer/Dockerfile
     env_file:
-      - path: ../../config/runtime/postgres_environment.env
+      - path: ../../config/runtime/postgres_runtime.env
         format: raw
     environment:
+      <<: *runtime-settings
+      FORCAD_API_REPLICAS: "${FORCAD_API_REPLICAS:-4}"
+      FORCAD_RECEIVER_REPLICAS: "${FORCAD_RECEIVER_REPLICAS:-2}"
+      FORCAD_WORKER_REPLICAS: "${FORCAD_WORKER_REPLICAS:-2}"
+      FORCAD_TICKER_REPLICAS: "${FORCAD_TICKER_REPLICAS:-1}"
+      PGBOUNCER_MAX_CLIENTS: "${PGBOUNCER_MAX_CLIENTS:-1024}"
+      PGBOUNCER_API_CLIENTS: "${PGBOUNCER_API_CLIENTS:-}"
+      PGBOUNCER_RECEIVER_CLIENTS: "${PGBOUNCER_RECEIVER_CLIENTS:-}"
+      PGBOUNCER_WORKER_CLIENTS: "${PGBOUNCER_WORKER_CLIENTS:-}"
+      PGBOUNCER_TICKER_CLIENTS: "${PGBOUNCER_TICKER_CLIENTS:-}"
       PGBOUNCER_API_CONNECTIONS: "${PGBOUNCER_API_CONNECTIONS:-32}"
       PGBOUNCER_API_MIN_CONNECTIONS: "${PGBOUNCER_API_MIN_CONNECTIONS:-0}"
       PGBOUNCER_RECEIVER_CONNECTIONS: "${PGBOUNCER_RECEIVER_CONNECTIONS:-64}"

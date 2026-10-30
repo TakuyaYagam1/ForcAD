@@ -62,6 +62,18 @@ func completeCredentials(document *config.Document, tree *yaml.Node) error {
 		}
 		setStorageDefaults(document.Storages, tree)
 	}
+	if document.Storages.DB.Runtime == nil {
+		password, err := randomSecret()
+		if err != nil {
+			return err
+		}
+		suffix, err := randomSecret()
+		if err != nil {
+			return err
+		}
+		username := "forcad_runtime_" + suffix[:12]
+		document.Storages.DB.Runtime = &config.Credentials{Username: username, Password: password}
+	}
 	return validateCompletedCredentials(*document)
 }
 
@@ -77,6 +89,9 @@ func validateCompletedCredentials(document config.Document) error {
 		return fmt.Errorf("%s - storage settings are required", location)
 	}
 	storage := document.Storages
+	if err := validateRuntimeCredentials(storage.DB); err != nil {
+		return err
+	}
 	for _, item := range []struct {
 		name string
 		host string
@@ -108,6 +123,17 @@ func validateCompletedCredentials(document config.Document) error {
 	}
 	if storage.Redis.DB < 0 || storage.Redis.DB > maxRedisDatabaseIndex {
 		return fmt.Errorf("%s - Redis database index must be between 0 and 1024", location)
+	}
+	return nil
+}
+
+func validateRuntimeCredentials(database config.Database) error {
+	runtime := database.Runtime
+	if runtime == nil {
+		return nil // Legacy documents can be upgraded by setup.
+	}
+	if strings.TrimSpace(runtime.Username) == "" || len(runtime.Username) > 63 || runtime.Username == database.User || strings.ContainsAny(runtime.Username, "\r\n\x00") || len(runtime.Password) < minAdminPasswordLength || runtime.Password == database.Password {
+		return fmt.Errorf("operator.validateRuntimeCredentials - database runtime requires a distinct username (1-63 bytes) and password (at least 16 characters)")
 	}
 	return nil
 }

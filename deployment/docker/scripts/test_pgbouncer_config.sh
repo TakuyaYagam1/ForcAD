@@ -45,5 +45,32 @@ if PGBOUNCER_API_MIN_CONNECTIONS="$(printf '1\n2')" awk -f /tmp/config.awk > /ru
     exit 1
 fi
 grep 'PGBOUNCER_API_MIN_CONNECTIONS' /run/pgbouncer/error.log >/dev/null
-echo 'PASS: API pool minimum defaults, inclusive bounds, invalid inputs and unchanged other roles.'
+FORCAD_WORKER_REPLICAS=20 awk -f /tmp/config.awk
+grep '^forcad_worker = .* pool_size=32 max_db_connections=32 max_db_client_connections=328 ' "$config" >/dev/null
+FORCAD_API_REPLICAS=0 FORCAD_RECEIVER_REPLICAS=0 FORCAD_TICKER_REPLICAS=0 FORCAD_WORKER_REPLICAS=20 awk -f /tmp/config.awk
+for replicas in -1 1025 invalid; do
+    if FORCAD_WORKER_REPLICAS="$replicas" awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+        echo 'FAIL: accepted invalid replica count' >&2; exit 1
+    fi
+done
+if FORCAD_WORKER_REPLICAS=20 PGBOUNCER_WORKER_CLIENTS=256 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted worker clients below replica demand' >&2; exit 1
+fi
+if FORCAD_WORKER_REPLICAS=64 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted aggregate demand beyond global client cap' >&2; exit 1
+fi
+if PGBOUNCER_SERVER_TLS_SSLMODE=verify-full awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted verified upstream TLS without a CA' >&2; exit 1
+fi
+if PGBOUNCER_CLIENT_TLS_SSLMODE=require awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted required client TLS without a certificate/key' >&2; exit 1
+fi
+printf 'config-test-placeholder\n' > /run/pgbouncer/ca.crt
+PGBOUNCER_CLIENT_TLS_SSLMODE=require PGBOUNCER_CLIENT_TLS_CERT_FILE=/run/pgbouncer/ca.crt \
+PGBOUNCER_CLIENT_TLS_KEY_FILE=/run/pgbouncer/ca.crt PGBOUNCER_SERVER_TLS_SSLMODE=verify-full \
+PGBOUNCER_SERVER_TLS_CA_FILE=/run/pgbouncer/ca.crt awk -f /tmp/config.awk
+grep '^server_tls_sslmode = verify-full$' "$config" >/dev/null
+grep '^client_tls_sslmode = require$' "$config" >/dev/null
+
+echo 'PASS: pool minimums, replica/client budgets, and fail-closed TLS configuration.'
 SH

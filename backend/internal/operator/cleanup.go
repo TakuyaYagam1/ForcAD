@@ -156,7 +156,7 @@ func validateMaintenanceFiles(paths projectPaths) error {
 
 func validateGeneratedRuntimeFiles(paths projectPaths) error {
 	const location = "operator.validateGeneratedRuntimeFiles"
-	for _, path := range []string{paths.adminEnv, paths.postgresEnv, paths.rabbitmqEnv, paths.redisEnv, paths.generatedCompose} {
+	for _, path := range []string{paths.adminEnv, paths.postgresEnv, paths.postgresRuntimeEnv, paths.gameConfig, paths.rabbitmqEnv, paths.redisEnv, paths.generatedCompose} {
 		info, err := os.Lstat(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -392,7 +392,7 @@ func removeGeneratedRuntimeFiles(paths projectPaths) error {
 		return fmt.Errorf("%s - open generated runtime directory: %w", location, err)
 	}
 	defer func() { _ = root.Close() }()
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "postgres_runtime.env", "game.yml", "rabbitmq_environment.env", "redis_environment.env"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("%s - remove generated runtime file %s: %w", location, name, err)
 		}

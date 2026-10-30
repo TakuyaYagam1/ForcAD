@@ -40,6 +40,13 @@ func RunDatabaseCommand(ctx context.Context, command string, args []string, out 
 		if err := db.Migrate(bounded, cfg.DatabaseURL); err != nil {
 			return err
 		}
+		if cfg.DatabaseRuntimeUser != "" || cfg.DatabaseRuntimePassword != "" {
+			if err := db.ProvisionRuntimeRole(bounded, cfg.DatabaseURL, cfg.DatabaseRuntimeUser, cfg.DatabaseRuntimePassword); err != nil {
+				return err
+			}
+		} else if os.Getenv("FORCAD_REQUIRE_RUNTIME_DB") == "1" {
+			return fmt.Errorf("%s - runtime database credentials missing; run setup before starting this deployment", location)
+		}
 		if command == "migrate" {
 			if _, err := fmt.Fprintln(out, "Database migrations applied"); err != nil {
 				return fmt.Errorf("%s - write migration result: %w", location, err)

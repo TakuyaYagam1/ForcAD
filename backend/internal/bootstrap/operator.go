@@ -12,7 +12,7 @@ import (
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
 )
 
-type operatorCommandRunner func(context.Context, string, []string, io.Reader, io.Writer, io.Writer) error
+type operatorCommandRunner func(context.Context, string, []string, []string, io.Reader, io.Writer, io.Writer) error
 
 // RunOperatorCommand runs local setup or forwards a Compose command to Docker.
 func RunOperatorCommand(ctx context.Context, command string, args []string, out io.Writer) error {
@@ -57,11 +57,14 @@ func runOperatorCommand(
 	if err != nil {
 		return err
 	}
-	composeArgs = append(composeArgs, commandArgs...)
 	if runner == nil {
 		return fmt.Errorf("%s - Docker Compose command runner is required", location)
 	}
-	if err := runner(ctx, composeArgs[0], composeArgs[1:], os.Stdin, out, os.Stderr); err != nil {
+	if err := checkScaleCapacity(ctx, composeArgs, commandArgs, runner); err != nil {
+		return err
+	}
+	composeArgs = append(composeArgs, commandArgs...)
+	if err := runner(ctx, composeArgs[0], composeArgs[1:], nil, os.Stdin, out, os.Stderr); err != nil {
 		return fmt.Errorf("%s - run Docker Compose command: %w", location, err)
 	}
 	return nil
@@ -108,9 +111,12 @@ func resolveProjectRoot(root string, workingDirectory func() (string, error)) (s
 	return root, nil
 }
 
-func execOperatorCommand(ctx context.Context, name string, args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func execOperatorCommand(ctx context.Context, name string, args []string, environment []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	// #nosec G702 -- This local CLI deliberately forwards operator arguments to Docker without a shell.
 	command := exec.CommandContext(ctx, name, args...)
+	if len(environment) > 0 {
+		command.Env = append(os.Environ(), environment...)
+	}
 	command.Stdin = stdin
 	command.Stdout = stdout
 	command.Stderr = stderr

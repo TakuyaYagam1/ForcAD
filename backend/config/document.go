@@ -43,11 +43,12 @@ type Storages struct {
 	Redis    Redis    `yaml:"redis"`
 }
 type Database struct {
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	DBName   string `yaml:"dbname"`
+	User     string       `yaml:"user"`
+	Password string       `yaml:"password"`
+	Host     string       `yaml:"host"`
+	Port     int          `yaml:"port"`
+	DBName   string       `yaml:"dbname"`
+	Runtime  *Credentials `yaml:"runtime,omitempty"`
 }
 type Rabbit struct {
 	User     string `yaml:"user"`

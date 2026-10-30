@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -25,7 +26,15 @@ func NewPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, func(), err
 	settings.MaxConnIdleTime = 5 * time.Minute
 	settings.HealthCheckPeriod = 30 * time.Second
 	settings.ConnConfig.ConnectTimeout = cfg.DatabaseTimeout
-	settings.ConnConfig.RuntimeParams["application_name"] = "forcad-" + cfg.Role
+	name := "forcad-" + cfg.Role
+	if instance, err := os.Hostname(); err == nil && instance != "" {
+		name += "/" + instance
+	}
+	// PostgreSQL truncates application_name at 63 bytes.
+	if len(name) > 63 {
+		name = name[:63]
+	}
+	settings.ConnConfig.RuntimeParams["application_name"] = name
 	if cfg.DatabasePoolerAddr == "" {
 		settings.ConnConfig.RuntimeParams["statement_timeout"] = strconv.FormatInt(cfg.DatabaseTimeout.Milliseconds(), 10)
 		settings.ConnConfig.RuntimeParams["lock_timeout"] = "2000"

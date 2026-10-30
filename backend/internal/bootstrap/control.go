@@ -46,6 +46,9 @@ func RunControlCommand(ctx context.Context, args []string, out io.Writer) error 
 	case "validate-config":
 		return RunDatabaseCommand(ctx, command, commandArgs, out)
 	default:
+		if canonicalControlCommand(args[0]) == "start" {
+			return runStartCommand(ctx, commandArgs, out, execOperatorCommand, os.Getwd)
+		}
 		return RunOperatorCommand(ctx, command, commandArgs, out)
 	}
 }

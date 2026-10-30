@@ -141,13 +141,18 @@ func decodeSetupDocument(data []byte) (config.Document, *yaml.Node, error) {
 func runtimeFiles(paths projectPaths, document config.Document) ([]runtimeFile, error) {
 	const location = "operator.runtimeFiles"
 	storage := document.Storages
+	if storage == nil || storage.DB.Runtime == nil {
+		return nil, fmt.Errorf("%s - runtime database credentials are required; run setup", location)
+	}
 	management := url.URL{Scheme: "http", Host: net.JoinHostPort(storage.RabbitMQ.Host, "15672"), Path: "/api/", User: url.UserPassword(storage.RabbitMQ.User, storage.RabbitMQ.Password)}
-	contents := []runtimeFile{
+	contents := make([]runtimeFile, 0, 6)
+	contents = append(contents, []runtimeFile{
 		{path: paths.adminEnv, keyValues: []string{"ADMIN_USERNAME", document.Admin.Username, "ADMIN_PASSWORD", document.Admin.Password}},
-		{path: paths.postgresEnv, keyValues: []string{"POSTGRES_HOST", storage.DB.Host, "POSTGRES_PORT", strconv.Itoa(storage.DB.Port), "POSTGRES_USER", storage.DB.User, "POSTGRES_PASSWORD", storage.DB.Password, "POSTGRES_DB", storage.DB.DBName}},
+		{path: paths.postgresEnv, keyValues: []string{"POSTGRES_HOST", storage.DB.Host, "POSTGRES_PORT", strconv.Itoa(storage.DB.Port), "POSTGRES_USER", storage.DB.User, "POSTGRES_PASSWORD", storage.DB.Password, "POSTGRES_DB", storage.DB.DBName, "FORCAD_RUNTIME_DB_USER", storage.DB.Runtime.Username, "FORCAD_RUNTIME_DB_PASSWORD", storage.DB.Runtime.Password}},
+		{path: paths.postgresRuntimeEnv, keyValues: []string{"POSTGRES_HOST", storage.DB.Host, "POSTGRES_PORT", strconv.Itoa(storage.DB.Port), "POSTGRES_USER", storage.DB.Runtime.Username, "POSTGRES_PASSWORD", storage.DB.Runtime.Password, "POSTGRES_DB", storage.DB.DBName}},
 		{path: paths.rabbitmqEnv, keyValues: []string{"RABBITMQ_HOST", storage.RabbitMQ.Host, "RABBITMQ_PORT", strconv.Itoa(storage.RabbitMQ.Port), "RABBITMQ_DEFAULT_USER", storage.RabbitMQ.User, "RABBITMQ_DEFAULT_PASS", storage.RabbitMQ.Password, "RABBITMQ_DEFAULT_VHOST", storage.RabbitMQ.VHost, "BROKER_API_URL", management.String()}},
 		{path: paths.redisEnv, keyValues: []string{"REDIS_HOST", storage.Redis.Host, "REDIS_PORT", strconv.Itoa(storage.Redis.Port), "REDIS_PASSWORD", storage.Redis.Password, "REDIS_DB", strconv.Itoa(storage.Redis.DB)}},
-	}
+	}...)
 	for i := range contents {
 		data, err := envFile(contents[i].keyValues...)
 		if err != nil {
@@ -155,6 +160,13 @@ func runtimeFiles(paths projectPaths, document config.Document) ([]runtimeFile, 
 		}
 		contents[i].data = data
 	}
+	// The shared container volume must never expose bootstrap/storage credentials.
+	document.Admin, document.Storages = nil, nil
+	gameData, err := yaml.Marshal(&document)
+	if err != nil {
+		return nil, fmt.Errorf("%s - encode runtime game configuration: %w", location, err)
+	}
+	contents = append(contents, runtimeFile{path: paths.gameConfig, data: gameData})
 	return contents, nil
 }
 

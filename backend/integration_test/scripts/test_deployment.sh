@@ -4,6 +4,10 @@ umask 077
 run_load=0
 run_monitoring=0
 api_replicas=2
+windows_host=0
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) windows_host=1 ;;
+esac
 
 case "${1:-}" in
     "") run_e2e=0 ;;
@@ -47,6 +51,10 @@ if (( run_load )); then
         default|local) ;;
         *) echo 'LOAD_CONTAINER_LOGGING must be default or local.' >&2; exit 2 ;;
     esac
+    case "${LOAD_BROKER_PREFLIGHT:-0}" in
+        0|1) ;;
+        *) echo 'LOAD_BROKER_PREFLIGHT must be 0 or 1.' >&2; exit 2 ;;
+    esac
     worker_replicas="${LOAD_WORKER_REPLICAS:-2}"
     if [[ ! "$worker_replicas" =~ ^([1-9]|1[0-9]|20)$ ]]; then
         echo 'LOAD_WORKER_REPLICAS must be an integer between 1 and 20.' >&2
@@ -63,11 +71,87 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd -P)"
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="$(cd "$tmp_parent" && pwd -P)"
 test_root="$(mktemp -d "$tmp_parent/forcad-deployment.XXXXXX")"
-chmod 0700 "$test_root"
+if (( windows_host )); then
+    # MSYS chmod/install modes do not secure NTFS files. Give this fresh tree
+    # a private, inheritable DACL before writing configuration or credentials.
+    private_acl_script="$(cat <<'PS'
+& {
+$ErrorActionPreference = 'Stop'
+try {
+$directory = Get-Item -LiteralPath $env:FORCAD_TEST_PRIVATE_ROOT
+if (-not $directory.PSIsContainer -or ($directory.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    throw 'Expected an ordinary temporary directory'
+}
+$owner = [Security.Principal.WindowsIdentity]::GetCurrent().User
+$allowed = @($owner.Value, 'S-1-5-18', 'S-1-5-32-544')
+$acl = New-Object Security.AccessControl.DirectorySecurity
+$acl.SetOwner($owner)
+$acl.SetAccessRuleProtection($true, $false)
+foreach ($sid in $allowed) {
+    $identity = New-Object Security.Principal.SecurityIdentifier($sid)
+    $rule = New-Object Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+    $acl.AddAccessRule($rule)
+}
+Set-Acl -LiteralPath $directory.FullName -AclObject $acl
+$verified = Get-Acl -LiteralPath $directory.FullName
+if (-not $verified.AreAccessRulesProtected) { throw 'Temporary directory inherited public permissions' }
+$rules = @($verified.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier]))
+if ($rules.Count -ne $allowed.Count) { throw 'Unexpected temporary directory access rule count' }
+foreach ($rule in $rules) {
+    if ($rule.IdentityReference.Value -notin $allowed -or $rule.AccessControlType -ne 'Allow' -or
+        $rule.FileSystemRights -ne 'FullControl' -or $rule.InheritanceFlags -ne 'ContainerInherit,ObjectInherit') {
+        throw 'Unexpected temporary directory access rule'
+    }
+}
+} catch {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
+}
+
+PS
+)"
+    FORCAD_TEST_PRIVATE_ROOT="$(cygpath -w "$test_root")" powershell.exe -NoProfile -NonInteractive -Command "$private_acl_script"
+    unset private_acl_script
+    # Native copies inherit the verified DACL; GNU install's POSIX fchmod fails
+    # on this filesystem. Container-side staging applies Linux owner/mode bits.
+    install() {
+        python3 - "$@" <<'PY'
+from pathlib import Path
+import shutil
+import sys
+
+args = sys.argv[1:]
+directory = args[:1] == ["-d"]
+if directory:
+    args = args[1:]
+if len(args) < 3 or args[0] != "-m" or args[1] not in {"0600", "0644", "0700", "0755"}:
+    raise SystemExit("Unsupported private Windows install arguments")
+paths = [Path(value) for value in args[2:]]
+if directory:
+    for path in paths:
+        path.mkdir(parents=True, exist_ok=True)
+else:
+    if len(paths) < 2 or (len(paths) > 2 and not paths[-1].is_dir()):
+        raise SystemExit("Expected source files and one destination")
+    for source in paths[:-1]:
+        destination = paths[-1] / source.name if paths[-1].is_dir() else paths[-1]
+        shutil.copyfile(source, destination)
+PY
+    }
+else
+    chmod 0700 "$test_root"
+fi
 test_project="forcad-deployment-$(id -u)-$$-$RANDOM"
+if (( run_load )) && [[ -n "${LOAD_REPORT_DIR:-}" ]]; then
+    mkdir -p "$LOAD_REPORT_DIR"
+    printf '%s\n' "$test_project" > "$LOAD_REPORT_DIR/compose-project.txt"
+fi
 image_prefix="$test_project"
 runtime_env="$test_root/runtime.env"
-compose=(docker compose --project-name "$test_project" --project-directory "$test_root/deployment/docker" -f "$test_root/deployment/docker/compose.yml" -f "$repo_root/deployment/docker/compose.e2e.yml")
+compose_env="$test_root/compose.env"
+: > "$compose_env"
+compose=(docker compose --env-file "$compose_env" --project-name "$test_project" --project-directory "$test_root/deployment/docker" -f "$test_root/deployment/docker/compose.yml" -f "$repo_root/deployment/docker/compose.e2e.yml")
 image_tags=("$image_prefix-runtime" "$image_prefix-worker" "$image_prefix-nginx" "$image_prefix-postgres" "$image_prefix-pgbouncer")
 if (( run_load )); then
     compose+=(-f "$repo_root/backend/load_test/compose.yml")
@@ -127,26 +211,50 @@ done
 image_cleanup=1
 
 # Do not inherit project settings from the owner shell or a checkout-local .env.
-unset FORCAD_NGINX_BIND PUBLIC_ORIGIN TRUSTED_PROXY_CIDRS CHECKER_JOB_GRACE \
+unset COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_DISABLE_ENV_FILE \
+    FORCAD_NGINX_BIND PUBLIC_ORIGIN TRUSTED_PROXY_CIDRS CHECKER_JOB_GRACE \
     FORCAD_API_HTTP_MAX_INFLIGHT FORCAD_RECEIVER_HTTP_MAX_INFLIGHT \
-    DATABASE_MAX_CONNS FORCAD_POSTGRES_MAX_CONNECTIONS \
+    DATABASE_MAX_CONNS DATABASE_MIN_CONNS DATABASE_TIMEOUT FORCAD_POSTGRES_MAX_CONNECTIONS \
     FORCAD_API_DATABASE_MAX_CONNS FORCAD_RECEIVER_DATABASE_MAX_CONNS \
     FORCAD_WORKER_DATABASE_MAX_CONNS FORCAD_TICKER_DATABASE_MAX_CONNS \
     PGBOUNCER_API_CONNECTIONS PGBOUNCER_API_MIN_CONNECTIONS PGBOUNCER_RECEIVER_CONNECTIONS \
     PGBOUNCER_WORKER_CONNECTIONS PGBOUNCER_TICKER_CONNECTIONS DATABASE_POOLER_ADDR \
+    PGBOUNCER_MAX_CLIENTS PGBOUNCER_API_CLIENTS PGBOUNCER_RECEIVER_CLIENTS \
+    PGBOUNCER_WORKER_CLIENTS PGBOUNCER_TICKER_CLIENTS \
+    FORCAD_RUNTIME_DB_USER FORCAD_RUNTIME_DB_PASSWORD FORCAD_REQUIRE_RUNTIME_DB \
+    FORCAD_DATABASE_REQUIRE_TLS FORCAD_DB_TLS_DIR POSTGRES_SSLMODE POSTGRES_SSLROOTCERT \
+    PGBOUNCER_CLIENT_TLS_SSLMODE PGBOUNCER_CLIENT_TLS_CERT_FILE PGBOUNCER_CLIENT_TLS_KEY_FILE \
+    PGBOUNCER_SERVER_TLS_SSLMODE PGBOUNCER_SERVER_TLS_CA_FILE PGSSLMODE PGSSLROOTCERT \
     CHECKER_WORKFLOW_TIMEOUT FORCAD_WORKER_CONCURRENCY FORCAD_CHECKER_MEMORY_LIMIT_MB \
     FORCAD_CHECKER_OUTPUT_LIMIT_BYTES FLAG_RATE FLAG_BURST FORCAD_SERVICE_MEMORY \
     FORCAD_SERVICE_MEMORY_RESERVATION FORCAD_SERVICE_PIDS \
     FORCAD_RECEIVER_MEMORY FORCAD_RECEIVER_MEMORY_RESERVATION \
     FORCAD_WORKER_MEMORY FORCAD_WORKER_MEMORY_RESERVATION FORCAD_WORKER_PIDS PUBLIC_SCHEME \
-    FORCAD_WORKER_REPLICAS \
+    FORCAD_API_REPLICAS FORCAD_RECEIVER_REPLICAS FORCAD_WORKER_REPLICAS FORCAD_TICKER_REPLICAS \
     VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT \
     FORCAD_POSTGRES_IMAGE
+
+# PgBouncer's client admission budget must describe the same replica counts as
+# the explicit --scale arguments below, including the checker load profile.
+export FORCAD_API_REPLICAS="$api_replicas"
+export FORCAD_RECEIVER_REPLICAS=2
+export FORCAD_WORKER_REPLICAS="${worker_replicas:-2}"
+export FORCAD_TICKER_REPLICAS=1
 
 install -d -m 0700 "$test_root/deployment/docker" "$test_root/config" \
     "$test_root/checkers" "$test_root/public/teams" "$test_root/bin" \
     "$test_root/artifacts"
 install -m 0600 "$repo_root/deployment/docker/compose.yml" "$test_root/deployment/docker/compose.yml"
+if (( run_load && windows_host )) && [[ "${LOAD_BROKER_PREFLIGHT:-0}" == 1 ]]; then
+    # Docker Desktop's bridge addresses are not reachable from native Windows.
+    # Only this isolated stack gets temporary, loopback-only broker ports.
+    cat > "$test_root/deployment/docker/compose.broker-preflight.yml" <<'YAML'
+services:
+  rabbitmq:
+    ports: !override ["127.0.0.1::5672", "127.0.0.1::15672"]
+YAML
+    compose+=(-f "$test_root/deployment/docker/compose.broker-preflight.yml")
+fi
 if (( run_monitoring )); then
     cp -R "$repo_root/deployment/monitoring" "$test_root/deployment/monitoring"
     # Provisioning contains no secrets; the non-root collectors must read it.
@@ -166,7 +274,7 @@ if (( run_load )); then
     install -m 0755 "$repo_root/backend/load_test/test-data/checkers/"*.py "$test_root/checkers/"
 fi
 install -m 0755 "$repo_root/backend/integration_test/fixtures/fixture.py" "$test_root/checkers/fixture.py"
-chmod 0755 "$test_root/checkers"
+if (( !windows_host )); then chmod 0755 "$test_root/checkers"; fi
 
 go -C "$repo_root/backend" build -o "$test_root/bin/forcad" ./cmd/forcad
 "$test_root/bin/forcad" setup --project-root "$test_root"
@@ -176,7 +284,7 @@ go -C "$repo_root/backend" build -o "$test_root/bin/forcad" ./cmd/forcad
         'FORCAD_E2E_TEAM_ONE_TOKEN=0000000000000001' \
         'FORCAD_E2E_TEAM_TWO_TOKEN=0000000000000002'
 } > "$runtime_env"
-chmod 0600 "$runtime_env"
+if (( !windows_host )); then chmod 0600 "$runtime_env"; fi
 
 export FORCAD_TEST_BUILD_ROOT="$repo_root"
 export FORCAD_TEST_IMAGE_PREFIX="$image_prefix"
@@ -229,6 +337,140 @@ fi
 
 http_address="$("${compose[@]}" port nginx 8080)"
 if (( run_load )); then
+    if [[ "${LOAD_BROKER_PREFLIGHT:-0}" == 1 ]]; then
+        rabbit_container="$("${compose[@]}" ps --status running -q rabbitmq)"
+        rabbit_amqp_address=
+        rabbit_management_address=
+        if (( windows_host )); then
+            rabbit_amqp_address="$("${compose[@]}" port rabbitmq 5672)"
+            rabbit_management_address="$("${compose[@]}" port rabbitmq 15672)"
+        fi
+        python3 - "$repo_root/backend" "$test_root" "$test_project" "$rabbit_container" \
+            "$rabbit_amqp_address" "$rabbit_management_address" <<'PY'
+import base64
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+from urllib.error import HTTPError
+from urllib.parse import quote
+from urllib.request import ProxyHandler, Request, build_opener
+
+backend, root, project, container, published_amqp, published_management = sys.argv[1:]
+secrets = []
+
+
+def redact(value):
+    for secret in sorted(secrets, key=len, reverse=True):
+        value = value.replace(secret, "[redacted]")
+    return value
+
+
+def broker_addresses(item):
+    if published_amqp or published_management:
+        ports = item.get("NetworkSettings", {}).get("Ports", {})
+        for endpoint, port in ((published_amqp, "5672/tcp"), (published_management, "15672/tcp")):
+            match = re.fullmatch(r"127\.0\.0\.1:([1-9][0-9]{0,4})", endpoint)
+            if not match or int(match[1]) > 65535:
+                raise RuntimeError("expected one loopback-only published RabbitMQ endpoint")
+            if ports.get(port) != [{"HostIp": "127.0.0.1", "HostPort": match[1]}]:
+                raise RuntimeError("published RabbitMQ endpoint did not match the isolated container")
+        return published_amqp, published_management
+    addresses = {str(ipaddress.IPv4Address(network["IPAddress"]))
+                 for network in item.get("NetworkSettings", {}).get("Networks", {}).values()
+                 if network.get("IPAddress")}
+    if len(addresses) != 1:
+        raise RuntimeError("expected one directly reachable RabbitMQ container IPv4 address")
+    host = addresses.pop()
+    return f"{host}:5672", f"{host}:15672"
+
+
+def preflight():
+    if not re.fullmatch(r"forcad-deployment-[a-z0-9-]+", project) or not re.fullmatch(r"[a-f0-9]{64}", container):
+        raise RuntimeError("expected one RabbitMQ container from this isolated Compose project")
+    inspected = subprocess.run(["docker", "inspect", "--type", "container", container],
+                               check=True, capture_output=True, text=True, timeout=15)
+    items = json.loads(inspected.stdout)
+    if len(items) != 1:
+        raise RuntimeError("ambiguous RabbitMQ container inventory")
+    item = items[0]
+    labels = item.get("Config", {}).get("Labels", {})
+    if (item.get("Id") != container or labels.get("com.docker.compose.project") != project
+            or labels.get("com.docker.compose.service") != "rabbitmq" or not item.get("State", {}).get("Running")):
+        raise RuntimeError("RabbitMQ container identity or running state did not match")
+    amqp_endpoint, management_endpoint = broker_addresses(item)
+    environment = dict(line.split("=", 1) for line in
+                       (Path(root) / "config/runtime/rabbitmq_environment.env").read_text().splitlines()
+                       if line and not line.startswith("#") and "=" in line)
+    actual_environment = dict(entry.split("=", 1) for entry in item["Config"].get("Env", []) if "=" in entry)
+    for key in ("RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS", "RABBITMQ_DEFAULT_VHOST"):
+        if not environment.get(key) or actual_environment.get(key) != environment[key]:
+            raise RuntimeError("RabbitMQ runtime credentials did not match the isolated container")
+    if environment["RABBITMQ_DEFAULT_VHOST"] == "forcad_test":
+        raise RuntimeError("broker preflight vhost must differ from the application vhost")
+    username, password = environment["RABBITMQ_DEFAULT_USER"], environment["RABBITMQ_DEFAULT_PASS"]
+    address = f"amqp://{quote(username, safe='')}:{quote(password, safe='')}@{amqp_endpoint}/forcad_test"
+    secrets.extend([password, quote(password, safe=""), address])
+    authorization = "Basic " + base64.b64encode((username + ":" + password).encode()).decode()
+    secrets.append(authorization)
+    direct_http = build_opener(ProxyHandler({}))
+
+    def management(method, path, payload=None):
+        body = json.dumps(payload).encode() if payload is not None else None
+        request = Request(f"http://{management_endpoint}/api/" + path, data=body, method=method,
+                          headers={"Authorization": authorization, "Content-Type": "application/json"})
+        with direct_http.open(request, timeout=15) as response:
+            return response.read()
+
+    existed = True
+    try:
+        management("GET", "vhosts/forcad_test")
+    except HTTPError as error:
+        if error.code != 404:
+            raise
+        existed = False
+    created = False
+    try:
+        management("PUT", "vhosts/forcad_test", {})
+        created = not existed
+        management("PUT", "permissions/forcad_test/" + quote(username, safe=""),
+                   {"configure": ".*", "write": ".*", "read": ".*"})
+        child_environment = os.environ.copy()
+        child_environment["FORCAD_TEST_AMQP_URL"] = address
+        required = {"TestDrainFinishesCurrentDeliveryAndLeavesQueuedWork",
+                    "TestConsumerCancellationReconnectsAndResumesDelivery"}
+        result = subprocess.run(["go", "test", "-count=1", "-timeout=2m", "-json", "-run",
+                                 "^(" + "|".join(sorted(required)) + ")$", "./integration_test/rabbitmq"],
+                                cwd=backend, env=child_environment, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, timeout=150)
+        passed = set()
+        for line in result.stdout.splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                print(redact(line), flush=True)
+                continue
+            if event.get("Output"):
+                print(redact(event["Output"]), end="", flush=True)
+            if event.get("Action") == "pass" and event.get("Test") in required:
+                passed.add(event["Test"])
+        if result.returncode != 0 or passed != required:
+            raise RuntimeError("RabbitMQ drain/reconnect preflight did not pass both required tests")
+    finally:
+        if created:
+            management("DELETE", "vhosts/forcad_test")
+    print("RabbitMQ preflight passed: drain and server-cancellation reconnect on the load stack.", flush=True)
+
+
+try:
+    preflight()
+except Exception as error:
+    raise SystemExit("RabbitMQ preflight failed: " + redact(str(error))) from None
+PY
+    fi
     FORCAD_LOAD_ROOT="$test_root" FORCAD_LOAD_PROJECT="$test_project" \
         FORCAD_LOAD_ORIGIN="http://$http_address" \
         go -C "$repo_root/backend" test -count=1 -timeout=24h -run '^TestLoad$' -v ./load_test

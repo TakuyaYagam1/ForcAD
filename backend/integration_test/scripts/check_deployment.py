@@ -23,6 +23,7 @@ from check_api import (
     check_unauthorized,
     expect,
 )
+from fixture_permissions import require_private_file
 
 root, project, origin = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 if not project.startswith("forcad-deployment-") or not root.name.startswith(
@@ -32,6 +33,8 @@ if not project.startswith("forcad-deployment-") or not root.name.startswith(
 compose = [
     "docker",
     "compose",
+    "--env-file",
+    str(root / "compose.env"),
     "--project-name",
     project,
     "--project-directory",
@@ -45,8 +48,7 @@ runtime_env_setting = os.environ.get("FORCAD_E2E_ADMIN_ENV_FILE")
 runtime_env = Path(runtime_env_setting) if runtime_env_setting else root / "runtime.env"
 if not runtime_env_setting and not runtime_env.exists():
     runtime_env = root / "config/runtime/admin.env"
-if runtime_env.stat().st_mode & 0o077:
-    raise SystemExit("Runtime credentials must be private")
+require_private_file(runtime_env)
 credentials = {
     key: value
     for line in runtime_env.read_text(encoding="utf-8").splitlines()

@@ -1,0 +1,48 @@
+# Overlay for verified PostgreSQL transport on both application -> PgBouncer
+# and PgBouncer -> PostgreSQL. The PostgreSQL server must already support TLS.
+# ca.crt must trust BOTH certificates. The pooler certificate must include the
+# Docker DNS name pgbouncer; PostgreSQL's must match POSTGRES_HOST.
+x-database-tls: &database-tls
+  FORCAD_DATABASE_REQUIRE_TLS: "1"
+  POSTGRES_SSLMODE: verify-full
+  POSTGRES_SSLROOTCERT: /run/forcad-db-ca.crt
+x-database-ca: &database-ca
+  type: bind
+  source: ${FORCAD_DB_TLS_DIR:?Set an absolute directory containing ca.crt and pooler.crt/key}/ca.crt
+  target: /run/forcad-db-ca.crt
+  read_only: true
+  bind: {create_host_path: false}
+
+services:
+  api:
+    environment: *database-tls
+    volumes: [*database-ca]
+  receiver:
+    environment: *database-tls
+    volumes: [*database-ca]
+  worker:
+    environment: *database-tls
+    volumes: [*database-ca]
+  ticker:
+    environment: *database-tls
+    volumes: [*database-ca]
+  initializer:
+    environment: *database-tls
+    volumes: [*database-ca]
+  pgbouncer:
+    environment:
+      PGBOUNCER_CLIENT_TLS_SSLMODE: require
+      PGBOUNCER_CLIENT_TLS_CERT_FILE: /run/forcad-tls/pooler.crt
+      PGBOUNCER_CLIENT_TLS_KEY_FILE: /run/forcad-tls/pooler.key
+      PGBOUNCER_SERVER_TLS_SSLMODE: verify-full
+      PGBOUNCER_SERVER_TLS_CA_FILE: /run/forcad-tls/ca.crt
+      PGSSLMODE: verify-full
+      PGSSLROOTCERT: /run/forcad-tls/ca.crt
+    volumes:
+      - type: bind
+        source: ${FORCAD_DB_TLS_DIR:?required}
+        target: /run/forcad-tls
+        read_only: true
+        bind: {create_host_path: false}
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgbouncer -p 6432 -U \"$$POSTGRES_USER\" -d forcad_ticker -X -Atc 'SELECT 1' | grep -qx 1"]
