@@ -60,6 +60,8 @@ Grafana and Prometheus listen on localhost on the ForcAD host. See
 [Monitoring](docs/MONITORING.md) for the SSH tunnel, dashboards and the separate
 Router exporter setup for game traffic metrics.
 
+![Grafana game traffic dashboard](public/grafana.png)
+
 ## Documentation
 
 | Guide | Contents |
