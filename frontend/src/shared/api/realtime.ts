@@ -4,7 +4,9 @@ import type { z } from "zod";
 export type RealtimeEventMessage = z.infer<typeof RealtimeEvent>;
 
 export function parseRealtimeEvent(value: unknown): RealtimeEventMessage | null {
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string") {
+    return null;
+  }
 
   let decoded: unknown;
   try {

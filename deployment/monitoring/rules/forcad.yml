@@ -1,4 +1,33 @@
 groups:
+  - name: forcad-checker-capacity
+    rules:
+      - alert: ForcadWorkerDegraded
+        expr: forcad_checker_worker_degraded > 0
+        for: 15s
+        labels:
+          severity: critical
+        annotations:
+          summary: Worker stopped admitting checker processes
+          description: "Worker {{ $labels.instance }} has an unreaped checker. Inspect its process diagnostics and replace the worker."
+
+      - alert: ForcadCheckerSlotsBusy
+        expr: sum(forcad_checker_actions_active) / clamp_min(sum(forcad_worker_action_limit{job="forcad_worker"}), 1) > 0.9
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Checker slots are continuously busy
+          description: "More than 90% of checker action slots have been occupied for a minute. Check round duration, action latency and worker container CPU."
+
+      - alert: ForcadCheckerServiceProgressStale
+        expr: time() - max by (service) (forcad_checker_service_last_completed_timestamp_seconds) > 90
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Checker service has no recent completed workflow
+          description: "Service {{ $labels.service }} has not completed a workflow for over 90 seconds. Check whether the game is paused before investigating capacity."
+
   - name: forcad-team-inventory
     rules:
       - record: forcad:team_info:latest

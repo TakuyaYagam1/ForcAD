@@ -7,7 +7,12 @@ import (
 	"strconv"
 )
 
-func applyMemoryLimit(executable string, args []string, memoryLimitMB int, envPath string) (string, []string, error) {
+func applyMemoryLimit(
+	executable string,
+	args []string,
+	memoryLimitMB int,
+	envPath string,
+) (string, []string, error) {
 	const location = "checker.applyMemoryLimit"
 	if memoryLimitMB <= 0 {
 		return executable, args, nil

@@ -4,9 +4,18 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
+import { multilineRules } from './eslint.multiline.js'
+import { multilinePlugin } from './eslint.multiline-types.js'
 
 export default defineConfig([
   globalIgnores(['dist']),
+  {
+    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
+    plugins: {
+      multiline: multilinePlugin
+    },
+    rules: multilineRules,
+  },
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

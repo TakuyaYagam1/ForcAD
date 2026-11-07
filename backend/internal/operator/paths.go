@@ -24,7 +24,8 @@ type projectPaths struct {
 	postgresEnv        string
 	postgresRuntimeEnv string
 	gameConfig         string
-	rabbitmqEnv        string
+	natsEnv            string
+	legacyBrokerEnv    string
 	redisEnv           string
 }
 
@@ -51,7 +52,8 @@ func pathsFor(root string) (projectPaths, error) {
 		postgresEnv:        filepath.Join(runtime, "postgres_environment.env"),
 		postgresRuntimeEnv: filepath.Join(runtime, "postgres_runtime.env"),
 		gameConfig:         filepath.Join(runtime, "game.yml"),
-		rabbitmqEnv:        filepath.Join(runtime, "rabbitmq_environment.env"),
+		natsEnv:            filepath.Join(runtime, "nats_environment.env"),
+		legacyBrokerEnv:    filepath.Join(runtime, "rabbitmq_environment.env"),
 		redisEnv:           filepath.Join(runtime, "redis_environment.env"),
 	}, nil
 }
@@ -59,22 +61,30 @@ func pathsFor(root string) (projectPaths, error) {
 // EffectiveComposePath returns the generated external-storage override when it
 // is a regular ForcAD-managed file, otherwise the canonical Compose file.
 func EffectiveComposePath(root string) (string, error) {
+	const location = "operator.EffectiveComposePath"
+
 	paths, err := pathsFor(root)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - %w", location, err)
 	}
-	return effectiveComposePath(paths)
+	path, err := effectiveComposePath(paths)
+	if err != nil {
+		return "", fmt.Errorf("%s - resolve effective Compose file: %w", location, err)
+	}
+	return path, nil
 }
 
 // ComposeArgs builds the shared Compose prefix used by operator commands.
 func ComposeArgs(root string, includeTests bool) ([]string, error) {
+	const location = "operator.ComposeArgs"
+
 	paths, err := pathsFor(root)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s - %w", location, err)
 	}
 	composePath, err := effectiveComposePath(paths)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s - %w", location, err)
 	}
 	args := []string{
 		"docker", "compose",
@@ -89,11 +99,16 @@ func ComposeArgs(root string, includeTests bool) ([]string, error) {
 
 // RemoveGeneratedCompose removes only the recognized external-storage override.
 func RemoveGeneratedCompose(root string) error {
+	const location = "operator.RemoveGeneratedCompose"
+
 	paths, err := pathsFor(root)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
-	return removeGeneratedCompose(paths)
+	if err := removeGeneratedCompose(paths); err != nil {
+		return fmt.Errorf("%s - remove generated Compose file: %w", location, err)
+	}
+	return nil
 }
 
 func effectiveComposePath(paths projectPaths) (string, error) {
@@ -120,9 +135,11 @@ func effectiveComposePath(paths projectPaths) (string, error) {
 	}
 	file, err := openGeneratedCompose(paths, info)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - %w", location, err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		_ = file.Close()
+	}()
 	line, err := bufio.NewReaderSize(file, 4097).ReadSlice('\n')
 	if err != nil {
 		if errors.Is(err, bufio.ErrBufferFull) {

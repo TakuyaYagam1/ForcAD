@@ -7,7 +7,12 @@ import { runGeneration } from "./generate.mjs";
 
 async function temporaryApi(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), "forcad-api-"));
-  t.after(() => rm(root, { recursive: true, force: true }));
+  t.after(() => {
+    return rm(root, {
+      recursive: true,
+      force: true
+    })
+  });
   return root;
 }
 
@@ -17,7 +22,9 @@ async function createBundle({ apiRoot }) {
 
 async function createMergedSchemas({ apiRoot }) {
   const components = path.join(apiRoot, "components");
-  await mkdir(components, { recursive: true });
+  await mkdir(components, {
+    recursive: true
+  });
   await writeFile(path.join(components, "schemas.yml"), "Example: {}\n");
 }
 
@@ -30,20 +37,42 @@ test("generation removes its temporary bundle and lock after success", async (t)
     apiRoot,
     execute: async (command) => {
       commands.push(command);
-      if (command.args.includes("merge-schemas.py")) await createMergedSchemas({ apiRoot });
-      if (command.args.includes("bundle")) await createBundle({ apiRoot });
+      if (command.args.includes("merge-schemas.py")) {
+        await createMergedSchemas({
+          apiRoot
+        });
+      }
+      if (command.args.includes("bundle")) {
+        await createBundle({
+          apiRoot
+        });
+      }
     },
   });
 
-  assert.equal(commands.length, 4);
-  assert.match(commands[0].command, /[\\/]\.venv[\\/]bin[\\/]python$/);
+  assert.equal(commands.length, 6);
+  assert.match(commands[0].command, /[\\/]\.venv[\\/](?:bin[\\/]python|Scripts[\\/]python\.exe)$/);
   assert.equal(commands[1].command, process.execPath);
   assert.equal(commands[2].command, "go");
   assert.equal(commands[3].command, process.execPath);
   assert.match(commands[3].args[0], /[\\/]patch-ogen-uuid\.mjs$/);
-  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });
+  assert.equal(commands[4].command, "gofmt");
+  assert.deepEqual(commands[4].args, [
+    "-w", "-r", "interface{} -> any", "internal/adapter/primary/http/api",
+  ]);
+  assert.equal(commands[5].command, "go");
+  assert.deepEqual(commands[5].args, [
+    "run", "./tools/codestyle", "--fix", "internal/adapter/primary/http/api",
+  ]);
+  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
 });
 
 test("generation removes its temporary bundle after a generator fails", async (t) => {
@@ -54,35 +83,99 @@ test("generation removes its temporary bundle after a generator fails", async (t
       mode: "backend",
       apiRoot,
       execute: async (command) => {
-        if (command.args.includes("merge-schemas.py")) await createMergedSchemas({ apiRoot });
-        if (command.args.includes("bundle")) await createBundle({ apiRoot });
-        if (command.command === "go") throw new Error("generator failed");
+        if (command.args.includes("merge-schemas.py")) {
+          await createMergedSchemas({
+            apiRoot
+          });
+        }
+        if (command.args.includes("bundle")) {
+          await createBundle({
+            apiRoot
+          });
+        }
+        if (command.command === "go") {
+          throw new Error("generator failed");
+        }
       },
     }),
     /generator failed/,
   );
 
-  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });
+  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
+});
+
+test("backend formatting failures fail generation and release temporary files", async (t) => {
+  const apiRoot = await temporaryApi(t);
+  const commands = [];
+  await assert.rejects(
+    runGeneration({
+      mode: "backend",
+      apiRoot,
+      execute: async (command) => {
+        commands.push(command);
+        if (command.args.includes("merge-schemas.py")) {
+          await createMergedSchemas({
+            apiRoot
+          });
+        }
+        if (command.args.includes("bundle")) {
+          await createBundle({
+            apiRoot
+          });
+        }
+        if (command.args[0] === "run") {
+          throw new Error("formatter failed");
+        }
+      },
+    }),
+    /formatter failed/,
+  );
+  assert.equal(commands.length, 6);
+  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
 });
 
 test("generation refuses and preserves pre-existing temporary files", async (t) => {
   const apiRoot = await temporaryApi(t);
   const bundle = path.join(apiRoot, "openapi.yml");
   const mergedSchemas = path.join(apiRoot, "components", "schemas.yml");
-  await mkdir(path.dirname(mergedSchemas), { recursive: true });
+  await mkdir(path.dirname(mergedSchemas), {
+    recursive: true
+  });
   await writeFile(bundle, "owned by another process\n");
   await writeFile(mergedSchemas, "owned schema data\n");
 
   await assert.rejects(
-    runGeneration({ mode: "backend", apiRoot, execute: async () => assert.fail("must not run") }),
+    runGeneration({
+      mode: "backend",
+      apiRoot,
+      execute: async () => {
+        return assert.fail("must not run")
+      }
+    }),
     /refusing to overwrite pre-existing.*schemas.yml.*openapi.yml/,
   );
 
   assert.equal(await readFile(bundle, "utf8"), "owned by another process\n");
   assert.equal(await readFile(mergedSchemas, "utf8"), "owned schema data\n");
-  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
 });
 
 test("the exclusive lock rejects a concurrent generation", async (t) => {
@@ -100,9 +193,15 @@ test("the exclusive lock rejects a concurrent generation", async (t) => {
     mode: "backend",
     apiRoot,
     execute: async (command) => {
-      if (command.args.includes("merge-schemas.py")) await createMergedSchemas({ apiRoot });
+      if (command.args.includes("merge-schemas.py")) {
+        await createMergedSchemas({
+          apiRoot
+        });
+      }
       if (command.args.includes("bundle")) {
-        await createBundle({ apiRoot });
+        await createBundle({
+          apiRoot
+        });
         started();
         await waitForRelease;
       }
@@ -111,15 +210,27 @@ test("the exclusive lock rejects a concurrent generation", async (t) => {
   await isStarted;
 
   await assert.rejects(
-    runGeneration({ mode: "frontend", apiRoot, execute: async () => assert.fail("must not run") }),
+    runGeneration({
+      mode: "frontend",
+      apiRoot,
+      execute: async () => {
+        return assert.fail("must not run")
+      }
+    }),
     /generation is already running/,
   );
 
   release();
   await first;
-  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });
+  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
 });
 
 test("generation removes its temporary bundle after an abort", async (t) => {
@@ -135,15 +246,30 @@ test("generation removes its temporary bundle after an abort", async (t) => {
     apiRoot,
     signal: controller.signal,
     execute: async (command) => {
-      if (command.args.includes("merge-schemas.py")) await createMergedSchemas({ apiRoot });
-      if (command.args.includes("bundle")) await createBundle({ apiRoot });
-      if (command.args.includes("bundle")) started();
-      else return;
+      if (command.args.includes("merge-schemas.py")) {
+        await createMergedSchemas({
+          apiRoot
+        });
+      }
+      if (command.args.includes("bundle")) {
+        await createBundle({
+          apiRoot
+        });
+      }
+      if (command.args.includes("bundle")) {
+        started();
+      } else {
+        return;
+      }
       await new Promise((resolve, reject) => {
         command.signal.addEventListener(
           "abort",
-          () => reject(new Error("generation aborted")),
-          { once: true },
+          () => {
+            return reject(new Error("generation aborted"))
+          },
+          {
+            once: true
+          },
         );
       });
     },
@@ -152,7 +278,13 @@ test("generation removes its temporary bundle after an abort", async (t) => {
   controller.abort("SIGINT");
 
   await assert.rejects(generation, /generation aborted/);
-  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), { code: "ENOENT" });
-  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), { code: "ENOENT" });
+  await assert.rejects(readFile(path.join(apiRoot, "openapi.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, "components", "schemas.yml")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(readFile(path.join(apiRoot, ".openapi.lock")), {
+    code: "ENOENT"
+  });
 });

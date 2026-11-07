@@ -30,7 +30,7 @@ x-storage-dependencies: &storage-dependencies
   postgres: {condition: service_healthy}
   postgres-data: {condition: service_completed_successfully}
   redis: {condition: service_healthy}
-  rabbitmq: {condition: service_healthy}
+  nats: {condition: service_healthy}
 x-runtime: &runtime
   depends_on:
     <<: *storage-dependencies
@@ -39,7 +39,7 @@ services:
   postgres: {}
   postgres-data: {}
   redis: {}
-  rabbitmq: {}
+  nats: {}
   config-loader: {}
   initializer:
     depends_on:
@@ -51,7 +51,7 @@ services:
   receiver:
     <<: *runtime
   ticker:
-    depends_on: [postgres, redis, rabbitmq]
+    depends_on: [postgres, redis, nats]
 `
 
 func TestSetupWrapsMissingConfigurationCause(t *testing.T) {
@@ -98,7 +98,7 @@ func TestSetupWritesConfigRuntimeAndExternalCompose(t *testing.T) {
 	err = Setup(root, SetupOptions{
 		Redis:    "cache.example:6380",
 		Database: "[2001:db8::4]:5433",
-		RabbitMQ: "broker.example",
+		NATS:     "broker.example",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -120,14 +120,14 @@ func TestSetupWritesConfigRuntimeAndExternalCompose(t *testing.T) {
 	if document.Admin == nil || document.Admin.Username != "forcad" || len(document.Admin.Password) != 64 {
 		t.Fatal("setup did not generate admin credentials")
 	}
-	if document.Storages == nil || len(document.Storages.DB.Password) != 64 || len(document.Storages.Redis.Password) != 64 || len(document.Storages.RabbitMQ.Password) != 64 {
+	if document.Storages == nil || len(document.Storages.DB.Password) != 64 || len(document.Storages.Redis.Password) != 64 || len(document.Storages.NATS.Password) != 64 {
 		t.Fatal("setup did not generate storage credentials")
 	}
 	if document.Storages.DB.Host != "2001:db8::4" || document.Storages.DB.Port != 5433 || document.Storages.Redis.Host != "cache.example" || document.Storages.Redis.Port != 6380 {
 		t.Fatal("external storage addresses were not applied")
 	}
-	if document.Storages.RabbitMQ.Host != "broker.example" || document.Storages.RabbitMQ.Port != 5672 {
-		t.Fatal("external RabbitMQ address was not applied")
+	if document.Storages.NATS.Host != "broker.example" || document.Storages.NATS.Port != 4222 {
+		t.Fatal("external NATS address was not applied")
 	}
 	if document.Teams[0].Token != "0123456789abcdef" {
 		t.Fatal("setup did not preserve the configured team token")
@@ -135,7 +135,7 @@ func TestSetupWritesConfigRuntimeAndExternalCompose(t *testing.T) {
 
 	runtimeDir := filepath.Join(root, "config", "runtime")
 	assertMode(t, runtimeDir, 0o700)
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "nats_environment.env", "redis_environment.env"} {
 		assertMode(t, filepath.Join(runtimeDir, name), 0o600)
 	}
 	redisEnv, err := os.ReadFile(filepath.Join(runtimeDir, "redis_environment.env"))
@@ -180,11 +180,11 @@ func TestSetupWritesConfigRuntimeAndExternalCompose(t *testing.T) {
 		t.Fatal(err)
 	}
 	services, ok := mappingValue(tree.Content[0], "services")
-	if !ok || mappingValueExists(services, "redis") || mappingValueExists(services, "postgres") || mappingValueExists(services, "postgres-data") || mappingValueExists(services, "rabbitmq") || !mappingValueExists(services, "api") {
+	if !ok || mappingValueExists(services, "redis") || mappingValueExists(services, "postgres") || mappingValueExists(services, "postgres-data") || mappingValueExists(services, "nats") || !mappingValueExists(services, "api") {
 		t.Fatal("external Compose override contains the wrong services")
 	}
 	dependencies, ok := mappingValue(tree.Content[0], "x-storage-dependencies")
-	if !ok || mappingValueExists(dependencies, "redis") || mappingValueExists(dependencies, "postgres") || mappingValueExists(dependencies, "postgres-data") || mappingValueExists(dependencies, "rabbitmq") {
+	if !ok || mappingValueExists(dependencies, "redis") || mappingValueExists(dependencies, "postgres") || mappingValueExists(dependencies, "postgres-data") || mappingValueExists(dependencies, "nats") {
 		t.Fatal("external Compose override left removed storage dependencies in an anchor")
 	}
 	ticker, ok := mappingValue(services, "ticker")
@@ -236,8 +236,14 @@ func TestSetupRejectsLegacyGlobalConfigsWithoutChangingInput(t *testing.T) {
 		name     string
 		document string
 	}{
-		{name: "legacy global key", document: legacy},
-		{name: "global and game keys", document: ambiguous},
+		{
+			name:     "legacy global key",
+			document: legacy,
+		},
+		{
+			name:     "global and game keys",
+			document: ambiguous,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := newProject(t, test.document)
@@ -315,7 +321,9 @@ func TestSetupRejectsUnownedComposeWithoutChangingConfig(t *testing.T) {
 	if err := os.WriteFile(generatedPath, []byte("services: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Setup(root, SetupOptions{Redis: "cache"}); err == nil {
+	if err := Setup(root, SetupOptions{
+		Redis: "cache",
+	}); err == nil {
 		t.Fatal("setup accepted an unowned generated Compose file")
 	}
 	after, err := os.ReadFile(configPath)
@@ -334,7 +342,9 @@ func TestSetupRejectsInvalidExternalAddressBeforeWriting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Setup(root, SetupOptions{Redis: "cache:0"}); err == nil {
+	if err := Setup(root, SetupOptions{
+		Redis: "cache:0",
+	}); err == nil {
 		t.Fatal("setup accepted an invalid external port")
 	}
 	after, err := os.ReadFile(configPath)
@@ -354,8 +364,14 @@ func TestSetupRejectsInvalidAdminCredentialsBeforeWriting(t *testing.T) {
 		name  string
 		admin string
 	}{
-		{name: "empty username", admin: "admin:\n  username: \" \"\n  password: \"long-enough-password\"\n"},
-		{name: "short password", admin: "admin:\n  username: organizer\n  password: short\n"},
+		{
+			name:  "empty username",
+			admin: "admin:\n  username: \" \"\n  password: \"long-enough-password\"\n",
+		},
+		{
+			name:  "short password",
+			admin: "admin:\n  username: organizer\n  password: short\n",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			document := strings.Replace(basicConfig, "game:", test.admin+"game:", 1)
@@ -388,12 +404,11 @@ storages:
     host: postgres
     port: 5432
     dbname: forcad
-  rabbitmq:
-    user: rabbituser
-    password: rabbitpass
-    host: rabbitmq
-    port: 5672
-    vhost: forcad
+  nats:
+    user: natsuser
+    password: natspass
+    host: nats
+    port: 4222
   redis:
     password: redispass
     host: redis
@@ -405,10 +420,26 @@ storages:
 		from string
 		to   string
 	}{
-		{name: "database port", from: "    port: 5432", to: "    port: 0"},
-		{name: "database user", from: "    user: dbuser", to: "    user: \" \""},
-		{name: "database name", from: "    dbname: forcad", to: "    dbname: \"\""},
-		{name: "redis database index", from: "    db: 4", to: "    db: 1025"},
+		{
+			name: "database port",
+			from: "    port: 5432",
+			to:   "    port: 0",
+		},
+		{
+			name: "database user",
+			from: "    user: dbuser",
+			to:   "    user: \" \"",
+		},
+		{
+			name: "database name",
+			from: "    dbname: forcad",
+			to:   "    dbname: \"\"",
+		},
+		{
+			name: "redis database index",
+			from: "    db: 4",
+			to:   "    db: 1025",
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			document := strings.Replace(base, test.from, test.to, 1)
@@ -452,12 +483,11 @@ storages:
     host: postgres
     port: 5432
     dbname: forcad
-  rabbitmq:
-    user: rabbituser
-    password: "rabbit$#secret"
-    host: rabbitmq
-    port: 5672
-    vhost: forcad
+  nats:
+    user: natsuser
+    password: "nats$#secret"
+    host: nats
+    port: 4222
   redis:
     password: "redis$#secret"
     host: redis
@@ -471,7 +501,7 @@ storages:
 	for name, values := range map[string][]string{
 		"admin.env":                {"ADMIN_PASSWORD=ops$#password-1234"},
 		"postgres_environment.env": {"POSTGRES_PASSWORD=db$#secret"},
-		"rabbitmq_environment.env": {"RABBITMQ_DEFAULT_PASS=rabbit$#secret"},
+		"nats_environment.env":     {"NATS_USER=natsuser", "NATS_PASSWORD=nats$#secret", "NATS_URL=nats://natsuser:nats$%23secret@nats:4222"},
 		"redis_environment.env":    {"REDIS_PASSWORD=redis$#secret", "REDIS_DB=4"},
 	} {
 		data, err := os.ReadFile(filepath.Join(root, "config", "runtime", name))

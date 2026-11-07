@@ -47,10 +47,20 @@ func (w *Worker) claimJob(ctx context.Context, jobID uuid.UUID) (jobClaim, bool,
 	if !time.Now().Before(claimDeadline) {
 		return jobClaim{}, false, fmt.Errorf("%s - confirmed claim expired: %w", location, ErrLeaseLost)
 	}
-	return jobClaim{job: job, ownerToken: ownerToken, claimedAt: now}, true, nil
+	return jobClaim{
+		job:        job,
+		ownerToken: ownerToken,
+		claimedAt:  now,
+	}, true, nil
 }
 
-func (w *Worker) finish(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, result domain.CheckerResult, executeErr error) error {
+func (w *Worker) finish(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	result domain.CheckerResult,
+	executeErr error,
+) error {
 	const location = "checker.Worker.finish"
 	if leaseErr := guard.failure(); leaseErr != nil {
 		guard.cancelFn(leaseErr)
@@ -70,7 +80,8 @@ func (w *Worker) finish(ctx context.Context, guard *leaseGuard, job domain.Check
 	}
 	if workflowTimedOut {
 		result = domain.CheckerResult{
-			Round: guard.round, Status: workflowTimeoutStatus,
+			Round:          guard.round,
+			Status:         workflowTimeoutStatus,
 			PublicMessage:  "Checker workflow timed out",
 			PrivateMessage: "Checker workflow exceeded CHECKER_WORKFLOW_TIMEOUT",
 		}

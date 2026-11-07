@@ -15,18 +15,39 @@ type Handler struct {
 	*eventsHandler
 }
 
-func NewHandler(game GameService, auth AuthService, flags FlagService, events EventService) *Handler {
+func NewHandler(
+	game GameService,
+	auth AuthService,
+	flags FlagService,
+	events EventService,
+) *Handler {
 	return &Handler{
-		authHandler:       &authHandler{auth: auth},
-		gameHandler:       &gameHandler{game: game},
-		teamsHandler:      &teamsHandler{game: game},
-		tasksHandler:      &tasksHandler{game: game},
-		teamTasksHandler:  &teamTasksHandler{game: game},
-		scoreboardHandler: &scoreboardHandler{game: game},
-		flagsHandler:      &flagsHandler{flags: flags},
-		healthHandler:     &healthHandler{},
-		metricsHandler:    &metricsHandler{},
-		eventsHandler:     &eventsHandler{events: events},
+		authHandler: &authHandler{
+			auth: auth,
+		},
+		gameHandler: &gameHandler{
+			game: game,
+		},
+		teamsHandler: &teamsHandler{
+			game: game,
+		},
+		tasksHandler: &tasksHandler{
+			game: game,
+		},
+		teamTasksHandler: &teamTasksHandler{
+			game: game,
+		},
+		scoreboardHandler: &scoreboardHandler{
+			game: game,
+		},
+		flagsHandler: &flagsHandler{
+			flags: flags,
+		},
+		healthHandler:  &healthHandler{},
+		metricsHandler: &metricsHandler{},
+		eventsHandler: &eventsHandler{
+			events: events,
+		},
 	}
 }
 

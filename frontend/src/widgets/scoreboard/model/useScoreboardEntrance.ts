@@ -15,26 +15,34 @@ interface EntranceStep {
 
 function playEntrance(steps: EntranceStep[]) {
   const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-  if (!isMotionAllowed(preference)) return () => {};
+  if (!isMotionAllowed(preference)) {
+    return () => {};
+  }
 
   const animations = new Set<Animation>();
   let stopped = false;
   let stopWatchingMotion = () => {};
 
   const stop = () => {
-    if (stopped) return;
+    if (stopped) {
+      return;
+    }
     stopped = true;
 
     stopWatchingMotion();
 
-    animations.forEach((animation) => animation.cancel());
+    animations.forEach((animation) => {
+      return animation.cancel()
+    });
     animations.clear();
   };
 
   stopWatchingMotion = watchMotionDisable(preference, stop);
 
   steps.forEach(({ element, name, from, to, duration, delay = 0 }) => {
-    if (!element || typeof element.animate !== "function") return;
+    if (!element || typeof element.animate !== "function") {
+      return;
+    }
 
     const animation = element.animate([from, to], {
       duration,
@@ -52,11 +60,15 @@ function playEntrance(steps: EntranceStep[]) {
       // Release temporary clipping/transforms so sticky cells work normally.
       animation.cancel();
 
-      if (!animations.size) stop();
+      if (!animations.size) {
+        stop();
+      }
     };
   });
 
-  if (!animations.size) stop();
+  if (!animations.size) {
+    stop();
+  }
 
   return stop;
 }
@@ -70,7 +82,9 @@ export function useScoreboardEntrance(
   const startedAt = useRef(0);
 
   useLayoutEffect(() => {
-    if (!enabled || !pageRef.current) return;
+    if (!enabled || !pageRef.current) {
+      return;
+    }
 
     startedAt.current = performance.now();
 
@@ -82,68 +96,101 @@ export function useScoreboardEntrance(
       to: Keyframe,
       duration: number,
       delay: number,
-    ): EntranceStep => ({
-      element: page.querySelector(selector),
-      name,
-      from,
-      to,
-      duration,
-      delay,
-    });
+    ): EntranceStep => {
+      return {
+        element: page.querySelector(selector),
+        name,
+        from,
+        to,
+        duration,
+        delay,
+      }
+    };
 
     return playEntrance([
       step(
         ".hero-copy h1",
         "title",
-        { opacity: 0, clipPath: "inset(0 100% 0 0)" },
-        { opacity: 1, clipPath: "inset(0 0 0 0)" },
+        {
+          opacity: 0,
+          clipPath: "inset(0 100% 0 0)"
+        },
+        {
+          opacity: 1,
+          clipPath: "inset(0 0 0 0)"
+        },
         800,
         120,
       ),
-      ...[".hero-subtitle", ".hero-metadata"].map((selector, index) =>
-        step(
+      ...[".hero-subtitle", ".hero-metadata"].map((selector, index) => {
+        return step(
           selector,
           `copy-${index}`,
-          { opacity: 0, transform: "translateY(8px)" },
-          { opacity: 1, transform: "translateY(0)" },
+          {
+            opacity: 0,
+            transform: "translateY(8px)"
+          },
+          {
+            opacity: 1,
+            transform: "translateY(0)"
+          },
           450,
           220 + index * 40,
-        ),
+        )
+      },
       ),
       step(
         ".round-track",
         "round-track",
-        { transform: "scaleX(0)", transformOrigin: "left center" },
-        { transform: "scaleX(1)", transformOrigin: "left center" },
+        {
+          transform: "scaleX(0)",
+          transformOrigin: "left center"
+        },
+        {
+          transform: "scaleX(1)",
+          transformOrigin: "left center"
+        },
         700,
         160,
       ),
       ...[".round-label", ".round-timer", ".scoreboard-toolbar"].map(
-        (selector, index) =>
-          step(
+        (selector, index) => {
+          return step(
             selector,
             `controls-${index}`,
-            { opacity: 0 },
-            { opacity: 1 },
+            {
+              opacity: 0
+            },
+            {
+              opacity: 1
+            },
             350,
             180 + index * 50,
-          ),
+          )
+        },
       ),
-      ...[".recent-events", ".table-hint"].map((selector, index) =>
-        step(
+      ...[".recent-events", ".table-hint"].map((selector, index) => {
+        return step(
           selector,
           `details-${index}`,
-          { opacity: 0 },
-          { opacity: 1 },
+          {
+            opacity: 0
+          },
+          {
+            opacity: 1
+          },
           400,
           650,
-        ),
+        )
+      },
       ),
     ]);
   }, [enabled]);
 
   useLayoutEffect(() => {
-    if (!enabled || !tableRef.current) return;
+    if (!enabled || !tableRef.current) {
+      return;
+    }
 
     // Delay only while the page is opening.
     const delay = Math.max(0, 320 - (performance.now() - startedAt.current));
@@ -166,5 +213,8 @@ export function useScoreboardEntrance(
     ]);
   }, [enabled, hasTeams]);
 
-  return { pageRef, tableRef };
+  return {
+    pageRef,
+    tableRef
+  };
 }

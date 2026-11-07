@@ -30,7 +30,11 @@ func assertPrivateMode(t *testing.T, path string, _ os.FileMode) os.FileInfo {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]bool{user.User.Sid.String(): true, "S-1-5-18": true, "S-1-5-32-544": true}
+	want := map[string]bool{
+		user.User.Sid.String(): true,
+		"S-1-5-18":             true,
+		"S-1-5-32-544":         true,
+	}
 	dacl, _, err := sd.DACL()
 	if err != nil || dacl == nil || int(dacl.AceCount) != len(want) {
 		t.Fatalf("unexpected private ACL: %s, error=%v", sd.String(), err)
@@ -80,7 +84,9 @@ func TestWindowsPrivateFilesExcludeInheritedReadersBeforeWriting(t *testing.T) {
 		t.Fatal(err)
 	}
 	temporaryPath := temporary.Name()
-	defer func() { _ = temporary.Close() }()
+	defer func() {
+		_ = temporary.Close()
+	}()
 	if info := assertPrivateMode(t, temporaryPath, 0o600); info.Size() != 0 {
 		t.Fatal("temporary file contains data before ACL verification")
 	}
@@ -124,7 +130,10 @@ func TestWindowsRuntimeDirectoryRemovesInheritedReaders(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if err := ensureRuntimeDirectory(projectPaths{configDir: parent, runtime: runtimePath}); err != nil {
+			if err := ensureRuntimeDirectory(projectPaths{
+				configDir: parent,
+				runtime:   runtimePath,
+			}); err != nil {
 				t.Fatal(err)
 			}
 			assertPrivateMode(t, runtimePath, 0o700)

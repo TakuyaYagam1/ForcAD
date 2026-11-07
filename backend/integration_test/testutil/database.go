@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/db"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 )
@@ -60,7 +59,19 @@ func Database(t *testing.T) (*pgxpool.Pool, string) {
 	if err := db.Migrate(ctx, address.String()); err != nil {
 		t.Fatal(err)
 	}
-	pool, closePool, err := postgres.NewPool(ctx, config.Config{Role: "test", DatabaseURL: address.String(), DatabaseMaxConns: 16, DatabaseTimeout: 5 * time.Second})
+	name := "forcad-test"
+	if instance, err := os.Hostname(); err == nil && instance != "" {
+		name += "/" + instance
+	}
+	if len(name) > 63 {
+		name = name[:63]
+	}
+	pool, closePool, err := postgres.NewPool(ctx, postgres.PoolOptions{
+		URL:             address.String(),
+		MaxConns:        16,
+		Timeout:         5 * time.Second,
+		ApplicationName: name,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

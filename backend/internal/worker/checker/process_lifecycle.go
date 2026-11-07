@@ -2,11 +2,14 @@ package checker
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
 // Failures reports the first failure that requires replacing this worker.
-func (w *Worker) Failures() <-chan error { return w.failures }
+func (w *Worker) Failures() <-chan error {
+	return w.failures
+}
 
 // Degraded is latched until restart, even if a late process is eventually reaped.
 func (w *Worker) Degraded() bool {
@@ -30,21 +33,22 @@ func (w *Worker) Unreaped() (int, time.Duration, uint64) {
 }
 
 func (w *Worker) beginAction(ctx context.Context) error {
+	const location = "checker.Worker.beginAction"
 	if w.Degraded() {
-		return ErrWorkerUnreaped
+		return fmt.Errorf("%s - reject work after an unreaped process: %w", location, ErrWorkerUnreaped)
 	}
 	select {
 	case <-w.degraded:
-		return ErrWorkerUnreaped
+		return fmt.Errorf("%s - reject work while draining an unreaped process: %w", location, ErrWorkerUnreaped)
 	case <-ctx.Done():
-		return context.Cause(ctx)
+		return fmt.Errorf("%s - wait for checker action slot: %w", location, context.Cause(ctx))
 	case w.actions <- struct{}{}:
 	}
 	// A pending caller can acquire a newly freed slot at the same instant the
 	// degradation channel closes. Never admit a checker after that transition.
 	if w.Degraded() {
 		<-w.actions
-		return ErrWorkerUnreaped
+		return fmt.Errorf("%s - reject work after capacity became degraded: %w", location, ErrWorkerUnreaped)
 	}
 	if w.observer != nil {
 		w.observer.ActionStarted()
@@ -53,6 +57,7 @@ func (w *Worker) beginAction(ctx context.Context) error {
 }
 
 func (w *Worker) endAction(pendingReap <-chan struct{}) {
+	const location = "checker.Worker.endAction"
 	if pendingReap == nil {
 		w.releaseAction()
 		return
@@ -64,7 +69,7 @@ func (w *Worker) endAction(pendingReap <-chan struct{}) {
 	w.processMu.Unlock()
 	w.degrade.Do(func() {
 		close(w.degraded)
-		w.failures <- ErrWorkerUnreaped
+		w.failures <- fmt.Errorf("%s - await checker process reap: %w", location, ErrWorkerUnreaped)
 		if w.options.OnDegraded != nil {
 			w.options.OnDegraded()
 		}

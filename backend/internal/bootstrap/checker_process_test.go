@@ -25,12 +25,15 @@ func TestShutdownWaitAndResourceCleanupAreBounded(t *testing.T) {
 		synctest.Wait()
 		finished := make(chan struct{})
 		started = time.Now()
-		if err := cleanupResources(func() { <-finished }, time.Second); err == nil || time.Since(started) != time.Second {
+		if err := cleanupResources(func() {
+			<-finished
+		}, time.Second); err == nil || time.Since(started) != time.Second {
 			t.Fatal("stuck pool cleanup prevented bounded process exit")
 		}
 		close(finished)
 		synctest.Wait()
-		if err := cleanupResources(func() {}, time.Second); err != nil {
+		if err := cleanupResources(func() {
+		}, time.Second); err != nil {
 			t.Fatal(err)
 		}
 	})

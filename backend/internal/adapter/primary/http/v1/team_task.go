@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"uuid"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
@@ -19,11 +21,7 @@ func (h *teamTasksHandler) GetAdminTeamTaskHistory(ctx context.Context, params a
 	if err != nil {
 		return nil, fmt.Errorf("%s - load team task history: %w", location, err)
 	}
-	result := make(api.GetAdminTeamTaskHistoryOKApplicationJSON, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, adminHistory(row))
-	}
-	return &result, nil
+	return response.AdminTeamTaskHistory(rows), nil
 }
 
 func (h *teamTasksHandler) GetClientTeamHistory(ctx context.Context, params api.GetClientTeamHistoryParams) ([]api.ParticipantTeamTaskHistory, error) {
@@ -32,11 +30,7 @@ func (h *teamTasksHandler) GetClientTeamHistory(ctx context.Context, params api.
 	if err != nil {
 		return nil, fmt.Errorf("%s - load public team history: %w", location, err)
 	}
-	result := make([]api.ParticipantTeamTaskHistory, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, publicHistory(row))
-	}
-	return result, nil
+	return response.PublicTeamHistory(rows), nil
 }
 
 func (*teamTasksHandler) GetAdminTeamTask(context.Context, api.GetAdminTeamTaskParams) (api.GetAdminTeamTaskRes, error) {

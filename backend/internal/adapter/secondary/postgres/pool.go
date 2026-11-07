@@ -3,54 +3,63 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"os"
 	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/TakuyaYagam1/ForcAD/config"
 )
 
-func NewPool(ctx context.Context, cfg config.Config) (*pgxpool.Pool, func(), error) {
+type PoolOptions struct {
+	URL                string
+	MaxConns           int32
+	MinConns           int32
+	Timeout            time.Duration
+	ApplicationName    string
+	TransactionPooling bool
+}
+
+// NewPool owns one process-scoped pool. Repositories borrowing it do not close it.
+func NewPool(ctx context.Context, options PoolOptions) (*pgxpool.Pool, func(), error) {
 	const location = "postgres.NewPool"
 
-	settings, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	settings, err := poolSettings(options)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s - parse PostgreSQL connection settings: invalid PostgreSQL connection settings", location)
 	}
-	settings.MaxConns = cfg.DatabaseMaxConns
-	settings.MinConns = cfg.DatabaseMinConns
-	settings.MaxConnLifetime = 30 * time.Minute
-	settings.MaxConnLifetimeJitter = 5 * time.Minute
-	settings.MaxConnIdleTime = 5 * time.Minute
-	settings.HealthCheckPeriod = 30 * time.Second
-	settings.ConnConfig.ConnectTimeout = cfg.DatabaseTimeout
-	name := "forcad-" + cfg.Role
-	if instance, err := os.Hostname(); err == nil && instance != "" {
-		name += "/" + instance
-	}
-	// PostgreSQL truncates application_name at 63 bytes.
-	if len(name) > 63 {
-		name = name[:63]
-	}
-	settings.ConnConfig.RuntimeParams["application_name"] = name
-	if cfg.DatabasePoolerAddr == "" {
-		settings.ConnConfig.RuntimeParams["statement_timeout"] = strconv.FormatInt(cfg.DatabaseTimeout.Milliseconds(), 10)
-		settings.ConnConfig.RuntimeParams["lock_timeout"] = "2000"
-		settings.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "10000"
-	}
-	// PgBouncer sets server timeouts in connect_query. Session startup SETs
-	// cannot follow a client between transaction-pooled server connections.
 	pool, err := pgxpool.NewWithConfig(ctx, settings)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s - create PostgreSQL connection pool: %w", location, err)
 	}
-	probe, cancel := context.WithTimeout(ctx, cfg.DatabaseTimeout)
+	probe, cancel := context.WithTimeout(ctx, options.Timeout)
 	defer cancel()
 	if err := pool.Ping(probe); err != nil {
 		pool.Close()
 		return nil, nil, fmt.Errorf("%s - verify PostgreSQL connection: %w", location, err)
 	}
 	return pool, pool.Close, nil
+}
+
+func poolSettings(options PoolOptions) (*pgxpool.Config, error) {
+	const location = "postgres.poolSettings"
+
+	settings, err := pgxpool.ParseConfig(options.URL)
+	if err != nil {
+		return nil, fmt.Errorf("%s - parse PostgreSQL connection settings: %w", location, err)
+	}
+	settings.MaxConns = options.MaxConns
+	settings.MinConns = options.MinConns
+	settings.MaxConnLifetime = 30 * time.Minute
+	settings.MaxConnLifetimeJitter = 5 * time.Minute
+	settings.MaxConnIdleTime = 5 * time.Minute
+	settings.HealthCheckPeriod = 30 * time.Second
+	settings.ConnConfig.ConnectTimeout = options.Timeout
+	settings.ConnConfig.RuntimeParams["application_name"] = options.ApplicationName
+	if !options.TransactionPooling {
+		settings.ConnConfig.RuntimeParams["statement_timeout"] = strconv.FormatInt(options.Timeout.Milliseconds(), 10)
+		settings.ConnConfig.RuntimeParams["lock_timeout"] = "2000"
+		settings.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = "10000"
+	}
+	// PgBouncer sets server timeouts in connect_query. Session startup SETs
+	// cannot follow a client between transaction-pooled server connections.
+	return settings, nil
 }

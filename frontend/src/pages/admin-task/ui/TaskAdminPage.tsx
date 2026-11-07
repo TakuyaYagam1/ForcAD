@@ -21,9 +21,18 @@ import { useTranslation } from "react-i18next";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
 
 type TaskPageError =
-  | { kind: "invalidId" }
-  | { kind: "validation"; issue: TaskValidationIssue }
-  | { kind: "request"; operation: "load" | "save"; cause: unknown };
+  | {
+    kind: "invalidId"
+  }
+  | {
+    kind: "validation";
+    issue: TaskValidationIssue
+  }
+  | {
+    kind: "request";
+    operation: "load" | "save";
+    cause: unknown
+  };
 
 interface TaskAdminPageProps {
   mode?: "create" | "edit";
@@ -31,7 +40,9 @@ interface TaskAdminPageProps {
 
 export function TaskAdminPage({ mode }: TaskAdminPageProps) {
   const { t } = useTranslation("admin");
-  const { taskId: taskIdParam } = useParams<{ taskId?: string }>();
+  const { taskId: taskIdParam } = useParams<{
+    taskId?: string
+  }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [task, setTask] = useState<Task | null>(null);
@@ -83,19 +94,30 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
         } else if (taskId !== null) {
           const loadedTask = await fetchTaskAdmin(taskId);
           if (!cancelled) {
-            setTask({ ...loadedTask, env_path: loadedTask.env_path ?? "" });
+            setTask({
+              ...loadedTask,
+              env_path: loadedTask.env_path ?? ""
+            });
             setLoadedKey(location.key);
           }
         } else if (!cancelled) {
-          setError({ kind: "invalidId" });
+          setError({
+            kind: "invalidId"
+          });
         }
       } catch (loadError: unknown) {
         console.error(loadError);
         if (!cancelled) {
-          setError({ kind: "request", operation: "load", cause: loadError });
+          setError({
+            kind: "request",
+            operation: "load",
+            cause: loadError
+          });
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -110,18 +132,27 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
     field: Field,
     value: Task[Field],
   ) => {
-    setTask((currentTask) =>
-      currentTask ? { ...currentTask, [field]: value } : currentTask,
+    setTask((currentTask) => {
+      return currentTask ? {
+        ...currentTask,
+        [field]: value
+      } : currentTask
+    },
     );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!task || !canSave || saving) return;
+    if (!task || !canSave || saving) {
+      return;
+    }
 
     const validationError = getTaskValidationIssue(task);
     if (validationError) {
-      setError({ kind: "validation", issue: validationError });
+      setError({
+        kind: "validation",
+        issue: validationError
+      });
       return;
     }
 
@@ -130,26 +161,42 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
     setError(null);
 
     try {
-      const payload: Omit<Task, "id"> & { id?: Task["id"] } = { ...task };
+      const payload: Omit<Task, "id"> & {
+        id?: Task["id"]
+      } = {
+        ...task
+      };
       delete payload.id;
 
       if (isCreate) {
         const createdTask = await createTaskAdmin(payload);
         if (routeKey.current === submittedRouteKey) {
-          navigate(`/admin/task/${createdTask.id}`, { replace: true });
+          navigate(`/admin/task/${createdTask.id}`, {
+            replace: true
+          });
         }
       } else if (taskId != null) {
         const updatedTask = await updateTaskAdmin(taskId, payload);
-        if (routeKey.current === submittedRouteKey) setTask(updatedTask);
+        if (routeKey.current === submittedRouteKey) {
+          setTask(updatedTask);
+        }
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-tasks"]
+      });
     } catch (saveError: unknown) {
       if (routeKey.current === submittedRouteKey) {
-        setError({ kind: "request", operation: "save", cause: saveError });
+        setError({
+          kind: "request",
+          operation: "save",
+          cause: saveError
+        });
       }
     } finally {
-      if (routeKey.current === submittedRouteKey) setSaving(false);
+      if (routeKey.current === submittedRouteKey) {
+        setSaving(false);
+      }
     }
   };
 
@@ -198,7 +245,9 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
               canSave={canSave}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onCancel={() => navigate("/admin/scoreboard")}
+              onCancel={() => {
+                return navigate("/admin/scoreboard")
+              }}
             />
           </>
         )}

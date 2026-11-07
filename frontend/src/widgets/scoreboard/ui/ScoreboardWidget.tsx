@@ -30,14 +30,30 @@ export function ScoreboardWidget({
   admin = false,
 }: ScoreboardWidgetProps) {
   const { t } = useTranslation("public");
-  const teams = useScoreboardStore((state) => state.teams) ?? [];
-  const tasks = useScoreboardStore((state) => state.tasks) ?? [];
-  const teamTasks = useScoreboardStore((state) => state.teamTasks) ?? [];
-  const round = useScoreboardStore((state) => state.round);
-  const roundStart = useScoreboardStore((state) => state.roundStart);
-  const error = useScoreboardStore((state) => state.error);
-  const roundTime = useScoreboardStore((state) => state.roundTime);
-  const setRoundTime = useScoreboardStore((state) => state.setRoundTime);
+  const teams = useScoreboardStore((state) => {
+    return state.teams
+  }) ?? [];
+  const tasks = useScoreboardStore((state) => {
+    return state.tasks
+  }) ?? [];
+  const teamTasks = useScoreboardStore((state) => {
+    return state.teamTasks
+  }) ?? [];
+  const round = useScoreboardStore((state) => {
+    return state.round
+  });
+  const roundStart = useScoreboardStore((state) => {
+    return state.roundStart
+  });
+  const error = useScoreboardStore((state) => {
+    return state.error
+  });
+  const roundTime = useScoreboardStore((state) => {
+    return state.roundTime
+  });
+  const setRoundTime = useScoreboardStore((state) => {
+    return state.setRoundTime
+  });
 
   const { pageRef, tableRef } = useScoreboardEntrance(!admin, teams.length > 0);
 
@@ -45,13 +61,17 @@ export function ScoreboardWidget({
 
   const config = useQuery({
     queryKey: ["game-config"],
-    queryFn: ({ signal }) => fetchScoreboardConfig(signal),
+    queryFn: ({ signal }) => {
+      return fetchScoreboardConfig(signal)
+    },
     enabled: roundTime === null,
     retry: 2,
     refetchInterval: 10000,
   });
   useEffect(() => {
-    if (config.data?.round_time) setRoundTime(config.data.round_time);
+    if (config.data?.round_time) {
+      setRoundTime(config.data.round_time);
+    }
   }, [config.data, setRoundTime]);
 
   return (
@@ -81,15 +101,19 @@ export function ScoreboardWidget({
           className="status-legend"
           aria-label={t("scoreboard.serviceStates")}
         >
-          {SCOREBOARD_STATUSES.map((status) => (
-            <span
-              key={status.code}
-              title={status.description}
-              style={{ backgroundColor: status.color }}
-            >
-              {status.label}
-            </span>
-          ))}
+          {SCOREBOARD_STATUSES.map((status) => {
+            return (
+              <span
+                key={status.code}
+                title={status.description}
+                style={{
+                  backgroundColor: status.color
+                }}
+              >
+                {status.label}
+              </span>
+            )
+          })}
         </div>
       </div>
 

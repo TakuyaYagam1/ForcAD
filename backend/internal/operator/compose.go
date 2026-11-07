@@ -34,9 +34,9 @@ func externalCompose(paths projectPaths, options SetupOptions) ([]byte, error) {
 		removed["postgres"] = struct{}{}
 		removed["postgres-data"] = struct{}{}
 	}
-	if options.RabbitMQ != "" {
-		removeMappingPair(services, "rabbitmq")
-		removed["rabbitmq"] = struct{}{}
+	if options.NATS != "" {
+		removeMappingPair(services, "nats")
+		removed["nats"] = struct{}{}
 	}
 	if len(removed) > 0 {
 		visited := make(map[*yaml.Node]struct{})
@@ -191,7 +191,7 @@ func removeGeneratedCompose(paths projectPaths) error {
 		return fmt.Errorf("%s - not a regular generated Compose file: %s", location, paths.generatedCompose)
 	}
 	if _, err := effectiveComposePath(paths); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if err := os.Remove(paths.generatedCompose); err != nil {
 		return fmt.Errorf("%s - remove generated Compose file: %w", location, err)

@@ -37,7 +37,14 @@ func TestStartReplicaEnvironment(t *testing.T) {
 				t.Fatal(err)
 			}
 			calls := 0
-			runner := func(_ context.Context, _ string, _ []string, environment []string, _ io.Reader, _, _ io.Writer) error {
+			runner := func(
+				_ context.Context,
+				_ string,
+				_ []string,
+				environment []string,
+				_ io.Reader,
+				_, _ io.Writer,
+			) error {
 				calls++
 				if !reflect.DeepEqual(environment, test.want) {
 					t.Fatalf("child overrides = %v, want %v", environment, test.want)
@@ -66,7 +73,15 @@ func TestScaledStartRejectsExcludedPoolerAndInvalidCounts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			runner := func(context.Context, string, []string, []string, io.Reader, io.Writer, io.Writer) error {
+			runner := func(
+				context.Context,
+				string,
+				[]string,
+				[]string,
+				io.Reader,
+				io.Writer,
+				io.Writer,
+			) error {
 				t.Fatal("invalid start invoked Docker")
 				return nil
 			}
@@ -83,7 +98,13 @@ func TestStartCannotChangeAnUnrecreatedPoolerBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	reads := 0
-	runner := func(_ context.Context, _ string, command, environment []string, _ io.Reader, out, _ io.Writer) error {
+	runner := func(
+		_ context.Context,
+		_ string,
+		command, environment []string,
+		_ io.Reader,
+		out, _ io.Writer,
+	) error {
 		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
 			t.Fatalf("preflight lost child overrides: %v", environment)
 		}
@@ -113,7 +134,9 @@ func TestCapacityOptionsRespectEqualsAndTerminator(t *testing.T) {
 		args []string
 		want map[string]int
 	}{
-		{[]string{"up", "--no-recreate=true", "--scale=worker=20"}, map[string]int{"worker": 20}},
+		{[]string{"up", "--no-recreate=true", "--scale=worker=20"}, map[string]int{
+			"worker": 20,
+		}},
 		{[]string{"up", "--no-recreate", "--no-recreate=false", "--scale=worker=20"}, nil},
 		{[]string{"up", "--", "--no-recreate", "--scale=worker=20"}, nil},
 		{[]string{"up", "--no-recreate", "--", "--scale=worker=20"}, map[string]int{}},
@@ -139,7 +162,9 @@ func TestOperatorChildEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 	var output bytes.Buffer
-	runner := withReplicaEnvironment(execOperatorCommand, map[string]int{"worker": 20})
+	runner := withReplicaEnvironment(execOperatorCommand, map[string]int{
+		"worker": 20,
+	})
 	err = runner(t.Context(), executable, []string{"-test.run=^TestOperatorChildEnvironment$"}, []string{marker + "=1"}, nil, &output, &output)
 	if err != nil || !strings.Contains(output.String(), "worker=20 cap=64") {
 		t.Fatalf("child environment = %q, %v", output.String(), err)

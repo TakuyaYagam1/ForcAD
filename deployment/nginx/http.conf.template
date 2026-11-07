@@ -29,6 +29,7 @@ resolver_timeout 5s;
 
 upstream api_backend {
     zone api_backend 64k;
+    least_conn;
     server api:5000 resolve;
     keepalive 32;
 }
@@ -37,6 +38,7 @@ upstream receiver_backend {
     zone receiver_backend 64k;
     server receiver:5000 resolve;
     keepalive 32;
+    keepalive_timeout 30s;
 }
 
 client_body_temp_path /tmp/nginx/client_temp;

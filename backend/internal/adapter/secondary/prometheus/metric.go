@@ -18,13 +18,19 @@ import (
 	"github.com/wahrwelt-kit/go-httpkit/httputil"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/rabbitmq"
+	natsbroker "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/nats"
 	redisadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
 )
 
 type checkFunc func(context.Context) error
 
-func (f checkFunc) Check(ctx context.Context) error { return f(ctx) }
+func (f checkFunc) Check(ctx context.Context) error {
+	const location = "prometheus.checkFunc.Check"
+	if err := f(ctx); err != nil {
+		return fmt.Errorf("%s - check dependency health: %w", location, err)
+	}
+	return nil
+}
 
 type Metrics struct {
 	Registry  *prometheus.Registry
@@ -36,19 +42,41 @@ type Metrics struct {
 	drainOnce sync.Once
 }
 
-func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broker *rabbitmq.Broker) *Metrics {
-	m := &Metrics{Registry: prometheus.NewRegistry(), drain: make(chan struct{})}
+func New(
+	cfg config.Config,
+	pool *pgxpool.Pool,
+	cache *redisadapter.Store,
+	broker *natsbroker.Broker,
+) *Metrics {
+	m := &Metrics{
+		Registry: prometheus.NewRegistry(),
+		drain:    make(chan struct{}),
+	}
 	m.Checker = newCheckerMetrics(m.Registry)
 	m.Registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	registerRoleMetrics(m.Registry, cfg.Role, pool)
 	for name, sample := range map[string]func() float64{
-		"forcad_database_connections":        func() float64 { return float64(pool.Stat().TotalConns()) },
-		"forcad_database_connections_in_use": func() float64 { return float64(pool.Stat().AcquiredConns()) },
-		"forcad_database_connection_limit":   func() float64 { return float64(pool.Stat().MaxConns()) },
-		"forcad_redis_connections":           func() float64 { return float64(cache.Client.PoolStats().TotalConns) },
-		"forcad_redis_connections_idle":      func() float64 { return float64(cache.Client.PoolStats().IdleConns) },
-		"forcad_redis_pool_pending_requests": func() float64 { return float64(cache.Client.PoolStats().PendingRequests) },
-		"forcad_worker_action_limit":         func() float64 { return float64(cfg.WorkerConcurrency) },
+		"forcad_database_connections": func() float64 {
+			return float64(pool.Stat().TotalConns())
+		},
+		"forcad_database_connections_in_use": func() float64 {
+			return float64(pool.Stat().AcquiredConns())
+		},
+		"forcad_database_connection_limit": func() float64 {
+			return float64(pool.Stat().MaxConns())
+		},
+		"forcad_redis_connections": func() float64 {
+			return float64(cache.Client.PoolStats().TotalConns)
+		},
+		"forcad_redis_connections_idle": func() float64 {
+			return float64(cache.Client.PoolStats().IdleConns)
+		},
+		"forcad_redis_pool_pending_requests": func() float64 {
+			return float64(cache.Client.PoolStats().PendingRequests)
+		},
+		"forcad_worker_action_limit": func() float64 {
+			return float64(cfg.WorkerConcurrency)
+		},
 		"forcad_draining": func() float64 {
 			if m.draining.Load() {
 				return 1
@@ -62,19 +90,43 @@ func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broke
 			return 0
 		},
 	} {
-		m.Registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{Name: name, Help: strings.ReplaceAll(name, "_", " ")}, sample))
+		m.Registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+			Name: name,
+			Help: strings.ReplaceAll(name, "_", " "),
+		}, sample))
 	}
-	m.Registry.MustRegister(prometheus.NewCounterFunc(prometheus.CounterOpts{Name: "forcad_database_acquire_canceled_total", Help: "Canceled database pool acquisitions."}, func() float64 { return float64(pool.Stat().CanceledAcquireCount()) }))
+	m.Registry.MustRegister(prometheus.NewCounterFunc(prometheus.CounterOpts{
+		Name: "forcad_database_acquire_canceled_total",
+		Help: "Canceled database pool acquisitions.",
+	}, func() float64 {
+		return float64(pool.Stat().CanceledAcquireCount())
+	}))
 	for name, sample := range map[string]func() float64{
-		"forcad_database_acquire_wait_seconds_total": func() float64 { return pool.Stat().EmptyAcquireWaitTime().Seconds() },
-		"forcad_database_acquire_wait_total":         func() float64 { return float64(pool.Stat().EmptyAcquireCount()) },
-		"forcad_redis_pool_timeouts_total":           func() float64 { return float64(cache.Client.PoolStats().Timeouts) },
-		"forcad_redis_pool_wait_total":               func() float64 { return float64(cache.Client.PoolStats().WaitCount) },
-		"forcad_redis_pool_wait_seconds_total":       func() float64 { return float64(cache.Client.PoolStats().WaitDurationNs) / float64(time.Second) },
+		"forcad_database_acquire_wait_seconds_total": func() float64 {
+			return pool.Stat().EmptyAcquireWaitTime().Seconds()
+		},
+		"forcad_database_acquire_wait_total": func() float64 {
+			return float64(pool.Stat().EmptyAcquireCount())
+		},
+		"forcad_redis_pool_timeouts_total": func() float64 {
+			return float64(cache.Client.PoolStats().Timeouts)
+		},
+		"forcad_redis_pool_wait_total": func() float64 {
+			return float64(cache.Client.PoolStats().WaitCount)
+		},
+		"forcad_redis_pool_wait_seconds_total": func() float64 {
+			return float64(cache.Client.PoolStats().WaitDurationNs) / float64(time.Second)
+		},
 	} {
-		m.Registry.MustRegister(prometheus.NewCounterFunc(prometheus.CounterOpts{Name: name, Help: strings.ReplaceAll(name, "_", " ")}, sample))
+		m.Registry.MustRegister(prometheus.NewCounterFunc(prometheus.CounterOpts{
+			Name: name,
+			Help: strings.ReplaceAll(name, "_", " "),
+		}, sample))
 	}
-	m.Export = promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{Timeout: 3 * time.Second, MaxRequestsInFlight: 4})
+	m.Export = promhttp.HandlerFor(m.Registry, promhttp.HandlerOpts{
+		Timeout:             3 * time.Second,
+		MaxRequestsInFlight: 4,
+	})
 	ready := httputil.HealthHandler(map[string]httputil.Checker{
 		"postgres": checkFunc(func(ctx context.Context) error {
 			const location = "prometheus.New"
@@ -94,11 +146,15 @@ func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broke
 	mux := http.NewServeMux()
 	mux.Handle("GET /metrics", m.Export)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
-		httputil.RenderJSON(w, r, 200, map[string]string{"status": "ok"})
+		httputil.RenderJSON(w, r, 200, map[string]string{
+			"status": "ok",
+		})
 	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		if m.draining.Load() || (cfg.Role == "worker" || cfg.Role == "all") && !broker.Connected() {
-			httputil.RenderJSON(w, r, 503, map[string]string{"status": "unavailable"})
+			httputil.RenderJSON(w, r, 503, map[string]string{
+				"status": "unavailable",
+			})
 			return
 		}
 		ready(w, r)
@@ -110,7 +166,9 @@ func New(cfg config.Config, pool *pgxpool.Pool, cache *redisadapter.Store, broke
 			return
 		}
 		m.Drain()
-		httputil.RenderJSON(w, r, 202, map[string]string{"status": "draining"})
+		httputil.RenderJSON(w, r, 202, map[string]string{
+			"status": "draining",
+		})
 	})
 	m.Control = mux
 	return m
@@ -125,13 +183,22 @@ func registerRoleMetrics(registry *prometheus.Registry, role string, pool *pgxpo
 	}
 }
 
-func (m *Metrics) Drain()                          { m.draining.Store(true); m.drainOnce.Do(func() { close(m.drain) }) }
-func (m *Metrics) DrainRequested() <-chan struct{} { return m.drain }
+func (m *Metrics) Drain() {
+	m.draining.Store(true)
+	m.drainOnce.Do(func() {
+		close(m.drain)
+	})
+}
+func (m *Metrics) DrainRequested() <-chan struct{} {
+	return m.drain
+}
 func (m *Metrics) Admission(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if m.draining.Load() {
 			w.Header().Set("Retry-After", "1")
-			httputil.RenderJSON(w, r, 503, map[string]string{"error": "Service is draining"})
+			httputil.RenderJSON(w, r, 503, map[string]string{
+				"error": "Service is draining",
+			})
 			return
 		}
 		next.ServeHTTP(w, r)

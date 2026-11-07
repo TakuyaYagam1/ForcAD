@@ -22,8 +22,11 @@ func TestProcessSnapshotExcludesCommandSecretsAndBoundsFiles(t *testing.T) {
 	files := map[string]string{
 		"stat":    "123 (FLAG_SECRET_COMM (nested)) " + strings.Join(fields, " "),
 		"status":  "Name:\tFLAG_SECRET_NAME\nPid:\t123\nPPid:\t12\nThreads:\t1\nVmRSS:\t2048 kB\nNSpid:\t123 7\nSigPnd:\t00000004\nSigBlk:\tFLAG_SECRET_BAD_FIELD\n",
-		"cmdline": "FLAG_SECRET_ARG", "environ": "FLAG_SECRET_ENV",
-		"wchan": strings.Repeat("w", 400), "stack": strings.Repeat("k", 4096), "syscall": strings.Repeat("0", 2048),
+		"cmdline": "FLAG_SECRET_ARG",
+		"environ": "FLAG_SECRET_ENV",
+		"wchan":   strings.Repeat("w", 400),
+		"stack":   strings.Repeat("k", 4096),
+		"syscall": strings.Repeat("0", 2048),
 	}
 	for name, data := range files {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0o600); err != nil {
@@ -46,7 +49,11 @@ func TestProcessSnapshotExcludesCommandSecretsAndBoundsFiles(t *testing.T) {
 
 func TestProcessSignalRetainsESRCHWithoutChangingCleanup(t *testing.T) {
 	// Linux pid_max is at most 2^22, so this cannot target a live process group.
-	command := &exec.Cmd{Process: &os.Process{Pid: math.MaxInt32}}
+	command := &exec.Cmd{
+		Process: &os.Process{
+			Pid: math.MaxInt32,
+		},
+	}
 	for _, signal := range []func(*exec.Cmd) (ProcessSignal, error){observeTerminateProcess, func(cmd *exec.Cmd) (ProcessSignal, error) {
 		return observeKillProcess(cmd, false)
 	}} {

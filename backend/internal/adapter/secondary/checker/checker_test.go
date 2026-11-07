@@ -34,7 +34,10 @@ func runCheckerFixture(mode string) int {
 		record := struct {
 			Args []string `json:"args"`
 			Path string   `json:"path"`
-		}{Args: args, Path: environmentValue(os.Environ(), "PATH")}
+		}{
+			Args: args,
+			Path: environmentValue(os.Environ(), "PATH"),
+		}
 		if err := json.NewEncoder(os.Stdout).Encode(record); err != nil {
 			return 2
 		}
@@ -139,7 +142,9 @@ func TestOptionsFromEnvPreservesCheckerSettings(t *testing.T) {
 		t.Fatalf("settings were not applied: %+v", configured)
 	}
 
-	disabled := OptionsFromEnv(map[string]string{checkerMemoryLimitEnv: "0"})
+	disabled := OptionsFromEnv(map[string]string{
+		checkerMemoryLimitEnv: "0",
+	})
 	if !disabled.DisableMemoryLimit || disabled.MemoryLimitMB != 0 {
 		t.Fatalf("zero memory limit should disable the cap: %+v", disabled)
 	}
@@ -162,9 +167,21 @@ func TestRunnerPreservesProtocolArgumentsAndPutOutput(t *testing.T) {
 		action Action
 		want   []string
 	}{
-		{name: "check", action: ActionCheck, want: []string{"check", "192.0.2.1"}},
-		{name: "put", action: ActionPut, want: []string{"put", "192.0.2.1", "private value", "FLAG{secret}", "17"}},
-		{name: "get", action: ActionGet, want: []string{"get", "192.0.2.1", "private value", "FLAG{secret}", "17"}},
+		{
+			name:   "check",
+			action: ActionCheck,
+			want:   []string{"check", "192.0.2.1"},
+		},
+		{
+			name:   "put",
+			action: ActionPut,
+			want:   []string{"put", "192.0.2.1", "private value", "FLAG{secret}", "17"},
+		},
+		{
+			name:   "get",
+			action: ActionGet,
+			want:   []string{"get", "192.0.2.1", "private value", "FLAG{secret}", "17"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -316,7 +333,9 @@ func TestRunnerTimeoutAndContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	timer := time.AfterFunc(50*time.Millisecond, cancel)
-	t.Cleanup(func() { timer.Stop() })
+	t.Cleanup(func() {
+		timer.Stop()
+	})
 	result, err = runner.Run(ctx, Request{
 		Executable: executable,
 		Action:     ActionGet,

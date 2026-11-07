@@ -19,7 +19,9 @@ func TestWriteErrorPreservesStatusHeadersAndNewline(t *testing.T) {
 	response := httptest.NewRecorder()
 	response.Header().Set("Retry-After", "1")
 
-	WriteError(response, http.StatusTooManyRequests, api.ApiError{Error: "Request limit exceeded"})
+	WriteError(response, http.StatusTooManyRequests, api.ApiError{
+		Error: "Request limit exceeded",
+	})
 
 	if response.Code != http.StatusTooManyRequests {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusTooManyRequests)
@@ -57,7 +59,9 @@ func TestRequestIDRejectsUnsafeValues(t *testing.T) {
 func TestRequestLoggerOmitsQueryAndRawPath(t *testing.T) {
 	var output bytes.Buffer
 	logger := slog.New(slog.NewJSONHandler(&output, nil))
-	handler := RequestID(Logger(logger, nil, func(*http.Request) string { return "unmatched" })(http.NotFoundHandler()))
+	handler := RequestID(Logger(logger, nil, func(*http.Request) string {
+		return "unmatched"
+	})(http.NotFoundHandler()))
 	request := httptest.NewRequest(http.MethodGet, "/private-value?token=secret-value", nil)
 	request.Header.Set("Authorization", "Bearer private-credential")
 	handler.ServeHTTP(httptest.NewRecorder(), request)
@@ -103,7 +107,9 @@ func TestRecovererPreservesAbortSignal(t *testing.T) {
 			t.Fatalf("panic = %v, want HTTP abort signal", got)
 		}
 	}()
-	handler := Recoverer(slog.Default())(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic(http.ErrAbortHandler) }))
+	handler := Recoverer(slog.Default())(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	}))
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
 }
 

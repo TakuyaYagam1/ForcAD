@@ -2,6 +2,7 @@ package application_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -18,20 +20,21 @@ import (
 
 	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/integration_test/testutil"
+	natsbroker "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/nats"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/rabbitmq"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
-	amqp "github.com/rabbitmq/amqp091-go"
+	natsgo "github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 )
 
 func TestApplicationRunsPythonCheckersAndAcceptsBatchOnce(t *testing.T) {
-	brokerURL, redisAddr := os.Getenv("FORCAD_TEST_AMQP_URL"), os.Getenv("FORCAD_TEST_REDIS_ADDR")
+	brokerURL, redisAddr := os.Getenv("FORCAD_TEST_NATS_URL"), os.Getenv("FORCAD_TEST_REDIS_ADDR")
 	if brokerURL == "" || redisAddr == "" {
 		t.Skip("local broker and Redis integration endpoints are not set")
 	}
-	parsed, err := url.Parse(brokerURL)
-	if err != nil || parsed.Path != "/forcad_test" {
-		t.Fatal("integration broker must use forcad_test vhost")
+	prefix := os.Getenv("FORCAD_TEST_NATS_PREFIX")
+	if !regexp.MustCompile(`^forcad_(test|e2e)_[A-Za-z0-9_]+$`).MatchString(prefix) {
+		t.Fatal("integration broker requires an isolated FORCAD_TEST_NATS_PREFIX")
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
@@ -91,31 +94,53 @@ teams:
 		t.Fatal(err)
 	}
 	address, _ := url.Parse(dsn)
-	queue := "test.bootstrap." + address.Query().Get("search_path")
-	values := map[string]string{"FORCAD_ROLE": "all", "DATABASE_URL": dsn, "REDIS_ADDR": redisAddr,
-		"AMQP_URL": brokerURL, "CHECKER_QUEUE": queue, "ADMIN_USERNAME": "organizer", "ADMIN_PASSWORD": "local-integration-password",
-		"CONTROL_TOKEN": strings.Repeat("d", 32), "HTTP_ADDR": "127.0.0.1:0", "METRICS_ADDR": "127.0.0.1:0", "WORKER_CONCURRENCY": "4", "SHUTDOWN_TIMEOUT": "5s"}
+	stream := prefix + "_bootstrap_" + address.Query().Get("search_path")
+	subject, consumer := stream+".jobs", "bootstrap-workers"
+	values := map[string]string{
+		"FORCAD_ROLE":        "all",
+		"DATABASE_URL":       dsn,
+		"REDIS_ADDR":         redisAddr,
+		"NATS_URL":           brokerURL,
+		"NATS_STREAM":        stream,
+		"NATS_SUBJECT":       subject,
+		"NATS_CONSUMER":      consumer,
+		"ADMIN_USERNAME":     "organizer",
+		"ADMIN_PASSWORD":     "local-integration-password",
+		"CONTROL_TOKEN":      strings.Repeat("d", 32),
+		"HTTP_ADDR":          "127.0.0.1:0",
+		"METRICS_ADDR":       "127.0.0.1:0",
+		"WORKER_CONCURRENCY": "4",
+		"SHUTDOWN_TIMEOUT":   "5s",
+	}
 	t.Cleanup(func() {
-		conn, err := amqp.Dial(brokerURL)
+		conn, err := natsgo.Connect(brokerURL, natsgo.Timeout(time.Second), natsgo.MaxReconnects(0))
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		defer conn.CloseDeadline(time.Now().Add(time.Second))
-		ch, err := conn.Channel()
+		defer conn.Close()
+		js, err := jetstream.New(conn)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		defer ch.Close()
-		if _, err = ch.QueueDelete(queue, false, false, false); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err = js.DeleteStream(ctx, stream); err != nil {
 			t.Error(err)
 		}
 	})
 	app := startApplication(t, values)
-	client := &http.Client{Timeout: 3 * time.Second}
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
 	var csrfToken string
-	request := func(method, path string, body []byte, cookie *http.Cookie, token string) (int, []byte, []*http.Cookie) {
+	request := func(
+		method, path string,
+		body []byte,
+		cookie *http.Cookie,
+		token string,
+	) (int, []byte, []*http.Cookie) {
 		t.Helper()
 		req, err := http.NewRequestWithContext(t.Context(), method, app.URL+path, bytes.NewReader(body))
 		if err != nil {
@@ -211,7 +236,19 @@ teams:
 	if err = rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	broker := rabbitmq.New(brokerURL, queue, 1, slog.New(slog.DiscardHandler))
+	broker := natsbroker.New(natsbroker.Config{
+		URL:           brokerURL,
+		Stream:        stream,
+		Subject:       subject,
+		Consumer:      consumer,
+		Concurrency:   1,
+		MaxAckPending: 1024,
+	}, slog.New(slog.DiscardHandler))
+	t.Cleanup(func() {
+		if err := broker.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	if confirmed, err := broker.Publish(t.Context(), ids); err != nil || len(confirmed) != 2 {
 		t.Fatalf("duplicate delivery: %v %v", confirmed, err)
 	}

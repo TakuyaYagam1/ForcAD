@@ -15,17 +15,25 @@ interface AdminShellProps {
 export function AdminShell({ children }: AdminShellProps) {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  const logout = useAdminAuthStore((state) => state.logout);
-  const authError = useAdminAuthStore((state) => state.error);
+  const logout = useAdminAuthStore((state) => {
+    return state.logout
+  });
+  const authError = useAdminAuthStore((state) => {
+    return state.error
+  });
   const [logoutPending, setLogoutPending] = useState(false);
   const logoutError = authError?.kind === "logoutFailed" ? authError : null;
 
   const handleLogout = async () => {
-    if (logoutPending) return;
+    if (logoutPending) {
+      return;
+    }
     setLogoutPending(true);
     try {
       await logout();
-      navigate("/admin/login", { replace: true });
+      navigate("/admin/login", {
+        replace: true
+      });
     } catch {
       // The auth store keeps the session and records the error for display.
     } finally {
@@ -43,7 +51,9 @@ export function AdminShell({ children }: AdminShellProps) {
           variant="ghost"
           size="sm"
           disabled={logoutPending}
-          onClick={() => void handleLogout()}
+          onClick={() => {
+            return void handleLogout()
+          }}
         >
           {logoutPending
             ? <LoaderCircle className="animate-spin" aria-hidden="true" />

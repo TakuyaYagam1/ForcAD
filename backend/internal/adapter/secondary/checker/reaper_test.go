@@ -17,7 +17,9 @@ func TestReaperNotificationMeansOSWaitCompleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer process.output.closeReaders()
-	t.Cleanup(func() { _ = killProcess(process.command) })
+	t.Cleanup(func() {
+		_ = killProcess(process.command)
+	})
 	select {
 	case <-process.reaped:
 		t.Fatal("process reported reaped while still running")

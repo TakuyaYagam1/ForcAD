@@ -530,6 +530,12 @@ func newMigrationFixture(t *testing.T) *migrationFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = conn.Close(context.Background()) })
-	return &migrationFixture{ctx: ctx, dsn: address.String(), conn: conn}
+	t.Cleanup(func() {
+		_ = conn.Close(context.Background())
+	})
+	return &migrationFixture{
+		ctx:  ctx,
+		dsn:  address.String(),
+		conn: conn,
+	}
 }

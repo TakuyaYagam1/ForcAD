@@ -14,13 +14,13 @@ The [default Compose file](../deployment/docker/compose.yml) starts:
 | --- | --- | --- |
 | `api` | 4 | Public and admin REST endpoints; native WebSocket events |
 | `receiver` | 2 | Flag submission at `/flags` and per-flag results |
-| `worker` | 2 | RabbitMQ consumption and external checker execution |
+| `worker` | 2 | NATS JetStream consumption and external checker execution |
 | `ticker` | 1 | Round scheduling, job publication and expired-job recovery |
 | `nginx` | 1 | Frontend assets and routing to API/receiver replicas |
 | `pgbouncer` | 1 | Transaction pooling with separate server budgets per application role |
 | `postgres` | 1 | Authoritative game state, flags, scores, sessions and jobs |
 | `redis` | 1 | Shared admission limits and public event distribution |
-| `rabbitmq` | 1 | Checker job delivery |
+| `nats` | 1 | Durable JetStream checker job delivery |
 
 `initializer`, `config-loader` and `postgres-data` are startup jobs. They prepare
 configuration/storage, apply embedded migrations and initialize a new game.
@@ -46,8 +46,8 @@ flowchart LR
     Redis --> API
     API -->|WebSocket| Browser
     Ticker -->|jobs and publication state| PgBouncer
-    Ticker --> RabbitMQ
-    RabbitMQ --> Worker
+    Ticker --> JetStream
+    JetStream --> Worker
     Worker -->|CHECK / PUT / GET| Checkers
     Worker -->|flags and verdicts| PgBouncer
     PgBouncer --> PostgreSQL
@@ -64,7 +64,7 @@ of the decoded batch, before database waits. Redis charges a shared budget
 in flags per team across receiver replicas.
 
 The ticker stores jobs and their publication state in PostgreSQL, then publishes
-job IDs to RabbitMQ with broker confirmation. Workers claim jobs with expiring
+job IDs to NATS JetStream with broker confirmation. Workers claim jobs with expiring
 ownership, execute [checker workflows](CHECKERS.md), and persist results before
 acknowledging queue messages. Duplicate delivery is expected and checked against
 the durable job state. An interrupted workflow that may have performed PUT is
@@ -91,8 +91,9 @@ each use a fixed singleton key, while schedules use descriptive string keys.
 
 Concurrency is bounded per process. HTTP admission limits requests in flight,
 pgx limits database connections, and worker slots limit checker processes.
-RabbitMQ prefetch follows worker concurrency. Adding replicas multiplies these
-limits, so their total must fit the database and host capacity.
+JetStream pull batches follow free worker slots, and the durable consumer's
+`MaxAckPending` bounds outstanding deliveries across replicas. Adding replicas
+multiplies process limits, so their total must fit the database and host capacity.
 
 A checker that remains unreaped after bounded termination keeps its action slot
 until the OS wait actually completes. The worker immediately becomes unready,
@@ -109,15 +110,15 @@ and stop when the application shuts down. Database reads for a scoreboard share
 one transaction snapshot. Scoring writes keep their transaction locks and
 duplicate checks.
 
-The dispatcher publishes bounded batches before waiting for RabbitMQ confirms.
+The dispatcher publishes bounded batches before waiting for JetStream publish acknowledgements.
 Only acknowledged IDs are checkpointed in PostgreSQL. Unknown publication
 outcomes remain eligible for retry; SQL job claims prevent duplicate execution.
 
 Drain rejects new HTTP requests, stops scheduling and stops taking checker jobs.
 In-flight work gets the configured shutdown deadline to finish. Unacknowledged
-jobs remain recoverable through RabbitMQ and the stored job state. Drain does
+jobs remain recoverable through JetStream and the stored job state. Drain does
 not empty the shared queue: other worker replicas can continue consuming it.
-On RabbitMQ transport loss, readiness and intake stop immediately while existing
+On NATS transport loss, readiness and intake stop immediately while existing
 SQL-fenced workflows have up to 30 seconds to settle. Then cancellation gets a
 5-second cleanup window. A handler still stuck after that forces process
 replacement instead of accumulating more sessions. A lost ACK may redeliver a
@@ -154,7 +155,7 @@ does not change API requests, game state or WebSocket subscriptions.
 | `internal/adapter/primary/http/v1/` | Domain-specific API handlers; routing stays in `http/router.go` |
 | `internal/adapter/primary/http/middleware/` | Request deadlines, body/admission limits, origin checks and request context |
 | `internal/adapter/primary/websocket/` | WebSocket connections and public event delivery |
-| `internal/adapter/secondary/` | PostgreSQL, Redis, RabbitMQ, metrics and checker processes |
+| `internal/adapter/secondary/` | PostgreSQL, Redis, NATS JetStream, metrics and checker processes |
 | `internal/worker/` | Scheduler and checker workflow orchestration |
 | `internal/operator/` | Local setup, Compose selection and cleanup |
 | `db/` | Embedded migrations and handwritten queries |

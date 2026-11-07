@@ -9,62 +9,62 @@ import * as zod from 'zod';
 
 export const Scoreboard = zod.object({
   "state": zod.object({
-  "round_start": zod.int(),
-  "round": zod.int(),
-  "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
-}),
+    "round_start": zod.int(),
+    "round": zod.int(),
+    "team_tasks": zod.array(zod.object({
+      "team_id": zod.uuid(),
+      "task_id": zod.uuid(),
+      "status": zod.int(),
+      "stolen": zod.int(),
+      "lost": zod.int(),
+      "score": zod.number(),
+      "checks": zod.int(),
+      "checks_passed": zod.int(),
+      "message": zod.string().nullable()
+    }))
+  }),
   "teams": zod.array(zod.object({
-  "id": zod.uuid(),
-  "name": zod.string(),
-  "ip": zod.string(),
-  "highlighted": zod.boolean(),
-  "active": zod.boolean(),
-  "logo_path": zod.string()
-})),
+    "id": zod.uuid(),
+    "name": zod.string(),
+    "ip": zod.string(),
+    "highlighted": zod.boolean(),
+    "active": zod.boolean(),
+    "logo_path": zod.string()
+  })),
   "tasks": zod.array(zod.object({
-  "id": zod.uuid(),
-  "name": zod.string()
-})),
+    "id": zod.uuid(),
+    "name": zod.string()
+  })),
   "config": zod.object({
-  "id": zod.int(),
-  "flag_lifetime": zod.int(),
-  "game_hardness": zod.number(),
-  "inflation": zod.boolean(),
-  "volga_attacks_mode": zod.boolean(),
-  "round_time": zod.int(),
-  "rounds": zod.int().nullable(),
-  "mode": zod.string(),
-  "timezone": zod.string(),
-  "start_time": zod.string(),
-  "real_round": zod.int().nullable(),
-  "game_running": zod.boolean().nullable()
-}),
+    "id": zod.int(),
+    "flag_lifetime": zod.int(),
+    "game_hardness": zod.number(),
+    "inflation": zod.boolean(),
+    "volga_attacks_mode": zod.boolean(),
+    "round_time": zod.int(),
+    "rounds": zod.int().nullable(),
+    "mode": zod.string(),
+    "timezone": zod.string(),
+    "start_time": zod.string(),
+    "real_round": zod.int().nullable(),
+    "game_running": zod.boolean().nullable()
+  }),
   "runtime": zod.object({
-  "phase": zod.enum(['waiting', 'running', 'paused', 'finished']),
-  "practice": zod.boolean(),
-  "reset_pending": zod.boolean(),
-  "generation": zod.int(),
-  "scheduled_start": zod.string(),
-  "can_start": zod.boolean(),
-  "can_start_practice": zod.boolean(),
-  "round": zod.int(),
-  "round_start": zod.number().nullable(),
-  "paused_at": zod.number().nullable(),
-  "paused_seconds": zod.number(),
-  "round_time": zod.int(),
-  "round_waiting": zod.boolean(),
-  "results_pending": zod.boolean()
-})
+    "phase": zod.enum(['waiting', 'running', 'paused', 'finished']),
+    "practice": zod.boolean(),
+    "reset_pending": zod.boolean(),
+    "generation": zod.int(),
+    "scheduled_start": zod.string(),
+    "can_start": zod.boolean(),
+    "can_start_practice": zod.boolean(),
+    "round": zod.int(),
+    "round_start": zod.number().nullable(),
+    "paused_at": zod.number().nullable(),
+    "paused_seconds": zod.number(),
+    "round_time": zod.int(),
+    "round_waiting": zod.boolean(),
+    "results_pending": zod.boolean()
+  })
 })
 
 export type Scoreboard = zod.input<typeof Scoreboard>;

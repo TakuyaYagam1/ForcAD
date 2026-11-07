@@ -12,6 +12,29 @@ import (
 	"uuid"
 )
 
+const canStartScheduledGame = `-- name: CanStartScheduledGame :one
+SELECT (
+    NOT COALESCE(game.game_running, FALSE)
+    AND COALESCE(game.real_round, 0) = 0
+    AND game.start_time IS NOT NULL
+    AND game.start_time <= $1
+    AND session.practice_start IS NULL
+    AND session.final_start IS NULL
+    AND NOT session.reset_pending
+    AND session.paused_at IS NULL
+)::BOOLEAN AS eligible
+FROM GameConfig AS game
+JOIN GameSession AS session ON session.id = game.id
+WHERE game.id = 1
+`
+
+func (q *Queries) CanStartScheduledGame(ctx context.Context, at pgtype.Timestamptz) (bool, error) {
+	row := q.db.QueryRow(ctx, canStartScheduledGame, at)
+	var eligible bool
+	err := row.Scan(&eligible)
+	return eligible, err
+}
+
 const cancelPracticeOutbox = `-- name: CancelPracticeOutbox :exec
 UPDATE CheckerJobs
 SET finished_at = $1
@@ -436,6 +459,37 @@ UPDATE GameSession SET reset_pending = TRUE WHERE id = 1
 func (q *Queries) MarkPracticeResetPending(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, markPracticeResetPending)
 	return err
+}
+
+const needsSchedulerMaintenance = `-- name: NeedsSchedulerMaintenance :one
+SELECT (
+    session.reset_pending
+    OR (
+        session.practice_start IS NOT NULL
+        AND (
+            NOT COALESCE(game.game_running, FALSE)
+            OR (game.start_time IS NOT NULL AND game.start_time <= $1)
+        )
+    )
+    OR (
+        NOT COALESCE(game.game_running, FALSE)
+        AND COALESCE(game.real_round, 0) >= 1
+        AND NOT session.reset_pending
+        AND session.practice_start IS NULL
+        AND (session.snapshot_round IS DISTINCT FROM game.real_round OR session.snapshot IS NULL)
+        AND NOT EXISTS (SELECT 1 FROM CheckerJobs WHERE finished_at IS NULL)
+    )
+)::BOOLEAN AS needed
+FROM GameConfig AS game
+JOIN GameSession AS session ON session.id = game.id
+WHERE game.id = 1
+`
+
+func (q *Queries) NeedsSchedulerMaintenance(ctx context.Context, at pgtype.Timestamptz) (bool, error) {
+	row := q.db.QueryRow(ctx, needsSchedulerMaintenance, at)
+	var needed bool
+	err := row.Scan(&needed)
+	return needed, err
 }
 
 const pendingSchedulerJobs = `-- name: PendingSchedulerJobs :many

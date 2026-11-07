@@ -60,6 +60,16 @@ function commandFor(mode, apiRoot, backendRoot, frontendRoot) {
       ],
       cwd: backendRoot,
     });
+    commands.push({
+      command: "gofmt",
+      args: ["-w", "-r", "interface{} -> any", "internal/adapter/primary/http/api"],
+      cwd: backendRoot,
+    });
+    commands.push({
+      command: "go",
+      args: ["run", "./tools/codestyle", "--fix", "internal/adapter/primary/http/api"],
+      cwd: backendRoot,
+    });
   }
 
   if (mode === "frontend" || mode === "all") {
@@ -83,10 +93,14 @@ function signalChildTree(child, signal) {
       process.kill(-child.pid, signal);
       return;
     } catch (error) {
-      if (error.code === "ESRCH") return;
+      if (error.code === "ESRCH") {
+        return;
+      }
     }
   }
-  if (child.exitCode === null && child.signalCode === null) child.kill(signal);
+  if (child.exitCode === null && child.signalCode === null) {
+    child.kill(signal);
+  }
 }
 
 function processGroupExists(pid) {
@@ -99,22 +113,30 @@ function processGroupExists(pid) {
 }
 
 function wait(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  return new Promise((resolve) => {
+    return setTimeout(resolve, milliseconds)
+  });
 }
 
 async function waitForProcessGroupExit(pid) {
-  if (process.platform === "win32" || !pid) return;
+  if (process.platform === "win32" || !pid) {
+    return;
+  }
 
   const gracefulDeadline = Date.now() + 2000;
   while (processGroupExists(pid) && Date.now() < gracefulDeadline) {
     await wait(25);
   }
-  if (!processGroupExists(pid)) return;
+  if (!processGroupExists(pid)) {
+    return;
+  }
 
   try {
     process.kill(-pid, "SIGKILL");
   } catch (error) {
-    if (error.code === "ESRCH") return;
+    if (error.code === "ESRCH") {
+      return;
+    }
     throw error;
   }
   const forcedDeadline = Date.now() + 1000;
@@ -134,7 +156,9 @@ function runCommand({ command, args, cwd, signal }) {
     let forceKillTimer;
 
     const finish = (callback, value) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(forceKillTimer);
       signal?.removeEventListener("abort", abortChild);
@@ -143,15 +167,26 @@ function runCommand({ command, args, cwd, signal }) {
 
     const abortChild = () => {
       signalChildTree(child, signal.reason === "SIGINT" ? "SIGINT" : "SIGTERM");
-      forceKillTimer = setTimeout(() => signalChildTree(child, "SIGKILL"), 2000);
+      forceKillTimer = setTimeout(() => {
+        return signalChildTree(child, "SIGKILL")
+      }, 2000);
     };
 
-    if (signal?.aborted) abortChild();
-    else signal?.addEventListener("abort", abortChild, { once: true });
+    if (signal?.aborted) {
+      abortChild();
+    } else {
+      signal?.addEventListener("abort", abortChild, {
+        once: true
+      });
+    }
 
-    child.once("error", (error) => finish(reject, error));
+    child.once("error", (error) => {
+      return finish(reject, error)
+    });
     child.once("close", async (code, childSignal) => {
-      if (signal?.aborted) await waitForProcessGroupExit(child.pid);
+      if (signal?.aborted) {
+        await waitForProcessGroupExit(child.pid);
+      }
       if (signal?.aborted) {
         finish(reject, new Error("API generation was interrupted"));
         return;
@@ -171,7 +206,9 @@ async function fileExists(filename) {
     await lstat(filename);
     return true;
   } catch (error) {
-    if (error.code === "ENOENT") return false;
+    if (error.code === "ENOENT") {
+      return false;
+    }
     throw error;
   }
 }
@@ -205,27 +242,42 @@ export async function runGeneration({
     }
 
     const existingFiles = [];
-    if (await fileExists(mergedSchemas)) existingFiles.push("api/components/schemas.yml");
-    if (await fileExists(bundle)) existingFiles.push("api/openapi.yml");
+    if (await fileExists(mergedSchemas)) {
+      existingFiles.push("api/components/schemas.yml");
+    }
+    if (await fileExists(bundle)) {
+      existingFiles.push("api/openapi.yml");
+    }
     if (existingFiles.length > 0) {
       throw new Error(`refusing to overwrite pre-existing ${existingFiles.join(" and ")}`);
     }
     ownsTemporaryFiles = true;
 
     for (const command of commandFor(mode, apiRoot, backendRoot, frontendRoot)) {
-      if (signal?.aborted) throw signal.reason ?? new Error("API generation aborted");
-      await execute({ ...command, signal });
+      if (signal?.aborted) {
+        throw signal.reason ?? new Error("API generation aborted");
+      }
+      await execute({
+        ...command,
+        signal
+      });
     }
   } finally {
     try {
       if (ownsTemporaryFiles) {
-        await rm(mergedSchemas, { force: true });
-        await rm(bundle, { force: true });
+        await rm(mergedSchemas, {
+          force: true
+        });
+        await rm(bundle, {
+          force: true
+        });
       }
     } finally {
       if (lock) {
         await lock.close();
-        await rm(lockPath, { force: true });
+        await rm(lockPath, {
+          force: true
+        });
       }
     }
   }
@@ -242,14 +294,23 @@ async function main(args) {
     receivedSignal = signal;
     controller.abort(signal);
   };
-  const onInterrupt = () => abort("SIGINT");
-  const onTerminate = () => abort("SIGTERM");
+  const onInterrupt = () => {
+    return abort("SIGINT")
+  };
+  const onTerminate = () => {
+    return abort("SIGTERM")
+  };
   process.once("SIGINT", onInterrupt);
   process.once("SIGTERM", onTerminate);
 
   try {
-    await runGeneration({ mode: args[0], signal: controller.signal });
-    if (receivedSignal) process.exitCode = receivedSignal === "SIGINT" ? 130 : 143;
+    await runGeneration({
+      mode: args[0],
+      signal: controller.signal
+    });
+    if (receivedSignal) {
+      process.exitCode = receivedSignal === "SIGINT" ? 130 : 143;
+    }
   } catch (error) {
     if (receivedSignal) {
       process.exitCode = receivedSignal === "SIGINT" ? 130 : 143;

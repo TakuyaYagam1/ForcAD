@@ -29,7 +29,12 @@ func TestConcurrentFlagSubmissionsAwardOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := postgres.New(pool)
-	flag, err := repo.Create(ctx, domain.Flag{Value: strings.Repeat("A", 31) + "=", TeamID: teams[1], TaskID: tasks[0], Round: 1}, nil)
+	flag, err := repo.Create(ctx, domain.Flag{
+		Value:  strings.Repeat("A", 31) + "=",
+		TeamID: teams[1],
+		TaskID: tasks[0],
+		Round:  1,
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +42,11 @@ func TestConcurrentFlagSubmissionsAwardOnce(t *testing.T) {
 	results := make(chan error, 64)
 	var workers sync.WaitGroup
 	for range 64 {
-		workers.Go(func() { <-start; err := submitFlag(ctx, repo, game, teams[0], flag); results <- err })
+		workers.Go(func() {
+			<-start
+			err := submitFlag(ctx, repo, game, teams[0], flag)
+			results <- err
+		})
 	}
 	close(start)
 	workers.Wait()
@@ -87,11 +96,19 @@ func TestOpposingSubmissionsPreserveScoresWithoutDeadlock(t *testing.T) {
 	jobs := make(chan submission, 100)
 	for i := range 100 {
 		victimIndex := i % 2
-		flag, err := repo.Create(ctx, domain.Flag{Value: fmt.Sprintf("%031d=", i), TeamID: teams[victimIndex], TaskID: tasks[0], Round: 1}, nil)
+		flag, err := repo.Create(ctx, domain.Flag{
+			Value:  fmt.Sprintf("%031d=", i),
+			TeamID: teams[victimIndex],
+			TaskID: tasks[0],
+			Round:  1,
+		}, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		jobs <- submission{attacker: teams[1-victimIndex], flag: flag}
+		jobs <- submission{
+			attacker: teams[1-victimIndex],
+			flag:     flag,
+		}
 	}
 	close(jobs)
 	var workers sync.WaitGroup
@@ -127,7 +144,12 @@ func TestSubmissionRechecksGameStateInsideTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := postgres.New(pool)
-	flag, err := repo.Create(ctx, domain.Flag{Value: strings.Repeat("B", 31) + "=", TeamID: teams[1], TaskID: tasks[0], Round: 1}, nil)
+	flag, err := repo.Create(ctx, domain.Flag{
+		Value:  strings.Repeat("B", 31) + "=",
+		TeamID: teams[1],
+		TaskID: tasks[0],
+		Round:  1,
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,8 +187,12 @@ func TestAttackDataFiltersWithUUIDTaskArray(t *testing.T) {
 	teams, tasks := gameEntityIDs(ctx, t, game)
 	repository := postgres.New(pool)
 	if _, err := repository.Create(ctx, domain.Flag{
-		Value: "UUID-ARRAY-FLAG", TeamID: teams[0], TaskID: tasks[0], Round: 1,
-		PublicData: "public array data", PrivateData: "private array data",
+		Value:       "UUID-ARRAY-FLAG",
+		TeamID:      teams[0],
+		TaskID:      tasks[0],
+		Round:       1,
+		PublicData:  "public array data",
+		PrivateData: "private array data",
 	}, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -180,12 +206,23 @@ func TestAttackDataFiltersWithUUIDTaskArray(t *testing.T) {
 	}
 }
 
-func submitFlag(ctx context.Context, repo *postgres.Repository, game *postgres.GameStore, team uuid.UUID, flag domain.Flag) error {
+func submitFlag(
+	ctx context.Context,
+	repo *postgres.Repository,
+	game *postgres.GameStore,
+	team uuid.UUID,
+	flag domain.Flag,
+) error {
 	life, err := game.Lifecycle(ctx)
 	if err != nil {
 		return err
 	}
-	results, err := repo.SubmitBatch(ctx, domain.FlagSubmission{TeamID: team, Values: []string{flag.Value}, ReceivedAt: time.Now(), Generation: life.Session.Generation})
+	results, err := repo.SubmitBatch(ctx, domain.FlagSubmission{
+		TeamID:     team,
+		Values:     []string{flag.Value},
+		ReceivedAt: time.Now(),
+		Generation: life.Session.Generation,
+	})
 	if err != nil {
 		return err
 	}

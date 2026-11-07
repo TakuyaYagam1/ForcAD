@@ -41,7 +41,13 @@ type Scheduler struct {
 	options    Options
 }
 
-func New(repository Repository, lifecycle outbound.GameRepository, publisher outbound.JobPublisher, logger *slog.Logger, options Options) *Scheduler {
+func New(
+	repository Repository,
+	lifecycle outbound.GameRepository,
+	publisher outbound.JobPublisher,
+	logger *slog.Logger,
+	options Options,
+) *Scheduler {
 	if options.PollInterval <= 0 {
 		options.PollInterval = 100 * time.Millisecond
 	}
@@ -63,7 +69,13 @@ func New(repository Repository, lifecycle outbound.GameRepository, publisher out
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Scheduler{repository: repository, lifecycle: lifecycle, publisher: publisher, logger: logger, options: options}
+	return &Scheduler{
+		repository: repository,
+		lifecycle:  lifecycle,
+		publisher:  publisher,
+		logger:     logger,
+		options:    options,
+	}
 }
 
 func (s *Scheduler) Run(ctx context.Context) error {
@@ -151,7 +163,11 @@ func (s *Scheduler) maintainSession(ctx context.Context, at time.Time) error {
 	return nil
 }
 
-func (s *Scheduler) runSchedules(ctx context.Context, at, logicalAt time.Time, requests []domain.ScheduleRequest) error {
+func (s *Scheduler) runSchedules(
+	ctx context.Context,
+	at, logicalAt time.Time,
+	requests []domain.ScheduleRequest,
+) error {
 	const location = "scheduler.Scheduler.runSchedules"
 	for _, request := range requests {
 		due, err := s.due(ctx, request, logicalAt)
@@ -227,7 +243,12 @@ func schedulerTime(life domain.Lifecycle, at time.Time) time.Time {
 	return at.Add(-offset)
 }
 
-func scheduleRequests(ctx context.Context, lifecycle outbound.GameRepository, life domain.Lifecycle, at, startAt time.Time) ([]domain.ScheduleRequest, error) {
+func scheduleRequests(
+	ctx context.Context,
+	lifecycle outbound.GameRepository,
+	life domain.Lifecycle,
+	at, startAt time.Time,
+) ([]domain.ScheduleRequest, error) {
 	const location = "scheduler.scheduleRequests"
 	if life.Config.RoundTime <= 0 {
 		return nil, fmt.Errorf("%s - invalid round time %d", location, life.Config.RoundTime)
@@ -236,13 +257,21 @@ func scheduleRequests(ctx context.Context, lifecycle outbound.GameRepository, li
 	switch life.Config.Mode {
 	case "classic":
 		return []domain.ScheduleRequest{{
-			ScheduleID: "classic_rounds", At: at, StartAt: startAt,
-			Interval: roundInterval, AdvancesRound: true, Workflow: domain.JobActionClassic,
+			ScheduleID:    "classic_rounds",
+			At:            at,
+			StartAt:       startAt,
+			Interval:      roundInterval,
+			AdvancesRound: true,
+			Workflow:      domain.JobActionClassic,
 		}}, nil
 	case "blitz":
 		requests := []domain.ScheduleRequest{{
-			ScheduleID: "blitz_rounds", At: at, StartAt: startAt,
-			Interval: roundInterval, AdvancesRound: true, Workflow: domain.JobActionPutsOnly,
+			ScheduleID:    "blitz_rounds",
+			At:            at,
+			StartAt:       startAt,
+			Interval:      roundInterval,
+			AdvancesRound: true,
+			Workflow:      domain.JobActionPutsOnly,
 		}}
 		tasks, err := lifecycle.Tasks(ctx, true)
 		if err != nil {
@@ -258,8 +287,11 @@ func scheduleRequests(ctx context.Context, lifecycle outbound.GameRepository, li
 			taskID := task.ID
 			requests = append(requests, domain.ScheduleRequest{
 				ScheduleID: "blitz_check_gets_task_" + task.ID.String(),
-				At:         at, StartAt: startAt, Interval: time.Duration(task.GetPeriod) * time.Second,
-				Workflow: domain.JobActionCheckGets, TaskID: &taskID,
+				At:         at,
+				StartAt:    startAt,
+				Interval:   time.Duration(task.GetPeriod) * time.Second,
+				Workflow:   domain.JobActionCheckGets,
+				TaskID:     &taskID,
 			})
 		}
 		return requests, nil

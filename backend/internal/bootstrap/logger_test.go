@@ -44,14 +44,47 @@ func TestLoggerPreservesNestedCheckerProcessDiagnostic(t *testing.T) {
 	}
 	timestamp := time.Date(2026, time.October, 30, 9, 22, 18, 123456789, time.UTC)
 	diagnostic := processchecker.ProcessDiagnostic{
-		Phase: "unreaped", PID: 2307, RequestedAt: timestamp, CollectedAt: timestamp.Add(time.Millisecond),
-		FinishedAt: timestamp.Add(2 * time.Millisecond), TimedOut: true, ExitCode: -1, SnapshotComplete: true,
+		Phase:            "unreaped",
+		PID:              2307,
+		RequestedAt:      timestamp,
+		CollectedAt:      timestamp.Add(time.Millisecond),
+		FinishedAt:       timestamp.Add(2 * time.Millisecond),
+		TimedOut:         true,
+		ExitCode:         -1,
+		SnapshotComplete: true,
 		Signals: []processchecker.ProcessSignal{
-			{Time: timestamp, Signal: "SIGTERM", Target: "process_group", PID: 2307, PGID: 2307, Outcome: "success"},
-			{Time: timestamp, Signal: "SIGKILL", Target: "process_group", PID: 2307, PGID: 2307, Outcome: "ESRCH", Error: "no such process"},
+			{
+				Time:    timestamp,
+				Signal:  "SIGTERM",
+				Target:  "process_group",
+				PID:     2307,
+				PGID:    2307,
+				Outcome: "success",
+			},
+			{
+				Time:    timestamp,
+				Signal:  "SIGKILL",
+				Target:  "process_group",
+				PID:     2307,
+				PGID:    2307,
+				Outcome: "ESRCH",
+				Error:   "no such process",
+			},
 		},
-		Proc: &processchecker.ProcessSnapshot{PID: 2307, PPID: 1, PGID: 2307, State: "D", StartTimeTicks: 29757,
-			Status: map[string]string{"Threads": "1"}, Wchan: "__vma_start_write", Errors: map[string]string{"stack": "permission_denied"}},
+		Proc: &processchecker.ProcessSnapshot{
+			PID:            2307,
+			PPID:           1,
+			PGID:           2307,
+			State:          "D",
+			StartTimeTicks: 29757,
+			Status: map[string]string{
+				"Threads": "1",
+			},
+			Wchan: "__vma_start_write",
+			Errors: map[string]string{
+				"stack": "permission_denied",
+			},
+		},
 		Goroutines: "goroutine 2048 [syscall]:\nos.(*Process).pidfdWait\n",
 	}
 	logger.Warn("checker process diagnostic", "job_id", "test-job", "diagnostic", diagnostic)
@@ -89,7 +122,9 @@ func TestLoggerRedactsGroupedCredentials(t *testing.T) {
 
 type shortLogWriter struct{}
 
-func (shortLogWriter) Write(data []byte) (int, error) { return len(data) / 2, nil }
+func (shortLogWriter) Write(data []byte) (int, error) {
+	return len(data) / 2, nil
+}
 
 func TestLoggerReportsOutputFailureOnClose(t *testing.T) {
 	logger, err := NewLogger(shortLogWriter{})
@@ -134,19 +169,29 @@ type blockedLogWriter struct {
 }
 
 func (writer *blockedLogWriter) Write(data []byte) (int, error) {
-	writer.once.Do(func() { close(writer.entered) })
+	writer.once.Do(func() {
+		close(writer.entered)
+	})
 	<-writer.release
 	return len(data), nil
 }
 
 func TestLoggingDoesNotBlockRequestsOnSlowOutput(t *testing.T) {
-	writer := &blockedLogWriter{entered: make(chan struct{}), release: make(chan struct{})}
+	writer := &blockedLogWriter{
+		entered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
 	logger, err := NewLogger(writer)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var release sync.Once
-	t.Cleanup(func() { release.Do(func() { close(writer.release) }); _ = logger.Close() })
+	t.Cleanup(func() {
+		release.Do(func() {
+			close(writer.release)
+		})
+		_ = logger.Close()
+	})
 	go logger.Info("first entry")
 	select {
 	case <-writer.entered:
@@ -165,7 +210,9 @@ func TestLoggingDoesNotBlockRequestsOnSlowOutput(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("requests waited for the blocked log sink")
 	}
-	release.Do(func() { close(writer.release) })
+	release.Do(func() {
+		close(writer.release)
+	})
 	if err := logger.Close(); err != nil {
 		t.Fatal(err)
 	}
@@ -175,12 +222,18 @@ func TestLoggingDoesNotBlockRequestsOnSlowOutput(t *testing.T) {
 }
 
 func TestLoggerCloseBoundsBlockedOutput(t *testing.T) {
-	writer := &blockedLogWriter{entered: make(chan struct{}), release: make(chan struct{})}
+	writer := &blockedLogWriter{
+		entered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
 	logger, err := NewLogger(writer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { close(writer.release); _ = logger.Close() })
+	t.Cleanup(func() {
+		close(writer.release)
+		_ = logger.Close()
+	})
 	logger.Info("entry")
 	select {
 	case <-writer.entered:
@@ -188,7 +241,9 @@ func TestLoggerCloseBoundsBlockedOutput(t *testing.T) {
 		t.Fatal("output was not reached")
 	}
 	done := make(chan error, 1)
-	go func() { done <- logger.Close() }()
+	go func() {
+		done <- logger.Close()
+	}()
 	select {
 	case err := <-done:
 		if err == nil {

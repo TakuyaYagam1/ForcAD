@@ -32,60 +32,86 @@ type CheckerMetrics struct {
 func newCheckerMetrics(registry *prometheus.Registry) *CheckerMetrics {
 	m := &CheckerMetrics{
 		active: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "forcad_checker_workflows_active", Help: "Checker workflows currently running in this worker.",
+			Name: "forcad_checker_workflows_active",
+			Help: "Checker workflows currently running in this worker.",
 		}),
 		actionsActive: prometheus.NewGauge(prometheus.GaugeOpts{
-			Name: "forcad_checker_actions_active", Help: "Checker action slots currently occupied in this worker.",
+			Name: "forcad_checker_actions_active",
+			Help: "Checker action slots currently occupied in this worker.",
 		}),
 		workflows: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_workflows_total", Help: "Checker workflows durably completed by status.",
+			Name: "forcad_checker_workflows_total",
+			Help: "Checker workflows durably completed by status.",
 		}, []string{"status"}),
 		serviceWorkflows: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_service_workflows_total", Help: "Durably completed checker workflows by service and numeric status.",
+			Name: "forcad_checker_service_workflows_total",
+			Help: "Durably completed checker workflows by service and numeric status.",
 		}, []string{"service", "status_code"}),
 		workflowTimeouts: prometheus.NewCounter(prometheus.CounterOpts{
-			Name: "forcad_checker_workflow_timeouts_total", Help: "Durably completed checker workflows that exceeded their deadline.",
+			Name: "forcad_checker_workflow_timeouts_total",
+			Help: "Durably completed checker workflows that exceeded their deadline.",
 		}),
 		actions: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_actions_total", Help: "Checker actions in durably completed workflows.",
+			Name: "forcad_checker_actions_total",
+			Help: "Checker actions in durably completed workflows.",
 		}, []string{"action", "status"}),
 		serviceActions: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_service_actions_total", Help: "Checker actions in durably completed workflows by service, team and numeric status.",
+			Name: "forcad_checker_service_actions_total",
+			Help: "Checker actions in durably completed workflows by service, team and numeric status.",
 		}, []string{"service", "team", "action", "status_code"}),
 		actionTimeouts: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_action_timeouts_total", Help: "Timed out checker actions in durably completed workflows.",
+			Name: "forcad_checker_action_timeouts_total",
+			Help: "Timed out checker actions in durably completed workflows.",
 		}, []string{"action"}),
 		serviceTimeouts: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "forcad_checker_service_action_timeouts_total", Help: "Timed out checker actions by service and action in durably completed workflows.",
+			Name: "forcad_checker_service_action_timeouts_total",
+			Help: "Timed out checker actions by service and action in durably completed workflows.",
 		}, []string{"service", "action"}),
 		duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name: "forcad_checker_action_duration_seconds", Help: "Duration of checker actions in durably completed workflows.",
+			Name:    "forcad_checker_action_duration_seconds",
+			Help:    "Duration of checker actions in durably completed workflows.",
 			Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 60, 120},
 		}, []string{"action"}),
 		serviceDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Name: "forcad_checker_service_action_duration_seconds", Help: "Checker action duration by service and action in durably completed workflows.",
+			Name:    "forcad_checker_service_action_duration_seconds",
+			Help:    "Checker action duration by service and action in durably completed workflows.",
 			Buckets: []float64{0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20, 30, 60, 120},
 		}, []string{"service", "action"}),
 		lastCompleted: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "forcad_checker_service_last_completed_timestamp_seconds", Help: "Unix time of the most recent durably completed checker workflow by service.",
+			Name: "forcad_checker_service_last_completed_timestamp_seconds",
+			Help: "Unix time of the most recent durably completed checker workflow by service.",
 		}, []string{"service"}),
 		lastActionStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "forcad_checker_service_action_last_status_code", Help: "Most recent durably completed checker action status by service, team and action.",
+			Name: "forcad_checker_service_action_last_status_code",
+			Help: "Most recent durably completed checker action status by service, team and action.",
 		}, []string{"service", "team", "action"}),
 		lastActionTime: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Name: "forcad_checker_service_action_last_completed_timestamp_seconds", Help: "Unix time of the most recent durably completed checker action by service, team and action.",
+			Name: "forcad_checker_service_action_last_completed_timestamp_seconds",
+			Help: "Unix time of the most recent durably completed checker action by service, team and action.",
 		}, []string{"service", "team", "action"}),
 	}
 	registry.MustRegister(m.active, m.actionsActive, m.workflows, m.serviceWorkflows, m.workflowTimeouts, m.actions, m.serviceActions, m.actionTimeouts, m.serviceTimeouts, m.duration, m.serviceDuration, m.lastCompleted, m.lastActionStatus, m.lastActionTime)
 	return m
 }
 
-func (m *CheckerMetrics) WorkflowStarted() { m.active.Inc() }
-func (m *CheckerMetrics) WorkflowEnded()   { m.active.Dec() }
-func (m *CheckerMetrics) ActionStarted()   { m.actionsActive.Inc() }
-func (m *CheckerMetrics) ActionEnded()     { m.actionsActive.Dec() }
+func (m *CheckerMetrics) WorkflowStarted() {
+	m.active.Inc()
+}
+func (m *CheckerMetrics) WorkflowEnded() {
+	m.active.Dec()
+}
+func (m *CheckerMetrics) ActionStarted() {
+	m.actionsActive.Inc()
+}
+func (m *CheckerMetrics) ActionEnded() {
+	m.actionsActive.Dec()
+}
 
-func (m *CheckerMetrics) ObserveCompleted(service, team string, result domain.CheckerResult, timedOut bool) {
+func (m *CheckerMetrics) ObserveCompleted(
+	service, team string,
+	result domain.CheckerResult,
+	timedOut bool,
+) {
 	if service == "" {
 		service = "unknown"
 	}
@@ -156,7 +182,8 @@ func checkerAction(action string) string {
 
 func registerCheckerJobs(registry *prometheus.Registry, pool *pgxpool.Pool) {
 	registry.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
-		Name: "forcad_checker_jobs_open", Help: "Checker jobs without a durable result, including queued and running jobs.",
+		Name: "forcad_checker_jobs_open",
+		Help: "Checker jobs without a durable result, including queued and running jobs.",
 	}, func() float64 {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()

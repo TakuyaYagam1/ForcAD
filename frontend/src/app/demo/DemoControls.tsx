@@ -4,7 +4,9 @@ import { prepareDemoGame, resetDemoData, simulateDemoCapture } from "./install";
 import { leaveDemoMode } from "./mode";
 import { useTranslation } from "react-i18next";
 
-export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
+export function DemoControls({ onDataChange }: {
+  onDataChange: () => void
+}) {
   const { t } = useTranslation("shell");
   const [message, setMessage] = useState<"prepared" | "reordered" | "captured" | "restored" | null>(null);
   function run(action: () => void, feedback: NonNullable<typeof message>) {
@@ -20,13 +22,18 @@ export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
           <span>{t("demo.description")}</span>
         </div>
         <div className="demo-panel-actions">
-          <button type="button" onClick={() => run(prepareDemoGame, "prepared")}>
+          <button type="button" onClick={() => {
+            return run(prepareDemoGame, "prepared")
+          }}>
             {t("demo.prepare")}
           </button>
           <button
             type="button"
-            onClick={() =>
-              run(() => simulateDemoCapture(true), "reordered")
+            onClick={() => {
+              return run(() => {
+                return simulateDemoCapture(true)
+              }, "reordered")
+            }
             }
           >
             <ArrowUpDown size={14} />
@@ -34,8 +41,11 @@ export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
           </button>
           <button
             type="button"
-            onClick={() =>
-              run(() => simulateDemoCapture(), "captured")
+            onClick={() => {
+              return run(() => {
+                return simulateDemoCapture()
+              }, "captured")
+            }
             }
           >
             <Flag size={14} />
@@ -43,7 +53,9 @@ export function DemoControls({ onDataChange }: { onDataChange: () => void }) {
           </button>
           <button
             type="button"
-            onClick={() => run(resetDemoData, "restored")}
+            onClick={() => {
+              return run(resetDemoData, "restored")
+            }}
           >
             <RotateCcw size={14} />
             {t("demo.reset")}

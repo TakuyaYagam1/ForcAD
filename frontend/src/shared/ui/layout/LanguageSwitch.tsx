@@ -9,18 +9,22 @@ export function LanguageSwitch() {
 
   return (
     <div className="language-switch" role="group" aria-label={t("language")}>
-      {LANGUAGES.map((language) => (
-        <button
-          key={language}
-          type="button"
-          lang={language}
-          aria-label={language === "ru" ? "Русский" : "English"}
-          aria-pressed={selected === language}
-          onClick={() => void setLanguage(language)}
-        >
-          {language.toUpperCase()}
-        </button>
-      ))}
+      {LANGUAGES.map((language) => {
+        return (
+          <button
+            key={language}
+            type="button"
+            lang={language}
+            aria-label={language === "ru" ? "Русский" : "English"}
+            aria-pressed={selected === language}
+            onClick={() => {
+              return void setLanguage(language)
+            }}
+          >
+            {language.toUpperCase()}
+          </button>
+        )
+      })}
     </div>
   );
 }

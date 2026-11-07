@@ -1,5 +1,5 @@
 # Copy to settings.toml and replace example values with the deployment values.
-# Use 1-32 teams and 1-5 members per team. admins sets the wg-admin peer count.
+# Use 1-32 teams and 1-7 members per team. admins sets the wg-admin peer count.
 admins = 1
 # Public game ports allowed through the router to team networks.
 game_tcp_ports = [8080, 8081]
@@ -15,6 +15,8 @@ dns_servers = ["1.1.1.1", "8.8.8.8"]
 [network]
 router_vpn = "10.183.1.0/30"
 forcad = "10.183.2.0/24"
+# Up to 5 members use /29 per team; 6-7 use /28. Size this pool for all teams
+# and keep it separate from admin_vpn.
 participant_vpn = "10.183.200.0/24"
 admin_vpn = "10.183.201.0/24"
 # Teams get consecutive /24 subnets starting here, in the listed team order.

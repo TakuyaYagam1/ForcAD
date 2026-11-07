@@ -92,7 +92,7 @@ Backend `test` runs Go unit tests; `race` enables the race detector and
 These targets do not start containers or run browser tests.
 
 `make -C deployment test` runs the backend integration suite against isolated
-PostgreSQL, PgBouncer, Redis, and RabbitMQ containers, then builds a temporary deployment
+PostgreSQL, PgBouncer, Redis, and NATS JetStream containers, then builds a temporary deployment
 and checks its HTTP endpoints. `make -C frontend e2e` delegates to
 `make -C deployment e2e`, which also runs the Playwright flows in `frontend/e2e`.
 Both deployment targets require Docker Compose.
@@ -123,7 +123,7 @@ go test -run='^$' -bench='^BenchmarkRuntimeConcurrent$' -benchmem -count=3 ./int
 
 The runtime benchmark uses a delayed fake repository to measure overlapping
 read suppression (`repo_calls/op`). The publisher benchmark uses isolated
-RabbitMQ, includes connection setup and excludes test queue setup. The runner
+NATS JetStream, includes connection setup and excludes test stream setup. The runner
 enables the race detector; use identical settings for comparisons. Neither
 benchmark establishes production capacity. Check frontend chunks with
 `make -C frontend build` and recovery flows with `make -C frontend e2e`.

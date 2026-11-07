@@ -20,8 +20,12 @@ test("RU and EN cover the same messages and interpolation variables", () => {
     const en = new Map(entries(resources.en[namespace]));
     assert.deepEqual([...ru.keys()].sort(), [...en.keys()].sort(), namespace);
     for (const [key, text] of ru) {
-      const variables = (value: string) => [...value.matchAll(/\{\{([^}]+)\}\}/g)]
-        .map((match) => match[1]).sort();
+      const variables = (value: string) => {
+        return [...value.matchAll(/\{\{([^}]+)\}\}/g)]
+          .map((match) => {
+            return match[1]
+          }).sort()
+      };
       assert.deepEqual(variables(text), variables(en.get(key)!), `${namespace}:${key}`);
       assert.ok(en.get(key)?.trim(), `${namespace}:${key} is empty`);
     }
@@ -40,17 +44,29 @@ test("only RU and EN are supported, with Russian as the default", async () => {
     assert.equal(getLocale(), "en-US");
     assert.equal(formatScore(1234.5), "1,234.5");
     assert.equal(gameStatusLabel("paused"), "Game paused");
-    assert.deepEqual(SCOREBOARD_STATUSES.map(({ label }) => label), ["UP", "CORRUPT", "MUMBLE", "DOWN", "CHECK FAILED"]);
+    assert.deepEqual(SCOREBOARD_STATUSES.map(({ label }) => {
+      return label
+    }), ["UP", "CORRUPT", "MUMBLE", "DOWN", "CHECK FAILED"]);
     assert.equal(status.description, "Service is operating normally (UP)");
-    assert.equal(formatTeamValidationIssue({ kind: "ip" }), "Enter a valid IPv4 or IPv6 address.");
-    assert.equal(i18n.t("public:scoreboard.teamCount", { count: 2, formattedCount: "2" }), "2 teams");
+    assert.equal(formatTeamValidationIssue({
+      kind: "ip"
+    }), "Enter a valid IPv4 or IPv6 address.");
+    assert.equal(i18n.t("public:scoreboard.teamCount", {
+      count: 2,
+      formattedCount: "2"
+    }), "2 teams");
     await setLanguage("ru");
     assert.equal(getLocale(), "ru-RU");
     assert.match(formatScore(1234.5), /^1\s234,5$/);
-    assert.deepEqual(SCOREBOARD_STATUSES.map(({ label }) => label), ["UP", "CORRUPT", "MUMBLE", "DOWN", "CHECK FAILED"]);
+    assert.deepEqual(SCOREBOARD_STATUSES.map(({ label }) => {
+      return label
+    }), ["UP", "CORRUPT", "MUMBLE", "DOWN", "CHECK FAILED"]);
     assert.equal(status.description, "Сервис работает штатно (UP)");
     for (const [count, word] of [[1, "команда"], [2, "команды"], [5, "команд"], [21, "команда"]] as const) {
-      assert.equal(i18n.t("public:scoreboard.teamCount", { count, formattedCount: String(count) }), `${count} ${word}`);
+      assert.equal(i18n.t("public:scoreboard.teamCount", {
+        count,
+        formattedCount: String(count)
+      }), `${count} ${word}`);
     }
   } finally {
     await setLanguage("ru");

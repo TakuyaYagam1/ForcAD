@@ -16,7 +16,9 @@ function verticalChrome(element: HTMLElement): number {
 
 function outerHeight(element: HTMLElement): number {
   const style = window.getComputedStyle(element);
-  if (style.display === "none") return 0;
+  if (style.display === "none") {
+    return 0;
+  }
   return (
     element.offsetHeight +
     pixels(style.marginTop) +
@@ -30,13 +32,17 @@ export function useScoreboardViewport(
   teamCount: number,
 ) {
   useLayoutEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      return;
+    }
 
     const page = pageRef.current;
     const main = page?.closest<HTMLElement>(".site-main");
     const shell = main?.closest<HTMLElement>(".brand-app");
     const header = shell?.querySelector<HTMLElement>(".site-header");
-    if (!page || !main || !shell || !header) return;
+    if (!page || !main || !shell || !header) {
+      return;
+    }
 
     const desktop = window.matchMedia("(min-width: 901px)");
     let frame = 0;
@@ -62,12 +68,15 @@ export function useScoreboardViewport(
       shell.style.setProperty("--scoreboard-shell-offset", `${offset}px`);
 
       const blocks = Array.from(page.children).filter(
-        (element): element is HTMLElement =>
-          element instanceof HTMLElement &&
-          !element.classList.contains("scoreboard-reveal"),
+        (element): element is HTMLElement => {
+          return element instanceof HTMLElement &&
+          !element.classList.contains("scoreboard-reveal")
+        },
       );
       const fixedHeight = blocks.reduce(
-        (total, block) => total + outerHeight(block),
+        (total, block) => {
+          return total + outerHeight(block)
+        },
         0,
       );
       const reveal = page.querySelector<HTMLElement>(".scoreboard-reveal");
@@ -94,9 +103,9 @@ export function useScoreboardViewport(
       // A short window must still show the header and one row (or an empty state).
       const scrollbar = scroll
         ? Math.max(
-            0,
-            scroll.offsetHeight - scroll.clientHeight - verticalChrome(scroll),
-          )
+          0,
+          scroll.offsetHeight - scroll.clientHeight - verticalChrome(scroll),
+        )
         : 0;
       // Fill the viewport with all teams. Filtering keeps the same row density.
       // Very short windows retain scrolling instead of shrinking text further.
@@ -125,7 +134,9 @@ export function useScoreboardViewport(
     };
 
     const schedule = () => {
-      if (!frame) frame = window.requestAnimationFrame(update);
+      if (!frame) {
+        frame = window.requestAnimationFrame(update);
+      }
     };
     const observer = new ResizeObserver(schedule);
     const observeParts = () => {
@@ -141,10 +152,13 @@ export function useScoreboardViewport(
       ]);
       if (shell.parentElement) {
         elements.add(shell.parentElement);
-        for (const sibling of shell.parentElement.children)
+        for (const sibling of shell.parentElement.children) {
           elements.add(sibling);
+        }
       }
-      elements.forEach((element) => observer.observe(element));
+      elements.forEach((element) => {
+        return observer.observe(element)
+      });
     };
     const mutations = new MutationObserver(() => {
       observeParts();
@@ -152,13 +166,18 @@ export function useScoreboardViewport(
     });
 
     observeParts();
-    mutations.observe(page, { childList: true, subtree: true });
+    mutations.observe(page, {
+      childList: true,
+      subtree: true
+    });
     window.addEventListener("resize", schedule);
     desktop.addEventListener("change", schedule);
     update();
 
     return () => {
-      if (frame) window.cancelAnimationFrame(frame);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
       observer.disconnect();
       mutations.disconnect();
       window.removeEventListener("resize", schedule);

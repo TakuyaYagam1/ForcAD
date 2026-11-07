@@ -42,6 +42,7 @@ type Game struct {
 	logger         *slog.Logger
 	snapshot       *cachekit.CachedValue[domain.Scoreboard]
 	runtimeFlights singleflight.Group
+	attackFlights  singleflight.Group
 	runtimeCtx     context.Context
 	runtimeCancel  context.CancelFunc
 	changed        chan struct{}
@@ -52,11 +53,23 @@ const (
 	runtimeLifecycleTimeout = 5 * time.Second
 )
 
-func NewGame(repo outbound.GameRepository, flags outbound.FlagRepository, publisher Publisher, logger *slog.Logger) *Game {
+func NewGame(
+	repo outbound.GameRepository,
+	flags outbound.FlagRepository,
+	publisher Publisher,
+	logger *slog.Logger,
+) *Game {
 	runtimeCtx, runtimeCancel := context.WithCancel(context.Background())
-	return &Game{repo: repo, flags: flags, publisher: publisher, logger: logger,
-		snapshot:   cachekit.MustNewCachedValue[domain.Scoreboard]("scoreboard", 500*time.Millisecond, cachekit.WithLoadTimeout(5*time.Second)),
-		runtimeCtx: runtimeCtx, runtimeCancel: runtimeCancel, changed: make(chan struct{}, 1)}
+	return &Game{
+		repo:          repo,
+		flags:         flags,
+		publisher:     publisher,
+		logger:        logger,
+		snapshot:      cachekit.MustNewCachedValue[domain.Scoreboard]("scoreboard", 500*time.Millisecond, cachekit.WithLoadTimeout(5*time.Second)),
+		runtimeCtx:    runtimeCtx,
+		runtimeCancel: runtimeCancel,
+		changed:       make(chan struct{}, 1),
+	}
 }
 
 func (g *Game) Close() {
@@ -64,15 +77,29 @@ func (g *Game) Close() {
 }
 
 func (g *Game) Lifecycle(ctx context.Context) (domain.Lifecycle, error) {
-	return g.repo.Lifecycle(ctx)
+	const location = "usecase.Game.Lifecycle"
+	lifecycle, err := g.sharedLifecycle(ctx)
+	if err != nil {
+		return lifecycle, fmt.Errorf("%s - read game lifecycle: %w", location, err)
+	}
+	return lifecycle, nil
 }
 func (g *Game) Runtime(ctx context.Context) (domain.RuntimeStatus, error) {
 	const location = "usecase.Game.Runtime"
-	if err := ctx.Err(); err != nil {
+	life, err := g.sharedLifecycle(ctx)
+	if err != nil {
 		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
+	return life.Runtime(time.Now()), nil
+}
+
+func (g *Game) sharedLifecycle(ctx context.Context) (domain.Lifecycle, error) {
+	const location = "usecase.Game.sharedLifecycle"
+	if err := ctx.Err(); err != nil {
+		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
+	}
 	if err := g.runtimeCtx.Err(); err != nil {
-		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
+		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
 	resultCh := g.runtimeFlights.DoChan(runtimeLifecycleKey, func() (any, error) {
 		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), runtimeLifecycleTimeout)
@@ -88,36 +115,79 @@ func (g *Game) Runtime(ctx context.Context) (domain.RuntimeStatus, error) {
 	var result singleflight.Result
 	select {
 	case <-ctx.Done():
-		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, ctx.Err())
+		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, ctx.Err())
 	case result = <-resultCh:
 	}
 	if err := ctx.Err(); err != nil {
-		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
+		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, err)
 	}
 	if result.Err != nil {
-		return domain.RuntimeStatus{}, fmt.Errorf("%s - read game lifecycle: %w", location, result.Err)
+		return domain.Lifecycle{}, fmt.Errorf("%s - read game lifecycle: %w", location, result.Err)
 	}
 	life, ok := result.Val.(domain.Lifecycle)
 	if !ok {
-		return domain.RuntimeStatus{}, fmt.Errorf("%s - invalid shared lifecycle result type %T", location, result.Val)
+		return domain.Lifecycle{}, fmt.Errorf("%s - invalid shared lifecycle result type %T", location, result.Val)
 	}
-	return life.Runtime(time.Now()), nil
+	return cloneLifecycle(life), nil
+}
+
+func cloneLifecycle(life domain.Lifecycle) domain.Lifecycle {
+	life.Config.Rounds = cloneLifecyclePointer(life.Config.Rounds)
+	life.Session.PracticeStart = cloneLifecyclePointer(life.Session.PracticeStart)
+	life.Session.FinalStart = cloneLifecyclePointer(life.Session.FinalStart)
+	life.Session.PausedAt = cloneLifecyclePointer(life.Session.PausedAt)
+	life.Session.RoundStartedAt = cloneLifecyclePointer(life.Session.RoundStartedAt)
+	life.Session.SnapshotRound = cloneLifecyclePointer(life.Session.SnapshotRound)
+	life.Session.Snapshot = bytes.Clone(life.Session.Snapshot)
+	return life
+}
+
+func cloneLifecyclePointer[T any](value *T) *T {
+	if value == nil {
+		return nil
+	}
+	return new(*value)
 }
 func (g *Game) Teams(ctx context.Context, active bool) ([]domain.Team, error) {
-	return g.repo.Teams(ctx, active)
+	const location = "usecase.Game.Teams"
+	teams, err := g.repo.Teams(ctx, active)
+	if err != nil {
+		return teams, fmt.Errorf("%s - read teams: %w", location, err)
+	}
+	return teams, nil
 }
 func (g *Game) Tasks(ctx context.Context, active bool) ([]domain.Task, error) {
-	return g.repo.Tasks(ctx, active)
+	const location = "usecase.Game.Tasks"
+	tasks, err := g.repo.Tasks(ctx, active)
+	if err != nil {
+		return tasks, fmt.Errorf("%s - read tasks: %w", location, err)
+	}
+	return tasks, nil
 }
 func (g *Game) History(ctx context.Context, team uuid.UUID, task *uuid.UUID) ([]domain.Cell, error) {
-	return g.repo.History(ctx, team, task)
+	const location = "usecase.Game.History"
+	history, err := g.repo.History(ctx, team, task)
+	if err != nil {
+		return history, fmt.Errorf("%s - read checker history: %w", location, err)
+	}
+	return history, nil
 }
 func (g *Game) PublicHistory(ctx context.Context, team uuid.UUID) ([]domain.PublicCell, error) {
-	return g.repo.PublicHistory(ctx, team)
+	const location = "usecase.Game.PublicHistory"
+	history, err := g.repo.PublicHistory(ctx, team)
+	if err != nil {
+		return history, fmt.Errorf("%s - read public checker history: %w", location, err)
+	}
+	return history, nil
 }
 
 func (g *Game) Scoreboard(ctx context.Context) (domain.Scoreboard, error) {
-	return g.snapshot.Get(ctx, g.loadScoreboard)
+	const location = "usecase.Game.Scoreboard"
+	board, err := g.snapshot.Get(ctx, g.loadScoreboard)
+	if err != nil {
+		return board, fmt.Errorf("%s - read cached scoreboard: %w", location, err)
+	}
+	return board, nil
 }
 
 func (g *Game) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
@@ -127,7 +197,9 @@ func (g *Game) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
 		return domain.Scoreboard{}, fmt.Errorf("%s - load scoreboard data: %w", location, err)
 	}
 	life, teams, tasks, cells := data.Lifecycle, data.Teams, data.Tasks, data.Cells
-	state := domain.GameState{TeamTasks: make([]domain.PublicCell, 0, len(cells))}
+	state := domain.GameState{
+		TeamTasks: make([]domain.PublicCell, 0, len(cells)),
+	}
 	if len(life.Session.Snapshot) > 0 {
 		if err = json.Unmarshal(life.Session.Snapshot, &state); err != nil {
 			return domain.Scoreboard{}, fmt.Errorf("%s - decode completed-round snapshot: %w", location, err)
@@ -147,7 +219,13 @@ func (g *Game) loadScoreboard(ctx context.Context) (domain.Scoreboard, error) {
 		}
 		state.TeamTasks = append(state.TeamTasks, public)
 	}
-	board := domain.Scoreboard{State: state, Config: life.Config, Runtime: life.Runtime(time.Now()), Teams: make([]domain.PublicTeam, 0, len(teams)), Tasks: make([]domain.PublicTask, 0, len(tasks))}
+	board := domain.Scoreboard{
+		State:   state,
+		Config:  life.Config,
+		Runtime: life.Runtime(time.Now()),
+		Teams:   make([]domain.PublicTeam, 0, len(teams)),
+		Tasks:   make([]domain.PublicTask, 0, len(tasks)),
+	}
 	for _, team := range teams {
 		board.Teams = append(board.Teams, team.Public())
 	}
@@ -184,44 +262,13 @@ func (g *Game) Standings(ctx context.Context) ([]Standing, error) {
 	})
 	result := make([]Standing, 0, len(teams))
 	for i, team := range teams {
-		result = append(result, Standing{Pos: i + 1, Team: team.Name, Score: math.RoundToEven(scores[team.ID]*100) / 100})
+		result = append(result, Standing{
+			Pos:   i + 1,
+			Team:  team.Name,
+			Score: math.RoundToEven(scores[team.ID]*100) / 100,
+		})
 	}
 	return result, nil
-}
-
-func (g *Game) AttackData(ctx context.Context, service *string) (map[string]map[string][]string, error) {
-	const location = "usecase.Game.AttackData"
-	life, err := g.repo.Lifecycle(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s - read game lifecycle: %w", location, err)
-	}
-	tasks, err := g.repo.Tasks(ctx, true)
-	if err != nil {
-		return nil, fmt.Errorf("%s - list active tasks: %w", location, err)
-	}
-	ids := make([]uuid.UUID, 0, len(tasks))
-	names := make(map[uuid.UUID]string, len(tasks))
-	data := map[string]map[string][]string{}
-	for _, task := range tasks {
-		if !hasTag(task.CheckerType, "pfr") || service != nil && task.Name != *service {
-			continue
-		}
-		ids = append(ids, task.ID)
-		names[task.ID] = task.Name
-		data[task.Name] = map[string][]string{}
-	}
-	if len(ids) == 0 {
-		return data, nil
-	}
-	flags, err := g.flags.AttackData(ctx, life.Config.RealRound, ids)
-	if err != nil {
-		return nil, fmt.Errorf("%s - load public attack data: %w", location, err)
-	}
-	for _, flag := range flags {
-		key := names[flag.TaskID]
-		data[key][flag.TeamIP] = append(data[key][flag.TeamIP], flag.PublicData)
-	}
-	return data, nil
 }
 
 func hasTag(tags, tag string) bool {
@@ -265,7 +312,9 @@ func (g *Game) Run(ctx context.Context) {
 		if err != nil || bytes.Equal(previous, encoded) {
 			continue
 		}
-		if err = g.publisher.Publish(ctx, "init_scoreboard", map[string]any{"data": board}); err != nil {
+		if err = g.publisher.Publish(ctx, "init_scoreboard", map[string]any{
+			"data": board,
+		}); err != nil {
 			if ctx.Err() == nil {
 				g.logger.Warn("scoreboard publication unavailable", "error", err)
 			}
@@ -297,17 +346,25 @@ func (g *Game) SaveTeam(ctx context.Context, team domain.Team, create bool) (dom
 		team.Token = hex.EncodeToString(token[:])
 	}
 	if team.Name == "" || len([]rune(team.Name)) > maxNameLength {
-		return domain.Team{}, fmt.Errorf("%s - invalid team name: %w", location, &domain.ValidationError{Message: "Invalid team name"})
+		return domain.Team{}, fmt.Errorf("%s - invalid team name: %w", location, &domain.ValidationError{
+			Message: "Invalid team name",
+		})
 	}
 	if _, err := netip.ParseAddr(team.IP); err != nil {
-		return domain.Team{}, fmt.Errorf("%s - invalid team address: %w", location, &domain.ValidationError{Message: "Invalid IPv4 or IPv6 address"})
+		return domain.Team{}, fmt.Errorf("%s - invalid team address: %w", location, &domain.ValidationError{
+			Message: "Invalid IPv4 or IPv6 address",
+		})
 	}
 	if !config.ValidLogoPath(team.LogoPath) {
-		return domain.Team{}, fmt.Errorf("%s - invalid team logo URL: %w", location, &domain.ValidationError{Message: "Invalid team logo URL"})
+		return domain.Team{}, fmt.Errorf("%s - invalid team logo URL: %w", location, &domain.ValidationError{
+			Message: "Invalid team logo URL",
+		})
 	}
 	decoded, err := hex.DecodeString(team.Token)
 	if err != nil || len(decoded) != 8 || strings.ToLower(team.Token) != team.Token {
-		return domain.Team{}, fmt.Errorf("%s - invalid team token format: %w", location, &domain.ValidationError{Message: "Team token must contain exactly 16 lowercase hexadecimal characters"})
+		return domain.Team{}, fmt.Errorf("%s - invalid team token format: %w", location, &domain.ValidationError{
+			Message: "Team token must contain exactly 16 lowercase hexadecimal characters",
+		})
 	}
 	if create {
 		team, err = g.repo.CreateTeam(ctx, team)
@@ -350,7 +407,9 @@ func validateTask(task domain.Task) error {
 		})
 	}
 	if invalidTaskSettings(task) {
-		return fmt.Errorf("%s - invalid task settings: %w", location, &domain.ValidationError{Message: "Invalid task settings"})
+		return fmt.Errorf("%s - invalid task settings: %w", location, &domain.ValidationError{
+			Message: "Invalid task settings",
+		})
 	}
 	return nil
 }

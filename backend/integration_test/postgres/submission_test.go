@@ -42,12 +42,21 @@ func newSubmissionFixture(t *testing.T) submissionFixture {
 	return submissionFixture{pool, postgres.New(pool), teams, tasks[0], life.Session.Generation}
 }
 
-func (f submissionFixture) flags(t *testing.T, victim int, start, count int) []string {
+func (f submissionFixture) flags(
+	t *testing.T,
+	victim int,
+	start, count int,
+) []string {
 	t.Helper()
 	values := make([]string, count)
 	for i := range values {
 		values[i] = fmt.Sprintf("%031d=", start+i)
-		if _, err := f.repo.Create(t.Context(), domain.Flag{Value: values[i], TeamID: f.teams[victim], TaskID: f.task, Round: 1}, nil); err != nil {
+		if _, err := f.repo.Create(t.Context(), domain.Flag{
+			Value:  values[i],
+			TeamID: f.teams[victim],
+			TaskID: f.task,
+			Round:  1,
+		}, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -55,7 +64,12 @@ func (f submissionFixture) flags(t *testing.T, victim int, start, count int) []s
 }
 
 func (f submissionFixture) request(team int, values []string) domain.FlagSubmission {
-	return domain.FlagSubmission{TeamID: f.teams[team], Values: values, Generation: f.generation, ReceivedAt: time.Now()}
+	return domain.FlagSubmission{
+		TeamID:     f.teams[team],
+		Values:     values,
+		Generation: f.generation,
+		ReceivedAt: time.Now(),
+	}
 }
 
 func TestBatchPreservesSequentialScoringAndVerdictOrder(t *testing.T) {
@@ -100,7 +114,9 @@ func TestReceivedBatchSurvivesRoundAdvanceAndExpiredRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 	if _, err = tx.Exec(ctx, `UPDATE GameConfig SET real_round=4`); err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +268,9 @@ func TestCanceledBatchDoesNotCommit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback(context.Background()) }()
+	defer func() {
+		_ = tx.Rollback(context.Background())
+	}()
 	if _, err := tx.Exec(t.Context(), `SELECT 1 FROM TeamTasks FOR UPDATE`); err != nil {
 		t.Fatal(err)
 	}

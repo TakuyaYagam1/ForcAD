@@ -42,7 +42,9 @@ func newRuntimeGateRepository() *runtimeGateRepository {
 }
 
 func (r *runtimeGateRepository) unblock(call int) {
-	r.releaseOnce[call-1].Do(func() { close(r.release[call-1]) })
+	r.releaseOnce[call-1].Do(func() {
+		close(r.release[call-1])
+	})
 }
 
 func (r *runtimeGateRepository) Lifecycle(ctx context.Context) (domain.Lifecycle, error) {
@@ -50,18 +52,29 @@ func (r *runtimeGateRepository) Lifecycle(ctx context.Context) (domain.Lifecycle
 	if r.deadlines != nil {
 		deadline, ok := ctx.Deadline()
 		select {
-		case r.deadlines <- runtimeDeadline{deadline: deadline, ok: ok}:
+		case r.deadlines <- runtimeDeadline{
+			deadline: deadline,
+			ok:       ok,
+		}:
 		default:
 		}
 	}
 	if call > int64(len(r.started)) {
-		return domain.Lifecycle{Config: domain.GameConfig{RealRound: int32(call)}}, nil
+		return domain.Lifecycle{
+			Config: domain.GameConfig{
+				RealRound: int32(call),
+			},
+		}, nil
 	}
 	index := int(call - 1)
 	close(r.started[index])
 	select {
 	case <-r.release[index]:
-		return domain.Lifecycle{Config: domain.GameConfig{RealRound: int32(call)}}, nil
+		return domain.Lifecycle{
+			Config: domain.GameConfig{
+				RealRound: int32(call),
+			},
+		}, nil
 	case <-ctx.Done():
 		return domain.Lifecycle{}, ctx.Err()
 	}
@@ -75,7 +88,9 @@ type runtimeObservedContext struct {
 }
 
 func (c *runtimeObservedContext) Done() <-chan struct{} {
-	c.once.Do(func() { close(c.ready) })
+	c.once.Do(func() {
+		close(c.ready)
+	})
 	return c.Context.Done()
 }
 
@@ -83,7 +98,10 @@ func startRuntimeCall(ctx context.Context, service *Game) <-chan runtimeCall {
 	result := make(chan runtimeCall, 1)
 	go func() {
 		status, err := service.Runtime(ctx)
-		result <- runtimeCall{status: status, err: err}
+		result <- runtimeCall{
+			status: status,
+			err:    err,
+		}
 	}()
 	return result
 }
@@ -129,11 +147,17 @@ func TestRuntimeSingleflightWaiterCancellationIsIndependent(t *testing.T) {
 
 	waiterCtx, cancelWaiter := context.WithCancel(context.Background())
 	defer cancelWaiter()
-	waiterObserved := &runtimeObservedContext{Context: waiterCtx, ready: make(chan struct{})}
+	waiterObserved := &runtimeObservedContext{
+		Context: waiterCtx,
+		ready:   make(chan struct{}),
+	}
 	waiter := startRuntimeCall(waiterObserved, service)
 	awaitRuntimeSignal(t, waiterObserved.ready, "cancelable waiter registration")
 
-	survivorObserved := &runtimeObservedContext{Context: context.Background(), ready: make(chan struct{})}
+	survivorObserved := &runtimeObservedContext{
+		Context: context.Background(),
+		ready:   make(chan struct{}),
+	}
 	survivor := startRuntimeCall(survivorObserved, service)
 	awaitRuntimeSignal(t, survivorObserved.ready, "surviving waiter registration")
 
@@ -224,12 +248,18 @@ func (r *runtimeRetryRepository) Lifecycle(context.Context) (domain.Lifecycle, e
 	if r.calls.Add(1) == 1 {
 		return domain.Lifecycle{}, r.err
 	}
-	return domain.Lifecycle{Config: domain.GameConfig{RealRound: 7}}, nil
+	return domain.Lifecycle{
+		Config: domain.GameConfig{
+			RealRound: 7,
+		},
+	}, nil
 }
 
 func TestRuntimeDoesNotCacheErrors(t *testing.T) {
 	wantErr := errors.New("temporary lifecycle failure")
-	repo := &runtimeRetryRepository{err: wantErr}
+	repo := &runtimeRetryRepository{
+		err: wantErr,
+	}
 	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
 
 	if _, err := service.Runtime(context.Background()); !errors.Is(err, wantErr) {
@@ -256,7 +286,10 @@ type runtimeTimeoutRepository struct {
 func (r *runtimeTimeoutRepository) Lifecycle(ctx context.Context) (domain.Lifecycle, error) {
 	r.calls.Add(1)
 	deadline, ok := ctx.Deadline()
-	r.deadline <- runtimeDeadline{deadline: deadline, ok: ok}
+	r.deadline <- runtimeDeadline{
+		deadline: deadline,
+		ok:       ok,
+	}
 	close(r.started)
 	<-ctx.Done()
 	err := ctx.Err()

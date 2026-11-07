@@ -11,7 +11,14 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 )
 
-func newTeamTraffic(cfg config.Config, metrics *prometheus.Metrics, repo *postgres.GameStore, events *websocket.Events, submissions *usecase.Flags, logger *slog.Logger) (*prometheus.TeamTraffic, error) {
+func newTeamTraffic(
+	cfg config.Config,
+	metrics *prometheus.Metrics,
+	repo *postgres.GameStore,
+	events *websocket.Events,
+	submissions *usecase.Flags,
+	logger *slog.Logger,
+) (*prometheus.TeamTraffic, error) {
 	const location = "bootstrap.newTeamTraffic"
 	var teams []config.Team
 	if cfg.ConfigPath != "" {

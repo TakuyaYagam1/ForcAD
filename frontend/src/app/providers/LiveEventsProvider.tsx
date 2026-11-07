@@ -16,20 +16,28 @@ const maximumCatchUpPages = 10;
 
 async function getEventPage(after?: string): Promise<PublicEventRecord[] | null> {
   try {
-    const events = await getClientEvents(after ? { after } : undefined);
+    const events = await getClientEvents(after ? {
+      after
+    } : undefined);
     return events.flatMap((event) => {
       const parsed = PublicEvent.safeParse(event);
       return parsed.success ? [parsed.data] : [];
     });
   } catch (error) {
-    if (after && axios.isAxiosError(error) && error.response?.status === 400) return null;
+    if (after && axios.isAxiosError(error) && error.response?.status === 400) {
+      return null;
+    }
     throw error;
   }
 }
 
-export function LiveEventsProvider({ children }: { children: ReactNode }) {
+export function LiveEventsProvider({ children }: {
+  children: ReactNode
+}) {
   useEffect(() => {
-    if (DEMO_MODE) return;
+    if (DEMO_MODE) {
+      return;
+    }
 
     const socket = getLiveEventsSocket();
     let active = true;
@@ -37,17 +45,25 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
 
     const syncFeed = async () => {
       const revision = ++feedRevision;
-      const isCurrent = () => active && revision === feedRevision;
+      const isCurrent = () => {
+        return active && revision === feedRevision
+      };
       try {
         const cursor = useLiveScoreboardStore.getState().events[0]?.id;
         const latest = await getEventPage();
-        if (!isCurrent() || !latest) return;
+        if (!isCurrent() || !latest) {
+          return;
+        }
         useLiveScoreboardStore.getState().hydrateEvents(latest);
-        if (!cursor) return;
+        if (!cursor) {
+          return;
+        }
         let after = cursor;
         for (let page = 0; page < maximumCatchUpPages; page += 1) {
           const events = await getEventPage(after);
-          if (!isCurrent()) return;
+          if (!isCurrent()) {
+            return;
+          }
           if (events === null) {
             useLiveScoreboardStore.getState().clear();
             const reset = await getEventPage();
@@ -57,13 +73,19 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
             return;
           }
           useLiveScoreboardStore.getState().hydrateEvents(events);
-          if (events.length < eventPageSize) return;
+          if (events.length < eventPageSize) {
+            return;
+          }
           const newest = events.at(-1)?.id;
-          if (!newest || newest === after) return;
+          if (!newest || newest === after) {
+            return;
+          }
           after = newest;
         }
       } catch {
-        if (isCurrent()) useLiveScoreboardStore.getState().setError("connectionLost");
+        if (isCurrent()) {
+          useLiveScoreboardStore.getState().setError("connectionLost");
+        }
       }
     };
 
@@ -76,12 +98,16 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
       useLiveScoreboardStore.getState().setError("connectionLost");
     };
     const onEvent = (
-      payload: FlagNotificationPayload | { data: FlagNotificationPayload },
+      payload: FlagNotificationPayload | {
+        data: FlagNotificationPayload
+      },
     ) => {
       const data = "data" in payload ? payload.data : payload;
       useLiveScoreboardStore.getState().pushNotification(data);
     };
-    const onAnnouncement = (payload: { data: PublicEventRecord }) => {
+    const onAnnouncement = (payload: {
+      data: PublicEventRecord
+    }) => {
       useLiveScoreboardStore.getState().hydrateEvents([payload.data]);
     };
 
@@ -90,9 +116,13 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
     socket.on("connect_error", onError);
     socket.on("flag_stolen", onEvent);
     socket.on("admin_message", onAnnouncement);
-    if (socket.connected) onReady();
+    if (socket.connected) {
+      onReady();
+    }
     const unsubscribeScoreboard = useScoreboardStore.subscribe((state, previous) => {
-      if (state.generation !== previous.generation && socket.connected) void syncFeed();
+      if (state.generation !== previous.generation && socket.connected) {
+        void syncFeed();
+      }
     });
     return () => {
       active = false;

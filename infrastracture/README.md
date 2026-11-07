@@ -21,7 +21,9 @@ python3 render.py
 Use [settings.example.toml](settings.example.toml) for field descriptions. Set
 the addresses, interfaces, game settings, tasks, teams and monitoring options
 for your deployment. Team order assigns consecutive VLANs, one /24 network per
-team and one /29 VPN block per team. Put logos under `public/teams/` or
+team and one /29 VPN block per team with up to five members. Six or seven
+members use /28 blocks. Size the participant VPN pool for one block per team
+and keep it separate from the admin VPN. Put logos under `public/teams/` or
 `public/brand/`, and checkers under `checkers/`. Leave a logo value empty when
 none is needed.
 

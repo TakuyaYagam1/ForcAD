@@ -71,8 +71,11 @@ RUN apk upgrade --no-cache \
     && chmod 0750 /home/forcad
 
 # Dependencies are installed by uv in the build stage; runtime checkers do not
-# need pip or its bundled copies of third-party libraries.
-RUN python -m pip uninstall --yes pip
+# need pip or its bundled copies of third-party libraries. The upstream image
+# omits stdlib bytecode. Compile it once while building because runtime checkers
+# cannot write caches and each action starts a fresh interpreter.
+RUN python -m pip uninstall --yes pip \
+    && python -m compileall -q /usr/local/lib/python3.14
 
 FROM checker-base AS checker-build
 

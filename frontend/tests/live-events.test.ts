@@ -50,14 +50,25 @@ test("live notification uses names from an already loaded scoreboard", () => {
   const named = resolveEventNames(
     notification,
     [
-      { id: "attacker", name: "Red team" },
-      { id: "victim", name: "Blue team" },
+      {
+        id: "attacker",
+        name: "Red team"
+      },
+      {
+        id: "victim",
+        name: "Blue team"
+      },
     ],
-    [{ id: "task", name: "Web" }],
+    [{
+      id: "task",
+      name: "Web"
+    }],
   );
 
   assert.equal(named.kind, "flag_stolen");
-  if (named.kind === "admin_message") return;
+  if (named.kind === "admin_message") {
+    return;
+  }
   assert.equal(named.attackerName, "Red team");
   assert.equal(named.victimName, "Blue team");
   assert.equal(named.taskName, "Web");
@@ -126,26 +137,34 @@ test("announcement content stays a text event and shares the bounded feed", () =
 });
 
 test("feed merge sorts newest first and retains at most one hundred rows", () => {
-  const current = Array.from({ length: 80 }, (_, i) => ({
-    id: `old-${i}`,
-    ts: i,
-    attackerId: "attacker",
-    victimId: "victim",
-    taskId: "task",
-    attackerName: "attacker",
-    victimName: "victim",
-    taskName: "task",
-  }));
-  const incoming = Array.from({ length: 30 }, (_, i) => ({
-    id: `new-${i}`,
-    ts: 100 + i,
-    attackerId: "attacker",
-    victimId: "victim",
-    taskId: "task",
-    attackerName: "attacker",
-    victimName: "victim",
-    taskName: "task",
-  }));
+  const current = Array.from({
+    length: 80
+  }, (_, i) => {
+    return {
+      id: `old-${i}`,
+      ts: i,
+      attackerId: "attacker",
+      victimId: "victim",
+      taskId: "task",
+      attackerName: "attacker",
+      victimName: "victim",
+      taskName: "task",
+    }
+  });
+  const incoming = Array.from({
+    length: 30
+  }, (_, i) => {
+    return {
+      id: `new-${i}`,
+      ts: 100 + i,
+      attackerId: "attacker",
+      victimId: "victim",
+      taskId: "task",
+      attackerName: "attacker",
+      victimName: "victim",
+      taskName: "task",
+    }
+  });
 
   const events = mergeLiveEvents(current, incoming);
   assert.equal(events.length, 100);

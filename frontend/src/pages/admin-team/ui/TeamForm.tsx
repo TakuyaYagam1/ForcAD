@@ -48,7 +48,10 @@ export function TeamForm({
           <CardTitle className="text-sm text-slate-100">
             {isCreate
               ? t("team.newTitle")
-              : t("team.existingTitle", { name: team.name, id: team.id ?? "-" })}
+              : t("team.existingTitle", {
+                name: team.name,
+                id: team.id ?? "-"
+              })}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
             {t("team.formDescription")}
@@ -77,7 +80,9 @@ export function TeamForm({
               required
               maxLength={MAX_TEAM_NAME_LENGTH}
               value={team.name}
-              onChange={(event) => onChange("name", event.target.value)}
+              onChange={(event) => {
+                return onChange("name", event.target.value)
+              }}
             />
           </div>
 
@@ -88,7 +93,9 @@ export function TeamForm({
               id="ip"
               required
               value={team.ip}
-              onChange={(event) => onChange("ip", event.target.value)}
+              onChange={(event) => {
+                return onChange("ip", event.target.value)
+              }}
             />
           </div>
 
@@ -103,7 +110,9 @@ export function TeamForm({
               placeholder={isCreate ? t("team.tokenPlaceholder") : ""}
               maxLength={16}
               value={team.token}
-              onChange={(event) => onChange("token", event.target.value)}
+              onChange={(event) => {
+                return onChange("token", event.target.value)
+              }}
             />
           </div>
 
@@ -114,7 +123,9 @@ export function TeamForm({
               id="logo_path"
               placeholder={t("team.logoPlaceholder")}
               value={team.logo_path}
-              onChange={(event) => onChange("logo_path", event.target.value)}
+              onChange={(event) => {
+                return onChange("logo_path", event.target.value)
+              }}
             />
           </div>
 
@@ -123,8 +134,9 @@ export function TeamForm({
               <Checkbox
                 disabled={saving}
                 checked={team.highlighted}
-                onCheckedChange={(value) =>
-                  onChange("highlighted", Boolean(value))
+                onCheckedChange={(value) => {
+                  return onChange("highlighted", Boolean(value))
+                }
                 }
               />
               {t("team.highlight")}
@@ -134,7 +146,9 @@ export function TeamForm({
               <Checkbox
                 disabled={saving}
                 checked={team.active}
-                onCheckedChange={(value) => onChange("active", Boolean(value))}
+                onCheckedChange={(value) => {
+                  return onChange("active", Boolean(value))
+                }}
               />
               {t("team.active")}
             </label>

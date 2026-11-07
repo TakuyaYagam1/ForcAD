@@ -52,7 +52,9 @@ func TestRuntimeRolePreservesDataAndRestrictsPrivileges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = runtime.Close(context.Background()) }()
+	defer func() {
+		_ = runtime.Close(context.Background())
+	}()
 	var allowed, forbidden bool
 	if err := runtime.QueryRow(ctx, `SELECT
 		(SELECT bool_and(has_table_privilege(current_user, t.name, p.privilege))

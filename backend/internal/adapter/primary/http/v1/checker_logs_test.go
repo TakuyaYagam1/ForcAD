@@ -22,7 +22,12 @@ type checkerLogsGame struct {
 	called    bool
 }
 
-func (g *checkerLogsGame) CheckerLogs(_ context.Context, teamID, taskID uuid.UUID, beforeID *uuid.UUID, limit int32) (domain.CheckerLogPage, error) {
+func (g *checkerLogsGame) CheckerLogs(
+	_ context.Context,
+	teamID, taskID uuid.UUID,
+	beforeID *uuid.UUID,
+	limit int32,
+) (domain.CheckerLogPage, error) {
 	g.called, g.beforeID, g.requested = true, beforeID, limit
 	g.page.TeamID, g.page.TaskID = teamID, taskID
 	return g.page, nil
@@ -33,14 +38,27 @@ func TestGetClientCheckerLogsReturnsOnlyPublicLogFields(t *testing.T) {
 	taskID := uuid.MustParse("01912345-6789-7000-8000-000000000002")
 	beforeID := uuid.MustParse("01912345-6789-7000-8000-000000000003")
 	logID := uuid.MustParse("01912345-6789-7000-8000-000000000004")
-	game := &checkerLogsGame{page: domain.CheckerLogPage{
-		Limit: 100, HasMore: true, NextBeforeID: &beforeID,
-		Logs: []domain.CheckerLog{{ID: logID, Round: 4, Action: "put", Stage: "classic", Status: 101, PublicMessage: "stored"}},
-	}}
+	game := &checkerLogsGame{
+		page: domain.CheckerLogPage{
+			Limit:        100,
+			HasMore:      true,
+			NextBeforeID: &beforeID,
+			Logs: []domain.CheckerLog{{
+				ID:            logID,
+				Round:         4,
+				Action:        "put",
+				Stage:         "classic",
+				Status:        101,
+				PublicMessage: "stored",
+			}},
+		},
+	}
 	handler := NewHandler(game, nil, nil, nil)
 	response, err := handler.GetClientCheckerLogs(context.Background(), api.GetClientCheckerLogsParams{
-		TeamID: teamID, TaskID: taskID,
-		Limit: api.NewOptInt32(100), BeforeID: api.NewOptString(beforeID.String()),
+		TeamID:   teamID,
+		TaskID:   taskID,
+		Limit:    api.NewOptInt32(100),
+		BeforeID: api.NewOptString(beforeID.String()),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +89,8 @@ func TestGetClientCheckerLogsRejectsInvalidCursor(t *testing.T) {
 	game := &checkerLogsGame{}
 	handler := NewHandler(game, nil, nil, nil)
 	response, err := handler.GetClientCheckerLogs(context.Background(), api.GetClientCheckerLogsParams{
-		TeamID: httpTeamID, TaskID: httpTaskID,
+		TeamID:   httpTeamID,
+		TaskID:   httpTaskID,
 		BeforeID: api.NewOptString("not-a-uuid"),
 	})
 	if err != nil {
@@ -89,20 +108,41 @@ func TestPublicCheckerLogRedactsHistoricalSuccessfulPutOutput(t *testing.T) {
 		status int32
 		want   string
 	}{
-		{action: "put", status: 101, want: "PUT completed"},
-		{action: "put", status: 103, want: "public failure detail"},
-		{action: "check", status: 101, want: "public check detail"},
+		{
+			action: "put",
+			status: 101,
+			want:   "PUT completed",
+		},
+		{
+			action: "put",
+			status: 103,
+			want:   "public failure detail",
+		},
+		{
+			action: "check",
+			status: 101,
+			want:   "public check detail",
+		},
 	} {
 		t.Run(test.action+test.want, func(t *testing.T) {
 			message := test.want
 			if test.action == "put" && test.status == 101 {
 				message = privateState
 			}
-			game := &checkerLogsGame{page: domain.CheckerLogPage{Logs: []domain.CheckerLog{{
-				Action: test.action, Status: test.status, PublicMessage: message,
-			}}}}
+			game := &checkerLogsGame{
+				page: domain.CheckerLogPage{
+					Logs: []domain.CheckerLog{{
+						Action:        test.action,
+						Status:        test.status,
+						PublicMessage: message,
+					}},
+				},
+			}
 			handler := NewHandler(game, nil, nil, nil)
-			response, err := handler.GetClientCheckerLogs(t.Context(), api.GetClientCheckerLogsParams{TeamID: httpTeamID, TaskID: httpTaskID})
+			response, err := handler.GetClientCheckerLogs(t.Context(), api.GetClientCheckerLogsParams{
+				TeamID: httpTeamID,
+				TaskID: httpTaskID,
+			})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,10 +160,18 @@ func TestPublicCheckerLogRedactsHistoricalSuccessfulPutOutput(t *testing.T) {
 func TestClientCheckerLogsRouteEncodesPublicPage(t *testing.T) {
 	teamID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
 	taskID := uuid.MustParse("01912345-6789-7000-8000-000000000002")
-	game := &checkerLogsGame{page: domain.CheckerLogPage{
-		TeamID: teamID, TaskID: taskID, Limit: 100,
-		Logs: []domain.CheckerLog{{Action: "check", Stage: "classic", PublicMessage: "UP"}},
-	}}
+	game := &checkerLogsGame{
+		page: domain.CheckerLogPage{
+			TeamID: teamID,
+			TaskID: taskID,
+			Limit:  100,
+			Logs: []domain.CheckerLog{{
+				Action:        "check",
+				Stage:         "classic",
+				PublicMessage: "UP",
+			}},
+		},
+	}
 	handler := NewHandler(game, nil, nil, nil)
 	server, err := api.NewServer(handler, handler, handler)
 	if err != nil {

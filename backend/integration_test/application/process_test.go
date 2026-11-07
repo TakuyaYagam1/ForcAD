@@ -30,7 +30,10 @@ func TestApplicationProcess(t *testing.T) {
 	if err := json.Unmarshal([]byte(encoded), &values); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := config.Load(func(key string) (string, bool) { value, ok := values[key]; return value, ok })
+	cfg, err := config.Load(func(key string) (string, bool) {
+		value, ok := values[key]
+		return value, ok
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +82,9 @@ func startApplication(t *testing.T, values map[string]string) *applicationProces
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = log.Close() })
+	t.Cleanup(func() {
+		_ = log.Close()
+	})
 	processCtx, stopProcess := context.WithCancel(context.Background())
 	cmd := exec.CommandContext(processCtx, executable, "-test.run=^TestApplicationProcess$")
 	cmd.Env = append(os.Environ(), applicationConfigEnv+"="+string(encoded))
@@ -90,8 +95,11 @@ func startApplication(t *testing.T, values map[string]string) *applicationProces
 		t.Fatal(err)
 	}
 	app := &applicationProcess{
-		URL: "http://" + values["HTTP_ADDR"], controlURL: "http://" + values["METRICS_ADDR"],
-		cmd: cmd, stop: stopProcess, done: make(chan struct{}),
+		URL:        "http://" + values["HTTP_ADDR"],
+		controlURL: "http://" + values["METRICS_ADDR"],
+		cmd:        cmd,
+		stop:       stopProcess,
+		done:       make(chan struct{}),
 	}
 	go func() {
 		app.err = cmd.Wait()
@@ -121,7 +129,9 @@ func startApplication(t *testing.T, values map[string]string) *applicationProces
 	})
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
-	client := &http.Client{Timeout: time.Second}
+	client := &http.Client{
+		Timeout: time.Second,
+	}
 	tick := time.NewTicker(25 * time.Millisecond)
 	defer tick.Stop()
 	for {
@@ -168,7 +178,9 @@ func (app *applicationProcess) drain(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+strings.Repeat("d", 32))
-	response, err := (&http.Client{Timeout: 3 * time.Second}).Do(req)
+	response, err := (&http.Client{
+		Timeout: 3 * time.Second,
+	}).Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}

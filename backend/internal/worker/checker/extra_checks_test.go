@@ -15,9 +15,11 @@ func TestExtraCheckDoesNotReadOrWriteFlags(t *testing.T) {
 	task.Puts, task.Gets = 2, 2
 	repository := newFakeRepository(payloadJSON(t, "check_only", task), domain.JobActionCheckOnly)
 	flags := &fakeFlagStore{}
-	runner := &fakeRunner{fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
-		return success(request.Action), nil
-	}}
+	runner := &fakeRunner{
+		fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
+			return success(request.Action), nil
+		},
+	}
 	worker := makeWorker(t, repository, flags, runner, Options{})
 	if err := worker.Handle(context.Background(), testJobID); err != nil {
 		t.Fatal(err)
@@ -36,10 +38,12 @@ func TestExtraCheckRoundDeadlineIsInfrastructureFailure(t *testing.T) {
 		expires := time.Now().Add(3 * time.Second)
 		job.ExpiresAt = &expires
 		repository.jobs[testJobID] = job
-		runner := &fakeRunner{fn: func(ctx context.Context, _ processchecker.Request) (processchecker.Result, error) {
-			<-ctx.Done()
-			return processchecker.Result{}, context.Cause(ctx)
-		}}
+		runner := &fakeRunner{
+			fn: func(ctx context.Context, _ processchecker.Request) (processchecker.Result, error) {
+				<-ctx.Done()
+				return processchecker.Result{}, context.Cause(ctx)
+			},
+		}
 		worker := makeWorker(t, repository, &fakeFlagStore{}, runner, Options{})
 		if err := worker.Handle(context.Background(), testJobID); err != nil {
 			t.Fatal(err)

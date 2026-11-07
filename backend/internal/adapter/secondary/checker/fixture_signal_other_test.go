@@ -2,4 +2,5 @@
 
 package checker
 
-func fixtureIgnoreTermination() {}
+func fixtureIgnoreTermination() {
+}

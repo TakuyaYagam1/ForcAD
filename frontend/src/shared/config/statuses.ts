@@ -62,7 +62,9 @@ function createStatusMeta(definition: StatusDefinition): ScoreboardStatusMeta {
   return {
     ...definition,
     get description() {
-      return String(i18n.t(descriptionKey, { ns: "common" }));
+      return String(i18n.t(descriptionKey, {
+        ns: "common"
+      }));
     },
   };
 }
@@ -71,8 +73,12 @@ export const SCOREBOARD_STATUSES: ScoreboardStatusMeta[] =
   statusDefinitions.map(createStatusMeta);
 
 export const STATUS_COLOR_BY_CODE: Record<number, string> = Object.fromEntries(
-  SCOREBOARD_STATUSES.map((s) => [s.code, s.color]),
+  SCOREBOARD_STATUSES.map((s) => {
+    return [s.code, s.color]
+  }),
 );
 
 export const STATUS_META_BY_CODE: Record<number, ScoreboardStatusMeta> =
-  Object.fromEntries(SCOREBOARD_STATUSES.map((s) => [s.code, s]));
+  Object.fromEntries(SCOREBOARD_STATUSES.map((s) => {
+    return [s.code, s]
+  }));

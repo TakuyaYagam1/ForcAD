@@ -24,25 +24,32 @@ type stageReport struct {
 }
 
 type suiteReport struct {
-	Started           time.Time       `json:"started"`
-	Finished          time.Time       `json:"finished"`
-	Profile           string          `json:"profile"`
-	Diagnostics       bool            `json:"diagnostics"`
-	DatabaseStorage   string          `json:"database_storage"`
-	ContainerLogging  string          `json:"container_logging"`
-	GoVersion         string          `json:"go_version"`
-	GeneratorCPUs     int             `json:"generator_cpus"`
-	GOMAXPROCS        int             `json:"gomaxprocs"`
-	DockerHost        json.RawMessage `json:"docker_host,omitempty"`
-	Stages            []stageReport   `json:"stages"`
-	WebSockets        streamReport    `json:"websockets"`
-	CheckerResults    int64           `json:"checker_results"`
-	Checker           *checkerReport  `json:"checker,omitempty"`
-	CorrectnessPassed bool            `json:"correctness_passed"`
-	Error             string          `json:"error,omitempty"`
+	Started                           time.Time       `json:"started"`
+	Finished                          time.Time       `json:"finished"`
+	Profile                           string          `json:"profile"`
+	Diagnostics                       bool            `json:"diagnostics"`
+	DatabaseStorage                   string          `json:"database_storage"`
+	ContainerLogging                  string          `json:"container_logging"`
+	GoVersion                         string          `json:"go_version"`
+	GeneratorCPUs                     int             `json:"generator_cpus"`
+	GOMAXPROCS                        int             `json:"gomaxprocs"`
+	DockerHost                        json.RawMessage `json:"docker_host,omitempty"`
+	Stages                            []stageReport   `json:"stages"`
+	WebSockets                        streamReport    `json:"websockets"`
+	WebSocketReconnectIntervalSeconds float64         `json:"websocket_reconnect_interval_seconds"`
+	CheckerResults                    int64           `json:"checker_results"`
+	CheckerResultsBefore              *int64          `json:"checker_results_before,omitempty"`
+	CheckerResultsTotal               *int64          `json:"checker_results_total,omitempty"`
+	Checker                           *checkerReport  `json:"checker,omitempty"`
+	CorrectnessPassed                 bool            `json:"correctness_passed"`
+	Error                             string          `json:"error,omitempty"`
 }
 
 func newReport(profile string) (*suiteReport, string, error) {
+	reconnectInterval, err := webSocketReconnectInterval()
+	if err != nil {
+		return nil, "", err
+	}
 	directory := os.Getenv("LOAD_REPORT_DIR")
 	if directory == "" {
 		directory = "reports"
@@ -50,11 +57,19 @@ func newReport(profile string) (*suiteReport, string, error) {
 	if err := os.MkdirAll(directory, 0700); err != nil {
 		return nil, "", fmt.Errorf("load.newReport - create directory: %w", err)
 	}
-	directory, err := os.MkdirTemp(directory, time.Now().UTC().Format("20060102-150405-")+profile+"-")
+	directory, err = os.MkdirTemp(directory, time.Now().UTC().Format("20060102-150405-")+profile+"-")
 	if err != nil {
 		return nil, "", fmt.Errorf("load.newReport - create run directory: %w", err)
 	}
-	report := &suiteReport{Started: time.Now().UTC(), Profile: profile, Diagnostics: os.Getenv("LOAD_DIAGNOSTICS") == "1", GoVersion: runtime.Version(), GeneratorCPUs: runtime.NumCPU(), GOMAXPROCS: runtime.GOMAXPROCS(0)}
+	report := &suiteReport{
+		Started:       time.Now().UTC(),
+		Profile:       profile,
+		Diagnostics:   os.Getenv("LOAD_DIAGNOSTICS") == "1",
+		GoVersion:     runtime.Version(),
+		GeneratorCPUs: runtime.NumCPU(),
+		GOMAXPROCS:    runtime.GOMAXPROCS(0),
+	}
+	report.WebSocketReconnectIntervalSeconds = reconnectInterval.Seconds()
 	report.DatabaseStorage = os.Getenv("LOAD_DATABASE_STORAGE")
 	if report.DatabaseStorage == "" {
 		report.DatabaseStorage = "disk"

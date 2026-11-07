@@ -20,7 +20,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type testAuth struct{ err error }
+type testAuth struct {
+	err error
+}
 
 func (a testAuth) Login(_ context.Context, user, password string) (string, error) {
 	if user != "admin" || password != "password" {
@@ -37,7 +39,9 @@ func (a testAuth) Status(_ context.Context, token string) (string, error) {
 	}
 	return "admin", nil
 }
-func (a testAuth) Logout(context.Context, string) error { return a.err }
+func (a testAuth) Logout(context.Context, string) error {
+	return a.err
+}
 
 func (a testAuth) StatusDetails(ctx context.Context, token string) (string, string, error) {
 	username, err := a.Status(ctx, token)
@@ -69,7 +73,10 @@ func (f *testFlags) Submit(ctx context.Context, token string, values []string) (
 	}
 	result := make([]usecase.FlagResponse, 0, len(values))
 	for _, value := range values {
-		result = append(result, usecase.FlagResponse{Flag: value, Message: "invalid"})
+		result = append(result, usecase.FlagResponse{
+			Flag:    value,
+			Message: "invalid",
+		})
 	}
 	return result, nil
 }
@@ -88,31 +95,73 @@ type testGame struct {
 }
 
 func (*testGame) Teams(context.Context, bool) ([]domain.Team, error) {
-	return []domain.Team{{ID: httpTeamID, Name: "team", IP: "127.0.0.1", Token: "secret-team-token", Active: true}}, nil
+	return []domain.Team{{
+		ID:     httpTeamID,
+		Name:   "team",
+		IP:     "127.0.0.1",
+		Token:  "secret-team-token",
+		Active: true,
+	}}, nil
 }
 func (g *testGame) ChangeState(_ context.Context, action string, _ *int64) error {
 	g.changed = action
 	return nil
 }
 func (*testGame) Runtime(context.Context) (domain.RuntimeStatus, error) {
-	return domain.RuntimeStatus{Phase: "running", Generation: 1}, nil
+	return domain.RuntimeStatus{
+		Phase:      "running",
+		Generation: 1,
+	}, nil
 }
 func (g *testGame) History(_ context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error) {
 	g.historyTeam, g.historyTask = teamID, taskID
-	return []domain.Cell{{ID: uuid.NewV7(), TeamID: httpTeamID, TaskID: httpTaskID, PublicMessage: "UP", PrivateMessage: "private-marker", Command: "secret-command", Timestamp: "1-0"}}, nil
+	return []domain.Cell{{
+		ID:             uuid.NewV7(),
+		TeamID:         httpTeamID,
+		TaskID:         httpTaskID,
+		PublicMessage:  "UP",
+		PrivateMessage: "private-marker",
+		Command:        "secret-command",
+		Timestamp:      "1-0",
+	}}, nil
 }
 func (*testGame) PublicHistory(context.Context, uuid.UUID) ([]domain.PublicCell, error) {
-	return []domain.PublicCell{{TeamID: httpTeamID, TaskID: httpTaskID, Message: "UP", Timestamp: "1-0"}}, nil
+	return []domain.PublicCell{{
+		TeamID:    httpTeamID,
+		TaskID:    httpTaskID,
+		Message:   "UP",
+		Timestamp: "1-0",
+	}}, nil
 }
 
 type testLimiter struct{}
 
-func (testLimiter) Allow(context.Context, string, int, int, int) (bool, error) { return true, nil }
+func (testLimiter) Allow(
+	context.Context,
+	string,
+	int,
+	int,
+	int,
+) (bool, error) {
+	return true, nil
+}
 
-func testRouter(t *testing.T, role string, g GameService, a AuthService, f FlagService) http.Handler {
+func testRouter(
+	t *testing.T,
+	role string,
+	g GameService,
+	a AuthService,
+	f FlagService,
+) http.Handler {
 	t.Helper()
-	cfg := config.Config{Role: role, HTTPMaxInflight: 1, RequestTimeout: time.Second}
-	noop := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	cfg := config.Config{
+		Role:            role,
+		HTTPMaxInflight: 1,
+		RequestTimeout:  time.Second,
+	}
+	noop := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
 	r, err := NewRouter(cfg, NewHandler(g, a, f, nil), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
@@ -122,9 +171,11 @@ func testRouter(t *testing.T, role string, g GameService, a AuthService, f FlagS
 
 func TestTeamRoutesUseUUIDs(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	headers := map[string]string{"Cookie": "session=valid"}
+	headers := map[string]string{
+		"Cookie": "session=valid",
+	}
 	path := "/api/admin/teams/" + httpTeamID.String() + "/"
-	response := request(router, http.MethodGet, path, "", headers)
+	response := performRequest(router, http.MethodGet, path, "", headers)
 	if response.Code != http.StatusOK {
 		t.Fatalf("team response: %d %s", response.Code, response.Body.String())
 	}
@@ -135,12 +186,12 @@ func TestTeamRoutesUseUUIDs(t *testing.T) {
 		t.Fatalf("team UUID: %q, decode error: %v", team.ID, err)
 	}
 	for _, id := range []string{"1", "not-a-uuid", "01912345-6789-7000-8000-00000000000z"} {
-		response = request(router, http.MethodGet, "/api/admin/teams/"+id+"/", "", headers)
+		response = performRequest(router, http.MethodGet, "/api/admin/teams/"+id+"/", "", headers)
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("invalid ID %q: %d %s", id, response.Code, response.Body.String())
 		}
 	}
-	response = request(router, http.MethodGet, "/api/admin/teams/"+uuid.NewV7().String()+"/", "", headers)
+	response = performRequest(router, http.MethodGet, "/api/admin/teams/"+uuid.NewV7().String()+"/", "", headers)
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("unknown UUID response: %d %s", response.Code, response.Body.String())
 	}
@@ -149,9 +200,11 @@ func TestTeamRoutesUseUUIDs(t *testing.T) {
 func TestAdminHistoryFiltersUseUUIDs(t *testing.T) {
 	game := &testGame{}
 	router := testRouter(t, "api", game, testAuth{}, &testFlags{})
-	headers := map[string]string{"Cookie": "session=valid"}
+	headers := map[string]string{
+		"Cookie": "session=valid",
+	}
 	path := "/api/admin/teamtasks/?team_id=" + httpTeamID.String() + "&task_id=" + httpTaskID.String()
-	response := request(router, http.MethodGet, path, "", headers)
+	response := performRequest(router, http.MethodGet, path, "", headers)
 	if response.Code != http.StatusOK {
 		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
 	}
@@ -169,12 +222,16 @@ func TestAdminHistoryFiltersUseUUIDs(t *testing.T) {
 	if len(entries) != 1 || entries[0].ID == uuid.Nil() || entries[0].TeamID != httpTeamID || entries[0].TaskID != httpTaskID {
 		t.Fatalf("history UUIDs: %+v", entries)
 	}
-	response = request(router, http.MethodGet, "/api/admin/teamtasks/?team_id=1&task_id=2", "", headers)
+	response = performRequest(router, http.MethodGet, "/api/admin/teamtasks/?team_id=1&task_id=2", "", headers)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("numeric history filters: %d %s", response.Code, response.Body.String())
 	}
 }
-func request(r http.Handler, method, path, body string, headers map[string]string) *httptest.ResponseRecorder {
+func performRequest(
+	r http.Handler,
+	method, path, body string,
+	headers map[string]string,
+) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
@@ -190,14 +247,16 @@ func request(r http.Handler, method, path, body string, headers map[string]strin
 func TestFlagsAliasesValidateBeforeUsecase(t *testing.T) {
 	f := &testFlags{}
 	r := testRouter(t, "receiver", &testGame{}, testAuth{}, f)
-	headers := map[string]string{"X-Team-Token": "0123456789abcdef"}
+	headers := map[string]string{
+		"X-Team-Token": "0123456789abcdef",
+	}
 	values := make([]string, 100)
 	for i := range values {
 		values[i] = "invalid"
 	}
 	batch, _ := json.Marshal(values)
 	for _, path := range []string{"/flags", "/flags/"} {
-		w := request(r, "PUT", path, string(batch), headers)
+		w := performRequest(r, "PUT", path, string(batch), headers)
 		if w.Code != 200 {
 			t.Fatalf("%s: %d %s", path, w.Code, w.Body.String())
 		}
@@ -208,7 +267,7 @@ func TestFlagsAliasesValidateBeforeUsecase(t *testing.T) {
 	}
 	before := f.calls
 	for _, body := range []string{`[null]`, `[1]`, `{"flags":[]}`, `[] []`, `["` + strings.Repeat("a", 33) + `"]`} {
-		w := request(r, "PUT", "/flags", body, headers)
+		w := performRequest(r, "PUT", "/flags", body, headers)
 		if w.Code != 400 {
 			t.Fatalf("invalid batch %q: %d %s", body, w.Code, w.Body.String())
 		}
@@ -217,30 +276,34 @@ func TestFlagsAliasesValidateBeforeUsecase(t *testing.T) {
 	valuesWithExtra = append(valuesWithExtra, values...)
 	valuesWithExtra = append(valuesWithExtra, "extra")
 	batch, _ = json.Marshal(valuesWithExtra)
-	if w := request(r, "PUT", "/flags", string(batch), headers); w.Code != 400 {
+	if w := performRequest(r, "PUT", "/flags", string(batch), headers); w.Code != 400 {
 		t.Fatalf("101 flags: %d", w.Code)
 	}
 	if f.calls != before {
 		t.Fatal("invalid payload reached usecase")
 	}
-	if w := request(r, "PUT", "/flags", "[]", nil); w.Code != 400 {
+	if w := performRequest(r, "PUT", "/flags", "[]", nil); w.Code != 400 {
 		t.Fatalf("missing token: %d", w.Code)
 	}
-	if w := request(r, "PUT", "/flags", strings.Repeat(" ", 40<<10), headers); w.Code != 413 {
+	if w := performRequest(r, "PUT", "/flags", strings.Repeat(" ", 40<<10), headers); w.Code != 413 {
 		t.Fatalf("body limit: %d", w.Code)
 	}
 }
 
 func TestAdminAuthenticationAndOrigin(t *testing.T) {
 	r := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	if w := request(r, "GET", "/api/admin/teams/", "", nil); w.Code != 403 {
+	if w := performRequest(r, "GET", "/api/admin/teams/", "", nil); w.Code != 403 {
 		t.Fatalf("anonymous admin: %d", w.Code)
 	}
-	if w := request(r, "GET", "/api/admin/teams/", "", map[string]string{"Cookie": "session=valid"}); w.Code != 200 {
+	if w := performRequest(r, "GET", "/api/admin/teams/", "", map[string]string{
+		"Cookie": "session=valid",
+	}); w.Code != 200 {
 		t.Fatalf("authenticated admin: %d", w.Code)
 	}
 	body := `{"username":"admin","password":"password"}`
-	w := request(r, "POST", "/api/admin/login/", body, map[string]string{"X-Forwarded-Proto": "https"})
+	w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+		"X-Forwarded-Proto": "https",
+	})
 	if w.Code != 200 {
 		t.Fatalf("login: %d %s", w.Code, w.Body.String())
 	}
@@ -251,17 +314,25 @@ func TestAdminAuthenticationAndOrigin(t *testing.T) {
 	if w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("admin response is cacheable")
 	}
-	if w := request(r, "POST", "/api/admin/login/", body, map[string]string{"Origin": "https://other.example"}); w.Code != 403 {
+	if w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+		"Origin": "https://other.example",
+	}); w.Code != 403 {
 		t.Fatalf("cross origin: %d", w.Code)
 	}
-	if w := request(r, "POST", "/api/admin/login/", body, map[string]string{"Sec-Fetch-Site": "cross-site"}); w.Code != 403 {
+	if w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+		"Sec-Fetch-Site": "cross-site",
+	}); w.Code != 403 {
 		t.Fatalf("cross site: %d", w.Code)
 	}
 }
 
 func TestAdminDependencyFailureIsNotInvalidSession(t *testing.T) {
-	r := testRouter(t, "api", &testGame{}, testAuth{err: errors.New("cache-secret-connection-failure")}, &testFlags{})
-	w := request(r, "GET", "/api/admin/teams/", "", map[string]string{"Cookie": "session=valid"})
+	r := testRouter(t, "api", &testGame{}, testAuth{
+		err: errors.New("cache-secret-connection-failure"),
+	}, &testFlags{})
+	w := performRequest(r, "GET", "/api/admin/teams/", "", map[string]string{
+		"Cookie": "session=valid",
+	})
 	if w.Code != 503 || strings.Contains(w.Body.String(), "secret") {
 		t.Fatalf("dependency error: %d %s", w.Code, w.Body.String())
 	}
@@ -292,15 +363,19 @@ func TestErrorHandlerPreservesWrappedPublicErrors(t *testing.T) {
 			mustHide: "usecase.Flags.Submit",
 		},
 		{
-			name:     "validation error",
-			err:      fmt.Errorf("usecase.Game.SaveTask - invalid task settings: %w", &domain.ValidationError{Message: "Invalid task settings"}),
+			name: "validation error",
+			err: fmt.Errorf("usecase.Game.SaveTask - invalid task settings: %w", &domain.ValidationError{
+				Message: "Invalid task settings",
+			}),
 			status:   http.StatusBadRequest,
 			message:  "Invalid task settings",
 			mustHide: "usecase.Game.SaveTask",
 		},
 		{
-			name:     "state error",
-			err:      fmt.Errorf("usecase.Game.ChangeState - reject state change: %w", &domain.StateError{Message: "Game has already finished"}),
+			name: "state error",
+			err: fmt.Errorf("usecase.Game.ChangeState - reject state change: %w", &domain.StateError{
+				Message: "Game has already finished",
+			}),
 			status:   http.StatusConflict,
 			message:  "Game has already finished",
 			mustHide: "usecase.Game.ChangeState",
@@ -336,13 +411,23 @@ func TestWrappedFlagSentinelsKeepPublicMessages(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "not started", err: usecase.ErrNotStarted},
-		{name: "invalid batch", err: usecase.ErrInvalidBatch},
+		{
+			name: "not started",
+			err:  usecase.ErrNotStarted,
+		},
+		{
+			name: "invalid batch",
+			err:  usecase.ErrInvalidBatch,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			serviceErr := fmt.Errorf("usecase.Flags.Submit - operation failed: %w", test.err)
-			r := testRouter(t, "receiver", &testGame{}, testAuth{}, &testFlags{err: serviceErr})
-			w := request(r, "PUT", "/flags", "[]", map[string]string{"X-Team-Token": "0123456789abcdef"})
+			r := testRouter(t, "receiver", &testGame{}, testAuth{}, &testFlags{
+				err: serviceErr,
+			})
+			w := performRequest(r, "PUT", "/flags", "[]", map[string]string{
+				"X-Team-Token": "0123456789abcdef",
+			})
 			if w.Code != http.StatusBadRequest || !strings.Contains(w.Body.String(), test.err.Error()) {
 				t.Fatalf("public response: %d %s", w.Code, w.Body.String())
 			}
@@ -356,7 +441,7 @@ func TestWrappedFlagSentinelsKeepPublicMessages(t *testing.T) {
 func TestPublicResponsesExcludePrivateData(t *testing.T) {
 	r := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
 	for _, path := range []string{"/api/client/teams/", "/api/client/teams/" + httpTeamID.String() + "/"} {
-		w := request(r, "GET", path, "", nil)
+		w := performRequest(r, "GET", path, "", nil)
 		if w.Code != 200 {
 			t.Fatalf("public route: %d %s", w.Code, w.Body.String())
 		}
@@ -370,7 +455,7 @@ func TestPublicResponsesExcludePrivateData(t *testing.T) {
 
 func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	response := request(router, http.MethodGet, "/api/client/teams/"+httpTeamID.String()+"/", "", nil)
+	response := performRequest(router, http.MethodGet, "/api/client/teams/"+httpTeamID.String()+"/", "", nil)
 	if response.Code != http.StatusOK {
 		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
 	}
@@ -389,41 +474,56 @@ func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
 func TestGameActionRequiresConfirmation(t *testing.T) {
 	g := &testGame{}
 	r := testRouter(t, "api", g, testAuth{}, &testFlags{})
-	headers := map[string]string{"Cookie": "session=valid", "X-CSRF-Token": strings.Repeat("c", 64)}
-	if w := request(r, "POST", "/api/admin/game/finish/", `{}`, headers); w.Code != 400 || g.changed != "" {
+	headers := map[string]string{
+		"Cookie":       "session=valid",
+		"X-CSRF-Token": strings.Repeat("c", 64),
+	}
+	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{}`, headers); w.Code != 400 || g.changed != "" {
 		t.Fatalf("missing confirmation: %d", w.Code)
 	}
-	if w := request(r, "POST", "/api/admin/game/finish/", `{"confirm":true,"generation":1.5}`, headers); w.Code != 400 || g.changed != "" {
+	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{"confirm":true,"generation":1.5}`, headers); w.Code != 400 || g.changed != "" {
 		t.Fatalf("fractional generation: %d", w.Code)
 	}
-	if w := request(r, "POST", "/api/admin/game/finish/", `{"confirm":true}`, headers); w.Code != 200 || g.changed != "finish" {
+	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{"confirm":true}`, headers); w.Code != 200 || g.changed != "finish" {
 		t.Fatalf("confirmed finish: %d %s", w.Code, w.Body.String())
 	}
 }
 
 func TestCapacityDoesNotQueueRequestsOrBlockHealth(t *testing.T) {
-	f := &testFlags{entered: make(chan struct{}), release: make(chan struct{})}
+	f := &testFlags{
+		entered: make(chan struct{}),
+		release: make(chan struct{}),
+	}
 	r := testRouter(t, "receiver", &testGame{}, testAuth{}, f)
-	headers := map[string]string{"X-Team-Token": "0123456789abcdef"}
+	headers := map[string]string{
+		"X-Team-Token": "0123456789abcdef",
+	}
 	var wg sync.WaitGroup
-	wg.Go(func() { request(r, "PUT", "/flags", "[]", headers) })
+	wg.Go(func() {
+		performRequest(r, "PUT", "/flags", "[]", headers)
+	})
 	<-f.entered
-	defer func() { close(f.release); wg.Wait() }()
-	if w := request(r, "PUT", "/flags", "[]", headers); w.Code != 503 {
+	defer func() {
+		close(f.release)
+		wg.Wait()
+	}()
+	if w := performRequest(r, "PUT", "/flags", "[]", headers); w.Code != 503 {
 		t.Fatalf("saturated receiver: %d", w.Code)
 	}
-	if w := request(r, "GET", "/flags/health/", "", nil); w.Code != 200 {
+	if w := performRequest(r, "GET", "/flags/health/", "", nil); w.Code != 200 {
 		t.Fatalf("health blocked: %d", w.Code)
 	}
-	if w := request(r, "GET", "/api/admin/teams/", "", nil); w.Code != 503 && w.Code != 404 {
+	if w := performRequest(r, "GET", "/api/admin/teams/", "", nil); w.Code != 503 && w.Code != 404 {
 		t.Fatalf("receiver exposes admin: %d", w.Code)
 	}
 }
 
 func TestRoleSeparatesReceiverAndAPI(t *testing.T) {
-	for _, tc := range []struct{ role, path, method string }{{"receiver", "/api/admin/teams/", "GET"}, {"receiver", "/api/client/teams/", "GET"}, {"api", "/flags", "PUT"}} {
+	for _, tc := range []struct {
+		role, path, method string
+	}{{"receiver", "/api/admin/teams/", "GET"}, {"receiver", "/api/client/teams/", "GET"}, {"api", "/flags", "PUT"}} {
 		r := testRouter(t, tc.role, &testGame{}, testAuth{}, &testFlags{})
-		if w := request(r, tc.method, tc.path, "", nil); w.Code != 404 {
+		if w := performRequest(r, tc.method, tc.path, "", nil); w.Code != 404 {
 			t.Fatalf("%s exposes %s: %d", tc.role, tc.path, w.Code)
 		}
 	}

@@ -11,13 +11,23 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-func (w *Worker) runAction(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, payload domain.JobPayload, ownerToken string, action processchecker.Action, flag *domain.Flag) (verdict, error) {
+func (w *Worker) runAction(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	payload domain.JobPayload,
+	ownerToken string,
+	action processchecker.Action,
+	flag *domain.Flag,
+) (verdict, error) {
 	const location = "checker.Worker.runAction"
 	if err := w.beginAction(ctx); err != nil {
 		return verdict{}, fmt.Errorf("%s - wait for checker action capacity: %w", location, err)
 	}
 	var pendingReap <-chan struct{}
-	defer func() { w.endAction(pendingReap) }()
+	defer func() {
+		w.endAction(pendingReap)
+	}()
 	//nolint:contextcheck // Lease writes use the guard's bounded recovery context, beyond the action deadline.
 	if err := guard.renewNow(); err != nil {
 		return verdict{}, fmt.Errorf("%s - renew job ownership before action: %w", location, err)
@@ -50,9 +60,11 @@ func (w *Worker) runAction(ctx context.Context, guard *leaseGuard, job domain.Ch
 
 func checkerRequest(payload domain.JobPayload, action processchecker.Action, flag *domain.Flag) processchecker.Request {
 	request := processchecker.Request{
-		Executable: payload.Task.Checker, Action: action, TeamIP: payload.Team.IP,
-		Timeout: time.Duration(payload.Task.CheckerTimeout) * time.Second,
-		EnvPath: payload.Task.EnvPath,
+		Executable: payload.Task.Checker,
+		Action:     action,
+		TeamIP:     payload.Team.IP,
+		Timeout:    time.Duration(payload.Task.CheckerTimeout) * time.Second,
+		EnvPath:    payload.Task.EnvPath,
 	}
 	if flag == nil {
 		return request
@@ -106,20 +118,33 @@ func checkerActionLog(
 		finishedAt = startedAt
 	}
 	log := domain.CheckerLog{
-		Round: job.Round, Action: string(action), Stage: string(job.Action),
-		StartedAt: startedAt, FinishedAt: finishedAt, DurationMS: duration.Milliseconds(),
-		TimedOut: timedOut, Status: statusCode(status), PublicMessage: publicMessage,
+		Round:         job.Round,
+		Action:        string(action),
+		Stage:         string(job.Action),
+		StartedAt:     startedAt,
+		FinishedAt:    finishedAt,
+		DurationMS:    duration.Milliseconds(),
+		TimedOut:      timedOut,
+		Status:        statusCode(status),
+		PublicMessage: publicMessage,
 	}
 	return log.PublicView()
 }
 
-func checkerActionFailure(ctx context.Context, location string, action processchecker.Action, err error) (verdict, error) {
+func checkerActionFailure(
+	ctx context.Context,
+	location string,
+	action processchecker.Action,
+	err error,
+) (verdict, error) {
 	if ctx.Err() != nil {
 		return verdict{}, fmt.Errorf("%s - run checker action: %w", location, context.Cause(ctx))
 	}
 	return verdict{
-		action: action, status: processchecker.StatusCheckFailed,
-		public: actionName(action) + " failed", private: "Checker process error: " + err.Error(),
+		action:  action,
+		status:  processchecker.StatusCheckFailed,
+		public:  actionName(action) + " failed",
+		private: "Checker process error: " + err.Error(),
 	}, nil
 }
 
@@ -133,7 +158,14 @@ func (w *Worker) acceptCheckerResult(
 	flag *domain.Flag,
 	result processchecker.Result,
 ) (verdict, error) {
-	v := verdict{action: action, status: result.Status, public: result.PublicMessage, private: result.PrivateMessage, command: result.Command}
+	const location = "checker.Worker.acceptCheckerResult"
+	v := verdict{
+		action:  action,
+		status:  result.Status,
+		public:  result.PublicMessage,
+		private: result.PrivateMessage,
+		command: result.Command,
+	}
 	if !validStatus(v.status) {
 		v.status, v.public = processchecker.StatusCheckFailed, "Check failed"
 		v.private = fmt.Sprintf("Checker returned unsupported status %d", result.Status)
@@ -141,7 +173,11 @@ func (w *Worker) acceptCheckerResult(
 	if v.status != processchecker.StatusUp || action != processchecker.ActionPut {
 		return v, nil
 	}
-	return w.persistPutFlag(ctx, guard, job, payload.Task, ownerToken, flag, v)
+	persisted, err := w.persistPutFlag(ctx, guard, job, payload.Task, ownerToken, flag, v)
+	if err != nil {
+		return persisted, fmt.Errorf("%s - persist checker flag: %w", location, err)
+	}
+	return persisted, nil
 }
 
 func (w *Worker) persistPutFlag(
@@ -155,7 +191,10 @@ func (w *Worker) persistPutFlag(
 ) (verdict, error) {
 	const location = "checker.Worker.runAction"
 	flagData := flagForStorage(*flag, task, v)
-	_, err := w.flags.Create(ctx, flagData, &domain.CheckerJobOwner{JobID: job.ID, ClaimToken: ownerToken})
+	_, err := w.flags.Create(ctx, flagData, &domain.CheckerJobOwner{
+		JobID:      job.ID,
+		ClaimToken: ownerToken,
+	})
 	if errors.Is(err, domain.ErrCheckerJobClosed) {
 		guard.abort(ErrLeaseLost)
 		return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, ErrLeaseLost)

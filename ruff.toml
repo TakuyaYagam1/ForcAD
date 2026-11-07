@@ -1,0 +1,5 @@
+target-version = "py311"
+extend-exclude = [".cache", "backend/load_test/reports", "security/semgrep/tests"]
+
+[lint]
+select = ["E701", "E702", "E703"]

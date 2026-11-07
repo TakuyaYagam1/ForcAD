@@ -30,13 +30,24 @@ function historyEntry(
 
 test("history is normalized, ordered newest first, and labels successful checks", () => {
   const history = normalizeTeamTaskHistory([
-    historyEntry({ timestamp: "1700000000-1" }),
-    historyEntry({ timestamp: "1700000001-0", status: 500, message: "failed" }),
-    historyEntry({ timestamp: "1700000000-4", checks_passed: 8 }),
+    historyEntry({
+      timestamp: "1700000000-1"
+    }),
+    historyEntry({
+      timestamp: "1700000001-0",
+      status: 500,
+      message: "failed"
+    }),
+    historyEntry({
+      timestamp: "1700000000-4",
+      checks_passed: 8
+    }),
   ]);
 
   assert.deepEqual(
-    history.map(({ timestampSecs, timestampNum }) => [timestampSecs, timestampNum]),
+    history.map(({ timestampSecs, timestampNum }) => {
+      return [timestampSecs, timestampNum]
+    }),
     [
       [1700000001, 0],
       [1700000000, 4],
@@ -49,5 +60,7 @@ test("history is normalized, ordered newest first, and labels successful checks"
   assert.equal(history[1]?.id, `${teamId}:${taskId}:1700000000-4`);
   assert.equal(history[1]?.teamId, teamId);
   assert.equal(history[1]?.taskId, taskId);
-  assert.equal(new Set(history.map(({ id }) => id)).size, 3);
+  assert.equal(new Set(history.map(({ id }) => {
+    return id
+  })).size, 3);
 });

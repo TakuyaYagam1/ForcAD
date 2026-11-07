@@ -20,7 +20,9 @@ async function mountApp() {
   await i18nReady;
   applyBrandConfig();
   i18n.on("languageChanged", applyBrandMetadata);
-  let DemoPanel: ComponentType<{ onDataChange: () => void }> | null = null;
+  let DemoPanel: ComponentType<{
+    onDataChange: () => void
+  }> | null = null;
   if (DEMO_MODE) {
     const { installDemoData } = await import("./demo/install");
     installDemoData();
@@ -29,7 +31,9 @@ async function mountApp() {
   const content = (
     <>
       {DemoPanel && (
-        <DemoPanel onDataChange={() => void queryClient.invalidateQueries()} />
+        <DemoPanel onDataChange={() => {
+          return void queryClient.invalidateQueries()
+        }} />
       )}
       <App />
     </>

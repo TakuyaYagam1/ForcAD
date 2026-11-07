@@ -44,16 +44,26 @@ import { axiosMutator } from '../../../axiosMutator';
 
 
 
-const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
-  const result = { queryKey } as T & { queryKey: K };
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & {
+  queryKey: K
+} => {
+  const result = {
+    queryKey
+  } as T & {
+    queryKey: K
+  };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === 'queryKey') continue;
+    if (key === 'queryKey') {
+      continue;
+    }
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
-      get: () => (query as Record<string, unknown>)[key],
+      get: () => {
+        return (query as Record<string, unknown>)[key]
+      },
     });
   }
   return result;
@@ -64,42 +74,55 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
  */
 export const getClientTeams = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<ParticipantTeam[]>(
-      {url: `/api/client/teams/`, method: 'GET', signal
+  return axiosMutator<ParticipantTeam[]>(
+    {
+      url: `/api/client/teams/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientTeamsQueryKey = () => {
-    return [
+  return [
     `/api/client/teams/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientTeamsQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>, }
+export const getGetClientTeamsQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientTeamsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeams>>> = ({ signal }) => getClientTeams(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeams>>> = ({ signal }) => {
+    return getClientTeams(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof getClientTeams>>>
@@ -107,41 +130,59 @@ export type GetClientTeamsQueryError = unknown
 
 
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeams>>,
           TError,
           Awaited<ReturnType<typeof getClientTeams>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeams>>,
           TError,
           Awaited<ReturnType<typeof getClientTeams>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary List teams visible to participants.
  */
 
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientTeamsQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -156,42 +197,55 @@ export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTea
  */
 export const getClientTasks = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<ParticipantTask[]>(
-      {url: `/api/client/tasks/`, method: 'GET', signal
+  return axiosMutator<ParticipantTask[]>(
+    {
+      url: `/api/client/tasks/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientTasksQueryKey = () => {
-    return [
+  return [
     `/api/client/tasks/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientTasksQueryOptions = <TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>, }
+export const getGetClientTasksQueryOptions = <TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientTasksQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTasks>>> = ({ signal }) => getClientTasks(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTasks>>> = ({ signal }) => {
+    return getClientTasks(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientTasksQueryResult = NonNullable<Awaited<ReturnType<typeof getClientTasks>>>
@@ -199,41 +253,59 @@ export type GetClientTasksQueryError = unknown
 
 
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTasks>>,
           TError,
           Awaited<ReturnType<typeof getClientTasks>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTasks>>,
           TError,
           Awaited<ReturnType<typeof getClientTasks>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary List tasks visible to participants.
  */
 
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientTasksQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -248,42 +320,55 @@ export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTas
  */
 export const getClientConfig = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<GameConfig>(
-      {url: `/api/client/config/`, method: 'GET', signal
+  return axiosMutator<GameConfig>(
+    {
+      url: `/api/client/config/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientConfigQueryKey = () => {
-    return [
+  return [
     `/api/client/config/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientConfigQueryOptions = <TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>, }
+export const getGetClientConfigQueryOptions = <TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientConfigQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientConfig>>> = ({ signal }) => getClientConfig(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientConfig>>> = ({ signal }) => {
+    return getClientConfig(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getClientConfig>>>
@@ -291,41 +376,59 @@ export type GetClientConfigQueryError = unknown
 
 
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientConfig>>,
           TError,
           Awaited<ReturnType<typeof getClientConfig>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientConfig>>,
           TError,
           Awaited<ReturnType<typeof getClientConfig>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get the current game configuration.
  */
 
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientConfigQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -339,47 +442,60 @@ export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientCo
  * @summary Get public flag data grouped by task and team address.
  */
 export const getClientAttackData = (
-    params?: GetClientAttackDataParams,
-    headers?: GetClientAttackDataHeaders,
- signal?: AbortSignal
+  params?: GetClientAttackDataParams,
+  headers?: GetClientAttackDataHeaders,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AttackData | null>(
-      {url: `/api/client/attack_data/`, method: 'GET',
+  return axiosMutator<AttackData | null>(
+    {
+      url: `/api/client/attack_data/`,
+      method: 'GET',
       headers,
-        params, signal
+      params,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientAttackDataQueryKey = (params?: GetClientAttackDataParams,) => {
-    return [
+  return [
     `/api/client/attack_data/`, ...(params ? [params] : [])
-    ] as const;
-    }
+  ] as const;
+}
 
 
 export const getGetClientAttackDataQueryOptions = <TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(params?: GetClientAttackDataParams,
-    headers?: GetClientAttackDataHeaders, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>, }
+  headers?: GetClientAttackDataHeaders, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>,
+  }
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientAttackDataQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientAttackData>>> = ({ signal }) => getClientAttackData(params,headers, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientAttackData>>> = ({ signal }) => {
+    return getClientAttackData(params,headers, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientAttackDataQueryResult = NonNullable<Awaited<ReturnType<typeof getClientAttackData>>>
@@ -388,44 +504,62 @@ export type GetClientAttackDataQueryError = void
 
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params: undefined |  GetClientAttackDataParams,
-    headers: undefined |  GetClientAttackDataHeaders, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>> & Pick<
+    headers: undefined |  GetClientAttackDataHeaders, options: {
+      query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientAttackData>>,
           TError,
           Awaited<ReturnType<typeof getClientAttackData>>
         > , 'initialData'
-      >, }
+      >,
+    }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params?: GetClientAttackDataParams,
-    headers?: GetClientAttackDataHeaders, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>> & Pick<
+    headers?: GetClientAttackDataHeaders, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientAttackData>>,
           TError,
           Awaited<ReturnType<typeof getClientAttackData>>
         > , 'initialData'
-      >, }
+      >,
+    }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params?: GetClientAttackDataParams,
-    headers?: GetClientAttackDataHeaders, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>, }
+    headers?: GetClientAttackDataHeaders, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>,
+    }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get public flag data grouped by task and team address.
  */
 
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
- params?: GetClientAttackDataParams,
-    headers?: GetClientAttackDataHeaders, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  params?: GetClientAttackDataParams,
+  headers?: GetClientAttackDataHeaders, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientAttackData>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientAttackDataQueryOptions(params,headers,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -439,43 +573,57 @@ export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClie
  * @summary Get participant-visible task history for a team.
  */
 export const getClientTeamHistory = (
-    teamId: string,
- signal?: AbortSignal
+  teamId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<ParticipantTeamTaskHistory[]>(
-      {url: `/api/client/teams/${teamId}/`, method: 'GET', signal
+  return axiosMutator<ParticipantTeamTaskHistory[]>(
+    {
+      url: `/api/client/teams/${teamId}/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientTeamHistoryQueryKey = (teamId: string,) => {
-    return [
+  return [
     `/api/client/teams/${teamId}/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientTeamHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>, }
+export const getGetClientTeamHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(teamId: string, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientTeamHistoryQueryKey(teamId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeamHistory>>> = ({ signal }) => getClientTeamHistory(teamId, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeamHistory>>> = ({ signal }) => {
+    return getClientTeamHistory(teamId, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: teamId !== null && teamId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    enabled: teamId !== null && teamId !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientTeamHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getClientTeamHistory>>>
@@ -483,41 +631,59 @@ export type GetClientTeamHistoryQueryError = unknown
 
 
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
+ teamId: string, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeamHistory>>,
           TError,
           Awaited<ReturnType<typeof getClientTeamHistory>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
+ teamId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeamHistory>>,
           TError,
           Awaited<ReturnType<typeof getClientTeamHistory>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>, }
+ teamId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get participant-visible task history for a team.
  */
 
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  teamId: string, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientTeamHistoryQueryOptions(teamId,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -531,50 +697,64 @@ export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getCli
  * @summary Get public checker results for one team and service.
  */
 export const getClientCheckerLogs = (
-    teamId: string,
-    taskId: string,
-    params?: GetClientCheckerLogsParams,
- signal?: AbortSignal
+  teamId: string,
+  taskId: string,
+  params?: GetClientCheckerLogsParams,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<CheckerLogPage>(
-      {url: `/api/client/teams/${teamId}/tasks/${taskId}/logs/`, method: 'GET',
-        params, signal
+  return axiosMutator<CheckerLogPage>(
+    {
+      url: `/api/client/teams/${teamId}/tasks/${taskId}/logs/`,
+      method: 'GET',
+      params,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientCheckerLogsQueryKey = (teamId: string,
-    taskId: string,
-    params?: GetClientCheckerLogsParams,) => {
-    return [
+  taskId: string,
+  params?: GetClientCheckerLogsParams,) => {
+  return [
     `/api/client/teams/${teamId}/tasks/${taskId}/logs/`, ...(params ? [params] : [])
-    ] as const;
-    }
+  ] as const;
+}
 
 
 export const getGetClientCheckerLogsQueryOptions = <TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(teamId: string,
-    taskId: string,
-    params?: GetClientCheckerLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>, }
+  taskId: string,
+  params?: GetClientCheckerLogsParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>,
+  }
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientCheckerLogsQueryKey(teamId,taskId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientCheckerLogs>>> = ({ signal }) => getClientCheckerLogs(teamId,taskId,params, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientCheckerLogs>>> = ({ signal }) => {
+    return getClientCheckerLogs(teamId,taskId,params, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: teamId !== null && teamId !== undefined && taskId !== null && taskId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    enabled: teamId !== null && teamId !== undefined && taskId !== null && taskId !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientCheckerLogsQueryResult = NonNullable<Awaited<ReturnType<typeof getClientCheckerLogs>>>
@@ -584,47 +764,65 @@ export type GetClientCheckerLogsQueryError = ApiError
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
-    params: undefined |  GetClientCheckerLogsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>> & Pick<
+    params: undefined |  GetClientCheckerLogsParams, options: {
+      query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientCheckerLogs>>,
           TError,
           Awaited<ReturnType<typeof getClientCheckerLogs>>
         > , 'initialData'
-      >, }
+      >,
+    }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
-    params?: GetClientCheckerLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>> & Pick<
+    params?: GetClientCheckerLogsParams, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientCheckerLogs>>,
           TError,
           Awaited<ReturnType<typeof getClientCheckerLogs>>
         > , 'initialData'
-      >, }
+      >,
+    }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
-    params?: GetClientCheckerLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>, }
+    params?: GetClientCheckerLogsParams, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>,
+    }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get public checker results for one team and service.
  */
 
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
- teamId: string,
-    taskId: string,
-    params?: GetClientCheckerLogsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  teamId: string,
+  taskId: string,
+  params?: GetClientCheckerLogsParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCheckerLogs>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientCheckerLogsQueryOptions(teamId,taskId,params,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -638,44 +836,57 @@ export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getCli
  * @summary Read recent public events or events after a cursor.
  */
 export const getClientEvents = (
-    params?: GetClientEventsParams,
- signal?: AbortSignal
+  params?: GetClientEventsParams,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<PublicEvent[]>(
-      {url: `/api/client/events/`, method: 'GET',
-        params, signal
+  return axiosMutator<PublicEvent[]>(
+    {
+      url: `/api/client/events/`,
+      method: 'GET',
+      params,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientEventsQueryKey = (params?: GetClientEventsParams,) => {
-    return [
+  return [
     `/api/client/events/`, ...(params ? [params] : [])
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientEventsQueryOptions = <TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(params?: GetClientEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>, }
+export const getGetClientEventsQueryOptions = <TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(params?: GetClientEventsParams, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientEventsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientEvents>>> = ({ signal }) => getClientEvents(params, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientEvents>>> = ({ signal }) => {
+    return getClientEvents(params, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientEventsQueryResult = NonNullable<Awaited<ReturnType<typeof getClientEvents>>>
@@ -683,41 +894,59 @@ export type GetClientEventsQueryError = ApiError
 
 
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
- params: undefined |  GetClientEventsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
+ params: undefined |  GetClientEventsParams, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientEvents>>,
           TError,
           Awaited<ReturnType<typeof getClientEvents>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
- params?: GetClientEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
+ params?: GetClientEventsParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientEvents>>,
           TError,
           Awaited<ReturnType<typeof getClientEvents>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
- params?: GetClientEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>, }
+ params?: GetClientEventsParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Read recent public events or events after a cursor.
  */
 
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
- params?: GetClientEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  params?: GetClientEventsParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientEventsQueryOptions(params,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -732,42 +961,55 @@ export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEv
  */
 export const getClientCtftimeScoreboard = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<CtftimeStanding[]>(
-      {url: `/api/client/ctftime/`, method: 'GET', signal
+  return axiosMutator<CtftimeStanding[]>(
+    {
+      url: `/api/client/ctftime/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientCtftimeScoreboardQueryKey = () => {
-    return [
+  return [
     `/api/client/ctftime/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientCtftimeScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>, }
+export const getGetClientCtftimeScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientCtftimeScoreboardQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>> = ({ signal }) => getClientCtftimeScoreboard(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>> = ({ signal }) => {
+    return getClientCtftimeScoreboard(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientCtftimeScoreboardQueryResult = NonNullable<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>>
@@ -775,41 +1017,59 @@ export type GetClientCtftimeScoreboardQueryError = ApiError
 
 
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientCtftimeScoreboard>>,
           TError,
           Awaited<ReturnType<typeof getClientCtftimeScoreboard>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientCtftimeScoreboard>>,
           TError,
           Awaited<ReturnType<typeof getClientCtftimeScoreboard>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get the CTFtime standings.
  */
 
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientCtftimeScoreboardQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -824,42 +1084,55 @@ export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof 
  */
 export const getClientHealth = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<StatusResponse>(
-      {url: `/api/client/health/`, method: 'GET', signal
+  return axiosMutator<StatusResponse>(
+    {
+      url: `/api/client/health/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientHealthQueryKey = () => {
-    return [
+  return [
     `/api/client/health/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientHealthQueryOptions = <TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>, }
+export const getGetClientHealthQueryOptions = <TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientHealthQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientHealth>>> = ({ signal }) => getClientHealth(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientHealth>>> = ({ signal }) => {
+    return getClientHealth(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getClientHealth>>>
@@ -867,41 +1140,59 @@ export type GetClientHealthQueryError = unknown
 
 
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientHealth>>,
           TError,
           Awaited<ReturnType<typeof getClientHealth>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientHealth>>,
           TError,
           Awaited<ReturnType<typeof getClientHealth>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Check the client API service.
  */
 
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientHealthQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -916,42 +1207,55 @@ export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHe
  */
 export const getClientStatus = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<GameRuntimeStatus>(
-      {url: `/api/client/status/`, method: 'GET', signal
+  return axiosMutator<GameRuntimeStatus>(
+    {
+      url: `/api/client/status/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientStatusQueryKey = () => {
-    return [
+  return [
     `/api/client/status/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientStatusQueryOptions = <TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>, }
+export const getGetClientStatusQueryOptions = <TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientStatusQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientStatus>>> = ({ signal }) => getClientStatus(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientStatus>>> = ({ signal }) => {
+    return getClientStatus(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getClientStatus>>>
@@ -959,41 +1263,59 @@ export type GetClientStatusQueryError = unknown
 
 
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientStatus>>,
           TError,
           Awaited<ReturnType<typeof getClientStatus>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientStatus>>,
           TError,
           Awaited<ReturnType<typeof getClientStatus>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get the current runtime status.
  */
 
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientStatusQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -1009,42 +1331,55 @@ export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientSt
  */
 export const getScoreboard = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<Scoreboard>(
-      {url: `/api/client/scoreboard/`, method: 'GET', signal
+  return axiosMutator<Scoreboard>(
+    {
+      url: `/api/client/scoreboard/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetScoreboardQueryKey = () => {
-    return [
+  return [
     `/api/client/scoreboard/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>, }
+export const getGetScoreboardQueryOptions = <TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetScoreboardQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScoreboard>>> = ({ signal }) => getScoreboard(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getScoreboard>>> = ({ signal }) => {
+    return getScoreboard(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetScoreboardQueryResult = NonNullable<Awaited<ReturnType<typeof getScoreboard>>>
@@ -1052,41 +1387,59 @@ export type GetScoreboardQueryError = unknown
 
 
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getScoreboard>>,
           TError,
           Awaited<ReturnType<typeof getScoreboard>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getScoreboard>>,
           TError,
           Awaited<ReturnType<typeof getScoreboard>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get the complete participant scoreboard.
  */
 
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetScoreboardQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }

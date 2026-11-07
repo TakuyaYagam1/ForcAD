@@ -7,10 +7,22 @@ import (
 
 func healthyCheckerReport() *checkerReport {
 	cells, puts := teamCount*3, teamCount*35
-	return &checkerReport{RoundSeconds: 60, ExpectedCells: cells, ExpectedPuts: puts,
-		Rounds: []checkerRoundReport{{Round: 1, Jobs: cells, Cells: cells,
-			FinishedJobs: cells, UpJobs: cells, PutActions: puts, StoredFlags: puts,
-			Complete: true, CompletionSeconds: 59.9}}}
+	return &checkerReport{
+		RoundSeconds:  60,
+		ExpectedCells: cells,
+		ExpectedPuts:  puts,
+		Rounds: []checkerRoundReport{{
+			Round:             1,
+			Jobs:              cells,
+			Cells:             cells,
+			FinishedJobs:      cells,
+			UpJobs:            cells,
+			PutActions:        puts,
+			StoredFlags:       puts,
+			Complete:          true,
+			CompletionSeconds: 59.9,
+		}},
+	}
 }
 
 func TestCheckerAuditRejectsIncompleteAndLateWork(t *testing.T) {
@@ -18,21 +30,52 @@ func TestCheckerAuditRejectsIncompleteAndLateWork(t *testing.T) {
 		name   string
 		change func(*checkerReport)
 	}{
-		{"missing cell", func(r *checkerReport) { r.Rounds[0].Cells-- }},
-		{"duplicate job", func(r *checkerReport) { r.Rounds[0].Jobs++ }},
-		{"missing round", func(r *checkerReport) { r.Rounds[0].Round = 2 }},
-		{"missing result", func(r *checkerReport) { r.Rounds[0].FinishedJobs-- }},
-		{"bad result", func(r *checkerReport) { r.Rounds[0].UpJobs-- }},
-		{"missing PUT", func(r *checkerReport) { r.Rounds[0].PutActions-- }},
-		{"missing flag", func(r *checkerReport) { r.Rounds[0].StoredFlags-- }},
-		{"wrong distribution with correct totals", func(r *checkerReport) { r.Rounds[0].MismatchedCells = 2 }},
-		{"round exceeds schedule but within grace", func(r *checkerReport) { r.Rounds[0].CompletionSeconds = 60.001 }},
-		{"never completed old round", func(r *checkerReport) { r.Rounds[0].Complete = false; r.PastRoundOpen = 1 }},
-		{"expired job", func(r *checkerReport) { r.ExpiredJobs = 1 }},
-		{"overdue job", func(r *checkerReport) { r.OverdueJobs = 1 }},
-		{"historical failed job", func(r *checkerReport) { r.BadJobs = 1 }},
-		{"failed action", func(r *checkerReport) { r.BadActions = 1 }},
-		{"action timeout", func(r *checkerReport) { r.ActionTimeouts = 1 }},
+		{"missing cell", func(r *checkerReport) {
+			r.Rounds[0].Cells--
+		}},
+		{"duplicate job", func(r *checkerReport) {
+			r.Rounds[0].Jobs++
+		}},
+		{"missing round", func(r *checkerReport) {
+			r.Rounds[0].Round = 2
+		}},
+		{"missing result", func(r *checkerReport) {
+			r.Rounds[0].FinishedJobs--
+		}},
+		{"bad result", func(r *checkerReport) {
+			r.Rounds[0].UpJobs--
+		}},
+		{"missing PUT", func(r *checkerReport) {
+			r.Rounds[0].PutActions--
+		}},
+		{"missing flag", func(r *checkerReport) {
+			r.Rounds[0].StoredFlags--
+		}},
+		{"wrong distribution with correct totals", func(r *checkerReport) {
+			r.Rounds[0].MismatchedCells = 2
+		}},
+		{"round exceeds schedule but within grace", func(r *checkerReport) {
+			r.Rounds[0].CompletionSeconds = 60.001
+		}},
+		{"never completed old round", func(r *checkerReport) {
+			r.Rounds[0].Complete = false
+			r.PastRoundOpen = 1
+		}},
+		{"expired job", func(r *checkerReport) {
+			r.ExpiredJobs = 1
+		}},
+		{"overdue job", func(r *checkerReport) {
+			r.OverdueJobs = 1
+		}},
+		{"historical failed job", func(r *checkerReport) {
+			r.BadJobs = 1
+		}},
+		{"failed action", func(r *checkerReport) {
+			r.BadActions = 1
+		}},
+		{"action timeout", func(r *checkerReport) {
+			r.ActionTimeouts = 1
+		}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			report := healthyCheckerReport()
@@ -50,7 +93,9 @@ func TestCheckerAuditRejectsIncompleteAndLateWork(t *testing.T) {
 func TestCheckerAuditAllowsOnlyCurrentInflightWork(t *testing.T) {
 	report := healthyCheckerReport()
 	report.Rounds = append(report.Rounds, checkerRoundReport{
-		Round: 2, Jobs: report.ExpectedCells, Cells: report.ExpectedCells,
+		Round:           2,
+		Jobs:            report.ExpectedCells,
+		Cells:           report.ExpectedCells,
 		MismatchedCells: report.ExpectedCells,
 	})
 	if err := report.validate(); err != nil || report.completedRounds() != 1 {

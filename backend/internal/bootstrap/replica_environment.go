@@ -12,19 +12,30 @@ import (
 // runStartCommand keeps the pooler's replica budget aligned with this start's
 // explicit scale options. Raw Compose forwarding and persistent settings are
 // unchanged; only this Docker subprocess receives the overrides.
-func runStartCommand(ctx context.Context, args []string, out io.Writer, runner operatorCommandRunner, workingDirectory func() (string, error)) error {
+func runStartCommand(
+	ctx context.Context,
+	args []string,
+	out io.Writer,
+	runner operatorCommandRunner,
+	workingDirectory func() (string, error),
+) error {
+	const location = "bootstrap.runStartCommand"
+
 	_, commandArgs, err := extractLeadingProjectRoot(args)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	targets, err := composeScaleTargets(commandArgs)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if len(targets) > 0 && composeUpOption(commandArgs, "--no-deps") {
-		return fmt.Errorf("bootstrap.runStartCommand - scaled start with --no-deps cannot update PgBouncer budgets; use control scale with the deployed pooler, or start with dependencies")
+		return fmt.Errorf("%s - scaled start with --no-deps cannot update PgBouncer budgets; use control scale with the deployed pooler, or start with dependencies", location)
 	}
-	return runOperatorCommand(ctx, "compose", args, out, withReplicaEnvironment(runner, targets), workingDirectory)
+	if err := runOperatorCommand(ctx, "compose", args, out, withReplicaEnvironment(runner, targets), workingDirectory); err != nil {
+		return fmt.Errorf("%s - start scaled deployment: %w", location, err)
+	}
+	return nil
 }
 
 func withReplicaEnvironment(runner operatorCommandRunner, targets map[string]int) operatorCommandRunner {
@@ -37,12 +48,24 @@ func withReplicaEnvironment(runner operatorCommandRunner, targets map[string]int
 			overrides = append(overrides, "FORCAD_"+strings.ToUpper(role)+"_REPLICAS="+strconv.Itoa(count))
 		}
 	}
-	return func(ctx context.Context, name string, args, environment []string, stdin io.Reader, stdout, stderr io.Writer) error {
-		return runner(ctx, name, args, append(slices.Clone(environment), overrides...), stdin, stdout, stderr)
+	return func(
+		ctx context.Context,
+		name string,
+		args, environment []string,
+		stdin io.Reader,
+		stdout, stderr io.Writer,
+	) error {
+		const location = "bootstrap.withReplicaEnvironment"
+		if err := runner(ctx, name, args, append(slices.Clone(environment), overrides...), stdin, stdout, stderr); err != nil {
+			return fmt.Errorf("%s - execute command with replica budgets: %w", location, err)
+		}
+		return nil
 	}
 }
 
 func composeScaleTargets(args []string) (map[string]int, error) {
+	const location = "bootstrap.composeScaleTargets"
+
 	if len(args) == 0 || args[0] != "up" {
 		return nil, nil
 	}
@@ -56,7 +79,7 @@ func composeScaleTargets(args []string) (map[string]int, error) {
 		case args[i] == "--scale":
 			i++
 			if i == len(args) {
-				return nil, fmt.Errorf("bootstrap.composeScaleTargets - --scale requires SERVICE=COUNT")
+				return nil, fmt.Errorf("%s - --scale requires SERVICE=COUNT", location)
 			}
 			value = args[i]
 		case strings.HasPrefix(args[i], "--scale="):
@@ -66,14 +89,14 @@ func composeScaleTargets(args []string) (map[string]int, error) {
 		}
 		role, raw, ok := strings.Cut(value, "=")
 		if !ok {
-			return nil, fmt.Errorf("bootstrap.composeScaleTargets - --scale requires SERVICE=COUNT")
+			return nil, fmt.Errorf("%s - --scale requires SERVICE=COUNT", location)
 		}
 		if !capacityRole(role) {
 			continue
 		}
 		count, err := replicaCount(raw)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s - %w", location, err)
 		}
 		// Docker Compose uses the last value for repeated --scale options.
 		targets[role] = count

@@ -14,6 +14,27 @@ scaling and shutdown so the overlay stays active. Plain `start`, `scale` and
 `compose` do not include it. See [Monitoring](MONITORING.md#start). For the
 network demo, use its [manage commands](../deployment/demo/README.md#manage-the-stack).
 
+## Migrating the checker broker
+
+This checkout uses NATS JetStream. Migrate between games, with the old workers
+drained and no unfinished checker jobs, or use a fresh rehearsal state. The new
+JetStream volume does not import messages from an old RabbitMQ queue.
+
+In an existing `config/config.yml`, replace `storages.rabbitmq` with
+`storages.nats`, retain `user` and `password`, remove `vhost`, and set `host` and
+`port` to the NATS endpoint (the supplied Compose service is `nats:4222`). The
+strict configuration decoder rejects the old storage section. Run setup again
+and rebuild the stack; runtime credentials now live in
+`config/runtime/nats_environment.env`. Treat the old broker credential file as
+a secret until it is removed; `clean` also removes that legacy generated file.
+
+Ticker provisions the shared persistent stream and durable consumer at startup,
+even before a game starts. Workers fetch only when a local slot is free and
+acknowledge after SQL settlement. SQL claims and leases remain authoritative
+when messages are redelivered. The standard `forcad-nats` volume survives normal
+container recreation and is included in a full reset. Broker monitoring binds
+to host loopback port 8222; it is not an authenticated public endpoint.
+
 ## Status and credentials
 
 ```bash

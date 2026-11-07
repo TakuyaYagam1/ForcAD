@@ -18,8 +18,18 @@ import (
 
 const databaseCommandTimeout = 2 * time.Minute
 
-func RunDatabaseCommand(ctx context.Context, command string, args []string, out io.Writer) error {
+func RunDatabaseCommand(
+	ctx context.Context,
+	command string,
+	args []string,
+	out io.Writer,
+) (runErr error) {
 	const location = "bootstrap.RunDatabaseCommand"
+	defer func() {
+		if runErr != nil {
+			runErr = fmt.Errorf("%s - execute database command: %w", location, runErr)
+		}
+	}()
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("%s - database command canceled: %w", location, err)
 	}
@@ -32,20 +42,16 @@ func RunDatabaseCommand(ctx context.Context, command string, args []string, out 
 	}
 	cfg, err := commandConfig(options.path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	bounded, cancel := context.WithTimeout(ctx, databaseCommandTimeout)
 	defer cancel()
 	if command == "migrate" || command == "init" {
 		if err := db.Migrate(bounded, cfg.DatabaseURL); err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
-		if cfg.DatabaseRuntimeUser != "" || cfg.DatabaseRuntimePassword != "" {
-			if err := db.ProvisionRuntimeRole(bounded, cfg.DatabaseURL, cfg.DatabaseRuntimeUser, cfg.DatabaseRuntimePassword); err != nil {
-				return err
-			}
-		} else if os.Getenv("FORCAD_REQUIRE_RUNTIME_DB") == "1" {
-			return fmt.Errorf("%s - runtime database credentials missing; run setup before starting this deployment", location)
+		if err := provisionDatabaseRuntimeRole(bounded, cfg); err != nil {
+			return fmt.Errorf("%s - provision runtime database role: %w", location, err)
 		}
 		if command == "migrate" {
 			if _, err := fmt.Fprintln(out, "Database migrations applied"); err != nil {
@@ -54,12 +60,26 @@ func RunDatabaseCommand(ctx context.Context, command string, args []string, out 
 			return nil
 		}
 	}
-	pool, closePool, err := postgres.NewPool(bounded, cfg)
+	pool, closePool, err := newPostgresPool(bounded, cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	defer closePool()
 	return options.run(bounded, postgres.NewGameStore(pool), out)
+}
+
+func provisionDatabaseRuntimeRole(ctx context.Context, cfg config.Config) error {
+	const location = "bootstrap.provisionDatabaseRuntimeRole"
+	if cfg.DatabaseRuntimeUser != "" || cfg.DatabaseRuntimePassword != "" {
+		if err := db.ProvisionRuntimeRole(ctx, cfg.DatabaseURL, cfg.DatabaseRuntimeUser, cfg.DatabaseRuntimePassword); err != nil {
+			return fmt.Errorf("%s - provision configured runtime credentials: %w", location, err)
+		}
+		return nil
+	}
+	if os.Getenv("FORCAD_REQUIRE_RUNTIME_DB") == "1" {
+		return fmt.Errorf("%s - runtime database credentials missing; run setup before starting this deployment", location)
+	}
+	return nil
 }
 
 type databaseOptions struct {
@@ -98,11 +118,21 @@ func parseDatabaseOptions(command string, args []string, out io.Writer) (databas
 	if command == "set-round-limit" && (roundLimit < 0 || int64(roundLimit) > math.MaxInt32) {
 		return databaseOptions{}, fmt.Errorf("%s - set-round-limit requires --rounds between 0 and 2147483647", location)
 	}
-	return databaseOptions{command: command, path: *path, roundLimit: roundLimit, full: full}, nil
+	return databaseOptions{
+		command:    command,
+		path:       *path,
+		roundLimit: roundLimit,
+		full:       full,
+	}, nil
 }
 
-func (options databaseOptions) run(ctx context.Context, store *postgres.GameStore, out io.Writer) error {
+func (options databaseOptions) run(ctx context.Context, store *postgres.GameStore, out io.Writer) (runErr error) {
 	const location = "bootstrap.databaseOptions.run"
+	defer func() {
+		if runErr != nil {
+			runErr = fmt.Errorf("%s - execute %s: %w", location, options.command, runErr)
+		}
+	}()
 	switch options.command {
 	case "pause", "resume":
 		return changeGamePause(ctx, store, options.command, out)
@@ -113,7 +143,7 @@ func (options databaseOptions) run(ctx context.Context, store *postgres.GameStor
 	case "status":
 		life, err := store.Lifecycle(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 		if err := json.NewEncoder(out).Encode(life.Runtime(time.Now())); err != nil {
 			return fmt.Errorf("%s - encode game status: %w", location, err)
@@ -122,7 +152,7 @@ func (options databaseOptions) run(ctx context.Context, store *postgres.GameStor
 	case "tokens":
 		teams, err := store.Teams(ctx, true)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 		for _, team := range teams {
 			if _, err := fmt.Fprintf(out, "%s\t%s\t%s\n", team.ID, team.Name, team.Token); err != nil {
@@ -135,15 +165,20 @@ func (options databaseOptions) run(ctx context.Context, store *postgres.GameStor
 	}
 }
 
-func initializeGame(ctx context.Context, store *postgres.GameStore, path string, out io.Writer) error {
+func initializeGame(
+	ctx context.Context,
+	store *postgres.GameStore,
+	path string,
+	out io.Writer,
+) error {
 	const location = "bootstrap.initializeGame"
 	document, err := config.LoadDocument(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	created, err := store.Initialize(ctx, document)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if created {
 		_, err = fmt.Fprintln(out, "Game initialized")
@@ -159,7 +194,7 @@ func initializeGame(ctx context.Context, store *postgres.GameStore, path string,
 func validateConfigFile(path string, full bool, out io.Writer) error {
 	const location = "bootstrap.validateConfigFile"
 	if err := localoperator.ValidateConfig(path, full); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if _, err := fmt.Fprintln(out, "Configuration is valid"); err != nil {
 		return fmt.Errorf("%s - write validation result: %w", location, err)

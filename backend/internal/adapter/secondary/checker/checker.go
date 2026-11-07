@@ -162,7 +162,9 @@ func NewRunner(options Options) *Runner {
 	} else if options.MemoryLimitMB <= 0 {
 		options.MemoryLimitMB = DefaultMemoryLimitMB
 	}
-	return &Runner{options: options}
+	return &Runner{
+		options: options,
+	}
 }
 
 // Run executes one checker operation. A context cancellation returns the
@@ -222,9 +224,8 @@ func finishCheckerResult(request Request, result Result, wait checkerWaitResult)
 	const location = "checker.finishCheckerResult"
 	failure := wait.cleanupErr
 	if wait.waitErr != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(wait.waitErr, &exitErr) {
-			failure = errors.Join(failure, fmt.Errorf("wait for checker process: %w", wait.waitErr))
+		if _, ok := errors.AsType[*exec.ExitError](wait.waitErr); !ok {
+			failure = errors.Join(failure, fmt.Errorf("%s - wait for checker process: %w", location, wait.waitErr))
 		}
 	}
 	switch wait.reason {
@@ -250,7 +251,7 @@ func finishCheckerResult(request Request, result Result, wait checkerWaitResult)
 		}
 	}
 	if wait.contextErr != nil {
-		failure = errors.Join(failure, fmt.Errorf("checker process was interrupted: %w", wait.contextErr))
+		failure = errors.Join(failure, fmt.Errorf("%s - checker process was interrupted: %w", location, wait.contextErr))
 	}
 	if failure != nil {
 		return result, fmt.Errorf("%s - %w", location, failure)

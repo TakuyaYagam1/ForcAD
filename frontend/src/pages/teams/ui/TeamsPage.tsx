@@ -11,7 +11,10 @@ import { useRef } from "react";
 import { Link } from "react-router-dom";
 import "./TeamsPage.css";
 
-function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
+function TeamCard({ team, rank }: {
+  team: ScoreboardTeam;
+  rank: number
+}) {
   const { t } = useTranslation("public");
   const podium = rank >= 1 && rank <= 3;
   const locale = getLocale();
@@ -32,14 +35,18 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
             <h2>{team.name}</h2>
             <span className="team-ip">{team.ip}</span>
             <span className="team-podium-place">
-              {t("teams.podiumPlace", { rank: formattedRank })}
+              {t("teams.podiumPlace", {
+                rank: formattedRank
+              })}
             </span>
           </div>
         </>
       ) : (
         <>
           <span className="team-card-place">
-            {t("teams.podiumPlace", { rank: formattedRank })}
+            {t("teams.podiumPlace", {
+              rank: formattedRank
+            })}
           </span>
           <div className="team-card-top">
             <TeamAvatar name={team.name} src={team.logo_path} />
@@ -67,8 +74,15 @@ function TeamCard({ team, rank }: { team: ScoreboardTeam; rank: number }) {
 export function TeamsPage() {
   const { t } = useTranslation("public");
   const leadersRef = useRef<HTMLElement>(null);
-  const teams = useScoreboardStore((state) => state.teams) ?? [];
-  const ranked = teams.map((team, index) => ({ team, rank: index + 1 }));
+  const teams = useScoreboardStore((state) => {
+    return state.teams
+  }) ?? [];
+  const ranked = teams.map((team, index) => {
+    return {
+      team,
+      rank: index + 1
+    }
+  });
   const leaders = ranked.slice(0, 3);
   const others = ranked.slice(3);
   useViewportAnimations(leadersRef, leaders.length > 0);
@@ -87,9 +101,11 @@ export function TeamsPage() {
                 aria-label={t("teams.leaders")}
               >
                 <div className="teams-podium">
-                  {leaders.map(({ team, rank }) => (
-                    <TeamCard key={team.id} team={team} rank={rank} />
-                  ))}
+                  {leaders.map(({ team, rank }) => {
+                    return (
+                      <TeamCard key={team.id} team={team} rank={rank} />
+                    )
+                  })}
                 </div>
               </section>
             )}
@@ -105,9 +121,11 @@ export function TeamsPage() {
                   </div>
                 )}
                 <div className="teams-grid">
-                  {others.map(({ team, rank }) => (
-                    <TeamCard key={team.id} team={team} rank={rank} />
-                  ))}
+                  {others.map(({ team, rank }) => {
+                    return (
+                      <TeamCard key={team.id} team={team} rank={rank} />
+                    )
+                  })}
                 </div>
               </section>
             )}

@@ -15,7 +15,7 @@ import (
 
 const (
 	postgresPort           = 5432
-	rabbitMQPort           = 5672
+	natsPort               = 4222
 	redisPort              = 6379
 	maxTCPPort             = 65535
 	maxRedisDatabaseIndex  = 1024
@@ -30,7 +30,10 @@ func completeCredentials(document *config.Document, tree *yaml.Node) error {
 		if err != nil {
 			return fmt.Errorf("%s - generate admin password: %w", location, err)
 		}
-		document.Admin = &config.Credentials{Username: "forcad", Password: password}
+		document.Admin = &config.Credentials{
+			Username: "forcad",
+			Password: password,
+		}
 	} else if !hasPath(tree, "admin", "username") || !hasPath(tree, "admin", "password") {
 		return fmt.Errorf("%s - admin configuration requires username and password", location)
 	}
@@ -40,9 +43,9 @@ func completeCredentials(document *config.Document, tree *yaml.Node) error {
 		if err != nil {
 			return fmt.Errorf("%s - generate database password: %w", location, err)
 		}
-		rabbitPassword, err := randomSecret()
+		natsPassword, err := randomSecret()
 		if err != nil {
-			return fmt.Errorf("%s - generate RabbitMQ password: %w", location, err)
+			return fmt.Errorf("%s - generate NATS password: %w", location, err)
 		}
 		redisPassword, err := randomSecret()
 		if err != nil {
@@ -50,12 +53,27 @@ func completeCredentials(document *config.Document, tree *yaml.Node) error {
 		}
 		username := document.Admin.Username
 		document.Storages = &config.Storages{
-			DB:       config.Database{User: username, Password: databasePassword, Host: "postgres", Port: postgresPort, DBName: "forcad"},
-			RabbitMQ: config.Rabbit{User: username, Password: rabbitPassword, Host: "rabbitmq", Port: rabbitMQPort, VHost: "forcad"},
-			Redis:    config.Redis{Password: redisPassword, Host: "redis", Port: redisPort},
+			DB: config.Database{
+				User:     username,
+				Password: databasePassword,
+				Host:     "postgres",
+				Port:     postgresPort,
+				DBName:   "forcad",
+			},
+			NATS: config.NATS{
+				User:     username,
+				Password: natsPassword,
+				Host:     "nats",
+				Port:     natsPort,
+			},
+			Redis: config.Redis{
+				Password: redisPassword,
+				Host:     "redis",
+				Port:     redisPort,
+			},
 		}
 	} else {
-		for _, path := range [][]string{{"storages", "db", "user"}, {"storages", "db", "password"}, {"storages", "rabbitmq", "user"}, {"storages", "rabbitmq", "password"}, {"storages", "redis", "password"}} {
+		for _, path := range [][]string{{"storages", "db", "user"}, {"storages", "db", "password"}, {"storages", "nats", "user"}, {"storages", "nats", "password"}, {"storages", "redis", "password"}} {
 			if !hasPath(tree, path...) {
 				return fmt.Errorf("%s - configuration requires %s", location, strings.Join(path, "."))
 			}
@@ -65,16 +83,22 @@ func completeCredentials(document *config.Document, tree *yaml.Node) error {
 	if document.Storages.DB.Runtime == nil {
 		password, err := randomSecret()
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 		suffix, err := randomSecret()
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 		username := "forcad_runtime_" + suffix[:12]
-		document.Storages.DB.Runtime = &config.Credentials{Username: username, Password: password}
+		document.Storages.DB.Runtime = &config.Credentials{
+			Username: username,
+			Password: password,
+		}
 	}
-	return validateCompletedCredentials(*document)
+	if err := validateCompletedCredentials(*document); err != nil {
+		return fmt.Errorf("%s - validate completed credentials: %w", location, err)
+	}
+	return nil
 }
 
 func validateCompletedCredentials(document config.Document) error {
@@ -90,16 +114,28 @@ func validateCompletedCredentials(document config.Document) error {
 	}
 	storage := document.Storages
 	if err := validateRuntimeCredentials(storage.DB); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	for _, item := range []struct {
 		name string
 		host string
 		port int
 	}{
-		{name: "database", host: storage.DB.Host, port: storage.DB.Port},
-		{name: "RabbitMQ", host: storage.RabbitMQ.Host, port: storage.RabbitMQ.Port},
-		{name: "Redis", host: storage.Redis.Host, port: storage.Redis.Port},
+		{
+			name: "database",
+			host: storage.DB.Host,
+			port: storage.DB.Port,
+		},
+		{
+			name: "NATS",
+			host: storage.NATS.Host,
+			port: storage.NATS.Port,
+		},
+		{
+			name: "Redis",
+			host: storage.Redis.Host,
+			port: storage.Redis.Port,
+		},
 	} {
 		if strings.TrimSpace(item.host) == "" {
 			return fmt.Errorf("%s - %s host must not be empty", location, item.name)
@@ -112,10 +148,22 @@ func validateCompletedCredentials(document config.Document) error {
 		name  string
 		value string
 	}{
-		{name: "database user", value: storage.DB.User},
-		{name: "database name", value: storage.DB.DBName},
-		{name: "RabbitMQ user", value: storage.RabbitMQ.User},
-		{name: "RabbitMQ virtual host", value: storage.RabbitMQ.VHost},
+		{
+			name:  "database user",
+			value: storage.DB.User,
+		},
+		{
+			name:  "database name",
+			value: storage.DB.DBName,
+		},
+		{
+			name:  "NATS user",
+			value: storage.NATS.User,
+		},
+		{
+			name:  "NATS password",
+			value: storage.NATS.Password,
+		},
 	} {
 		if strings.TrimSpace(item.value) == "" {
 			return fmt.Errorf("%s - %s must not be empty", location, item.name)
@@ -128,12 +176,13 @@ func validateCompletedCredentials(document config.Document) error {
 }
 
 func validateRuntimeCredentials(database config.Database) error {
+	const location = "operator.validateRuntimeCredentials"
 	runtime := database.Runtime
 	if runtime == nil {
 		return nil // Legacy documents can be upgraded by setup.
 	}
 	if strings.TrimSpace(runtime.Username) == "" || len(runtime.Username) > 63 || runtime.Username == database.User || strings.ContainsAny(runtime.Username, "\r\n\x00") || len(runtime.Password) < minAdminPasswordLength || runtime.Password == database.Password {
-		return fmt.Errorf("operator.validateRuntimeCredentials - database runtime requires a distinct username (1-63 bytes) and password (at least 16 characters)")
+		return fmt.Errorf("%s - database runtime requires a distinct username (1-63 bytes) and password (at least 16 characters)", location)
 	}
 	return nil
 }
@@ -148,14 +197,11 @@ func setStorageDefaults(storages *config.Storages, tree *yaml.Node) {
 	if !hasPath(tree, "storages", "db", "dbname") {
 		storages.DB.DBName = "forcad"
 	}
-	if !hasPath(tree, "storages", "rabbitmq", "host") {
-		storages.RabbitMQ.Host = "rabbitmq"
+	if !hasPath(tree, "storages", "nats", "host") {
+		storages.NATS.Host = "nats"
 	}
-	if !hasPath(tree, "storages", "rabbitmq", "port") {
-		storages.RabbitMQ.Port = rabbitMQPort
-	}
-	if !hasPath(tree, "storages", "rabbitmq", "vhost") {
-		storages.RabbitMQ.VHost = "forcad"
+	if !hasPath(tree, "storages", "nats", "port") {
+		storages.NATS.Port = natsPort
 	}
 	if !hasPath(tree, "storages", "redis", "host") {
 		storages.Redis.Host = "redis"
@@ -176,7 +222,7 @@ func applyExternalAddresses(document *config.Document, options SetupOptions) err
 	}{
 		{"Redis", options.Redis, redisPort, &document.Storages.Redis.Host, &document.Storages.Redis.Port},
 		{"database", options.Database, postgresPort, &document.Storages.DB.Host, &document.Storages.DB.Port},
-		{"RabbitMQ", options.RabbitMQ, rabbitMQPort, &document.Storages.RabbitMQ.Host, &document.Storages.RabbitMQ.Port},
+		{"NATS", options.NATS, natsPort, &document.Storages.NATS.Host, &document.Storages.NATS.Port},
 	}
 	for _, item := range addresses {
 		if item.value == "" {

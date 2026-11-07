@@ -130,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [runtime, worker, nginx, postgres, pgbouncer]
+        image: [runtime, worker, nginx, postgres, pgbouncer, nats]
     steps:
       - name: Checkout source
         id: checkout

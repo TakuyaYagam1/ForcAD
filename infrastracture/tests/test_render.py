@@ -84,7 +84,7 @@ class RenderTests(unittest.TestCase):
                 'wan_interface = "ens19"', 'wan_interface = "ens19; reboot"'
             ),
             example.replace('team_trunk = "ens21"', 'team_trunk = "ens19"'),
-            example.replace("members_per_team = 5", "members_per_team = 6"),
+            example.replace("members_per_team = 5", "members_per_team = 8"),
             example.replace("game_tcp_ports = [8080, 8081]", "game_tcp_ports = [22]"),
             example.replace("game_udp_ports = []", "game_udp_ports = [0]"),
             example.replace("game_udp_ports = []", "game_udp_ports = [53, 53]"),
@@ -117,6 +117,34 @@ class RenderTests(unittest.TestCase):
                     path.write_text(text)
                     with self.assertRaises(ValueError):
                         render.load_config(path)
+
+    def test_seven_members_have_unique_routed_addresses(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(
+                example.replace("members_per_team = 5", "members_per_team = 7")
+                .replace(
+                    'participant_vpn = "10.183.200.0/24"',
+                    'participant_vpn = "10.183.200.0/27"',
+                )
+            )
+            config = render.load_config(path)
+        inventory = render.teams(config)
+        peers = [peer for team in inventory for peer in team["peers"]]
+        self.assertEqual(len(inventory), 2)
+        self.assertEqual(len(set(peers)), 14)
+        self.assertNotIn("10.183.200.1", peers)
+        for team in inventory:
+            network = ipaddress.ip_network(team["vpn_cidr"])
+            self.assertEqual(network.prefixlen, 28)
+            self.assertEqual(len(team["peers"]), 7)
+            self.assertTrue(
+                all(ipaddress.ip_address(peer) in network for peer in team["peers"])
+            )
+        config["network"]["participant_vpn"] = "10.183.200.0/29"
+        with self.assertRaisesRegex(ValueError, "one /28 per team"):
+            render.network_layout(config)
 
     def test_extra_checks_are_optional_and_rendered(self):
         example = (ROOT / "settings.example.toml").read_text()

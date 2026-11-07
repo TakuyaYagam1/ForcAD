@@ -20,18 +20,24 @@ export function AdminTeamTaskLogPage() {
   const validIds = teamId !== undefined && taskId !== undefined;
   const logQuery = useQuery({
     queryKey: ["teamtask-log", teamId, taskId],
-    queryFn: ({ signal }) => fetchTeamTaskLog(teamId!, taskId!, signal),
+    queryFn: ({ signal }) => {
+      return fetchTeamTaskLog(teamId!, taskId!, signal)
+    },
     enabled: validIds,
     refetchInterval: 5000,
   });
   const teamQuery = useQuery({
     queryKey: ["team", teamId],
-    queryFn: ({ signal }) => fetchTeamAdmin(teamId!, signal),
+    queryFn: ({ signal }) => {
+      return fetchTeamAdmin(teamId!, signal)
+    },
     enabled: validIds,
   });
   const taskQuery = useQuery({
     queryKey: ["task", taskId],
-    queryFn: ({ signal }) => fetchTaskAdmin(taskId!, signal),
+    queryFn: ({ signal }) => {
+      return fetchTaskAdmin(taskId!, signal)
+    },
     enabled: validIds,
   });
   const numberFormat = new Intl.NumberFormat(getLocale());
@@ -47,11 +53,15 @@ export function AdminTeamTaskLogPage() {
             <h1>{t("teamTaskLog.title")}</h1>
             <p>
               {teamQuery.data?.name ?? (teamId
-                ? t("team.nameWithId", { id: teamId })
+                ? t("team.nameWithId", {
+                  id: teamId
+                })
                 : t("team.invalidId"))}
               <span className="footer-divider">/</span>
               {taskQuery.data?.name ?? (taskId
-                ? t("task.nameWithId", { id: taskId })
+                ? t("task.nameWithId", {
+                  id: taskId
+                })
                 : t("task.invalidId"))}
             </p>
           </div>
@@ -63,7 +73,9 @@ export function AdminTeamTaskLogPage() {
             <button
               className="text-link"
               type="button"
-              onClick={() => void logQuery.refetch()}
+              onClick={() => {
+                return void logQuery.refetch()
+              }}
             >
               {t("common.retry")}
             </button>
@@ -89,11 +101,13 @@ export function AdminTeamTaskLogPage() {
                     t("teamTaskLog.publicMessage"),
                     t("teamTaskLog.privateMessage"),
                     t("teamTaskLog.command"),
-                  ].map((label) => (
-                    <th scope="col" key={label}>
-                      {label}
-                    </th>
-                  ))}
+                  ].map((label) => {
+                    return (
+                      <th scope="col" key={label}>
+                        {label}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>

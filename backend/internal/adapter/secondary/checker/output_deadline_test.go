@@ -14,13 +14,20 @@ func TestCompletedCheckerOutputDrainHonorsContextCancellation(t *testing.T) {
 	}
 	defer output.closeReaders()
 	defer output.closeWriters()
-	capture := &outputCapture{limit: 4096}
+	capture := &outputCapture{
+		limit: 4096,
+	}
 	limit := make(chan struct{}, 1)
 	// Retain both writers after the leader exits to keep normal output
 	// collection pending. Cancellation must not wait for the action deadline.
 	output.start(capture, limit)
 	exited := make(chan checkerExit)
-	process := startedChecker{output: output, capture: capture, outputLimit: limit, waited: exited}
+	process := startedChecker{
+		output:      output,
+		capture:     capture,
+		outputLimit: limit,
+		waited:      exited,
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	type completion struct {
@@ -29,13 +36,25 @@ func TestCompletedCheckerOutputDrainHonorsContextCancellation(t *testing.T) {
 	}
 	completed := make(chan completion, 1)
 	go func() {
-		result := Result{Action: ActionPut, Status: StatusCheckFailed, ExitCode: -1}
+		result := Result{
+			Action:   ActionPut,
+			Status:   StatusCheckFailed,
+			ExitCode: -1,
+		}
 		wait := waitForChecker(ctx, 5*time.Second, time.Second, process, &result)
-		result, err := finishCheckerResult(Request{Action: ActionPut}, result, wait)
-		completed <- completion{result: result, err: err}
+		result, err := finishCheckerResult(Request{
+			Action: ActionPut,
+		}, result, wait)
+		completed <- completion{
+			result: result,
+			err:    err,
+		}
 	}()
 	select {
-	case exited <- checkerExit{exitCode: 101, reaped: true}:
+	case exited <- checkerExit{
+		exitCode: 101,
+		reaped:   true,
+	}:
 		// The unbuffered send ensures the exit branch is selected before
 		// cancellation, so the case specifically exercises output draining.
 	case <-time.After(time.Second):
@@ -71,21 +90,39 @@ func TestCompletedCheckerWaitsForDelayedOutputWithinActionBudget(t *testing.T) {
 	// Only scheduling of the output-copy goroutines is delayed. A cleanup
 	// budget after SIGKILL must not shorten the normal action deadline.
 	output.closeWriters()
-	capture := &outputCapture{limit: 4096}
+	capture := &outputCapture{
+		limit: 4096,
+	}
 	limit := make(chan struct{}, 1)
 	exited := make(chan checkerExit, 1)
-	exited <- checkerExit{exitCode: 101, reaped: true}
+	exited <- checkerExit{
+		exitCode: 101,
+		reaped:   true,
+	}
 	readersStarted := make(chan struct{})
 	go func() {
 		time.Sleep(2 * checkerKillDrainTimeout)
 		output.start(capture, limit)
 		close(readersStarted)
 	}()
-	defer func() { <-readersStarted }()
-	process := startedChecker{output: output, capture: capture, outputLimit: limit, waited: exited}
-	result := Result{Action: ActionPut, Status: StatusCheckFailed, ExitCode: -1}
+	defer func() {
+		<-readersStarted
+	}()
+	process := startedChecker{
+		output:      output,
+		capture:     capture,
+		outputLimit: limit,
+		waited:      exited,
+	}
+	result := Result{
+		Action:   ActionPut,
+		Status:   StatusCheckFailed,
+		ExitCode: -1,
+	}
 	wait := waitForChecker(context.Background(), 5*time.Second, time.Second, process, &result)
-	result, err = finishCheckerResult(Request{Action: ActionPut}, result, wait)
+	result, err = finishCheckerResult(Request{
+		Action: ActionPut,
+	}, result, wait)
 	if err != nil || result.Status != StatusUp || !result.ProcessReaped || !result.OutputComplete || result.Killed || result.TimedOut {
 		t.Fatalf("healthy completed output rejected: result=%+v err=%v", result, err)
 	}

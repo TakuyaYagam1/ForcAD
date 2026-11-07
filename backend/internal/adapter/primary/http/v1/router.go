@@ -21,7 +21,16 @@ type Traffic interface {
 	Middleware(route func(*http.Request) string) func(http.Handler) http.Handler
 }
 
-func NewRouter(cfg config.Config, handler *Handler, events http.Handler, monitor http.Handler, registry prometheus.Registerer, limiter middleware.RateLimiter, logger *slog.Logger, traffic ...Traffic) (http.Handler, error) {
+func NewRouter(
+	cfg config.Config,
+	handler *Handler,
+	events http.Handler,
+	monitor http.Handler,
+	registry prometheus.Registerer,
+	limiter middleware.RateLimiter,
+	logger *slog.Logger,
+	traffic ...Traffic,
+) (http.Handler, error) {
 	const location = "httpv1.NewRouter"
 	server, err := api.NewServer(handler, handler, handler, api.WithErrorHandler(errorHandler(logger)))
 	if err != nil {
@@ -68,7 +77,11 @@ func NewRouter(cfg config.Config, handler *Handler, events http.Handler, monitor
 	return r, nil
 }
 
-func registerMetricsRoutes(router chi.Router, role string, events, monitor http.Handler) {
+func registerMetricsRoutes(
+	router chi.Router,
+	role string,
+	events, monitor http.Handler,
+) {
 	if role == "api" || role == "all" {
 		router.Get("/api/events/ws", events.ServeHTTP)
 		for _, path := range []string{"/api/admin/metrics", "/api/client/metrics"} {

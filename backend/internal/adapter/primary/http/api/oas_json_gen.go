@@ -183,7 +183,9 @@ func (s *AdminLoginRequest) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -349,7 +351,9 @@ func (s *AdminSession) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -669,7 +673,9 @@ func (s *AdminTask) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -956,7 +962,9 @@ func (s *AdminTaskWrite) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -1210,7 +1218,9 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -1411,7 +1421,9 @@ func (s *AdminTeamCreate) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -1794,7 +1806,9 @@ func (s *AdminTeamTaskLogEntry) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -2053,7 +2067,9 @@ func (s *AdminTeamUpdate) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -2224,7 +2240,9 @@ func (s *AnnouncementCreate) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -2320,7 +2338,9 @@ func (s *ApiError) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -2842,7 +2862,9 @@ func (s *CheckerLog) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -3029,7 +3051,9 @@ func (s *CheckerLogPage) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -3539,7 +3563,9 @@ func (s *CtftimeStanding) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -3956,7 +3982,9 @@ func (s *FlagSubmissionResult) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -4391,7 +4419,9 @@ func (s *GameConfig) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -4703,7 +4733,9 @@ func (s *GameRuntimeStatus) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -4887,7 +4919,9 @@ func (s *GameState) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -6098,7 +6132,9 @@ func (s *ParticipantTask) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -6277,7 +6313,9 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -6557,7 +6595,9 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -6931,7 +6971,9 @@ func (s *PublicEvent) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -7149,7 +7191,9 @@ func (s *Scoreboard) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -7395,7 +7439,9 @@ func (s *ScoreboardTeamTask) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil
@@ -7547,7 +7593,9 @@ func (s *StatusResponse) Decode(d *jx.Decoder) error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 
 	return nil

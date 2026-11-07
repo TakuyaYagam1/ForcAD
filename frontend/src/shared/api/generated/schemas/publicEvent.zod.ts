@@ -10,7 +10,9 @@ import * as zod from 'zod';
 export const PublicEvent = zod.object({
   "id": zod.string(),
   "kind": zod.enum(['flag_stolen', 'admin_message']),
-  "created_at": zod.iso.datetime({"offset":true}),
+  "created_at": zod.iso.datetime({
+    "offset":true
+  }),
   "attacker_id": zod.uuid().optional(),
   "attacker_name": zod.string().optional(),
   "victim_id": zod.uuid().optional(),

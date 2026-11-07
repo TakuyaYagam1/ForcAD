@@ -24,27 +24,45 @@ export function AdminLoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { mutateAsync, isPending } = useAdminLoginMutation();
-  const authError = useAdminAuthStore((state) => state.error);
-  const isAuthenticated = useAdminAuthStore((state) => state.isAuthenticated);
-  const checked = useAdminAuthStore((state) => state.isAuthChecked);
-  const checkSession = useAdminAuthStore((state) => state.checkSession);
+  const authError = useAdminAuthStore((state) => {
+    return state.error
+  });
+  const isAuthenticated = useAdminAuthStore((state) => {
+    return state.isAuthenticated
+  });
+  const checked = useAdminAuthStore((state) => {
+    return state.isAuthChecked
+  });
+  const checkSession = useAdminAuthStore((state) => {
+    return state.checkSession
+  });
   useEffect(() => {
-    if (!checked) void checkSession();
+    if (!checked) {
+      void checkSession();
+    }
   }, [checked, checkSession]);
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema)
+  });
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      return;
+    }
     const state = location.state as {
-      from?: string | { pathname?: string };
+      from?: string | {
+        pathname?: string
+      };
     } | null;
     const from =
       typeof state?.from === "string" ? state.from : state?.from?.pathname;
-    navigate(from || "/admin/scoreboard", { replace: true });
+    navigate(from || "/admin/scoreboard", {
+      replace: true
+    });
   }, [isAuthenticated, navigate, location.state]);
   const onSubmit = async (values: FormValues) => {
     try {
@@ -101,7 +119,9 @@ export function AdminLoginForm() {
               aria-label={
                 showPassword ? t("login.hidePassword") : t("login.showPassword")
               }
-              onClick={() => setShowPassword(!showPassword)}
+              onClick={() => {
+                return setShowPassword(!showPassword)
+              }}
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>

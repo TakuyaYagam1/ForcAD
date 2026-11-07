@@ -35,7 +35,12 @@ type maintenanceRunnerFixture struct {
 	failOn   string
 }
 
-func (r *maintenanceRunnerFixture) run(ctx context.Context, name string, args []string, stdout, _ io.Writer) error {
+func (r *maintenanceRunnerFixture) run(
+	ctx context.Context,
+	name string,
+	args []string,
+	stdout, _ io.Writer,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -76,7 +81,7 @@ func newMaintenanceCommandProject(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "nats_environment.env", "redis_environment.env"} {
 		if err := os.WriteFile(filepath.Join(root, "config", "runtime", name), []byte("fixture=value\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -85,7 +90,10 @@ func newMaintenanceCommandProject(t *testing.T) string {
 }
 
 func maintenanceProjectJSON(root string, storage bool) string {
-	services := map[string]any{"api": map[string]any{}}
+	services := map[string]any{
+		"api": map[string]any{},
+	}
+	volumes := map[string]any{}
 	if storage {
 		services["postgres"] = map[string]any{
 			"image": "forcad_postgres:local",
@@ -96,14 +104,27 @@ func maintenanceProjectJSON(root string, storage bool) string {
 			}},
 		}
 		services["redis"] = map[string]any{}
-		services["rabbitmq"] = map[string]any{}
+		services["nats"] = map[string]any{
+			"volumes": []any{map[string]any{
+				"type":   "volume",
+				"source": "forcad-nats",
+				"target": "/data",
+			}},
+		}
+		volumes["forcad-nats"] = map[string]any{}
 	}
-	encoded, _ := json.Marshal(map[string]any{"name": "forcad-maintenance-test", "services": services})
+	encoded, _ := json.Marshal(map[string]any{
+		"name":     "forcad-maintenance-test",
+		"services": services,
+		"volumes":  volumes,
+	})
 	return string(encoded)
 }
 
 func newMaintenanceRunner(root string, storage bool) *maintenanceRunnerFixture {
-	return &maintenanceRunnerFixture{project: maintenanceProjectJSON(root, storage)}
+	return &maintenanceRunnerFixture{
+		project: maintenanceProjectJSON(root, storage),
+	}
 }
 
 func TestRunMaintenanceCommandResetUsesComposeNetworkAfterStoppingWriters(t *testing.T) {
@@ -133,7 +154,9 @@ func TestRunMaintenanceCommandResetFailureLeavesServicesStopped(t *testing.T) {
 	runner := newMaintenanceRunner(root, true)
 	runner.events = &events
 	runner.failOn = "run --rm --no-deps --entrypoint forcad initializer reset-data"
-	err := runMaintenanceCommand(context.Background(), "reset", []string{"--confirm", "--project-root", root}, io.Discard, runner.run, func() (string, error) { return root, nil }, nil)
+	err := runMaintenanceCommand(context.Background(), "reset", []string{"--confirm", "--project-root", root}, io.Discard, runner.run, func() (string, error) {
+		return root, nil
+	}, nil)
 	if err == nil || !strings.Contains(err.Error(), "remain stopped") {
 		t.Fatalf("reset failure = %v", err)
 	}
@@ -161,7 +184,9 @@ func TestRunMaintenanceCommandDefaultsProjectRootToWorkingDirectory(t *testing.T
 func TestRunMaintenanceCommandRequiresConfirmationBeforeRunner(t *testing.T) {
 	root := newMaintenanceCommandProject(t)
 	runner := newMaintenanceRunner(root, true)
-	err := runMaintenanceCommand(context.Background(), "reset", []string{"--project-root", root}, io.Discard, runner.run, func() (string, error) { return root, nil }, nil)
+	err := runMaintenanceCommand(context.Background(), "reset", []string{"--project-root", root}, io.Discard, runner.run, func() (string, error) {
+		return root, nil
+	}, nil)
 	if err == nil || !strings.Contains(err.Error(), "--confirm") {
 		t.Fatalf("missing confirmation error = %v", err)
 	}
@@ -174,7 +199,9 @@ func TestRunMaintenanceCommandCleanUsesFullResetWithoutResetData(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "unix:///tmp/fixture-docker.sock")
 	root := newMaintenanceCommandProject(t)
 	runner := newMaintenanceRunner(root, true)
-	err := runMaintenanceCommand(context.Background(), "clean", []string{"--confirm", "--project-root", root}, io.Discard, runner.run, func() (string, error) { return root, nil }, nil)
+	err := runMaintenanceCommand(context.Background(), "clean", []string{"--confirm", "--project-root", root}, io.Discard, runner.run, func() (string, error) {
+		return root, nil
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +231,9 @@ func TestRunMaintenanceCommandRejectsCleanFullAndUnexpectedArguments(t *testing.
 	root := newMaintenanceCommandProject(t)
 	runner := newMaintenanceRunner(root, true)
 	for _, args := range [][]string{{"--confirm", "--full", "--project-root", root}, {"--confirm", "--project-root", root, "extra"}} {
-		err := runMaintenanceCommand(context.Background(), "clean", args, io.Discard, runner.run, func() (string, error) { return root, nil }, nil)
+		err := runMaintenanceCommand(context.Background(), "clean", args, io.Discard, runner.run, func() (string, error) {
+			return root, nil
+		}, nil)
 		if err == nil {
 			t.Fatalf("clean accepted unexpected arguments %v", args)
 		}
@@ -239,13 +268,19 @@ func TestRunResetDataCommandUsesOnlyContainerEnvironment(t *testing.T) {
 	}
 }
 
-type maintenanceErrorWriter struct{ err error }
+type maintenanceErrorWriter struct {
+	err error
+}
 
-func (w maintenanceErrorWriter) Write([]byte) (int, error) { return 0, w.err }
+func (w maintenanceErrorWriter) Write([]byte) (int, error) {
+	return 0, w.err
+}
 
 func TestRunResetDataCommandWrapsOutputError(t *testing.T) {
 	writeErr := errors.New("output unavailable")
-	err := runResetDataCommand(context.Background(), []string{"--confirm"}, maintenanceErrorWriter{err: writeErr}, func(context.Context, config.Config) error {
+	err := runResetDataCommand(context.Background(), []string{"--confirm"}, maintenanceErrorWriter{
+		err: writeErr,
+	}, func(context.Context, config.Config) error {
 		return nil
 	})
 	if !errors.Is(err, writeErr) {
@@ -259,7 +294,10 @@ func TestRunResetDataCommandWrapsOutputError(t *testing.T) {
 func TestRunResetDataRequiresConfirmationAndRejectsFullFlags(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://game:secret@db.internal:5432/forcad")
 	called := false
-	resetter := func(context.Context, config.Config) error { called = true; return nil }
+	resetter := func(context.Context, config.Config) error {
+		called = true
+		return nil
+	}
 	for _, args := range [][]string{{}, {"--confirm", "--full"}, {"--confirm", "--clean"}, {"--confirm", "extra"}} {
 		err := runMaintenanceCommand(context.Background(), "reset-data", args, io.Discard, nil, nil, resetter)
 		if err == nil {

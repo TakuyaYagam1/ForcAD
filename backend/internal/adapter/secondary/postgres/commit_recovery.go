@@ -15,14 +15,24 @@ const commitRecoveryTimeout = time.Second
 // confirmJobCommit only observes committed state on a new connection. It never
 // retries a claim or PUT. The worker still checks its parent cancellation and
 // confirmed lease before continuing after this bounded RPC recovery.
-func (r *Repository) confirmJobCommit(ctx context.Context, commitErr error, id uuid.UUID, owner string, requested time.Time, operation string) bool {
+func (r *Repository) confirmJobCommit(
+	ctx context.Context,
+	commitErr error,
+	id uuid.UUID,
+	owner string,
+	requested time.Time,
+	operation string,
+) bool {
 	if errors.Is(commitErr, pgx.ErrTxCommitRollback) || !requested.After(time.Now()) {
 		return false
 	}
 	deadline := minTime(time.Now().Add(commitRecoveryTimeout), requested)
 	recovery, cancel := context.WithDeadline(context.WithoutCancel(ctx), deadline)
 	defer cancel()
-	state, err := r.queries.ConfirmCheckerJobOwnership(recovery, sqlc.ConfirmCheckerJobOwnershipParams{JobID: id, OwnerToken: &owner})
+	state, err := r.queries.ConfirmCheckerJobOwnership(recovery, sqlc.ConfirmCheckerJobOwnershipParams{
+		JobID:      id,
+		OwnerToken: &owner,
+	})
 	return err == nil && committedJobUpdate(state, requested, operation)
 }
 

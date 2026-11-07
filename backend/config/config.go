@@ -31,8 +31,11 @@ type Config struct {
 	RedisAddr               string
 	RedisPassword           string
 	RedisDB                 int
-	BrokerURL               string
-	CheckerQueue            string
+	NATSURL                 string
+	NATSStream              string
+	NATSSubject             string
+	NATSConsumer            string
+	NATSMaxAckPending       int
 	AdminUsername           string
 	AdminPassword           string
 	ControlToken            string
@@ -60,7 +63,14 @@ const (
 	maxHTTPMaxInflight     = 4096
 )
 
-func New() (Config, error) { return Load(os.LookupEnv) }
+func New() (Config, error) {
+	const location = "config.New"
+	cfg, err := Load(os.LookupEnv)
+	if err != nil {
+		return cfg, fmt.Errorf("%s - load process configuration: %w", location, err)
+	}
+	return cfg, nil
+}
 
 func Load(lookup LookupEnv) (Config, error) {
 	const location = "config.Load"
@@ -81,8 +91,10 @@ func Load(lookup LookupEnv) (Config, error) {
 		DatabaseRuntimePassword: value("FORCAD_RUNTIME_DB_PASSWORD", ""),
 		RedisAddr:               value("REDIS_ADDR", net.JoinHostPort(value("REDIS_HOST", "redis"), value("REDIS_PORT", "6379"))),
 		RedisPassword:           value("REDIS_PASSWORD", ""),
-		BrokerURL:               value("AMQP_URL", ""),
-		CheckerQueue:            value("CHECKER_QUEUE", "forcad.checker.jobs"),
+		NATSURL:                 value("NATS_URL", ""),
+		NATSStream:              value("NATS_STREAM", "FORCAD_CHECKERS"),
+		NATSSubject:             value("NATS_SUBJECT", "forcad.checker.jobs"),
+		NATSConsumer:            value("NATS_CONSUMER", "forcad-workers"),
 		AdminUsername:           value("ADMIN_USERNAME", ""),
 		AdminPassword:           value("ADMIN_PASSWORD", ""),
 		ControlToken:            value("CONTROL_TOKEN", ""),
@@ -91,10 +103,13 @@ func Load(lookup LookupEnv) (Config, error) {
 	if c.DatabaseURL == "" {
 		c.DatabaseURL = databaseURL(value)
 	}
-	if c.BrokerURL == "" {
-		u := url.URL{Scheme: "amqp", Host: net.JoinHostPort(value("RABBITMQ_HOST", "rabbitmq"), value("RABBITMQ_PORT", "5672")), Path: "/" + value("RABBITMQ_VHOST", value("RABBITMQ_DEFAULT_VHOST", "forcad"))}
-		u.User = url.UserPassword(value("RABBITMQ_USER", value("RABBITMQ_DEFAULT_USER", "forcad")), value("RABBITMQ_PASSWORD", value("RABBITMQ_DEFAULT_PASS", "")))
-		c.BrokerURL = u.String()
+	if c.NATSURL == "" {
+		u := url.URL{
+			Scheme: "nats",
+			Host:   net.JoinHostPort(value("NATS_HOST", "nats"), value("NATS_PORT", "4222")),
+		}
+		u.User = url.UserPassword(value("NATS_USER", "forcad"), value("NATS_PASSWORD", ""))
+		c.NATSURL = u.String()
 	}
 	var errs []error
 	for _, cidr := range strings.Split(value("TRUSTED_PROXY_CIDRS", ""), ",") {
@@ -102,7 +117,10 @@ func Load(lookup LookupEnv) (Config, error) {
 			c.TrustedProxyCIDRs = append(c.TrustedProxyCIDRs, cidr)
 		}
 	}
-	integer := func(key string, fallback, minimum, maximum int) int {
+	integer := func(
+		key string,
+		fallback, minimum, maximum int,
+	) int {
 		v, err := strconv.Atoi(value(key, strconv.Itoa(fallback)))
 		if err != nil || v < minimum || v > maximum {
 			errs = append(errs, fmt.Errorf("%s - %s must be an integer between %d and %d", location, key, minimum, maximum))
@@ -127,6 +145,7 @@ func Load(lookup LookupEnv) (Config, error) {
 	c.DatabaseTimeout = duration("DATABASE_TIMEOUT", 5*time.Second)
 	c.RedisDB = integer("REDIS_DB", 0, 0, 1024)
 	c.WorkerConcurrency = integer("WORKER_CONCURRENCY", 8, 1, 1024)
+	c.NATSMaxAckPending = integer("NATS_MAX_ACK_PENDING", 1024, 1, 1000000)
 	c.CheckerMemoryMB = integer("FORCAD_CHECKER_MEMORY_LIMIT_MB", 1024, 0, 1048576)
 	c.CheckerOutputBytes = integer("FORCAD_CHECKER_OUTPUT_LIMIT_BYTES", 1<<20, 1024, 16<<20)
 	c.CheckerWorkflowTimeout = duration("CHECKER_WORKFLOW_TIMEOUT", 30*time.Minute)
@@ -136,17 +155,31 @@ func Load(lookup LookupEnv) (Config, error) {
 	c.FlagRate = integer("FLAG_RATE", 200, 1, 1000000)
 	c.FlagBurst = integer("FLAG_BURST", 400, 1, 1000000)
 	errs = append(errs, poolErr, httpErr, c.Validate())
-	if c.DatabasePoolerAddr != "" {
-		if err := c.usePooler(); err != nil {
-			errs = append(errs, err)
-		}
-	}
+	errs = append(errs, c.configurePooler())
 	errs = append(errs, validateDatabaseTLS(c.DatabaseURL, value("FORCAD_DATABASE_REQUIRE_TLS", "0")))
-	return c, errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return c, fmt.Errorf("%s - validate process configuration: %w", location, err)
+	}
+	return c, nil
+}
+
+func (c *Config) configurePooler() error {
+	const location = "config.Config.configurePooler"
+	if c.DatabasePoolerAddr == "" {
+		return nil
+	}
+	if err := c.usePooler(); err != nil {
+		return fmt.Errorf("%s - apply transaction pooler endpoint: %w", location, err)
+	}
+	return nil
 }
 
 func databaseURL(value func(string, string) string) string {
-	u := url.URL{Scheme: "postgres", Host: net.JoinHostPort(value("POSTGRES_HOST", "postgres"), value("POSTGRES_PORT", "5432")), Path: "/" + value("POSTGRES_DB", "forcad")}
+	u := url.URL{
+		Scheme: "postgres",
+		Host:   net.JoinHostPort(value("POSTGRES_HOST", "postgres"), value("POSTGRES_PORT", "5432")),
+		Path:   "/" + value("POSTGRES_DB", "forcad"),
+	}
 	u.User = url.UserPassword(value("POSTGRES_USER", "forcad"), value("POSTGRES_PASSWORD", ""))
 	q := u.Query()
 	q.Set("sslmode", value("POSTGRES_SSLMODE", "prefer"))
@@ -158,15 +191,16 @@ func databaseURL(value func(string, string) string) string {
 }
 
 func validateDatabaseTLS(raw, required string) error {
+	const location = "config.validateDatabaseTLS"
 	if required == "0" {
 		return nil
 	}
 	if required != "1" {
-		return fmt.Errorf("config.validateDatabaseTLS - FORCAD_DATABASE_REQUIRE_TLS must be 0 or 1")
+		return fmt.Errorf("%s - FORCAD_DATABASE_REQUIRE_TLS must be 0 or 1", location)
 	}
 	address, err := url.Parse(raw)
 	if err != nil || address.Query().Get("sslmode") != "verify-full" || address.Query().Get("sslrootcert") == "" {
-		return fmt.Errorf("config.validateDatabaseTLS - verified database TLS requires sslmode=verify-full and an explicit sslrootcert")
+		return fmt.Errorf("%s - verified database TLS requires sslmode=verify-full and an explicit sslrootcert", location)
 	}
 	return nil
 }
@@ -231,9 +265,10 @@ func (c *Config) usePooler() error {
 }
 
 func (c Config) Validate() error {
+	const location = "config.Config.Validate"
 	for _, validate := range []func() error{c.validateQueue, c.validateHTTP, c.validateRole, c.validateEndpoints, c.validateAdmin} {
 		if err := validate(); err != nil {
-			return err
+			return fmt.Errorf("%s - validate process settings: %w", location, err)
 		}
 	}
 	return nil
@@ -241,13 +276,25 @@ func (c Config) Validate() error {
 
 func (c Config) validateQueue() error {
 	const location = "config.Config.validateQueue"
-	if len(c.CheckerQueue) == 0 || len(c.CheckerQueue) > maxQueueNameLength {
-		return fmt.Errorf("%s - CHECKER_QUEUE must contain 1 to 128 characters", location)
+	if c.NATSMaxAckPending < 1 || c.NATSMaxAckPending > 1000000 {
+		return fmt.Errorf("%s - NATS_MAX_ACK_PENDING must be between 1 and 1000000", location)
 	}
-	for _, char := range c.CheckerQueue {
-		if !validQueueCharacter(char) {
-			return fmt.Errorf("%s - CHECKER_QUEUE contains an unsupported character", location)
+	for _, item := range []struct {
+		key, value string
+	}{
+		{"NATS_STREAM", c.NATSStream}, {"NATS_CONSUMER", c.NATSConsumer}, {"NATS_SUBJECT", c.NATSSubject},
+	} {
+		if len(item.value) == 0 || len(item.value) > maxQueueNameLength {
+			return fmt.Errorf("%s - %s must contain 1 to 128 characters", location, item.key)
 		}
+		for _, char := range item.value {
+			if !validQueueCharacter(char) || (char == '.' && item.key != "NATS_SUBJECT") {
+				return fmt.Errorf("%s - %s contains an unsupported character", location, item.key)
+			}
+		}
+	}
+	if strings.HasPrefix(c.NATSSubject, ".") || strings.HasSuffix(c.NATSSubject, ".") || strings.Contains(c.NATSSubject, "..") {
+		return fmt.Errorf("%s - NATS_SUBJECT must contain nonempty subject tokens", location)
 	}
 	return nil
 }
@@ -302,9 +349,23 @@ func (c Config) validateEndpoints() error {
 	if err != nil || (db.Scheme != "postgres" && db.Scheme != "postgresql") || db.Hostname() == "" {
 		return fmt.Errorf("%s - DATABASE_URL must be a PostgreSQL URL", location)
 	}
-	broker, err := url.Parse(c.BrokerURL)
-	if err != nil || (broker.Scheme != "amqp" && broker.Scheme != "amqps") || broker.Hostname() == "" {
-		return fmt.Errorf("%s - AMQP_URL must be an AMQP URL", location)
+	if err := validateNATSEndpoint(c.NATSURL); err != nil {
+		return fmt.Errorf("%s - validate NATS endpoint: %w", location, err)
+	}
+	return nil
+}
+
+func validateNATSEndpoint(raw string) error {
+	const location = "config.Config.validateEndpoints"
+	broker, err := url.Parse(raw)
+	if err != nil || (broker.Scheme != "nats" && broker.Scheme != "tls") || broker.Hostname() == "" || broker.Path != "" || broker.RawQuery != "" || broker.Fragment != "" {
+		return fmt.Errorf("%s - NATS_URL must be a NATS or TLS URL without a path", location)
+	}
+	if port := broker.Port(); port != "" {
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > maxTCPPort {
+			return fmt.Errorf("%s - NATS_URL contains an invalid port", location)
+		}
 	}
 	return nil
 }

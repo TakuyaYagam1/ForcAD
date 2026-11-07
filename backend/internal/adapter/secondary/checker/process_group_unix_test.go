@@ -13,7 +13,9 @@ import (
 
 func TestRunnerTimeoutStopsCheckerProcessGroup(t *testing.T) {
 	for _, mode := range []string{"spawn", "spawn-parent-term"} {
-		t.Run(mode, func(t *testing.T) { testRunnerStopsProcessGroup(t, mode) })
+		t.Run(mode, func(t *testing.T) {
+			testRunnerStopsProcessGroup(t, mode)
+		})
 	}
 }
 

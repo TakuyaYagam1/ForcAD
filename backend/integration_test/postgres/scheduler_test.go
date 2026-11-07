@@ -124,8 +124,12 @@ func TestConcurrentTickersPrepareOnlyOneRound(t *testing.T) {
 		t.Fatalf("scheduled start = %t, %v", started, err)
 	}
 	request := domain.ScheduleRequest{
-		ScheduleID: "classic_rounds", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic,
+		ScheduleID:    "classic_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
 	}
 	const callers = 8
 	runs := make(chan *domain.DispatchRun, callers)
@@ -237,14 +241,29 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 		statement string
 		args      []any
 	}{
-		{statement: `UPDATE GameConfig SET real_round=1 WHERE id=1`, args: nil},
-		{statement: `UPDATE GameSession SET round_started_at=$1,snapshot_round=1,snapshot='{}'::JSONB WHERE id=1`, args: []any{start}},
-		{statement: `INSERT INTO Flags(flag,team_id,task_id,round,public_flag_data,private_flag_data)
-			VALUES('FINALFLAG',$1,$2,1,'final-public','final-private')`, args: []any{teamIDs[0], taskIDs[0]}},
-		{statement: `INSERT INTO TeamTasksLog(round,team_id,task_id,status,public_message,private_message,command)
-			VALUES(1,$1,$2,101,'final-log','final-private-log','final-command')`, args: []any{teamIDs[0], taskIDs[0]}},
-		{statement: `INSERT INTO GameRoundSnapshots(round,round_start,snapshot)
-			VALUES(1,1,'{"team_tasks":[]}'::JSONB)`, args: nil},
+		{
+			statement: `UPDATE GameConfig SET real_round=1 WHERE id=1`,
+			args:      nil,
+		},
+		{
+			statement: `UPDATE GameSession SET round_started_at=$1,snapshot_round=1,snapshot='{}'::JSONB WHERE id=1`,
+			args:      []any{start},
+		},
+		{
+			statement: `INSERT INTO Flags(flag,team_id,task_id,round,public_flag_data,private_flag_data)
+			VALUES('FINALFLAG',$1,$2,1,'final-public','final-private')`,
+			args: []any{teamIDs[0], taskIDs[0]},
+		},
+		{
+			statement: `INSERT INTO TeamTasksLog(round,team_id,task_id,status,public_message,private_message,command)
+			VALUES(1,$1,$2,101,'final-log','final-private-log','final-command')`,
+			args: []any{teamIDs[0], taskIDs[0]},
+		},
+		{
+			statement: `INSERT INTO GameRoundSnapshots(round,round_start,snapshot)
+			VALUES(1,1,'{"team_tasks":[]}'::JSONB)`,
+			args: nil,
+		},
 	}
 	for _, row := range finalRows {
 		if _, err := pool.Exec(ctx, row.statement, row.args...); err != nil {
@@ -437,8 +456,12 @@ func TestBlitzSeparatesPutsAndUsesTaskGetPeriod(t *testing.T) {
 		t.Fatalf("scheduled start = %t, %v", started, err)
 	}
 	puts, err := repository.Prepare(ctx, domain.ScheduleRequest{
-		ScheduleID: "blitz_rounds", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionPutsOnly,
+		ScheduleID:    "blitz_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionPutsOnly,
 	})
 	if err != nil || puts == nil {
 		t.Fatalf("prepare blitz puts = %+v, %v", puts, err)
@@ -459,8 +482,12 @@ func TestBlitzSeparatesPutsAndUsesTaskGetPeriod(t *testing.T) {
 		t.Fatalf("blitz schedule ID length = %d, want more than 32", len(scheduleID))
 	}
 	getRequest := domain.ScheduleRequest{
-		ScheduleID: scheduleID, At: start, StartAt: start,
-		Interval: 30 * time.Second, Workflow: domain.JobActionCheckGets, TaskID: &taskID,
+		ScheduleID: scheduleID,
+		At:         start,
+		StartAt:    start,
+		Interval:   30 * time.Second,
+		Workflow:   domain.JobActionCheckGets,
+		TaskID:     &taskID,
 	}
 	gets, err := repository.Prepare(ctx, getRequest)
 	if err != nil || gets == nil {
@@ -513,8 +540,12 @@ func TestPrepareRechecksPersistedDueTimeAfterRunFinishes(t *testing.T) {
 		t.Fatalf("scheduled start = %t, %v", started, err)
 	}
 	request := domain.ScheduleRequest{
-		ScheduleID: "classic_rounds", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic,
+		ScheduleID:    "classic_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
 	}
 	first, err := repository.Prepare(ctx, request)
 	if err != nil || first == nil {
@@ -585,8 +616,12 @@ func TestPrepareUsesPersistedPauseClockForDueBoundary(t *testing.T) {
 		t.Fatalf("scheduled start = %t, %v", started, err)
 	}
 	request := domain.ScheduleRequest{
-		ScheduleID: "classic_rounds", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic,
+		ScheduleID:    "classic_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
 	}
 	run, err := repository.Prepare(ctx, request)
 	if err != nil || run == nil {

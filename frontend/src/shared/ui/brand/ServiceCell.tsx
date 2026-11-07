@@ -47,7 +47,9 @@ export function ServiceCell({
     <button
       type="button"
       className={`service-cell${meta ? " service-cell--active" : ""}${wideValues ? " service-cell--wide-values" : ""}`}
-      style={meta ? { backgroundColor: meta.color } : undefined}
+      style={meta ? {
+        backgroundColor: meta.color
+      } : undefined}
       onClick={onClick}
       aria-label={t("service.ariaLabel", {
         name,
@@ -73,7 +75,9 @@ export function ServiceCell({
       </span>
     </button>
   );
-  if (onClick) return trigger;
+  if (onClick) {
+    return trigger;
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -106,7 +110,9 @@ export function ServiceCell({
           <span className="eyebrow">{t("service.checkerResponse")}</span>
           <pre
             className={meta ? "checker-result--status" : undefined}
-            style={meta ? { backgroundColor: meta.color } : undefined}
+            style={meta ? {
+              backgroundColor: meta.color
+            } : undefined}
           >
             {checkerResponse}
           </pre>

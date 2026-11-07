@@ -14,18 +14,33 @@ type recordingObserver struct {
 	completed []domain.CheckerResult
 }
 
-func (o *recordingObserver) WorkflowStarted() { o.active++ }
-func (o *recordingObserver) WorkflowEnded()   { o.active-- }
-func (o *recordingObserver) ActionStarted()   {}
-func (o *recordingObserver) ActionEnded()     {}
-func (o *recordingObserver) ObserveCompleted(_, _ string, result domain.CheckerResult, _ bool) {
+func (o *recordingObserver) WorkflowStarted() {
+	o.active++
+}
+func (o *recordingObserver) WorkflowEnded() {
+	o.active--
+}
+func (o *recordingObserver) ActionStarted() {
+}
+func (o *recordingObserver) ActionEnded() {
+}
+func (o *recordingObserver) ObserveCompleted(
+	_, _ string,
+	result domain.CheckerResult,
+	_ bool,
+) {
 	o.completed = append(o.completed, result)
 }
 
 func TestCheckerObserverCountsOnlyConfirmedCompletion(t *testing.T) {
-	runner := &fakeRunner{fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
-		return processchecker.Result{Action: request.Action, Status: processchecker.StatusUp}, nil
-	}}
+	runner := &fakeRunner{
+		fn: func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
+			return processchecker.Result{
+				Action: request.Action,
+				Status: processchecker.StatusUp,
+			}, nil
+		},
+	}
 	for _, test := range []struct {
 		name            string
 		completeErr     error
@@ -33,9 +48,19 @@ func TestCheckerObserverCountsOnlyConfirmedCompletion(t *testing.T) {
 		wantCount       int
 		wantErr         bool
 	}{
-		{name: "completed", wantCount: 1},
-		{name: "commit failed", completeErr: errors.New("commit failed"), wantErr: true},
-		{name: "commit result lost", completeUnknown: true},
+		{
+			name:      "completed",
+			wantCount: 1,
+		},
+		{
+			name:        "commit failed",
+			completeErr: errors.New("commit failed"),
+			wantErr:     true,
+		},
+		{
+			name:            "commit result lost",
+			completeUnknown: true,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			repo := newFakeRepository(payloadJSON(t, "", defaultTask()), domain.JobActionCheckOnly)
@@ -43,7 +68,9 @@ func TestCheckerObserverCountsOnlyConfirmedCompletion(t *testing.T) {
 			repo.completeUnknown = test.completeUnknown
 			repo.states[testJobID] = domain.CheckerJobState{}
 			observer := &recordingObserver{}
-			worker := makeWorker(t, repo, &fakeFlagStore{}, runner, Options{Observer: observer})
+			worker := makeWorker(t, repo, &fakeFlagStore{}, runner, Options{
+				Observer: observer,
+			})
 			err := worker.Handle(t.Context(), testJobID)
 			if (err != nil) != test.wantErr {
 				t.Fatalf("Handle() error = %v", err)

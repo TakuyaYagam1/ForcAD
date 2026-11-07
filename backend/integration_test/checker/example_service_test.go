@@ -35,7 +35,9 @@ type exampleService struct {
 
 func newExampleService(t *testing.T) (*exampleService, string) {
 	t.Helper()
-	service := &exampleService{notes: make(map[string]exampleNote)}
+	service := &exampleService{
+		notes: make(map[string]exampleNote),
+	}
 	server := httptest.NewServer(http.HandlerFunc(service.serveHTTP))
 	t.Cleanup(server.Close)
 	return service, strings.TrimPrefix(server.URL, "http://")
@@ -95,7 +97,11 @@ func (service *exampleService) serveHTTP(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (service *exampleService) create(w http.ResponseWriter, r *http.Request, id, token string) {
+func (service *exampleService) create(
+	w http.ResponseWriter,
+	r *http.Request,
+	id, token string,
+) {
 	var note exampleNote
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&note); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -108,7 +114,9 @@ func (service *exampleService) create(w http.ResponseWriter, r *http.Request, id
 	note.ID, note.Token = id, token
 	service.notes[id] = note
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(map[string]string{"id": id})
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"id": id,
+	})
 }
 
 func (service *exampleService) setReply(reply exampleReply) {

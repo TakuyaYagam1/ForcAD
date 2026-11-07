@@ -15,9 +15,11 @@ import (
 func readComposeProject(ctx context.Context, runner MaintenanceRunner, composeArgs []string) (composeProject, error) {
 	const location = "operator.readComposeProject"
 	args := append(append([]string(nil), composeArgs[1:]...), "config", "--format", "json")
-	output := &limitedBuffer{limit: maintenanceOutputLimit}
+	output := &limitedBuffer{
+		limit: maintenanceOutputLimit,
+	}
 	if err := runDocker(ctx, runner, args, output); err != nil {
-		return composeProject{}, maintenanceCommandError(ctx, "inspect the Compose project", err)
+		return composeProject{}, fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "inspect the Compose project", err))
 	}
 	if output.exceeded {
 		return composeProject{}, fmt.Errorf("%s - Compose project configuration exceeds the inspection limit", location)
@@ -50,15 +52,22 @@ type composeMount struct {
 }
 
 type composeVolume struct {
-	External bool `json:"external"`
+	External bool   `json:"external"`
+	Name     string `json:"name"`
 }
 
-func verifyProjectOwnership(ctx context.Context, runner MaintenanceRunner, name, deployment string) error {
+func verifyProjectOwnership(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	name, deployment string,
+) error {
 	const location = "operator.verifyProjectOwnership"
 	args := []string{"ps", "-aq", "--filter", "label=com.docker.compose.project=" + name}
-	output := &limitedBuffer{limit: maintenanceOutputLimit}
+	output := &limitedBuffer{
+		limit: maintenanceOutputLimit,
+	}
 	if err := runDocker(ctx, runner, args, output); err != nil {
-		return maintenanceCommandError(ctx, "check Compose project ownership", err)
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "check Compose project ownership", err))
 	}
 	if output.exceeded {
 		return fmt.Errorf("%s - too many Compose containers to verify ownership", location)
@@ -73,14 +82,19 @@ func verifyProjectOwnership(ctx context.Context, runner MaintenanceRunner, name,
 	inspectArgs := make([]string, 0, 3+len(ids))
 	inspectArgs = append(inspectArgs, "inspect", "--format", "{{json .Config.Labels}}")
 	inspectArgs = append(inspectArgs, ids...)
-	labelsOutput := &limitedBuffer{limit: maintenanceOutputLimit}
+	labelsOutput := &limitedBuffer{
+		limit: maintenanceOutputLimit,
+	}
 	if err := runDocker(ctx, runner, inspectArgs, labelsOutput); err != nil {
-		return maintenanceCommandError(ctx, "verify Compose container ownership", err)
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "verify Compose container ownership", err))
 	}
 	if labelsOutput.exceeded {
 		return fmt.Errorf("%s - Compose container ownership output exceeds the inspection limit", location)
 	}
-	return verifyOwnershipLabels(labelsOutput.Bytes(), deployment, len(ids))
+	if err := verifyOwnershipLabels(labelsOutput.Bytes(), deployment, len(ids)); err != nil {
+		return fmt.Errorf("%s - verify inspected ownership labels: %w", location, err)
+	}
+	return nil
 }
 
 func verifyOwnershipLabels(labelsData []byte, deployment string, expectedCount int) error {
@@ -120,9 +134,11 @@ func verifyOwnershipLabels(labelsData []byte, deployment string, expectedCount i
 
 func cachedPostgresImage(ctx context.Context, image string, runner MaintenanceRunner) (string, error) {
 	const location = "operator.cachedPostgresImage"
-	output := &limitedBuffer{limit: 4096}
+	output := &limitedBuffer{
+		limit: 4096,
+	}
 	if err := runDocker(ctx, runner, []string{"image", "inspect", image, "--format", "{{.Id}}"}, output); err != nil {
-		return "", maintenanceCommandError(ctx, "inspect the cached PostgreSQL image", err)
+		return "", fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "inspect the cached PostgreSQL image", err))
 	}
 	if output.exceeded {
 		return "", fmt.Errorf("%s - cached PostgreSQL image identity exceeds the limit", location)
@@ -145,9 +161,11 @@ func requireLocalDocker(ctx context.Context, runner MaintenanceRunner) error {
 		}
 		return fmt.Errorf("%s - full reset requires a local Unix-socket Docker daemon", location)
 	}
-	output := &limitedBuffer{limit: 4096}
+	output := &limitedBuffer{
+		limit: 4096,
+	}
 	if err := runDocker(ctx, runner, []string{"context", "inspect", "--format", "{{.Endpoints.docker.Host}}"}, output); err != nil {
-		return maintenanceCommandError(ctx, "inspect the Docker context", err)
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "inspect the Docker context", err))
 	}
 	if output.exceeded || !strings.HasPrefix(strings.TrimSpace(output.String()), "unix://") {
 		return fmt.Errorf("%s - full reset requires a local Unix-socket Docker daemon", location)

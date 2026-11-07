@@ -15,7 +15,10 @@ func collectProcessSnapshot(pid int) *ProcessSnapshot {
 }
 
 func collectProcessSnapshotAt(root string, pid int) *ProcessSnapshot {
-	snapshot := &ProcessSnapshot{PID: pid, Errors: make(map[string]string)}
+	snapshot := &ProcessSnapshot{
+		PID:    pid,
+		Errors: make(map[string]string),
+	}
 	base := fmt.Sprintf("%s/%d/", root, pid)
 	read := func(name string, limit int64) string {
 		file, err := os.Open(base + name)
@@ -23,7 +26,9 @@ func collectProcessSnapshotAt(root string, pid int) *ProcessSnapshot {
 			snapshot.Errors[name] = procReadError(err)
 			return ""
 		}
-		defer func() { _ = file.Close() }()
+		defer func() {
+			_ = file.Close()
+		}()
 		data, err := io.ReadAll(io.LimitReader(file, limit+1))
 		if err != nil {
 			snapshot.Errors[name] = procReadError(err)

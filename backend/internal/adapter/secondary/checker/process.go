@@ -28,7 +28,11 @@ type startedChecker struct {
 	reaped      <-chan struct{}
 }
 
-func startChecker(executable string, args, env []string, outputLimitBytes int) (startedChecker, error) {
+func startChecker(
+	executable string,
+	args, env []string,
+	outputLimitBytes int,
+) (startedChecker, error) {
 	const location = "checker.startChecker"
 	//nolint:noctx // Cancellation uses process-group shutdown and independently owned pipes.
 	cmd := exec.Command(executable, args...)
@@ -45,11 +49,20 @@ func startChecker(executable string, args, env []string, outputLimitBytes int) (
 		return startedChecker{}, fmt.Errorf("%s - start checker process: %w", location, err)
 	}
 	output.closeWriters()
-	capture := &outputCapture{limit: outputLimitBytes}
+	capture := &outputCapture{
+		limit: outputLimitBytes,
+	}
 	outputLimit := make(chan struct{}, 1)
 	output.start(capture, outputLimit)
 	reaped := make(chan struct{})
-	return startedChecker{command: cmd, capture: capture, output: output, outputLimit: outputLimit, waited: reapChecker(cmd, reaped), reaped: reaped}, nil
+	return startedChecker{
+		command:     cmd,
+		capture:     capture,
+		output:      output,
+		outputLimit: outputLimit,
+		waited:      reapChecker(cmd, reaped),
+		reaped:      reaped,
+	}, nil
 }
 
 func reapChecker(cmd *exec.Cmd, reaped chan<- struct{}) <-chan checkerExit {
@@ -60,7 +73,11 @@ func reapChecker(cmd *exec.Cmd, reaped chan<- struct{}) <-chan checkerExit {
 		if cmd.ProcessState != nil {
 			exitCode = cmd.ProcessState.ExitCode()
 		}
-		waited <- checkerExit{err: err, exitCode: exitCode, reaped: cmd.ProcessState != nil}
+		waited <- checkerExit{
+			err:      err,
+			exitCode: exitCode,
+			reaped:   cmd.ProcessState != nil,
+		}
 		// Publish the buffered exit first. Seeing completion must also mean
 		// the shutdown loop can consume the final exit classification.
 		if cmd.ProcessState != nil && reaped != nil {
@@ -114,12 +131,24 @@ type checkerWait struct {
 	signals         []ProcessSignal
 }
 
-func waitForChecker(ctx context.Context, timeout, terminateTimeout time.Duration, process startedChecker, result *Result) checkerWaitResult {
+func waitForChecker(
+	ctx context.Context,
+	timeout, terminateTimeout time.Duration,
+	process startedChecker,
+	result *Result,
+) checkerWaitResult {
 	timeoutTimer := time.NewTimer(timeout)
 	defer timeoutTimer.Stop()
-	state := checkerWait{ctx: ctx, process: process, result: result,
-		waited: process.waited, outputDone: process.output.done, timeout: timeoutTimer.C,
-		contextDone: ctx.Done(), outputLimit: process.outputLimit}
+	state := checkerWait{
+		ctx:         ctx,
+		process:     process,
+		result:      result,
+		waited:      process.waited,
+		outputDone:  process.output.done,
+		timeout:     timeoutTimer.C,
+		contextDone: ctx.Done(),
+		outputLimit: process.outputLimit,
+	}
 	defer state.stopTimers()
 	defer process.output.closeReaders()
 	defer func() {
@@ -236,10 +265,11 @@ func (state *checkerWait) acceptExit(exit checkerExit) {
 }
 
 func (state *checkerWait) acceptOutput(err error, terminateTimeout time.Duration) {
+	const location = "checker.checkerWait.acceptOutput"
 	state.copiesDone++
 	if err != nil && !state.outputClosed {
 		state.outputFailed = true
-		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("read checker output: %w", err))
+		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("%s - read checker output: %w", location, err))
 		state.beginShutdown(shutdownFailure, terminateTimeout)
 	}
 	if state.copiesDone == 2 {
@@ -260,6 +290,7 @@ func (state *checkerWait) pollOutput(terminateTimeout time.Duration) {
 }
 
 func (state *checkerWait) beginShutdown(reason shutdownReason, terminateTimeout time.Duration) {
+	const location = "checker.checkerWait.beginShutdown"
 	if state.outcome.reason != shutdownNone {
 		return
 	}
@@ -281,7 +312,7 @@ func (state *checkerWait) beginShutdown(reason shutdownReason, terminateTimeout 
 	signal, err := observeTerminateProcess(state.process.command)
 	state.signals = append(state.signals, signal)
 	if err != nil {
-		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("terminate checker process group: %w", err))
+		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("%s - terminate checker process group: %w", location, err))
 	}
 	state.terminateTimer = time.NewTimer(terminateTimeout)
 	state.terminate = state.terminateTimer.C
@@ -290,6 +321,7 @@ func (state *checkerWait) beginShutdown(reason shutdownReason, terminateTimeout 
 }
 
 func (state *checkerWait) forceKill() {
+	const location = "checker.checkerWait.forceKill"
 	if state.killRequested {
 		return
 	}
@@ -302,7 +334,7 @@ func (state *checkerWait) forceKill() {
 	signal, err := observeKillProcess(state.process.command, state.result.ProcessReaped)
 	state.signals = append(state.signals, signal)
 	if err != nil {
-		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("kill checker process group: %w", err))
+		state.outcome.cleanupErr = errors.Join(state.outcome.cleanupErr, fmt.Errorf("%s - kill checker process group: %w", location, err))
 	}
 	state.startDrainTimer()
 	// Preserve the former total cleanup budget: 250ms drain + 500ms reap.

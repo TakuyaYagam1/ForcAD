@@ -38,6 +38,24 @@ case "${1:-}" in
 esac
 
 if (( run_load )); then
+    case "${LOAD_MONITORING:-0}" in
+        0) ;;
+        1) run_monitoring=1 ;;
+        *) echo 'LOAD_MONITORING must be 0 or 1.' >&2; exit 2 ;;
+    esac
+    case "${LOAD_CLIENT_BUCKETS:-0}" in
+        0|1) ;;
+        *) echo 'LOAD_CLIENT_BUCKETS must be 0 or 1.' >&2; exit 2 ;;
+    esac
+    case "${LOAD_CHECKER_AUDIT:-0}" in
+        0|1) ;;
+        *) echo 'LOAD_CHECKER_AUDIT must be 0 or 1.' >&2; exit 2 ;;
+    esac
+    receiver_replicas="${LOAD_RECEIVER_REPLICAS:-2}"
+    if [[ ! "$receiver_replicas" =~ ^([1-9]|1[0-6])$ ]]; then
+        echo 'LOAD_RECEIVER_REPLICAS must be an integer between 1 and 16.' >&2
+        exit 2
+    fi
     api_replicas="${LOAD_API_REPLICAS:-2}"
     if [[ ! "$api_replicas" =~ ^([1-9]|1[0-6])$ ]]; then
         echo 'LOAD_API_REPLICAS must be an integer between 1 and 16.' >&2
@@ -152,9 +170,12 @@ runtime_env="$test_root/runtime.env"
 compose_env="$test_root/compose.env"
 : > "$compose_env"
 compose=(docker compose --env-file "$compose_env" --project-name "$test_project" --project-directory "$test_root/deployment/docker" -f "$test_root/deployment/docker/compose.yml" -f "$repo_root/deployment/docker/compose.e2e.yml")
-image_tags=("$image_prefix-runtime" "$image_prefix-worker" "$image_prefix-nginx" "$image_prefix-postgres" "$image_prefix-pgbouncer")
+image_tags=("$image_prefix-runtime" "$image_prefix-worker" "$image_prefix-nginx" "$image_prefix-postgres" "$image_prefix-pgbouncer" "$image_prefix-nats")
 if (( run_load )); then
     compose+=(-f "$repo_root/backend/load_test/compose.yml")
+    if [[ "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
+        compose+=(-f "$repo_root/backend/load_test/compose.clients.yml")
+    fi
     image_tags+=("$image_prefix-fixture")
     if [[ "${LOAD_DATABASE_STORAGE:-disk}" == memory ]]; then
         compose+=(-f "$repo_root/backend/load_test/compose.memory.yml")
@@ -174,7 +195,7 @@ cleanup() {
     trap - EXIT INT TERM
     if (( compose_started )); then
         if (( result != 0 )); then
-            "${compose[@]}" logs --tail 40 initializer pgbouncer api receiver ticker worker rabbitmq >&2 || true
+            "${compose[@]}" logs --tail 40 initializer pgbouncer api receiver ticker worker nats >&2 || true
             if (( run_monitoring )); then
                 "${compose[@]}" logs --tail 40 prometheus grafana checker-db-access >&2 || true
             fi
@@ -230,14 +251,51 @@ unset COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_FILE COMPOSE_PROJECT_NAME COMPO
     FORCAD_SERVICE_MEMORY_RESERVATION FORCAD_SERVICE_PIDS \
     FORCAD_RECEIVER_MEMORY FORCAD_RECEIVER_MEMORY_RESERVATION \
     FORCAD_WORKER_MEMORY FORCAD_WORKER_MEMORY_RESERVATION FORCAD_WORKER_PIDS PUBLIC_SCHEME \
+    FORCAD_API_MEMORY FORCAD_API_MEMORY_RESERVATION FORCAD_API_DATABASE_MIN_CONNS \
+    FORCAD_API_GOGC FORCAD_API_GOMEMLIMIT FORCAD_RECEIVER_GOMEMLIMIT FORCAD_WORKER_GOMEMLIMIT \
+    FORCAD_TICKER_MEMORY FORCAD_TICKER_MEMORY_RESERVATION \
+    FORCAD_REDIS_MEMORY FORCAD_REDIS_MEMORY_RESERVATION \
+    FORCAD_NATS_MEMORY FORCAD_NATS_MEMORY_RESERVATION \
+    FORCAD_PGBOUNCER_MEMORY FORCAD_PGBOUNCER_MEMORY_RESERVATION \
+    FORCAD_POSTGRES_MEMORY FORCAD_POSTGRES_MEMORY_RESERVATION \
+    FORCAD_POSTGRES_SHM_SIZE FORCAD_POSTGRES_SHARED_BUFFERS \
+    FORCAD_PROMETHEUS_MEMORY FORCAD_PROMETHEUS_MEMORY_RESERVATION \
+    FORCAD_PROMETHEUS_RETENTION_TIME FORCAD_PROMETHEUS_RETENTION_SIZE \
+    FORCAD_PROMETHEUS_QUERY_CONCURRENCY FORCAD_PROMETHEUS_QUERY_SAMPLES \
+    FORCAD_GRAFANA_MEMORY FORCAD_GRAFANA_MEMORY_RESERVATION \
     FORCAD_API_REPLICAS FORCAD_RECEIVER_REPLICAS FORCAD_WORKER_REPLICAS FORCAD_TICKER_REPLICAS \
     VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT \
-    FORCAD_POSTGRES_IMAGE
+    FORCAD_POSTGRES_IMAGE NATS_URL NATS_USER NATS_PASSWORD NATS_STREAM NATS_SUBJECT \
+    NATS_CONSUMER NATS_MAX_ACK_PENDING
 
 # PgBouncer's client admission budget must describe the same replica counts as
 # the explicit --scale arguments below, including the checker load profile.
+if (( run_load )) && [[ "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
+    install -d -m 0755 "$test_root/deployment/nginx"
+    python3 - "$repo_root" "$test_root" <<'PY'
+from pathlib import Path
+import sys
+
+repo, target = map(Path, sys.argv[1:])
+config = (repo / 'deployment/nginx/http.conf.template').read_text()
+original = 'limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=150r/s;'
+if config.count(original) != 1:
+    raise SystemExit('Expected one production REST limiter; inspect the client bucket test adapter')
+# The isolated, loopback-only generator represents individual clients. Keep
+# the same per-client rate, burst and rejection code as production.
+replacement = '''map $http_x_forcad_load_client $load_client_key {
+    default $binary_remote_addr;
+    "~^client-[0-9]{1,4}$" $http_x_forcad_load_client;
+}
+limit_req_zone $load_client_key zone=api_per_ip:10m rate=150r/s;'''
+config = config.replace(original, replacement).replace('${DNS_RESOLVER}', '127.0.0.11')
+path = target / 'deployment/nginx/http.conf'
+path.write_text(config)
+path.chmod(0o644)
+PY
+fi
 export FORCAD_API_REPLICAS="$api_replicas"
-export FORCAD_RECEIVER_REPLICAS=2
+export FORCAD_RECEIVER_REPLICAS="${receiver_replicas:-2}"
 export FORCAD_WORKER_REPLICAS="${worker_replicas:-2}"
 export FORCAD_TICKER_REPLICAS=1
 
@@ -247,11 +305,18 @@ install -d -m 0700 "$test_root/deployment/docker" "$test_root/config" \
 install -m 0600 "$repo_root/deployment/docker/compose.yml" "$test_root/deployment/docker/compose.yml"
 if (( run_load && windows_host )) && [[ "${LOAD_BROKER_PREFLIGHT:-0}" == 1 ]]; then
     # Docker Desktop's bridge addresses are not reachable from native Windows.
-    # Only this isolated stack gets temporary, loopback-only broker ports.
-    cat > "$test_root/deployment/docker/compose.broker-preflight.yml" <<'YAML'
+    # Keep the published endpoint stable when the reconnect test restarts NATS.
+    nats_preflight_port="$(python3 - <<'PY'
+import socket
+with socket.socket() as listener:
+    listener.bind(('127.0.0.1', 0))
+    print(listener.getsockname()[1])
+PY
+)"
+    cat > "$test_root/deployment/docker/compose.broker-preflight.yml" <<YAML
 services:
-  rabbitmq:
-    ports: !override ["127.0.0.1::5672", "127.0.0.1::15672"]
+  nats:
+    ports: !override ["127.0.0.1:${nats_preflight_port}:4222"]
 YAML
     compose+=(-f "$test_root/deployment/docker/compose.broker-preflight.yml")
 fi
@@ -263,10 +328,11 @@ if (( run_monitoring )); then
     install -d -m 0755 "$test_root/backend/db/migrations"
     install -m 0644 "$repo_root/backend/db/migrations/00001_initial_schema.sql" \
         "$test_root/backend/db/migrations/00001_initial_schema.sql"
-    export FORCAD_GRAFANA_PORT= FORCAD_PROMETHEUS_PORT=
+    export FORCAD_GRAFANA_PORT='' FORCAD_PROMETHEUS_PORT=''
     export FORCAD_POSTGRES_IMAGE="$image_prefix-postgres"
-    export GRAFANA_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
-    export GRAFANA_CHECKER_DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+    GRAFANA_ADMIN_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+    GRAFANA_CHECKER_DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
+    export GRAFANA_ADMIN_PASSWORD GRAFANA_CHECKER_DB_PASSWORD
 fi
 install -m 0600 "$repo_root/backend/integration_test/fixtures/config.yml" "$test_root/config/config.yml"
 if (( run_load )); then
@@ -312,7 +378,7 @@ export FORCAD_E2E_GID="$e2e_gid"
 
 compose_started=1
 if ! "${compose[@]}" up -d --build --wait --wait-timeout 180 \
-    --scale "api=$api_replicas" --scale receiver=2 --scale "worker=${worker_replicas:-2}"; then
+    --scale "api=$api_replicas" --scale "receiver=${receiver_replicas:-2}" --scale "worker=${worker_replicas:-2}"; then
     "${compose[@]}" ps -a >&2
     for container in $("${compose[@]}" ps -aq pgbouncer initializer); do
         docker inspect "$container" --format '{{.Name}} {{.State.Error}} {{if .State.Health}}{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}{{end}}' >&2
@@ -336,18 +402,19 @@ if (( run_e2e )); then
 fi
 
 http_address="$("${compose[@]}" port nginx 8080)"
+if (( run_load && run_monitoring )); then
+    echo "Prometheus: http://$("${compose[@]}" port prometheus 9090)"
+    echo "Grafana: http://$("${compose[@]}" port grafana 3000)"
+fi
 if (( run_load )); then
     if [[ "${LOAD_BROKER_PREFLIGHT:-0}" == 1 ]]; then
-        rabbit_container="$("${compose[@]}" ps --status running -q rabbitmq)"
-        rabbit_amqp_address=
-        rabbit_management_address=
+        nats_container="$("${compose[@]}" ps --status running -q nats)"
+        nats_client_address=
         if (( windows_host )); then
-            rabbit_amqp_address="$("${compose[@]}" port rabbitmq 5672)"
-            rabbit_management_address="$("${compose[@]}" port rabbitmq 15672)"
+            nats_client_address="$("${compose[@]}" port nats 4222)"
         fi
-        python3 - "$repo_root/backend" "$test_root" "$test_project" "$rabbit_container" \
-            "$rabbit_amqp_address" "$rabbit_management_address" <<'PY'
-import base64
+        python3 - "$repo_root/backend" "$test_root" "$test_project" "$nats_container" \
+            "$nats_client_address" <<'PY'
 import ipaddress
 import json
 import os
@@ -355,120 +422,112 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from urllib.error import HTTPError
-from urllib.parse import quote
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.parse import quote, unquote, urlsplit
 
-backend, root, project, container, published_amqp, published_management = sys.argv[1:]
+backend, root, project, container, published_client = sys.argv[1:]
 secrets = []
 
 
 def redact(value):
     for secret in sorted(secrets, key=len, reverse=True):
-        value = value.replace(secret, "[redacted]")
+        if secret:
+            value = value.replace(secret, "[redacted]")
     return value
 
 
-def broker_addresses(item):
-    if published_amqp or published_management:
+def broker_address(item):
+    if published_client:
         ports = item.get("NetworkSettings", {}).get("Ports", {})
-        for endpoint, port in ((published_amqp, "5672/tcp"), (published_management, "15672/tcp")):
-            match = re.fullmatch(r"127\.0\.0\.1:([1-9][0-9]{0,4})", endpoint)
-            if not match or int(match[1]) > 65535:
-                raise RuntimeError("expected one loopback-only published RabbitMQ endpoint")
-            if ports.get(port) != [{"HostIp": "127.0.0.1", "HostPort": match[1]}]:
-                raise RuntimeError("published RabbitMQ endpoint did not match the isolated container")
-        return published_amqp, published_management
+        match = re.fullmatch(r"127\.0\.0\.1:([1-9][0-9]{0,4})", published_client)
+        if not match or int(match[1]) > 65535:
+            raise RuntimeError("expected one loopback-only published NATS endpoint")
+        if ports.get("4222/tcp") != [{"HostIp": "127.0.0.1", "HostPort": match[1]}]:
+            raise RuntimeError("published NATS endpoint did not match the isolated container")
+        return published_client
     addresses = {str(ipaddress.IPv4Address(network["IPAddress"]))
                  for network in item.get("NetworkSettings", {}).get("Networks", {}).values()
                  if network.get("IPAddress")}
     if len(addresses) != 1:
-        raise RuntimeError("expected one directly reachable RabbitMQ container IPv4 address")
+        raise RuntimeError("expected one directly reachable NATS container IPv4 address")
     host = addresses.pop()
-    return f"{host}:5672", f"{host}:15672"
+    return f"{host}:4222"
 
 
 def preflight():
     if not re.fullmatch(r"forcad-deployment-[a-z0-9-]+", project) or not re.fullmatch(r"[a-f0-9]{64}", container):
-        raise RuntimeError("expected one RabbitMQ container from this isolated Compose project")
+        raise RuntimeError("expected one NATS container from this isolated Compose project")
     inspected = subprocess.run(["docker", "inspect", "--type", "container", container],
                                check=True, capture_output=True, text=True, timeout=15)
     items = json.loads(inspected.stdout)
     if len(items) != 1:
-        raise RuntimeError("ambiguous RabbitMQ container inventory")
+        raise RuntimeError("ambiguous NATS container inventory")
     item = items[0]
     labels = item.get("Config", {}).get("Labels", {})
     if (item.get("Id") != container or labels.get("com.docker.compose.project") != project
-            or labels.get("com.docker.compose.service") != "rabbitmq" or not item.get("State", {}).get("Running")):
-        raise RuntimeError("RabbitMQ container identity or running state did not match")
-    amqp_endpoint, management_endpoint = broker_addresses(item)
+            or labels.get("com.docker.compose.service") != "nats" or not item.get("State", {}).get("Running")):
+        raise RuntimeError("NATS container identity or running state did not match")
+    endpoint = broker_address(item)
     environment = dict(line.split("=", 1) for line in
-                       (Path(root) / "config/runtime/rabbitmq_environment.env").read_text().splitlines()
+                       (Path(root) / "config/runtime/nats_environment.env").read_text().splitlines()
                        if line and not line.startswith("#") and "=" in line)
     actual_environment = dict(entry.split("=", 1) for entry in item["Config"].get("Env", []) if "=" in entry)
-    for key in ("RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS", "RABBITMQ_DEFAULT_VHOST"):
+    for key in ("NATS_USER", "NATS_PASSWORD"):
         if not environment.get(key) or actual_environment.get(key) != environment[key]:
-            raise RuntimeError("RabbitMQ runtime credentials did not match the isolated container")
-    if environment["RABBITMQ_DEFAULT_VHOST"] == "forcad_test":
-        raise RuntimeError("broker preflight vhost must differ from the application vhost")
-    username, password = environment["RABBITMQ_DEFAULT_USER"], environment["RABBITMQ_DEFAULT_PASS"]
-    address = f"amqp://{quote(username, safe='')}:{quote(password, safe='')}@{amqp_endpoint}/forcad_test"
-    secrets.extend([password, quote(password, safe=""), address])
-    authorization = "Basic " + base64.b64encode((username + ":" + password).encode()).decode()
-    secrets.append(authorization)
-    direct_http = build_opener(ProxyHandler({}))
+            raise RuntimeError("NATS runtime credentials did not match the isolated container")
+    username, password = environment["NATS_USER"], environment["NATS_PASSWORD"]
+    runtime_url = urlsplit(environment.get("NATS_URL", ""))
+    if (runtime_url.scheme != "nats" or runtime_url.hostname != "nats" or runtime_url.port != 4222
+            or unquote(runtime_url.username or "") != username or unquote(runtime_url.password or "") != password
+            or runtime_url.path or runtime_url.query or runtime_url.fragment):
+        raise RuntimeError("NATS runtime URL did not match the isolated service and credentials")
+    address = f"nats://{quote(username, safe='')}:{quote(password, safe='')}@{endpoint}"
+    secrets.extend([password, quote(password, safe=""), environment.get("NATS_URL", ""), address])
+    prefix = "forcad_e2e_" + project.replace("-", "_")
+    child_environment = os.environ.copy()
+    child_environment.update(FORCAD_TEST_NATS_URL=address, FORCAD_TEST_NATS_PREFIX=prefix,
+                             FORCAD_TEST_NATS_CONTAINER=container, FORCAD_TEST_NATS_PROJECT=project)
+    required = {"TestDrainFinishesCurrentDeliveryAndLeavesQueuedWork",
+                "TestConsumerReconnectsAndResumesDelivery"}
+    def save_log(raw):
+        output = redact(raw)
+        if os.environ.get("LOAD_REPORT_DIR"):
+            log_path = Path(os.environ["LOAD_REPORT_DIR"]) / "broker-preflight.jsonl"
+            log_path.write_text(output, encoding="utf-8")
+            log_path.chmod(0o600)
+        return output
 
-    def management(method, path, payload=None):
-        body = json.dumps(payload).encode() if payload is not None else None
-        request = Request(f"http://{management_endpoint}/api/" + path, data=body, method=method,
-                          headers={"Authorization": authorization, "Content-Type": "application/json"})
-        with direct_http.open(request, timeout=15) as response:
-            return response.read()
-
-    existed = True
     try:
-        management("GET", "vhosts/forcad_test")
-    except HTTPError as error:
-        if error.code != 404:
-            raise
-        existed = False
-    created = False
-    try:
-        management("PUT", "vhosts/forcad_test", {})
-        created = not existed
-        management("PUT", "permissions/forcad_test/" + quote(username, safe=""),
-                   {"configure": ".*", "write": ".*", "read": ".*"})
-        child_environment = os.environ.copy()
-        child_environment["FORCAD_TEST_AMQP_URL"] = address
-        required = {"TestDrainFinishesCurrentDeliveryAndLeavesQueuedWork",
-                    "TestConsumerCancellationReconnectsAndResumesDelivery"}
         result = subprocess.run(["go", "test", "-count=1", "-timeout=2m", "-json", "-run",
-                                 "^(" + "|".join(sorted(required)) + ")$", "./integration_test/rabbitmq"],
+                                 "^(" + "|".join(sorted(required)) + ")$", "./integration_test/nats"],
                                 cwd=backend, env=child_environment, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, text=True, timeout=150)
-        passed = set()
-        for line in result.stdout.splitlines():
-            try:
-                event = json.loads(line)
-            except ValueError:
-                print(redact(line), flush=True)
-                continue
-            if event.get("Output"):
-                print(redact(event["Output"]), end="", flush=True)
-            if event.get("Action") == "pass" and event.get("Test") in required:
-                passed.add(event["Test"])
-        if result.returncode != 0 or passed != required:
-            raise RuntimeError("RabbitMQ drain/reconnect preflight did not pass both required tests")
-    finally:
-        if created:
-            management("DELETE", "vhosts/forcad_test")
-    print("RabbitMQ preflight passed: drain and server-cancellation reconnect on the load stack.", flush=True)
+    except subprocess.TimeoutExpired as error:
+        raw = error.stdout or ""
+        if isinstance(raw, bytes):
+            raw = raw.decode(errors="replace")
+        print(save_log(raw), end="", flush=True)
+        raise RuntimeError("NATS drain/reconnect preflight timed out") from None
+    output = save_log(result.stdout)
+    passed = set()
+    for line in output.splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            print(redact(line), flush=True)
+            continue
+        if event.get("Output"):
+            print(redact(event["Output"]), end="", flush=True)
+        if event.get("Action") == "pass" and event.get("Test") in required:
+            passed.add(event["Test"])
+    if result.returncode != 0 or passed != required:
+        raise RuntimeError("NATS drain/reconnect preflight did not pass both required tests")
+    print("NATS JetStream preflight passed: drain and broker-restart reconnect on the load stack.", flush=True)
 
 
 try:
     preflight()
 except Exception as error:
-    raise SystemExit("RabbitMQ preflight failed: " + redact(str(error))) from None
+    raise SystemExit("NATS preflight failed: " + redact(str(error))) from None
 PY
     fi
     FORCAD_LOAD_ROOT="$test_root" FORCAD_LOAD_PROJECT="$test_project" \

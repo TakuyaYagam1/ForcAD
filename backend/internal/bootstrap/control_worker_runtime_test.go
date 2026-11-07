@@ -42,7 +42,7 @@ func TestWorkerRefusesLegacyRuntimeCredentialsWithoutRewriting(t *testing.T) {
 	if err := os.WriteFile(path, legacy, 0600); err != nil {
 		t.Fatal(err)
 	}
-	err = runWorkerCommand(t.Context(), root, []string{"--redis", "redis.example", "--database", "db.example", "--rabbitmq", "rabbit.example"}, io.Discard, nil)
+	err = runWorkerCommand(t.Context(), root, []string{"--redis", "redis.example", "--database", "db.example", "--nats", "nats.example"}, io.Discard, nil)
 	if err == nil || !strings.Contains(err.Error(), "main host") {
 		t.Fatalf("legacy worker error = %v", err)
 	}

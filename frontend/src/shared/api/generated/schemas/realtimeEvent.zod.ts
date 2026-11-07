@@ -10,121 +10,125 @@ import * as zod from 'zod';
 export const RealtimeEvent = zod.union([zod.object({
   "type": zod.enum(['init_scoreboard']),
   "payload": zod.object({
-  "data": zod.object({
-  "state": zod.object({
-  "round_start": zod.int(),
-  "round": zod.int(),
-  "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
-}),
-  "teams": zod.array(zod.object({
-  "id": zod.uuid(),
-  "name": zod.string(),
-  "ip": zod.string(),
-  "highlighted": zod.boolean(),
-  "active": zod.boolean(),
-  "logo_path": zod.string()
-})),
-  "tasks": zod.array(zod.object({
-  "id": zod.uuid(),
-  "name": zod.string()
-})),
-  "config": zod.object({
-  "id": zod.int(),
-  "flag_lifetime": zod.int(),
-  "game_hardness": zod.number(),
-  "inflation": zod.boolean(),
-  "volga_attacks_mode": zod.boolean(),
-  "round_time": zod.int(),
-  "rounds": zod.int().nullable(),
-  "mode": zod.string(),
-  "timezone": zod.string(),
-  "start_time": zod.string(),
-  "real_round": zod.int().nullable(),
-  "game_running": zod.boolean().nullable()
-}),
-  "runtime": zod.object({
-  "phase": zod.enum(['waiting', 'running', 'paused', 'finished']),
-  "practice": zod.boolean(),
-  "reset_pending": zod.boolean(),
-  "generation": zod.int(),
-  "scheduled_start": zod.string(),
-  "can_start": zod.boolean(),
-  "can_start_practice": zod.boolean(),
-  "round": zod.int(),
-  "round_start": zod.number().nullable(),
-  "paused_at": zod.number().nullable(),
-  "paused_seconds": zod.number(),
-  "round_time": zod.int(),
-  "round_waiting": zod.boolean(),
-  "results_pending": zod.boolean()
-})
-})
-}),
+    "data": zod.object({
+      "state": zod.object({
+        "round_start": zod.int(),
+        "round": zod.int(),
+        "team_tasks": zod.array(zod.object({
+          "team_id": zod.uuid(),
+          "task_id": zod.uuid(),
+          "status": zod.int(),
+          "stolen": zod.int(),
+          "lost": zod.int(),
+          "score": zod.number(),
+          "checks": zod.int(),
+          "checks_passed": zod.int(),
+          "message": zod.string().nullable()
+        }))
+      }),
+      "teams": zod.array(zod.object({
+        "id": zod.uuid(),
+        "name": zod.string(),
+        "ip": zod.string(),
+        "highlighted": zod.boolean(),
+        "active": zod.boolean(),
+        "logo_path": zod.string()
+      })),
+      "tasks": zod.array(zod.object({
+        "id": zod.uuid(),
+        "name": zod.string()
+      })),
+      "config": zod.object({
+        "id": zod.int(),
+        "flag_lifetime": zod.int(),
+        "game_hardness": zod.number(),
+        "inflation": zod.boolean(),
+        "volga_attacks_mode": zod.boolean(),
+        "round_time": zod.int(),
+        "rounds": zod.int().nullable(),
+        "mode": zod.string(),
+        "timezone": zod.string(),
+        "start_time": zod.string(),
+        "real_round": zod.int().nullable(),
+        "game_running": zod.boolean().nullable()
+      }),
+      "runtime": zod.object({
+        "phase": zod.enum(['waiting', 'running', 'paused', 'finished']),
+        "practice": zod.boolean(),
+        "reset_pending": zod.boolean(),
+        "generation": zod.int(),
+        "scheduled_start": zod.string(),
+        "can_start": zod.boolean(),
+        "can_start_practice": zod.boolean(),
+        "round": zod.int(),
+        "round_start": zod.number().nullable(),
+        "paused_at": zod.number().nullable(),
+        "paused_seconds": zod.number(),
+        "round_time": zod.int(),
+        "round_waiting": zod.boolean(),
+        "results_pending": zod.boolean()
+      })
+    })
+  }),
   "timestamp": zod.string()
 }),zod.object({
   "type": zod.enum(['update_scoreboard']),
   "payload": zod.object({
-  "data": zod.object({
-  "round_start": zod.int(),
-  "round": zod.int(),
-  "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
-})
-}),
+    "data": zod.object({
+      "round_start": zod.int(),
+      "round": zod.int(),
+      "team_tasks": zod.array(zod.object({
+        "team_id": zod.uuid(),
+        "task_id": zod.uuid(),
+        "status": zod.int(),
+        "stolen": zod.int(),
+        "lost": zod.int(),
+        "score": zod.number(),
+        "checks": zod.int(),
+        "checks_passed": zod.int(),
+        "message": zod.string().nullable()
+      }))
+    })
+  }),
   "timestamp": zod.string()
 }),zod.object({
   "type": zod.enum(['flag_stolen']),
   "payload": zod.object({
-  "data": zod.object({
-  "attacker_id": zod.uuid(),
-  "victim_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "attacker_delta": zod.number(),
-  "generation": zod.int(),
-  "event_id": zod.string(),
-  "created_at": zod.iso.datetime({"offset":true})
-})
-}),
+    "data": zod.object({
+      "attacker_id": zod.uuid(),
+      "victim_id": zod.uuid(),
+      "task_id": zod.uuid(),
+      "attacker_delta": zod.number(),
+      "generation": zod.int(),
+      "event_id": zod.string(),
+      "created_at": zod.iso.datetime({
+        "offset":true
+      })
+    })
+  }),
   "timestamp": zod.string()
 }),zod.object({
   "type": zod.enum(['admin_message']),
   "payload": zod.object({
-  "data": zod.object({
-  "id": zod.string(),
-  "kind": zod.enum(['flag_stolen', 'admin_message']),
-  "created_at": zod.iso.datetime({"offset":true}),
-  "attacker_id": zod.uuid().optional(),
-  "attacker_name": zod.string().optional(),
-  "victim_id": zod.uuid().optional(),
-  "victim_name": zod.string().optional(),
-  "task_id": zod.uuid().optional(),
-  "task_name": zod.string().optional(),
-  "round": zod.int().optional(),
-  "attacker_delta": zod.number().optional(),
-  "title": zod.string().optional(),
-  "markdown": zod.string().optional(),
-  "author": zod.string().optional()
-})
-}),
+    "data": zod.object({
+      "id": zod.string(),
+      "kind": zod.enum(['flag_stolen', 'admin_message']),
+      "created_at": zod.iso.datetime({
+        "offset":true
+      }),
+      "attacker_id": zod.uuid().optional(),
+      "attacker_name": zod.string().optional(),
+      "victim_id": zod.uuid().optional(),
+      "victim_name": zod.string().optional(),
+      "task_id": zod.uuid().optional(),
+      "task_name": zod.string().optional(),
+      "round": zod.int().optional(),
+      "attacker_delta": zod.number().optional(),
+      "title": zod.string().optional(),
+      "markdown": zod.string().optional(),
+      "author": zod.string().optional()
+    })
+  }),
   "timestamp": zod.string()
 })]).describe('Public event sent as a JSON text frame on /api/events/ws. No administration or checker-private data is included.')
 

@@ -25,12 +25,46 @@ func TestScheduleDue(t *testing.T) {
 		interval time.Duration
 		want     bool
 	}{
-		{name: "first run", at: at, interval: time.Minute, want: true},
-		{name: "interval boundary", lastRun: &last, at: at, interval: time.Minute, want: true},
-		{name: "before interval boundary", lastRun: &last, at: at.Add(-time.Nanosecond), interval: time.Minute, want: false},
-		{name: "zero interval", lastRun: &last, at: at, interval: 0, want: true},
-		{name: "negative interval", lastRun: &last, at: at, interval: -time.Second, want: false},
-		{name: "zero time", at: time.Time{}, interval: time.Second, want: false},
+		{
+			name:     "first run",
+			at:       at,
+			interval: time.Minute,
+			want:     true,
+		},
+		{
+			name:     "interval boundary",
+			lastRun:  &last,
+			at:       at,
+			interval: time.Minute,
+			want:     true,
+		},
+		{
+			name:     "before interval boundary",
+			lastRun:  &last,
+			at:       at.Add(-time.Nanosecond),
+			interval: time.Minute,
+			want:     false,
+		},
+		{
+			name:     "zero interval",
+			lastRun:  &last,
+			at:       at,
+			interval: 0,
+			want:     true,
+		},
+		{
+			name:     "negative interval",
+			lastRun:  &last,
+			at:       at,
+			interval: -time.Second,
+			want:     false,
+		},
+		{
+			name:     "zero time",
+			at:       time.Time{},
+			interval: time.Second,
+			want:     false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -44,7 +78,11 @@ func TestScheduleDue(t *testing.T) {
 func TestSchedulerTimeUsesPauseClock(t *testing.T) {
 	at := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
 	pausedAt := at.Add(-10 * time.Second)
-	life := domain.Lifecycle{Session: domain.Session{SchedulePausedSeconds: 30}}
+	life := domain.Lifecycle{
+		Session: domain.Session{
+			SchedulePausedSeconds: 30,
+		},
+	}
 	if got, want := schedulerTime(life, at), at.Add(-30*time.Second); !got.Equal(want) {
 		t.Fatalf("schedulerTime() = %s, want %s", got, want)
 	}
@@ -63,9 +101,40 @@ func TestEffectiveStartPrefersSessionStart(t *testing.T) {
 		life domain.Lifecycle
 		want time.Time
 	}{
-		{name: "configured start", life: domain.Lifecycle{Config: domain.GameConfig{StartTime: configStart}}, want: configStart},
-		{name: "practice start", life: domain.Lifecycle{Config: domain.GameConfig{StartTime: configStart}, Session: domain.Session{PracticeStart: &practiceStart}}, want: practiceStart},
-		{name: "final start wins", life: domain.Lifecycle{Config: domain.GameConfig{StartTime: configStart}, Session: domain.Session{PracticeStart: &practiceStart, FinalStart: &finalStart}}, want: finalStart},
+		{
+			name: "configured start",
+			life: domain.Lifecycle{
+				Config: domain.GameConfig{
+					StartTime: configStart,
+				},
+			},
+			want: configStart,
+		},
+		{
+			name: "practice start",
+			life: domain.Lifecycle{
+				Config: domain.GameConfig{
+					StartTime: configStart,
+				},
+				Session: domain.Session{
+					PracticeStart: &practiceStart,
+				},
+			},
+			want: practiceStart,
+		},
+		{
+			name: "final start wins",
+			life: domain.Lifecycle{
+				Config: domain.GameConfig{
+					StartTime: configStart,
+				},
+				Session: domain.Session{
+					PracticeStart: &practiceStart,
+					FinalStart:    &finalStart,
+				},
+			},
+			want: finalStart,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -88,10 +157,18 @@ func (r taskListingRepository) Tasks(context.Context, bool) ([]domain.Task, erro
 
 func TestBlitzTaskScheduleIDPreservesFullUUID(t *testing.T) {
 	taskID := uuid.MustParse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
-	life := domain.Lifecycle{Config: domain.GameConfig{Mode: "blitz", RoundTime: 60}}
+	life := domain.Lifecycle{
+		Config: domain.GameConfig{
+			Mode:      "blitz",
+			RoundTime: 60,
+		},
+	}
 	at := time.Date(2026, 10, 11, 12, 0, 0, 0, time.UTC)
 	requests, err := scheduleRequests(context.Background(), taskListingRepository{
-		tasks: []domain.Task{{ID: taskID, GetPeriod: 15}},
+		tasks: []domain.Task{{
+			ID:        taskID,
+			GetPeriod: 15,
+		}},
 	}, life, at, at)
 	if err != nil {
 		t.Fatal(err)
@@ -110,9 +187,16 @@ func TestBlitzTaskScheduleIDPreservesFullUUID(t *testing.T) {
 }
 
 func TestBlitzScheduleRejectsNilTaskID(t *testing.T) {
-	life := domain.Lifecycle{Config: domain.GameConfig{Mode: "blitz", RoundTime: 60}}
+	life := domain.Lifecycle{
+		Config: domain.GameConfig{
+			Mode:      "blitz",
+			RoundTime: 60,
+		},
+	}
 	_, err := scheduleRequests(context.Background(), taskListingRepository{
-		tasks: []domain.Task{{GetPeriod: 15}},
+		tasks: []domain.Task{{
+			GetPeriod: 15,
+		}},
 	}, life, time.Now(), time.Now())
 	if err == nil || !strings.HasPrefix(err.Error(), "scheduler.scheduleRequests - ") {
 		t.Fatalf("scheduleRequests() error = %v, want located nil task ID error", err)
@@ -120,7 +204,9 @@ func TestBlitzScheduleRejectsNilTaskID(t *testing.T) {
 }
 
 func TestNewCapsBatchAndSetsDefaults(t *testing.T) {
-	scheduler := New(nil, nil, nil, nil, Options{BatchSize: 1000})
+	scheduler := New(nil, nil, nil, nil, Options{
+		BatchSize: 1000,
+	})
 	if scheduler.options.BatchSize != maxPublishBatch {
 		t.Fatalf("batch size = %d, want %d", scheduler.options.BatchSize, maxPublishBatch)
 	}
@@ -132,7 +218,9 @@ func TestNewCapsBatchAndSetsDefaults(t *testing.T) {
 
 func TestNewUsesConfiguredRecoveryGrace(t *testing.T) {
 	grace := 47 * time.Second
-	scheduler := New(nil, nil, nil, nil, Options{RecoveryGrace: grace})
+	scheduler := New(nil, nil, nil, nil, Options{
+		RecoveryGrace: grace,
+	})
 	if scheduler.options.RecoveryGrace != grace {
 		t.Fatalf("recovery grace = %s, want configured %s", scheduler.options.RecoveryGrace, grace)
 	}
@@ -195,11 +283,20 @@ func TestInitialJobDeadlineRejectsDuplicateNamesAndInvalidUTF8(t *testing.T) {
 		name    string
 		payload []byte
 	}{
-		{name: "duplicate name", payload: []byte(`{"task":{"checker_timeout":20,"checker_timeout":30}}`)},
-		{name: "invalid UTF-8", payload: invalidUTF8},
+		{
+			name:    "duplicate name",
+			payload: []byte(`{"task":{"checker_timeout":20,"checker_timeout":30}}`),
+		},
+		{
+			name:    "invalid UTF-8",
+			payload: invalidUTF8,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			job := domain.CheckerJob{ID: testJobID, Payload: test.payload}
+			job := domain.CheckerJob{
+				ID:      testJobID,
+				Payload: test.payload,
+			}
 			if _, err := initialJobDeadline(job, time.Now(), 30*time.Second); err == nil {
 				t.Fatal("initialJobDeadline() accepted malformed job payload")
 			}
@@ -214,16 +311,30 @@ type malformedPayloadRepository struct {
 	markedAsSent int
 }
 
-func (r *malformedPayloadRepository) ClaimPending(context.Context, string, time.Time, time.Time, int32) ([]domain.CheckerJob, error) {
+func (r *malformedPayloadRepository) ClaimPending(
+	context.Context,
+	string,
+	time.Time,
+	time.Time,
+	int32,
+) ([]domain.CheckerJob, error) {
 	return []domain.CheckerJob{r.job}, nil
 }
 
-func (r *malformedPayloadRepository) MarkPublished(context.Context, uuid.UUID, string, time.Time, time.Time) (bool, error) {
+func (r *malformedPayloadRepository) MarkPublished(
+	context.Context,
+	uuid.UUID,
+	string,
+	time.Time,
+	time.Time,
+) (bool, error) {
 	r.markedAsSent++
 	return true, nil
 }
 
-type confirmingPublisher struct{ confirmed []uuid.UUID }
+type confirmingPublisher struct {
+	confirmed []uuid.UUID
+}
 
 func (p *confirmingPublisher) Publish(_ context.Context, ids []uuid.UUID) ([]uuid.UUID, error) {
 	p.confirmed = append([]uuid.UUID(nil), ids...)
@@ -232,13 +343,19 @@ func (p *confirmingPublisher) Publish(_ context.Context, ids []uuid.UUID) ([]uui
 
 func TestMalformedPublishedPayloadGetsNoDeadlineCheckpoint(t *testing.T) {
 	repository := &malformedPayloadRepository{
-		job: domain.CheckerJob{ID: testJobID, Payload: []byte(`{"task":{"checker_timeout":20,"checker_timeout":30}}`)},
+		job: domain.CheckerJob{
+			ID:      testJobID,
+			Payload: []byte(`{"task":{"checker_timeout":20,"checker_timeout":30}}`),
+		},
 	}
 	publisher := &confirmingPublisher{}
 	scheduler := &Scheduler{
 		repository: repository,
 		publisher:  publisher,
-		options:    Options{BatchSize: 1, RecoveryGrace: 30 * time.Second},
+		options: Options{
+			BatchSize:     1,
+			RecoveryGrace: 30 * time.Second,
+		},
 	}
 	if err := scheduler.publishBatch(context.Background(), time.Now()); err == nil {
 		t.Fatal("publishBatch() accepted a payload without an unambiguous deadline")
@@ -251,7 +368,9 @@ func TestMalformedPublishedPayloadGetsNoDeadlineCheckpoint(t *testing.T) {
 	}
 }
 
-type checkpointRepository struct{ Repository }
+type checkpointRepository struct {
+	Repository
+}
 
 func (checkpointRepository) LastRun(ctx context.Context, _ string) (*time.Time, error) {
 	return nil, ctx.Err()
@@ -260,8 +379,12 @@ func (checkpointRepository) LastRun(ctx context.Context, _ string) (*time.Time, 
 func TestDuePreservesCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	s := &Scheduler{repository: checkpointRepository{}}
-	_, err := s.due(ctx, domain.ScheduleRequest{ScheduleID: "classic_rounds"}, time.Now())
+	s := &Scheduler{
+		repository: checkpointRepository{},
+	}
+	_, err := s.due(ctx, domain.ScheduleRequest{
+		ScheduleID: "classic_rounds",
+	}, time.Now())
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("due() error = %v, want cancellation", err)
 	}

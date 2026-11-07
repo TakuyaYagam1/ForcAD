@@ -33,7 +33,9 @@ export function getSameOriginProxyOrigin(
   requestScheme: RequestScheme,
   target: string,
 ): string | undefined {
-  if (!requestOrigin || !requestHost) return undefined;
+  if (!requestOrigin || !requestHost) {
+    return undefined;
+  }
 
   const incoming = parseOrigin(requestOrigin);
   const host = parseOrigin(`${requestScheme}://${requestHost}`);

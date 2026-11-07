@@ -14,17 +14,32 @@ import (
 func TestDiagnosticMetadataSurvivesBlockedProcRead(t *testing.T) {
 	events := make(chan ProcessDiagnostic, 2)
 	release := make(chan struct{})
-	unblock := sync.OnceFunc(func() { close(release) })
+	unblock := sync.OnceFunc(func() {
+		close(release)
+	})
 	t.Cleanup(unblock)
 	done := make(chan struct{})
 	requested := time.Now().UTC()
 	go func() {
 		defer close(done)
-		collectAndReportDiagnostic(ProcessDiagnostic{PID: 123, Phase: "shutdown", RequestedAt: requested, TimedOut: true,
-			Signals: []ProcessSignal{{Signal: "SIGTERM", Outcome: "success"}}}, true,
-			func(event ProcessDiagnostic) { events <- event }, func(pid int) *ProcessSnapshot {
+		collectAndReportDiagnostic(ProcessDiagnostic{
+			PID:         123,
+			Phase:       "shutdown",
+			RequestedAt: requested,
+			TimedOut:    true,
+			Signals: []ProcessSignal{{
+				Signal:  "SIGTERM",
+				Outcome: "success",
+			}},
+		}, true,
+			func(event ProcessDiagnostic) {
+				events <- event
+			}, func(pid int) *ProcessSnapshot {
 				<-release
-				return &ProcessSnapshot{PID: pid, State: "D"}
+				return &ProcessSnapshot{
+					PID:   pid,
+					State: "D",
+				}
 			})
 	}()
 	initial := receiveDiagnostic(t, events)
@@ -43,7 +58,9 @@ func TestDiagnosticMetadataSurvivesBlockedProcRead(t *testing.T) {
 func TestDiagnosticObserverCannotBlockShutdownOrChangeFirstCause(t *testing.T) {
 	events := make(chan ProcessDiagnostic, 4)
 	release := make(chan struct{})
-	unblock := sync.OnceFunc(func() { close(release) })
+	unblock := sync.OnceFunc(func() {
+		close(release)
+	})
 	t.Cleanup(unblock)
 	ctx, cancel := context.WithCancel(WithDiagnosticHandler(context.Background(), func(event ProcessDiagnostic) {
 		events <- event
@@ -52,10 +69,31 @@ func TestDiagnosticObserverCannotBlockShutdownOrChangeFirstCause(t *testing.T) {
 		}
 	}))
 	defer cancel()
-	result := Result{OutputLimited: true, ExitCode: -1}
-	state := checkerWait{ctx: ctx, result: &result, contextDone: ctx.Done(), outcome: checkerWaitResult{reason: shutdownOutputLimit},
-		process: startedChecker{command: &exec.Cmd{Process: &os.Process{Pid: os.Getpid()}, Args: []string{"FLAG_SECRET_ARG"}, Env: []string{"FLAG_SECRET_ENV"}}},
-		signals: []ProcessSignal{{Signal: "SIGTERM", Outcome: "success"}}}
+	result := Result{
+		OutputLimited: true,
+		ExitCode:      -1,
+	}
+	state := checkerWait{
+		ctx:         ctx,
+		result:      &result,
+		contextDone: ctx.Done(),
+		outcome: checkerWaitResult{
+			reason: shutdownOutputLimit,
+		},
+		process: startedChecker{
+			command: &exec.Cmd{
+				Process: &os.Process{
+					Pid: os.Getpid(),
+				},
+				Args: []string{"FLAG_SECRET_ARG"},
+				Env:  []string{"FLAG_SECRET_ENV"},
+			},
+		},
+		signals: []ProcessSignal{{
+			Signal:  "SIGTERM",
+			Outcome: "success",
+		}},
+	}
 	if !state.reportDiagnostic("shutdown", false) || !state.reportDiagnostic("kill", false) {
 		t.Fatal("initial diagnostic slots unavailable")
 	}

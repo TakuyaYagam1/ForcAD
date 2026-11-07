@@ -21,16 +21,43 @@ func TestExampleServiceFailure(t *testing.T) {
 		reply exampleReply
 		want  processchecker.Status
 	}{
-		{"invalid JSON", exampleReply{status: 201, body: "not JSON"}, processchecker.StatusMumble},
-		{"wrong JSON shape", exampleReply{status: 201, body: "[]"}, processchecker.StatusMumble},
-		{"wrong note ID", exampleReply{status: 201, body: `{"id":"wrong"}`}, processchecker.StatusMumble},
-		{"HTML", exampleReply{status: 201, body: "<html></html>", contentType: "text/html"}, processchecker.StatusMumble},
-		{"large response", exampleReply{status: 201, body: strings.Repeat("x", 65537)}, processchecker.StatusMumble},
-		{"redirect", exampleReply{status: 302}, processchecker.StatusMumble},
-		{"bad request", exampleReply{status: 400}, processchecker.StatusMumble},
-		{"overload", exampleReply{status: 429}, processchecker.StatusDown},
-		{"server error", exampleReply{status: 503}, processchecker.StatusDown},
-		{"timeout", exampleReply{status: 201, delay: 2500 * time.Millisecond}, processchecker.StatusDown},
+		{"invalid JSON", exampleReply{
+			status: 201,
+			body:   "not JSON",
+		}, processchecker.StatusMumble},
+		{"wrong JSON shape", exampleReply{
+			status: 201,
+			body:   "[]",
+		}, processchecker.StatusMumble},
+		{"wrong note ID", exampleReply{
+			status: 201,
+			body:   `{"id":"wrong"}`,
+		}, processchecker.StatusMumble},
+		{"HTML", exampleReply{
+			status:      201,
+			body:        "<html></html>",
+			contentType: "text/html",
+		}, processchecker.StatusMumble},
+		{"large response", exampleReply{
+			status: 201,
+			body:   strings.Repeat("x", 65537),
+		}, processchecker.StatusMumble},
+		{"redirect", exampleReply{
+			status: 302,
+		}, processchecker.StatusMumble},
+		{"bad request", exampleReply{
+			status: 400,
+		}, processchecker.StatusMumble},
+		{"overload", exampleReply{
+			status: 429,
+		}, processchecker.StatusDown},
+		{"server error", exampleReply{
+			status: 503,
+		}, processchecker.StatusDown},
+		{"timeout", exampleReply{
+			status: 201,
+			delay:  2500 * time.Millisecond,
+		}, processchecker.StatusDown},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			service, host := newExampleService(t)
@@ -62,10 +89,17 @@ func TestExampleFlagFailure(t *testing.T) {
 				t.Fatal("failed GET exposed credentials")
 			}
 			for _, status := range []int{401, 403, 404, 410} {
-				service.setReply(exampleReply{method: http.MethodGet, status: status})
+				service.setReply(exampleReply{
+					method: http.MethodGet,
+					status: status,
+				})
 				requireExampleStatus(t, runExample(t, mode, host, processchecker.ActionGet, private, 2), processchecker.StatusCorrupt)
 			}
-			service.setReply(exampleReply{method: http.MethodGet, status: 200, body: `{"body":null}`})
+			service.setReply(exampleReply{
+				method: http.MethodGet,
+				status: 200,
+				body:   `{"body":null}`,
+			})
 			requireExampleStatus(t, runExample(t, mode, host, processchecker.ActionGet, private, 2), processchecker.StatusMumble)
 		})
 	}
@@ -83,7 +117,12 @@ func TestExampleInvalidPrivateData(t *testing.T) {
 	for _, private := range []string{"broken", "null", "[]", "{}", strings.Repeat("x", 4097)} {
 		requireExampleStatus(t, runExample(t, "hackerdom", host, processchecker.ActionGet, private, 1), processchecker.StatusCheckFailed)
 	}
-	state := exampleState{Version: 1, ID: exampleIdentifier, Token: strings.Repeat("a", 32), Place: 1}
+	state := exampleState{
+		Version: 1,
+		ID:      exampleIdentifier,
+		Token:   strings.Repeat("a", 32),
+		Place:   1,
+	}
 	private, err := json.Marshal(state)
 	if err != nil {
 		t.Fatal(err)

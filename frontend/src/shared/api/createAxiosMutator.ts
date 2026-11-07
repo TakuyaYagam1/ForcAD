@@ -21,16 +21,32 @@ export function createAxiosMutator(api: AxiosInstance, http: AxiosInstance) {
     return typeof value === "string" && /^[0-9a-f]{64}$/.test(value) ? value : undefined;
   };
   const sessionToken = async (): Promise<string> => {
-    if (csrfToken) return csrfToken;
-    if (pendingToken) return pendingToken;
+    if (csrfToken) {
+      return csrfToken;
+    }
+    if (pendingToken) {
+      return pendingToken;
+    }
     const version = sessionVersion;
-    const request = api.request({ url: "/admin/status/", method: "GET", timeout: 10000 })
+    const request = api.request({
+      url: "/admin/status/",
+      method: "GET",
+      timeout: 10000
+    })
       .then(({ data }) => {
-        if (version !== sessionVersion) throw new Error("Administrator session changed; try again");
+        if (version !== sessionVersion) {
+          throw new Error("Administrator session changed; try again");
+        }
         csrfToken = rememberToken(data);
-        if (!csrfToken) throw new Error("Administrator session has no CSRF token; sign in again");
+        if (!csrfToken) {
+          throw new Error("Administrator session has no CSRF token; sign in again");
+        }
         return csrfToken;
-      }).finally(() => { if (pendingToken === request) pendingToken = undefined; });
+      }).finally(() => {
+        if (pendingToken === request) {
+          pendingToken = undefined;
+        }
+      });
     pendingToken = request;
     return request;
   };
@@ -39,7 +55,10 @@ export function createAxiosMutator(api: AxiosInstance, http: AxiosInstance) {
     config: AxiosRequestConfig,
     options?: AxiosRequestConfig,
   ): Promise<T> => {
-    const merged = { ...config, ...options };
+    const merged = {
+      ...config,
+      ...options
+    };
     const requestUrl = merged.url ?? "";
     const isApiRequest = requestUrl.startsWith("/api/");
     const instance = isApiRequest ? api : http;
@@ -61,19 +80,32 @@ export function createAxiosMutator(api: AxiosInstance, http: AxiosInstance) {
     if (admin && mutation && !login) {
       headers.set("X-CSRF-Token", await sessionToken());
     }
-    const request = { ...merged, url };
-    if (suppliedCSRF || (admin && mutation && !login)) request.headers = headers;
-    if (login) forgetToken();
+    const request = {
+      ...merged,
+      url
+    };
+    if (suppliedCSRF || (admin && mutation && !login)) {
+      request.headers = headers;
+    }
+    if (login) {
+      forgetToken();
+    }
     const version = sessionVersion;
     try {
       const { data } = await instance.request<T>(request);
       if (version === sessionVersion) {
-        if (login || status) csrfToken = rememberToken(data);
-        if (logout) forgetToken();
+        if (login || status) {
+          csrfToken = rememberToken(data);
+        }
+        if (logout) {
+          forgetToken();
+        }
       }
       return data;
     } catch (error) {
-      if (admin && version === sessionVersion && [401, 403].includes((error as AxiosError).response?.status ?? 0)) forgetToken();
+      if (admin && version === sessionVersion && [401, 403].includes((error as AxiosError).response?.status ?? 0)) {
+        forgetToken();
+      }
       // Never retry a mutation automatically: its side effects may have committed.
       throw error;
     }

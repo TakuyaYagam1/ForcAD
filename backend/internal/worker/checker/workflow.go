@@ -13,7 +13,12 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-func (w *Worker) execute(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, ownerToken string) (domain.CheckerResult, error) {
+func (w *Worker) execute(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	ownerToken string,
+) (domain.CheckerResult, error) {
 	const location = "checker.Worker.execute"
 	plan := planWorkflow(job)
 	if !plan.isValid {
@@ -65,8 +70,11 @@ func (w *Worker) execute(ctx context.Context, guard *leaseGuard, job domain.Chec
 		public = "OK"
 	}
 	return domain.CheckerResult{
-		Round: job.Round, Status: statusCode(selected.status), PublicMessage: public,
-		PrivateMessage: selected.private, Command: selected.command,
+		Round:          job.Round,
+		Status:         statusCode(selected.status),
+		PublicMessage:  public,
+		PrivateMessage: selected.private,
+		Command:        selected.command,
 	}, nil
 }
 
@@ -80,25 +88,46 @@ type workflowPlan struct {
 func planWorkflow(job domain.CheckerJob) workflowPlan {
 	payload, err := decodePayload(job.Payload)
 	if err != nil {
-		return workflowPlan{failure: failedResult(job.Round, "Invalid checker job payload")}
+		return workflowPlan{
+			failure: failedResult(job.Round, "Invalid checker job payload"),
+		}
 	}
 	if payload.Team.ID == uuid.Nil() || payload.Task.ID == uuid.Nil() || payload.Team.IP == "" || payload.Task.Checker == "" ||
 		payload.Task.CheckerTimeout <= 0 {
-		return workflowPlan{failure: failedResult(job.Round, "Checker job payload is missing required team or task data")}
+		return workflowPlan{
+			failure: failedResult(job.Round, "Checker job payload is missing required team or task data"),
+		}
 	}
 	if (job.TeamID != uuid.Nil() && job.TeamID != payload.Team.ID) || (job.TaskID != uuid.Nil() && job.TaskID != payload.Task.ID) {
-		return workflowPlan{failure: failedResult(job.Round, "Checker job identity does not match its payload")}
+		return workflowPlan{
+			failure: failedResult(job.Round, "Checker job identity does not match its payload"),
+		}
 	}
 	workflow, err := workflowFor(job.Action, payload.Workflow)
 	if err != nil {
-		return workflowPlan{failure: failedResult(job.Round, domain.ErrInvalidJobWorkflow.Error())}
+		return workflowPlan{
+			failure: failedResult(job.Round, domain.ErrInvalidJobWorkflow.Error()),
+		}
 	}
 	if !validWorkflowActionCount(workflow, payload.Task) {
-		return workflowPlan{failure: failedResult(job.Round, "Invalid checker workflow action count")}
+		return workflowPlan{
+			failure: failedResult(job.Round, "Invalid checker workflow action count"),
+		}
 	}
-	return workflowPlan{payload: payload, workflow: workflow, isValid: true}
+	return workflowPlan{
+		payload:  payload,
+		workflow: workflow,
+		isValid:  true,
+	}
 }
-func (w *Worker) runAfterCheck(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, payload domain.JobPayload, ownerToken string, workflow domain.JobAction) ([]verdict, error) {
+func (w *Worker) runAfterCheck(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	payload domain.JobPayload,
+	ownerToken string,
+	workflow domain.JobAction,
+) ([]verdict, error) {
 	const location = "checker.Worker.runAfterCheck"
 	branchCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(context.Canceled)
@@ -112,14 +141,20 @@ func (w *Worker) runAfterCheck(ctx context.Context, guard *leaseGuard, job domai
 		count++
 		go func() {
 			v, err := w.runPuts(branchCtx, guard, job, payload, ownerToken)
-			results <- branchResult{verdicts: v, err: err}
+			results <- branchResult{
+				verdicts: v,
+				err:      err,
+			}
 		}()
 	}
 	if payload.Task.Gets > 0 {
 		count++
 		go func() {
 			v, err := w.runGets(branchCtx, guard, job, payload, ownerToken)
-			results <- branchResult{verdicts: v, err: err}
+			results <- branchResult{
+				verdicts: v,
+				err:      err,
+			}
 		}()
 	}
 	if count == 0 {
@@ -146,7 +181,13 @@ func (w *Worker) runAfterCheck(ctx context.Context, guard *leaseGuard, job domai
 	return orderBranches(all), nil
 }
 
-func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, payload domain.JobPayload, ownerToken string) ([]verdict, error) {
+func (w *Worker) runPuts(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	payload domain.JobPayload,
+	ownerToken string,
+) ([]verdict, error) {
 	const location = "checker.Worker.runPuts"
 	count := int(payload.Task.Puts)
 	if count <= 0 {
@@ -154,8 +195,12 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 	}
 	firstPlace, err := randomBelow(int64(payload.Task.Places))
 	if err != nil {
-		return []verdict{{action: processchecker.ActionPut, status: processchecker.StatusCheckFailed,
-			public: "PUT failed", private: "PUT setup failed: " + err.Error()}}, nil
+		return []verdict{{
+			action:  processchecker.ActionPut,
+			status:  processchecker.StatusCheckFailed,
+			public:  "PUT failed",
+			private: "PUT setup failed: " + err.Error(),
+		}}, nil
 	}
 	putCtx, cancel := context.WithCancelCause(ctx)
 	defer cancel(context.Canceled)
@@ -186,7 +231,12 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 				place := int32((firstPlace+int64(index))%int64(payload.Task.Places) + 1)
 				flag, err := generateFlag(payload.Team.ID, payload.Task, job.Round, place)
 				if err != nil {
-					results[index] = verdict{action: processchecker.ActionPut, status: processchecker.StatusCheckFailed, public: "PUT failed", private: "PUT setup failed: " + err.Error()}
+					results[index] = verdict{
+						action:  processchecker.ActionPut,
+						status:  processchecker.StatusCheckFailed,
+						public:  "PUT failed",
+						private: "PUT setup failed: " + err.Error(),
+					}
 					continue
 				}
 				v, err := w.runAction(putCtx, guard, job, payload, ownerToken, processchecker.ActionPut, &flag)
@@ -208,35 +258,60 @@ func (w *Worker) runPuts(ctx context.Context, guard *leaseGuard, job domain.Chec
 	return results, nil
 }
 
-func (w *Worker) runGets(ctx context.Context, guard *leaseGuard, job domain.CheckerJob, payload domain.JobPayload, ownerToken string) ([]verdict, error) {
+func (w *Worker) runGets(
+	ctx context.Context,
+	guard *leaseGuard,
+	job domain.CheckerJob,
+	payload domain.JobPayload,
+	ownerToken string,
+) ([]verdict, error) {
 	const location = "checker.Worker.runGets"
 	lifecycle, err := w.lifecycle.Lifecycle(ctx)
 	if err != nil {
 		if ctx.Err() != nil {
 			return nil, fmt.Errorf("%s - read lifecycle for GET: %w", location, context.Cause(ctx))
 		}
-		return []verdict{{action: processchecker.ActionGet, status: processchecker.StatusCheckFailed, public: "GET failed", private: "Could not read flag lifetime"}}, nil
+		return []verdict{{
+			action:  processchecker.ActionGet,
+			status:  processchecker.StatusCheckFailed,
+			public:  "GET failed",
+			private: "Could not read flag lifetime",
+		}}, nil
 	}
 	currentRound, lifetime := job.Round, lifecycle.Config.FlagLifetime
 	if currentRound < 1 || lifetime < 1 {
-		return []verdict{{action: processchecker.ActionGet, status: processchecker.StatusCheckFailed, public: "GET failed", private: "GET requires a positive current round and flag lifetime"}}, nil
+		return []verdict{{
+			action:  processchecker.ActionGet,
+			status:  processchecker.StatusCheckFailed,
+			public:  "GET failed",
+			private: "GET requires a positive current round and flag lifetime",
+		}}, nil
 	}
 	firstRound := max(int32(1), currentRound-lifetime+1)
 	width := int64(currentRound-firstRound) + 1
 	verdicts := make([]verdict, 0, payload.Task.Gets)
-	previous := verdict{action: processchecker.ActionCheck, status: processchecker.StatusUp}
+	previous := verdict{
+		action: processchecker.ActionCheck,
+		status: processchecker.StatusUp,
+	}
 	for range payload.Task.Gets {
 		if previous.status != processchecker.StatusUp {
 			break
 		}
 		flagRound, ok := randomFlagRound(firstRound, width)
 		if !ok {
-			return append(verdicts, verdict{action: processchecker.ActionGet, status: processchecker.StatusCheckFailed, public: "GET failed", private: "Could not choose a GET flag round"}), nil
+			return append(verdicts, verdict{
+				action:  processchecker.ActionGet,
+				status:  processchecker.StatusCheckFailed,
+				public:  "GET failed",
+				private: "Could not choose a GET flag round",
+			}), nil
 		}
 		flag, err := w.flags.FindRandomRound(ctx, payload.Team.ID, payload.Task.ID, flagRound)
 		if errors.Is(err, domain.ErrFlagNotFound) {
 			previous = verdict{
-				action: processchecker.ActionGet, status: processchecker.StatusUp,
+				action:  processchecker.ActionGet,
+				status:  processchecker.StatusUp,
 				private: fmt.Sprintf("No flag from round %d", flagRound),
 			}
 			verdicts = append(verdicts, previous)
@@ -246,7 +321,12 @@ func (w *Worker) runGets(ctx context.Context, guard *leaseGuard, job domain.Chec
 			if ctx.Err() != nil {
 				return nil, fmt.Errorf("%s - load GET flag: %w", location, context.Cause(ctx))
 			}
-			return append(verdicts, verdict{action: processchecker.ActionGet, status: processchecker.StatusCheckFailed, public: "GET failed", private: "Could not load flag for GET"}), nil
+			return append(verdicts, verdict{
+				action:  processchecker.ActionGet,
+				status:  processchecker.StatusCheckFailed,
+				public:  "GET failed",
+				private: "Could not load flag for GET",
+			}), nil
 		}
 		previous, err = w.runAction(ctx, guard, job, payload, ownerToken, processchecker.ActionGet, &flag)
 		if err != nil {

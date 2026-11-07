@@ -101,7 +101,9 @@ func TestDiagnosticStreamReportsConsumerFailure(t *testing.T) {
 	defer cancel()
 	cmd := diagnosticFixture(ctx, "blocked", "")
 	want := errors.New("sample destination failed")
-	err := collectDiagnosticLines(ctx, cmd, func(string) error { return want })
+	err := collectDiagnosticLines(ctx, cmd, func(string) error {
+		return want
+	})
 	if !errors.Is(err, want) || cmd.ProcessState == nil {
 		t.Fatalf("consumer failure was lost or command not reaped: %v", err)
 	}

@@ -22,7 +22,12 @@ func (m *memoryStore) Get(_ context.Context, key string) ([]byte, error) {
 	}
 	return v, nil
 }
-func (m *memoryStore) Set(_ context.Context, key string, value []byte, ttl time.Duration) error {
+func (m *memoryStore) Set(
+	_ context.Context,
+	key string,
+	value []byte,
+	ttl time.Duration,
+) error {
 	m.values[key] = value
 	m.ttl = ttl
 	return nil
@@ -36,7 +41,9 @@ func (m *memoryStore) Del(_ context.Context, keys ...string) error {
 
 func TestSessionLifecycleAndPasswordRotation(t *testing.T) {
 	ctx := context.Background()
-	store := &memoryStore{values: map[string][]byte{}}
+	store := &memoryStore{
+		values: map[string][]byte{},
+	}
 	service := NewAuth(store, "admin", "original-password")
 	if _, err := service.Login(ctx, "admin", "wrong"); !errors.Is(err, ErrUnauthorized) || !strings.HasPrefix(err.Error(), "usecase.Auth.Login - ") {
 		t.Fatal("accepted wrong password")
@@ -72,7 +79,9 @@ func TestSessionLifecycleAndPasswordRotation(t *testing.T) {
 
 func TestMalformedSessionsFailClosed(t *testing.T) {
 	ctx := context.Background()
-	store := &memoryStore{values: map[string][]byte{}}
+	store := &memoryStore{
+		values: map[string][]byte{},
+	}
 	service := NewAuth(store, "admin", "password")
 	for _, token := range []string{"", "session:*", "../secret", "ffffffff"} {
 		if _, err := service.Status(ctx, token); !errors.Is(err, ErrUnauthorized) {

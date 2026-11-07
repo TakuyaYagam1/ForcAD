@@ -14,7 +14,9 @@ export const FlagNotification = zod.object({
   "attacker_delta": zod.number(),
   "generation": zod.int(),
   "event_id": zod.string(),
-  "created_at": zod.iso.datetime({"offset":true})
+  "created_at": zod.iso.datetime({
+    "offset":true
+  })
 })
 
 export type FlagNotification = zod.input<typeof FlagNotification>;

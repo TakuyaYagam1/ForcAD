@@ -22,10 +22,13 @@ var runtimeTables = []string{
 
 // ProvisionRuntimeRole runs only on the explicit initializer/migrate connection.
 // It preserves existing game data and refuses to repurpose an unrelated role.
-func ProvisionRuntimeRole(ctx context.Context, databaseURL, username, password string) error {
+func ProvisionRuntimeRole(
+	ctx context.Context,
+	databaseURL, username, password string,
+) error {
 	const location = "db.ProvisionRuntimeRole"
 	if err := validateRoleCredentials(username, password); err != nil {
-		return err
+		return fmt.Errorf("%s - validate runtime credentials: %w", location, err)
 	}
 	conn, err := pgx.Connect(ctx, databaseURL)
 	if err != nil {
@@ -59,16 +62,16 @@ func ProvisionRuntimeRole(ctx context.Context, databaseURL, username, password s
 	}
 	marker := fmt.Sprintf("%s:%d:%d", runtimeRoleMarker, databaseOID, schemaOID)
 	if err := ensureRuntimeRole(ctx, tx, username, marker); err != nil {
-		return err
+		return fmt.Errorf("%s - ensure managed runtime role: %w", location, err)
 	}
 	if err := validateRuntimeGrants(ctx, tx, username, schema); err != nil {
-		return err
+		return fmt.Errorf("%s - validate runtime grants: %w", location, err)
 	}
 	if err := setRuntimePassword(ctx, tx, username, password); err != nil {
-		return err
+		return fmt.Errorf("%s - configure runtime authentication: %w", location, err)
 	}
 	if err := grantRuntimeTables(ctx, tx, username, database, schema); err != nil {
-		return err
+		return fmt.Errorf("%s - grant runtime table access: %w", location, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("%s - commit runtime role provisioning: %w", location, err)
@@ -77,13 +80,18 @@ func ProvisionRuntimeRole(ctx context.Context, databaseURL, username, password s
 }
 
 func validateRoleCredentials(username, password string) error {
+	const location = "db.validateRoleCredentials"
 	if strings.TrimSpace(username) == "" || len(username) > 63 || strings.ContainsAny(username, "\x00\r\n") || len(password) < 16 || strings.ContainsAny(password, "\x00\r\n") {
-		return fmt.Errorf("db.validateRoleCredentials - runtime credentials require a username of 1-63 bytes and a password of at least 16 characters")
+		return fmt.Errorf("%s - runtime credentials require a username of 1-63 bytes and a password of at least 16 characters", location)
 	}
 	return nil
 }
 
-func setRuntimePassword(ctx context.Context, tx pgx.Tx, username, password string) error {
+func setRuntimePassword(
+	ctx context.Context,
+	tx pgx.Tx,
+	username, password string,
+) error {
 	const location = "db.setRuntimePassword"
 	var passwordSQL string
 	if err := tx.QueryRow(ctx, `SELECT format('ALTER ROLE %I LOGIN PASSWORD %L', $1::text, $2::text)`, username, password).Scan(&passwordSQL); err != nil {
@@ -96,7 +104,11 @@ func setRuntimePassword(ctx context.Context, tx pgx.Tx, username, password strin
 	return nil
 }
 
-func grantRuntimeTables(ctx context.Context, tx pgx.Tx, username, database, schema string) error {
+func grantRuntimeTables(
+	ctx context.Context,
+	tx pgx.Tx,
+	username, database, schema string,
+) error {
 	const location = "db.grantRuntimeTables"
 	role := pgx.Identifier{username}.Sanitize()
 	for _, statement := range []string{
@@ -115,7 +127,11 @@ func grantRuntimeTables(ctx context.Context, tx pgx.Tx, username, database, sche
 	return nil
 }
 
-func ensureRuntimeRole(ctx context.Context, tx pgx.Tx, username, expectedMarker string) error {
+func ensureRuntimeRole(
+	ctx context.Context,
+	tx pgx.Tx,
+	username, expectedMarker string,
+) error {
 	const location = "db.ensureRuntimeRole"
 	var marker string
 	var privileged bool
@@ -144,7 +160,11 @@ func ensureRuntimeRole(ctx context.Context, tx pgx.Tx, username, expectedMarker 
 	return nil
 }
 
-func validateRuntimeGrants(ctx context.Context, tx pgx.Tx, username, schema string) error {
+func validateRuntimeGrants(
+	ctx context.Context,
+	tx pgx.Tx,
+	username, schema string,
+) error {
 	const location = "db.validateRuntimeGrants"
 	var excessive bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE has_schema_privilege($1, oid, 'CREATE'))

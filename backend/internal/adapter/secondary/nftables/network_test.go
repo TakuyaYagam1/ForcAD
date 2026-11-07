@@ -18,28 +18,54 @@ import (
 )
 
 func testInventory() Inventory {
-	return Inventory{Teams: []InventoryTeam{
-		{TeamIP: "192.0.2.10", Networks: []string{"192.0.2.0/24"}},
-		{TeamIP: "2001:db8::10", Networks: []string{"2001:db8:1::/64"}},
-	}}
+	return Inventory{
+		Teams: []InventoryTeam{
+			{
+				TeamIP:   "192.0.2.10",
+				Networks: []string{"192.0.2.0/24"},
+			},
+			{
+				TeamIP:   "2001:db8::10",
+				Networks: []string{"2001:db8:1::/64"},
+			},
+		},
+	}
 }
 
 func singleTeamInventory() Inventory {
-	return Inventory{Teams: []InventoryTeam{{TeamIP: "192.0.2.10", Networks: []string{"192.0.2.10/32"}}}}
+	return Inventory{
+		Teams: []InventoryTeam{{
+			TeamIP:   "192.0.2.10",
+			Networks: []string{"192.0.2.10/32"},
+		}},
+	}
 }
 
 func TestInventoryFromDocumentUsesTrafficNetworks(t *testing.T) {
-	document := config.Document{Teams: []config.Team{
-		{IP: "192.0.2.10"},
-		{IP: "2001:db8::10", TrafficCIDRs: []string{"2001:db8:1::/64"}},
-	}}
+	document := config.Document{
+		Teams: []config.Team{
+			{
+				IP: "192.0.2.10",
+			},
+			{
+				IP:           "2001:db8::10",
+				TrafficCIDRs: []string{"2001:db8:1::/64"},
+			},
+		},
+	}
 	inventory, err := InventoryFromDocument(document)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := []InventoryTeam{
-		{TeamIP: "192.0.2.10", Networks: []string{"192.0.2.10/32"}},
-		{TeamIP: "2001:db8::10", Networks: []string{"2001:db8:1::/64"}},
+		{
+			TeamIP:   "192.0.2.10",
+			Networks: []string{"192.0.2.10/32"},
+		},
+		{
+			TeamIP:   "2001:db8::10",
+			Networks: []string{"2001:db8:1::/64"},
+		},
 	}
 	if len(inventory.Teams) != len(want) {
 		t.Fatalf("teams = %#v, want %#v", inventory.Teams, want)
@@ -92,7 +118,9 @@ func TestRenderRulesSupportsBothFamiliesAndRefusesRepeatedApply(t *testing.T) {
 
 func TestCounterNamesAndFingerprintDoNotDependOnInventoryOrder(t *testing.T) {
 	inventory := testInventory()
-	reordered := Inventory{Teams: []InventoryTeam{inventory.Teams[1], inventory.Teams[0]}}
+	reordered := Inventory{
+		Teams: []InventoryTeam{inventory.Teams[1], inventory.Teams[0]},
+	}
 	firstFingerprint, err := inventoryFingerprint(inventory)
 	if err != nil {
 		t.Fatal(err)
@@ -136,10 +164,22 @@ func TestReadInventoryValidatesSanitizedJSONIndependently(t *testing.T) {
 		name string
 		json string
 	}{
-		{name: "noncanonical prefix", json: `{"teams":[{"team_ip":"192.0.2.1","networks":["192.0.2.1/24"]}]}`},
-		{name: "overlapping networks", json: `{"teams":[{"team_ip":"192.0.2.1","networks":["192.0.2.0/24"]},{"team_ip":"192.0.2.2","networks":["192.0.2.0/25"]}]}`},
-		{name: "mapped IPv6", json: `{"teams":[{"team_ip":"::ffff:192.0.2.1","networks":["192.0.2.1/32"]}]}`},
-		{name: "duplicate field", json: `{"teams":[],"teams":[]}`},
+		{
+			name: "noncanonical prefix",
+			json: `{"teams":[{"team_ip":"192.0.2.1","networks":["192.0.2.1/24"]}]}`,
+		},
+		{
+			name: "overlapping networks",
+			json: `{"teams":[{"team_ip":"192.0.2.1","networks":["192.0.2.0/24"]},{"team_ip":"192.0.2.2","networks":["192.0.2.0/25"]}]}`,
+		},
+		{
+			name: "mapped IPv6",
+			json: `{"teams":[{"team_ip":"::ffff:192.0.2.1","networks":["192.0.2.1/32"]}]}`,
+		},
+		{
+			name: "duplicate field",
+			json: `{"teams":[],"teams":[]}`,
+		},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -157,10 +197,30 @@ func TestReadInventoryValidatesSanitizedJSONIndependently(t *testing.T) {
 func TestParseNftCountersMapsStableNamesAndFingerprint(t *testing.T) {
 	inventory := testInventory()
 	fixtures := []counterFixture{
-		{teamIP: "192.0.2.10", direction: "rx", packets: 11, bytes: 110},
-		{teamIP: "192.0.2.10", direction: "tx", packets: 12, bytes: 120},
-		{teamIP: "2001:db8::10", direction: "rx", packets: 21, bytes: 210},
-		{teamIP: "2001:db8::10", direction: "tx", packets: 22, bytes: 220},
+		{
+			teamIP:    "192.0.2.10",
+			direction: "rx",
+			packets:   11,
+			bytes:     110,
+		},
+		{
+			teamIP:    "192.0.2.10",
+			direction: "tx",
+			packets:   12,
+			bytes:     120,
+		},
+		{
+			teamIP:    "2001:db8::10",
+			direction: "rx",
+			packets:   21,
+			bytes:     210,
+		},
+		{
+			teamIP:    "2001:db8::10",
+			direction: "tx",
+			packets:   22,
+			bytes:     220,
+		},
 	}
 	data := counterResponse(t, inventory, fixtures)
 	values, complete, err := parseNftCounters(data, inventory)
@@ -171,7 +231,10 @@ func TestParseNftCountersMapsStableNamesAndFingerprint(t *testing.T) {
 		t.Fatalf("complete = %v, counter count = %d", complete, len(values))
 	}
 	for _, fixture := range fixtures {
-		label := counterLabel{teamIP: fixture.teamIP, direction: fixture.direction}
+		label := counterLabel{
+			teamIP:    fixture.teamIP,
+			direction: fixture.direction,
+		}
 		if got := values[label]; got.bytes != fixture.bytes || got.packets != fixture.packets {
 			t.Errorf("counter %v = %#v, want packets=%d bytes=%d", label, got, fixture.packets, fixture.bytes)
 		}
@@ -180,13 +243,21 @@ func TestParseNftCountersMapsStableNamesAndFingerprint(t *testing.T) {
 
 func TestParseNftCountersReportsMissingAndRejectsMalformedData(t *testing.T) {
 	inventory := singleTeamInventory()
-	rx := counterFixture{teamIP: "192.0.2.10", direction: "rx", packets: 7, bytes: 70}
+	rx := counterFixture{
+		teamIP:    "192.0.2.10",
+		direction: "rx",
+		packets:   7,
+		bytes:     70,
+	}
 	data := counterResponse(t, inventory, []counterFixture{rx})
 	values, complete, err := parseNftCounters(data, inventory)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if complete || len(values) != 1 || values[counterLabel{teamIP: rx.teamIP, direction: "rx"}].bytes != rx.bytes {
+	if complete || len(values) != 1 || values[counterLabel{
+		teamIP:    rx.teamIP,
+		direction: "rx",
+	}].bytes != rx.bytes {
 		t.Fatalf("missing-counter result = %#v, complete=%v", values, complete)
 	}
 
@@ -212,8 +283,18 @@ func TestParseNftCountersReportsMissingAndRejectsMalformedData(t *testing.T) {
 
 func TestMetricsHandlerExportsMappedCountersAndMissingStatus(t *testing.T) {
 	inventory := singleTeamInventory()
-	rx := counterFixture{teamIP: "192.0.2.10", direction: "rx", packets: 7, bytes: 70}
-	tx := counterFixture{teamIP: "192.0.2.10", direction: "tx", packets: 9, bytes: 90}
+	rx := counterFixture{
+		teamIP:    "192.0.2.10",
+		direction: "rx",
+		packets:   7,
+		bytes:     70,
+	}
+	tx := counterFixture{
+		teamIP:    "192.0.2.10",
+		direction: "tx",
+		packets:   9,
+		bytes:     90,
+	}
 
 	goodHandler, err := NewMetricsHandler(context.Background(), inventory, counterListerFunc(func(context.Context) ([]byte, error) {
 		return counterResponse(t, inventory, []counterFixture{rx, tx}), nil
@@ -268,7 +349,17 @@ func TestMetricsHandlerHonorsCancellationAndBoundsConcurrentScrapes(t *testing.T
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-release:
-			return counterResponse(t, singleTeamInventory(), []counterFixture{{teamIP: "192.0.2.10", direction: "rx", packets: 1, bytes: 1}, {teamIP: "192.0.2.10", direction: "tx", packets: 1, bytes: 1}}), nil
+			return counterResponse(t, singleTeamInventory(), []counterFixture{{
+				teamIP:    "192.0.2.10",
+				direction: "rx",
+				packets:   1,
+				bytes:     1,
+			}, {
+				teamIP:    "192.0.2.10",
+				direction: "tx",
+				packets:   1,
+				bytes:     1,
+			}}), nil
 		}
 	})
 	handler, err := NewMetricsHandler(context.Background(), singleTeamInventory(), lister)
@@ -347,16 +438,24 @@ func counterResponse(t *testing.T, inventory Inventory, fixtures []counterFixtur
 		t.Fatal(err)
 	}
 	items := make([]map[string]any, 0, len(fixtures)+1)
-	items = append(items, map[string]any{"metainfo": map[string]any{}})
+	items = append(items, map[string]any{
+		"metainfo": map[string]any{},
+	})
 	for _, fixture := range fixtures {
-		items = append(items, map[string]any{"counter": map[string]any{
-			"family": "inet", "table": tableName,
-			"name":    counterName(fixture.teamIP, fixture.direction),
-			"packets": fixture.packets, "bytes": fixture.bytes,
-			"comment": inventoryComment(fingerprint),
-		}})
+		items = append(items, map[string]any{
+			"counter": map[string]any{
+				"family":  "inet",
+				"table":   tableName,
+				"name":    counterName(fixture.teamIP, fixture.direction),
+				"packets": fixture.packets,
+				"bytes":   fixture.bytes,
+				"comment": inventoryComment(fingerprint),
+			},
+		})
 	}
-	data, err := json.Marshal(map[string]any{"nftables": items})
+	data, err := json.Marshal(map[string]any{
+		"nftables": items,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,21 +485,37 @@ func TestParseNftSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	set := func(name, addressType string, elements []any) map[string]any {
-		return map[string]any{"set": map[string]any{
-			"family": "inet", "table": tableName, "name": name,
-			"comment": inventoryComment(fingerprint), "type": []string{addressType, addressType},
-			"elem": elements,
-		}}
+		return map[string]any{
+			"set": map[string]any{
+				"family":  "inet",
+				"table":   tableName,
+				"name":    name,
+				"comment": inventoryComment(fingerprint),
+				"type":    []string{addressType, addressType},
+				"elem":    elements,
+			},
+		}
 	}
-	element := map[string]any{"elem": map[string]any{
-		"val":     map[string]any{"concat": []string{"10.200.0.2", "192.0.2.10"}},
-		"counter": map[string]any{"packets": 12, "bytes": 1234},
-	}}
-	response := map[string]any{"nftables": []any{
-		map[string]any{"metainfo": map[string]any{}},
-		set("sources_v4", "ipv4_addr", []any{element}),
-		set("sources_v6", "ipv6_addr", nil),
-	}}
+	element := map[string]any{
+		"elem": map[string]any{
+			"val": map[string]any{
+				"concat": []string{"10.200.0.2", "192.0.2.10"},
+			},
+			"counter": map[string]any{
+				"packets": 12,
+				"bytes":   1234,
+			},
+		},
+	}
+	response := map[string]any{
+		"nftables": []any{
+			map[string]any{
+				"metainfo": map[string]any{},
+			},
+			set("sources_v4", "ipv4_addr", []any{element}),
+			set("sources_v6", "ipv6_addr", nil),
+		},
+	}
 	data, err := json.Marshal(response)
 	if err != nil {
 		t.Fatal(err)
@@ -409,10 +524,17 @@ func TestParseNftSources(t *testing.T) {
 	if err != nil || !complete || len(samples) != 1 || samples[0].sourceIP != "10.200.0.2" || samples[0].value.bytes != 1234 {
 		t.Fatalf("source counters were not decoded: %+v, complete=%t, error=%v", samples, complete, err)
 	}
-	unknown := map[string]any{"elem": map[string]any{
-		"val":     map[string]any{"concat": []string{"10.200.0.2", "192.0.2.99"}},
-		"counter": map[string]any{"packets": 1, "bytes": 1},
-	}}
+	unknown := map[string]any{
+		"elem": map[string]any{
+			"val": map[string]any{
+				"concat": []string{"10.200.0.2", "192.0.2.99"},
+			},
+			"counter": map[string]any{
+				"packets": 1,
+				"bytes":   1,
+			},
+		},
+	}
 	response["nftables"] = []any{set("sources_v4", "ipv4_addr", []any{unknown}), set("sources_v6", "ipv6_addr", nil)}
 	data, err = json.Marshal(response)
 	if err != nil {

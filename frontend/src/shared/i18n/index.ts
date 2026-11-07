@@ -13,8 +13,18 @@ import {
 } from "./locale.ts";
 
 export const resources = {
-  ru: { common: commonRu, public: publicRu, admin: adminRu, shell: shellRu },
-  en: { common: commonEn, public: publicEn, admin: adminEn, shell: shellEn },
+  ru: {
+    common: commonRu,
+    public: publicRu,
+    admin: adminRu,
+    shell: shellRu
+  },
+  en: {
+    common: commonEn,
+    public: publicEn,
+    admin: adminEn,
+    shell: shellEn
+  },
 };
 
 declare module "i18next" {
@@ -31,7 +41,9 @@ export const i18n = i18next;
 
 function saveLanguage(language: string) {
   const supported = resolveLanguage(language);
-  if (typeof document !== "undefined") document.documentElement.lang = supported;
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = supported;
+  }
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, supported);
   } catch {
@@ -49,8 +61,12 @@ export const i18nReady = i18n.use(initReactI18next).init({
   load: "languageOnly",
   defaultNS: "common",
   initAsync: false,
-  interpolation: { escapeValue: false },
-  react: { useSuspense: false },
+  interpolation: {
+    escapeValue: false
+  },
+  react: {
+    useSuspense: false
+  },
 });
 
 export function getLanguage(): Language {

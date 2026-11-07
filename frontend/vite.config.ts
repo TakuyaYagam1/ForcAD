@@ -26,18 +26,24 @@ export default defineConfig(({ mode }) => {
       request.socket instanceof TLSSocket ? "https" : "http",
       target,
     );
-    if (origin) proxyRequest.setHeader("Origin", origin);
+    if (origin) {
+      proxyRequest.setHeader("Origin", origin);
+    }
   };
 
-  const createProxy = (ws = false): ProxyOptions => ({
-    target,
-    changeOrigin: true,
-    ...(ws ? { ws: true } : {}),
-    configure(server) {
-      server.on("proxyReq", rewriteOrigin);
-      server.on("proxyReqWs", rewriteOrigin);
-    },
-  });
+  const createProxy = (ws = false): ProxyOptions => {
+    return {
+      target,
+      changeOrigin: true,
+      ...(ws ? {
+        ws: true
+      } : {}),
+      configure(server) {
+        server.on("proxyReq", rewriteOrigin);
+        server.on("proxyReqWs", rewriteOrigin);
+      },
+    }
+  };
 
   return {
     publicDir: publicDirectory,

@@ -15,7 +15,9 @@ func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
 			if strings.HasPrefix(r.URL.Path, "/api/admin/") && unsafeMethod(r.Method) {
 				w.Header().Add("Vary", "Origin, Sec-Fetch-Site, Referer")
 				if !adminRequestOrigin(r, publicOrigin) {
-					WriteError(w, http.StatusForbidden, api.ApiError{Error: "Cross-origin administrative request rejected"})
+					WriteError(w, http.StatusForbidden, api.ApiError{
+						Error: "Cross-origin administrative request rejected",
+					})
 					return
 				}
 				// Login has no authenticated session/token yet. JSON excludes
@@ -24,7 +26,9 @@ func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
 				if r.URL.Path == "/api/admin/login/" {
 					kind, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 					if err != nil || kind != "application/json" {
-						WriteError(w, http.StatusUnsupportedMediaType, api.ApiError{Error: "Login requires application/json"})
+						WriteError(w, http.StatusUnsupportedMediaType, api.ApiError{
+							Error: "Login requires application/json",
+						})
 						return
 					}
 				}

@@ -45,13 +45,22 @@ type Runner interface {
 type Repository interface {
 	outbound.JobRepository
 	IsActiveTeam(ctx context.Context, teamID uuid.UUID) (bool, error)
-	SetDeadline(ctx context.Context, jobID uuid.UUID, ownerToken string, now, deadline time.Time) (bool, error)
+	SetDeadline(
+		ctx context.Context,
+		jobID uuid.UUID,
+		ownerToken string,
+		now, deadline time.Time,
+	) (bool, error)
 }
 
 // FlagStore persists PUT output and loads a flag from a selected round.
 type FlagStore interface {
 	Create(ctx context.Context, flag domain.Flag, owner *domain.CheckerJobOwner) (domain.Flag, error)
-	FindRandomRound(ctx context.Context, teamID, taskID uuid.UUID, round int32) (domain.Flag, error)
+	FindRandomRound(
+		ctx context.Context,
+		teamID, taskID uuid.UUID,
+		round int32,
+	) (domain.Flag, error)
 }
 
 // LifecycleReader supplies the current flag lifetime for GET selection.
@@ -65,7 +74,11 @@ type Observer interface {
 	WorkflowEnded()
 	ActionStarted()
 	ActionEnded()
-	ObserveCompleted(service, team string, result domain.CheckerResult, timedOut bool)
+	ObserveCompleted(
+		service, team string,
+		result domain.CheckerResult,
+		timedOut bool,
+	)
 }
 
 // Options controls durable claim renewal, bounded recovery and workflow runtime.
@@ -101,7 +114,14 @@ type Worker struct {
 
 // New constructs a worker. The action semaphore belongs to this instance and
 // therefore limits concurrent checker processes across all handled jobs.
-func New(repo Repository, flags FlagStore, lifecycle LifecycleReader, runner Runner, options Options, logger *slog.Logger) *Worker {
+func New(
+	repo Repository,
+	flags FlagStore,
+	lifecycle LifecycleReader,
+	runner Runner,
+	options Options,
+	logger *slog.Logger,
+) *Worker {
 	if options.LeaseDuration <= 0 {
 		options.LeaseDuration = defaultLeaseDuration
 	}
@@ -127,10 +147,17 @@ func New(repo Repository, flags FlagStore, lifecycle LifecycleReader, runner Run
 		logger = slog.Default()
 	}
 	return &Worker{
-		repo: repo, flags: flags, lifecycle: lifecycle, runner: runner, logger: logger,
-		options: options, actions: make(chan struct{}, options.WorkConcurrency),
-		observer: options.Observer,
-		degraded: make(chan struct{}), failures: make(chan error, 1), unreaped: make(map[uint64]time.Time),
+		repo:      repo,
+		flags:     flags,
+		lifecycle: lifecycle,
+		runner:    runner,
+		logger:    logger,
+		options:   options,
+		actions:   make(chan struct{}, options.WorkConcurrency),
+		observer:  options.Observer,
+		degraded:  make(chan struct{}),
+		failures:  make(chan error, 1),
+		unreaped:  make(map[uint64]time.Time),
 	}
 }
 
@@ -183,8 +210,14 @@ func (w *Worker) Handle(ctx context.Context, jobID uuid.UUID) error {
 	workCtx, cancel := context.WithCancelCause(recoveryCtx)
 	defer cancel(context.Canceled)
 	guard := &leaseGuard{
-		worker: w, jobID: jobID, ownerToken: claim.ownerToken, ctx: workCtx,
-		cancelFn: cancel, done: make(chan struct{}), round: claim.job.Round, workflowDeadline: workflowDeadline,
+		worker:           w,
+		jobID:            jobID,
+		ownerToken:       claim.ownerToken,
+		ctx:              workCtx,
+		cancelFn:         cancel,
+		done:             make(chan struct{}),
+		round:            claim.job.Round,
+		workflowDeadline: workflowDeadline,
 		recoveryDeadline: recoveryDeadline,
 	}
 	//nolint:contextcheck // The guard owns workCtx, the recovery-bounded child created above.

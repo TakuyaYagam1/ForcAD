@@ -11,13 +11,16 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 )
 
-type lifecycleTrace struct{ queries atomic.Int64 }
+type lifecycleTrace struct {
+	queries atomic.Int64
+}
 
 func (trace *lifecycleTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
 	trace.queries.Add(1)
 	return ctx
 }
-func (*lifecycleTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (*lifecycleTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {
+}
 
 func TestLifecycleReadsMetadataInOneQuery(t *testing.T) {
 	f := newSubmissionFixture(t)

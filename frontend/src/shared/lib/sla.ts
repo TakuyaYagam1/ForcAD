@@ -8,7 +8,9 @@ export function getSlaPercent(
   checksPassed: number,
 ): number | null {
   const denominator = Number.isSafeInteger(checks) ? Math.max(0, checks) : 0;
-  if (denominator === 0) return null;
+  if (denominator === 0) {
+    return null;
+  }
 
   const passed = Number.isSafeInteger(checksPassed)
     ? Math.min(denominator, Math.max(0, checksPassed))
@@ -23,7 +25,9 @@ export function getCombinedSlaPercent(
   let checksPassed = 0;
 
   for (const cell of cells) {
-    if (!Number.isSafeInteger(cell.checks) || cell.checks <= 0) continue;
+    if (!Number.isSafeInteger(cell.checks) || cell.checks <= 0) {
+      continue;
+    }
     checks += cell.checks;
     if (Number.isSafeInteger(cell.checksPassed)) {
       checksPassed += Math.min(cell.checks, Math.max(0, cell.checksPassed));

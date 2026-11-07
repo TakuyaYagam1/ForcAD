@@ -14,7 +14,12 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-func generateFlag(teamID uuid.UUID, task domain.Task, round int32, place int32) (domain.Flag, error) {
+func generateFlag(
+	teamID uuid.UUID,
+	task domain.Task,
+	round int32,
+	place int32,
+) (domain.Flag, error) {
 	const location = "checker.generateFlag"
 	if task.Name == "" || place < 1 || place > task.Places {
 		return domain.Flag{}, fmt.Errorf("%s - task name and valid place are required for PUT", location)
@@ -42,8 +47,12 @@ func generateFlag(teamID uuid.UUID, task domain.Task, round int32, place int32) 
 		return domain.Flag{}, fmt.Errorf("%s - generate private flag seed: %w", location, err)
 	}
 	return domain.Flag{
-		Value: randomFlag.String(), TeamID: teamID, TaskID: task.ID, Round: round,
-		PrivateData: hex.EncodeToString(seed), VulnerabilityID: &place,
+		Value:           randomFlag.String(),
+		TeamID:          teamID,
+		TaskID:          task.ID,
+		Round:           round,
+		PrivateData:     hex.EncodeToString(seed),
+		VulnerabilityID: &place,
 	}, nil
 }
 

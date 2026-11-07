@@ -52,7 +52,26 @@ func TestLoad(t *testing.T) {
 	}
 }
 
-func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteReport, directory string, logf func(string, ...any)) (runErr error) {
+func runSuite(
+	ctx context.Context,
+	d *deployment,
+	stages []stage,
+	report *suiteReport,
+	directory string,
+	logf func(string, ...any),
+) (runErr error) {
+	readPacing, err := readPacingSetting()
+	if err != nil {
+		return err
+	}
+	ingress, err := prepareHTTPIngress(ctx, d, directory)
+	if err != nil {
+		return err
+	}
+	spectators, err := spectatorCount()
+	if err != nil {
+		return err
+	}
 	metadataCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	metadata, err := exec.CommandContext(metadataCtx, "docker", "info", "--format", `{"cpus":{{.NCPU}},"memory_bytes":{{.MemTotal}},"storage_driver":{{json .Driver}},"logging_driver":{{json .LoggingDriver}},"security_options":{{json .SecurityOptions}}}`).Output()
 	cancel()
@@ -64,6 +83,17 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		return err
 	}
 	flags := &catalog{}
+	// Keep startup diagnostics too: the first round can exhaust capacity before
+	// the flag catalog is ready and before the measured request stages begin.
+	watch := observe(ctx, d, flags, directory, spectators)
+	defer func() {
+		var observerErr error
+		report.WebSockets, observerErr = watch.stop()
+		runErr = errors.Join(runErr, observerErr)
+		if report.WebSockets.Failures > 0 || report.WebSockets.Connections < int64(spectators) || report.WebSockets.Messages < int64(spectators) {
+			runErr = errors.Join(runErr, fmt.Errorf("load.runSuite - incomplete or failed WebSocket observations: %+v", report.WebSockets))
+		}
+	}()
 	if err := flags.wait(ctx, d); err != nil {
 		return err
 	}
@@ -71,12 +101,9 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 	if err != nil {
 		return err
 	}
-	watch := observe(ctx, d, flags, directory)
+	report.CheckerResultsBefore = &before
 	defer func() {
-		var observerErr error
-		report.WebSockets, observerErr = watch.stop()
-		runErr = errors.Join(runErr, observerErr)
-		if report.Profile == "checker" {
+		if checkerAuditEnabled(report.Profile) {
 			checker, auditErr := collectCheckerReport(ctx, d)
 			if auditErr == nil {
 				report.Checker = checker
@@ -89,6 +116,7 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		}
 		after, countErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
 		if countErr == nil {
+			report.CheckerResultsTotal = &after
 			report.CheckerResults = after - before
 			if runErr == nil && report.CheckerResults < int64(teamCount*3) {
 				runErr = fmt.Errorf("load.runSuite - checker rounds stopped progressing")
@@ -96,12 +124,9 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 		} else {
 			runErr = errors.Join(runErr, countErr)
 		}
-		if report.WebSockets.Failures > 0 || report.WebSockets.Connections < int64(teamCount) || report.WebSockets.Messages < int64(teamCount) {
-			runErr = errors.Join(runErr, fmt.Errorf("load.runSuite - incomplete or failed WebSocket observations: %+v", report.WebSockets))
-		}
 	}()
 	measurementErr := runStages(ctx, stages, report.Profile != "checker", func(s stage) error {
-		return measure(ctx, d, flags, s, report, directory, logf)
+		return measure(ctx, d, flags, s, report, directory, ingress, readPacing, logf)
 	})
 	bad, err := d.number(ctx, `SELECT count(*) FROM TeamTasks WHERE status<>101 OR checks<2 OR checks_passed<>checks`)
 	if err != nil {
@@ -122,7 +147,12 @@ func runSuite(ctx context.Context, d *deployment, stages []stage, report *suiteR
 
 // Stop increasing pressure after a failed stage, but still observe recovery.
 // Its success must not erase an earlier availability or correctness failure.
-func runStages(ctx context.Context, stages []stage, withBurst bool, measureStage func(stage) error) error {
+func runStages(
+	ctx context.Context,
+	stages []stage,
+	withBurst bool,
+	measureStage func(stage) error,
+) error {
 	var measurementErr error
 	for _, s := range stages[:len(stages)-1] {
 		if measurementErr = measureStage(s); measurementErr != nil {
@@ -130,7 +160,13 @@ func runStages(ctx context.Context, stages []stage, withBurst bool, measureStage
 		}
 	}
 	if measurementErr == nil && withBurst {
-		burst := stage{Name: "flag-burst", Duration: 3 * time.Second, ReadRPS: 100, FlagRPS: 400, Overload: true}
+		burst := stage{
+			Name:     "flag-burst",
+			Duration: 3 * time.Second,
+			ReadRPS:  100,
+			FlagRPS:  400,
+			Overload: true,
+		}
 		measurementErr = measureStage(burst)
 		if !waitContext(ctx, 3*time.Second) {
 			return errors.Join(measurementErr, ctx.Err())
@@ -142,7 +178,24 @@ func runStages(ctx context.Context, stages []stage, withBurst bool, measureStage
 	return errors.Join(measurementErr, measureStage(stages[len(stages)-1]))
 }
 
-func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report *suiteReport, directory string, logf func(string, ...any)) error {
+func flagCatchupBudget(s stage) time.Duration {
+	if s.Name == "flag-burst" {
+		return generatorLagBudget / 2
+	}
+	return min(10*time.Millisecond, time.Second/time.Duration(s.FlagRPS))
+}
+
+func measure(
+	ctx context.Context,
+	d *deployment,
+	flags *catalog,
+	s stage,
+	report *suiteReport,
+	directory string,
+	ingress *httpIngressRoute,
+	readPacing pacingPolicy,
+	logf func(string, ...any),
+) error {
 	logf("stage=%s path=%s duration=%s reads=%d/s flags=%d/s", s.Name, s.Path, s.Duration, s.ReadRPS, s.FlagRPS*batchSize)
 	before, err := d.number(ctx, `SELECT count(*) FROM StolenFlags`)
 	if err != nil {
@@ -153,22 +206,48 @@ func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report
 		return err
 	}
 	completedBefore := 0
-	if report.Profile == "checker" {
+	if checkerAuditEnabled(report.Profile) {
 		count, err := d.number(ctx, completedCheckerRoundsSQL)
 		if err != nil {
 			return err
 		}
 		completedBefore = int(count)
 	}
+	flagWorkerLimit, err := diagnosticFlagWorkerLimit(s.Name)
+	if err != nil {
+		return err
+	}
 	f := newFarm(d.origin, flags)
 	f.allowRateLimit = s.Name == "flag-burst"
-	result := stageReport{Name: s.Name, Path: s.Path, Started: time.Now().UTC(), Seconds: s.Duration.Seconds()}
+	result := stageReport{
+		Name:    s.Name,
+		Path:    s.Path,
+		Started: time.Now().UTC(),
+		Seconds: s.Duration.Seconds(),
+	}
 	var workers sync.WaitGroup
 	workers.Go(func() {
-		result.Reads = attack(ctx, attackOptions{rps: s.ReadRPS, duration: s.Duration, workers: readWorkers, target: readTarget(d.origin, s.Path), validate: validateRead(s.Overload)})
+		result.Reads = attack(ctx, attackOptions{
+			pacing:   readPacing,
+			ingress:  ingress,
+			rps:      s.ReadRPS,
+			duration: s.Duration,
+			workers:  readWorkers,
+			target:   readTarget(d.origin, s.Path),
+			validate: validateRead(s.Overload),
+		})
 	})
 	workers.Go(func() {
-		result.Flags = attack(ctx, attackOptions{rps: s.FlagRPS, duration: s.Duration, workers: flagWorkers, target: f.target, validate: f.validate})
+		result.Flags = attack(ctx, attackOptions{
+			pacing:        pacingDiscardBacklog,
+			ingress:       ingress,
+			rps:           s.FlagRPS,
+			duration:      s.Duration,
+			workers:       flagWorkerLimit,
+			target:        f.target,
+			validate:      f.validate,
+			catchupBudget: flagCatchupBudget(s),
+		})
 	})
 	workers.Wait()
 	result.Finished = time.Now().UTC()
@@ -178,7 +257,7 @@ func measure(ctx context.Context, d *deployment, flags *catalog, s stage, report
 	integrityErr := f.reconcile(ctx, d, before)
 	result.Committed = f.committed
 	checksAfter, progressErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
-	if report.Profile == "checker" {
+	if checkerAuditEnabled(report.Profile) {
 		checker, auditErr := collectCheckerReport(ctx, d)
 		if auditErr == nil {
 			report.Checker = checker

@@ -17,7 +17,10 @@ func (g *GameStore) CheckerLogs(
 ) ([]domain.CheckerLog, error) {
 	const location = "postgres.GameStore.CheckerLogs"
 	rows, err := g.queries.ReadPublicCheckerLogs(ctx, sqlc.ReadPublicCheckerLogsParams{
-		TeamID: teamID, TaskID: taskID, BeforeID: beforeID, LogLimit: limit,
+		TeamID:   teamID,
+		TaskID:   taskID,
+		BeforeID: beforeID,
+		LogLimit: limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - read public checker logs: %w", location, err)
@@ -25,9 +28,15 @@ func (g *GameStore) CheckerLogs(
 	result := make([]domain.CheckerLog, 0, len(rows))
 	for _, row := range rows {
 		log := domain.CheckerLog{
-			ID: row.ID, Round: row.Round, Action: row.Action, Stage: row.Stage,
-			StartedAt: row.StartedAt.Time, FinishedAt: row.FinishedAt.Time,
-			DurationMS: row.DurationMs, TimedOut: row.TimedOut, Status: row.Status,
+			ID:            row.ID,
+			Round:         row.Round,
+			Action:        row.Action,
+			Stage:         row.Stage,
+			StartedAt:     row.StartedAt.Time,
+			FinishedAt:    row.FinishedAt.Time,
+			DurationMS:    row.DurationMs,
+			TimedOut:      row.TimedOut,
+			Status:        row.Status,
 			PublicMessage: row.PublicMessage,
 		}
 		result = append(result, log.PublicView())
@@ -49,10 +58,17 @@ func insertCheckerLogs(
 		}
 		log = log.PublicView()
 		if err := queries.InsertPublicCheckerLog(ctx, sqlc.InsertPublicCheckerLogParams{
-			TeamID: teamID, TaskID: taskID, Round: log.Round,
-			Action: log.Action, Stage: log.Stage, StartedAt: gameStamp(log.StartedAt),
-			FinishedAt: gameStamp(log.FinishedAt), DurationMs: log.DurationMS,
-			TimedOut: log.TimedOut, Status: log.Status, PublicMessage: log.PublicMessage,
+			TeamID:        teamID,
+			TaskID:        taskID,
+			Round:         log.Round,
+			Action:        log.Action,
+			Stage:         log.Stage,
+			StartedAt:     gameStamp(log.StartedAt),
+			FinishedAt:    gameStamp(log.FinishedAt),
+			DurationMs:    log.DurationMS,
+			TimedOut:      log.TimedOut,
+			Status:        log.Status,
+			PublicMessage: log.PublicMessage,
 		}); err != nil {
 			return fmt.Errorf("%s - insert checker log %d: %w", location, index, err)
 		}

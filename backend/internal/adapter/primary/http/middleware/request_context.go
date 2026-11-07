@@ -23,7 +23,10 @@ func CSRFRequest(ctx context.Context) (string, bool) {
 }
 
 func WithRequestInfo(ctx context.Context, session string, secure bool) context.Context {
-	return context.WithValue(ctx, requestKey{}, requestInfo{session: session, secure: secure})
+	return context.WithValue(ctx, requestKey{}, requestInfo{
+		session: session,
+		secure:  secure,
+	})
 }
 
 func Session(ctx context.Context) string {

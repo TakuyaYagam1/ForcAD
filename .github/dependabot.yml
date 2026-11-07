@@ -37,6 +37,7 @@ updates:
       - /deployment/demo
       - /deployment/docker/pgbouncer
       - /deployment/docker/postgres
+      - /deployment/docker/nats
       - /frontend
       - /infrastracture/tests
     ignore:
@@ -52,6 +53,7 @@ updates:
     ignore:
       # These images are built locally by ForcAD.
       - dependency-name: forcad_postgres
+      - dependency-name: forcad_nats
       - dependency-name: forcad-demo
     patterns: ["*"]
     multi-ecosystem-group: dependencies

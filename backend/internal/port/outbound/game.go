@@ -3,25 +3,26 @@ package outbound
 import (
 	"context"
 	"time"
-	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
 type GameRepository interface {
-	Board(ctx context.Context) (domain.BoardData, error)
+	TeamCatalogRepository
+	TaskRepository
+	ScoreRepository
+	CheckerLogRepository
+
 	Lifecycle(ctx context.Context) (domain.Lifecycle, error)
-	Teams(ctx context.Context, active bool) ([]domain.Team, error)
-	Tasks(ctx context.Context, active bool) ([]domain.Task, error)
-	Cells(ctx context.Context) ([]domain.Cell, error)
-	History(ctx context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error)
-	CheckerLogs(ctx context.Context, teamID, taskID uuid.UUID, beforeID *uuid.UUID, limit int32) ([]domain.CheckerLog, error)
-	PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error)
-	ChangeState(ctx context.Context, action string, generation *int64, at time.Time) error
-	CreateTeam(ctx context.Context, team domain.Team) (domain.Team, error)
-	UpdateTeam(ctx context.Context, team domain.Team) (domain.Team, error)
-	DeactivateTeam(ctx context.Context, teamID uuid.UUID) error
-	CreateTask(ctx context.Context, task domain.Task) (domain.Task, error)
-	UpdateTask(ctx context.Context, task domain.Task) (domain.Task, error)
-	DeactivateTask(ctx context.Context, taskID uuid.UUID) error
+	ChangeState(
+		ctx context.Context,
+		action string,
+		generation *int64,
+		at time.Time,
+	) error
+}
+
+type GameMaintenanceRepository interface {
+	StartScheduled(ctx context.Context, at time.Time) (bool, error)
+	Maintain(ctx context.Context, at time.Time) (bool, error)
 }

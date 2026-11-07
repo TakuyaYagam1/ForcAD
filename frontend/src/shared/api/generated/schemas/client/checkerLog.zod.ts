@@ -15,8 +15,12 @@ export const CheckerLog = zod.object({
   "round": zod.int(),
   "action": zod.string(),
   "stage": zod.string(),
-  "started_at": zod.iso.datetime({"offset":true}),
-  "finished_at": zod.iso.datetime({"offset":true}),
+  "started_at": zod.iso.datetime({
+    "offset":true
+  }),
+  "finished_at": zod.iso.datetime({
+    "offset":true
+  }),
   "duration_ms": zod.int().min(checkerLogDurationMsMin),
   "timed_out": zod.boolean(),
   "status": zod.int(),

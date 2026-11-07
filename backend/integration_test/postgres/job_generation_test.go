@@ -36,8 +36,12 @@ func TestCheckerJobGenerationFence(t *testing.T) {
 		t.Fatalf("scheduled generation = %d, want 1", life.Session.Generation)
 	}
 	run, err := repository.Prepare(ctx, domain.ScheduleRequest{
-		ScheduleID: "generation_fence", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic,
+		ScheduleID:    "generation_fence",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
 	})
 	if err != nil || run == nil {
 		t.Fatalf("prepare scheduled job = %+v, %v", run, err)
@@ -122,13 +126,20 @@ func TestCheckerJobGenerationFence(t *testing.T) {
 		t.Fatal("claimed current-generation job has no owner token")
 	}
 	if _, err := repository.Create(ctx, domain.Flag{
-		Value: "current-generation-flag", TeamID: current.TeamID, TaskID: current.TaskID, Round: current.Round,
-	}, &domain.CheckerJobOwner{JobID: current.ID, ClaimToken: *current.ClaimToken}); err != nil {
+		Value:  "current-generation-flag",
+		TeamID: current.TeamID,
+		TaskID: current.TaskID,
+		Round:  current.Round,
+	}, &domain.CheckerJobOwner{
+		JobID:      current.ID,
+		ClaimToken: *current.ClaimToken,
+	}); err != nil {
 		t.Fatalf("commit flag for current-generation job: %v", err)
 	}
 	completedAt := publishedAt.Add(2 * time.Second)
 	if completed, err := repository.Complete(ctx, currentID, *current.ClaimToken, completedAt, domain.CheckerResult{
-		Round: current.Round, Status: domain.TaskStatusUp,
+		Round:  current.Round,
+		Status: domain.TaskStatusUp,
 	}); err != nil || !completed {
 		t.Fatalf("complete current-generation job = %t, %v; want true", completed, err)
 	}
@@ -140,8 +151,14 @@ func TestCheckerJobGenerationFence(t *testing.T) {
 			t.Fatal(err)
 		}
 		flag, err := repository.Create(ctx, domain.Flag{
-			Value: "fenced-" + id.String(), TeamID: current.TeamID, TaskID: current.TaskID, Round: current.Round,
-		}, &domain.CheckerJobOwner{JobID: id, ClaimToken: owner})
+			Value:  "fenced-" + id.String(),
+			TeamID: current.TeamID,
+			TaskID: current.TaskID,
+			Round:  current.Round,
+		}, &domain.CheckerJobOwner{
+			JobID:      id,
+			ClaimToken: owner,
+		})
 		if !errors.Is(err, domain.ErrCheckerJobClosed) {
 			t.Fatalf("commit flag for fenced job %q returned flag %d, error %v", id, flag.ID, err)
 		}
@@ -149,7 +166,8 @@ func TestCheckerJobGenerationFence(t *testing.T) {
 			t.Fatalf("renew fenced job %q = %t, %v; want false", id, renewed, err)
 		}
 		if completed, err := repository.Complete(ctx, id, owner, publishedAt.Add(4*time.Second), domain.CheckerResult{
-			Round: current.Round, Status: domain.TaskStatusUp,
+			Round:  current.Round,
+			Status: domain.TaskStatusUp,
 		}); err != nil || completed {
 			t.Fatalf("complete fenced job %q = %t, %v; want false", id, completed, err)
 		}

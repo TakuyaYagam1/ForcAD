@@ -7,7 +7,12 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-func (f *Flags) observeSubmission(team uuid.UUID, count int, responses []FlagResponse, err error) {
+func (f *Flags) observeSubmission(
+	team uuid.UUID,
+	count int,
+	responses []FlagResponse,
+	err error,
+) {
 	if f.observer == nil {
 		return
 	}

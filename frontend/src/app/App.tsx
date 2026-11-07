@@ -3,24 +3,78 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { RequireAdmin } from "./providers/RequireAdmin";
 import { useTranslation } from "react-i18next";
 
-const ScoreboardPage = lazy(() => import("@/pages/scoreboard/ui/ScoreboardPage")
-  .then(({ ScoreboardPage }) => ({ default: ScoreboardPage })));
-const LiveScoreboardPage = lazy(() => import("@/pages/live-scoreboard/ui/LiveScoreboardPage")
-  .then(({ LiveScoreboardPage }) => ({ default: LiveScoreboardPage })));
-const TeamScoreboardPage = lazy(() => import("@/pages/team-scoreboard/ui/TeamScoreboardPage")
-  .then(({ TeamScoreboardPage }) => ({ default: TeamScoreboardPage })));
-const TeamsPage = lazy(() => import("@/pages/teams/ui/TeamsPage")
-  .then(({ TeamsPage }) => ({ default: TeamsPage })));
-const AdminLoginPage = lazy(() => import("@/pages/admin-login/ui/AdminLoginPage")
-  .then(({ AdminLoginPage }) => ({ default: AdminLoginPage })));
-const AdminScoreboardPage = lazy(() => import("@/pages/admin-scoreboard/ui/AdminScoreboardPage")
-  .then(({ AdminScoreboardPage }) => ({ default: AdminScoreboardPage })));
-const TeamAdminPage = lazy(() => import("@/pages/admin-team/ui/TeamAdminPage")
-  .then(({ TeamAdminPage }) => ({ default: TeamAdminPage })));
-const TaskAdminPage = lazy(() => import("@/pages/admin-task/ui/TaskAdminPage")
-  .then(({ TaskAdminPage }) => ({ default: TaskAdminPage })));
-const AdminTeamTaskLogPage = lazy(() => import("@/pages/admin-team-task-log/ui/AdminTeamTaskLogPage")
-  .then(({ AdminTeamTaskLogPage }) => ({ default: AdminTeamTaskLogPage })));
+const ScoreboardPage = lazy(() => {
+  return import("@/pages/scoreboard/ui/ScoreboardPage")
+    .then(({ ScoreboardPage }) => {
+      return {
+        default: ScoreboardPage
+      }
+    })
+});
+const LiveScoreboardPage = lazy(() => {
+  return import("@/pages/live-scoreboard/ui/LiveScoreboardPage")
+    .then(({ LiveScoreboardPage }) => {
+      return {
+        default: LiveScoreboardPage
+      }
+    })
+});
+const TeamScoreboardPage = lazy(() => {
+  return import("@/pages/team-scoreboard/ui/TeamScoreboardPage")
+    .then(({ TeamScoreboardPage }) => {
+      return {
+        default: TeamScoreboardPage
+      }
+    })
+});
+const TeamsPage = lazy(() => {
+  return import("@/pages/teams/ui/TeamsPage")
+    .then(({ TeamsPage }) => {
+      return {
+        default: TeamsPage
+      }
+    })
+});
+const AdminLoginPage = lazy(() => {
+  return import("@/pages/admin-login/ui/AdminLoginPage")
+    .then(({ AdminLoginPage }) => {
+      return {
+        default: AdminLoginPage
+      }
+    })
+});
+const AdminScoreboardPage = lazy(() => {
+  return import("@/pages/admin-scoreboard/ui/AdminScoreboardPage")
+    .then(({ AdminScoreboardPage }) => {
+      return {
+        default: AdminScoreboardPage
+      }
+    })
+});
+const TeamAdminPage = lazy(() => {
+  return import("@/pages/admin-team/ui/TeamAdminPage")
+    .then(({ TeamAdminPage }) => {
+      return {
+        default: TeamAdminPage
+      }
+    })
+});
+const TaskAdminPage = lazy(() => {
+  return import("@/pages/admin-task/ui/TaskAdminPage")
+    .then(({ TaskAdminPage }) => {
+      return {
+        default: TaskAdminPage
+      }
+    })
+});
+const AdminTeamTaskLogPage = lazy(() => {
+  return import("@/pages/admin-team-task-log/ui/AdminTeamTaskLogPage")
+    .then(({ AdminTeamTaskLogPage }) => {
+      return {
+        default: AdminTeamTaskLogPage
+      }
+    })
+});
 
 function RouteLoading() {
   const { t } = useTranslation("shell");
@@ -43,7 +97,9 @@ function RouteErrorFallback() {
         <button
           className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-100 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            return window.location.reload()
+          }}
         >
           {t("reload")}
         </button>
@@ -53,17 +109,27 @@ function RouteErrorFallback() {
 }
 
 class RouteErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
+  {
+    children: ReactNode
+  },
+  {
+    hasError: boolean
+  }
 > {
-  state = { hasError: false };
+  state = {
+    hasError: false
+  };
 
   static getDerivedStateFromError() {
-    return { hasError: true };
+    return {
+      hasError: true
+    };
   }
 
   render() {
-    if (this.state.hasError) return <RouteErrorFallback />;
+    if (this.state.hasError) {
+      return <RouteErrorFallback />;
+    }
     return this.props.children;
   }
 }

@@ -23,7 +23,7 @@ services:
     logging: *logging
   redis:
     logging: *logging
-  rabbitmq:
+  nats:
     logging: *logging
   notes:
     logging: *logging

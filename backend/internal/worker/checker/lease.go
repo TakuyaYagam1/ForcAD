@@ -113,11 +113,12 @@ func (g *leaseGuard) renewNow() error {
 }
 
 func (g *leaseGuard) confirmLeaseWindow(deadline time.Time) error {
+	const location = "checker.leaseGuard.confirmLeaseWindow"
 	if err := g.ctx.Err(); err != nil {
-		return g.renewFailure(g.ctx, "accept confirmed lease", context.Cause(g.ctx))
+		return fmt.Errorf("%s - accept confirmed lease: %w", location, g.renewFailure(g.ctx, "accept confirmed lease", context.Cause(g.ctx)))
 	}
 	if !time.Now().Before(deadline) {
-		return g.renewFailure(g.ctx, "confirmed lease window expired", ErrLeaseLost)
+		return fmt.Errorf("%s - check confirmed lease deadline: %w", location, g.renewFailure(g.ctx, "confirmed lease window expired", ErrLeaseLost))
 	}
 	return nil
 }
@@ -130,10 +131,11 @@ func minTime(a, b time.Time) time.Time {
 }
 
 func (g *leaseGuard) renewFailure(ctx context.Context, operation string, err error) error {
+	const location = "checker.leaseGuard.renewFailure"
 	if cause := context.Cause(ctx); cause != nil {
 		err = cause
 	}
-	err = fmt.Errorf("checker.leaseGuard.renewNow - %s: %w", operation, err)
+	err = fmt.Errorf("%s - %s: %w", location, operation, err)
 	g.abort(err)
 	return err
 }

@@ -21,9 +21,18 @@ import { useTranslation } from "react-i18next";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
 
 type TeamPageError =
-  | { kind: "invalidId" }
-  | { kind: "validation"; issue: TeamValidationIssue }
-  | { kind: "request"; operation: "load" | "save"; cause: unknown };
+  | {
+    kind: "invalidId"
+  }
+  | {
+    kind: "validation";
+    issue: TeamValidationIssue
+  }
+  | {
+    kind: "request";
+    operation: "load" | "save";
+    cause: unknown
+  };
 
 interface TeamAdminPageProps {
   mode?: "create" | "edit";
@@ -31,7 +40,9 @@ interface TeamAdminPageProps {
 
 export function TeamAdminPage({ mode }: TeamAdminPageProps) {
   const { t } = useTranslation("admin");
-  const { teamId: teamIdParam } = useParams<{ teamId?: string }>();
+  const { teamId: teamIdParam } = useParams<{
+    teamId?: string
+  }>();
   const navigate = useNavigate();
   const location = useLocation();
   const [team, setTeam] = useState<Team | null>(null);
@@ -78,19 +89,30 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
         } else if (teamId !== null) {
           const loadedTeam = await fetchTeamAdmin(teamId);
           if (!cancelled) {
-            setTeam({ ...loadedTeam, logo_path: loadedTeam.logo_path ?? "" });
+            setTeam({
+              ...loadedTeam,
+              logo_path: loadedTeam.logo_path ?? ""
+            });
             setLoadedKey(location.key);
           }
         } else if (!cancelled) {
-          setError({ kind: "invalidId" });
+          setError({
+            kind: "invalidId"
+          });
         }
       } catch (loadError: unknown) {
         console.error(loadError);
         if (!cancelled) {
-          setError({ kind: "request", operation: "load", cause: loadError });
+          setError({
+            kind: "request",
+            operation: "load",
+            cause: loadError
+          });
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
@@ -105,18 +127,27 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
     field: Field,
     value: Team[Field],
   ) => {
-    setTeam((currentTeam) =>
-      currentTeam ? { ...currentTeam, [field]: value } : currentTeam,
+    setTeam((currentTeam) => {
+      return currentTeam ? {
+        ...currentTeam,
+        [field]: value
+      } : currentTeam
+    },
     );
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!team || !canSave || saving) return;
+    if (!team || !canSave || saving) {
+      return;
+    }
 
     const validationError = getTeamValidationIssue(team, isCreate);
     if (validationError) {
-      setError({ kind: "validation", issue: validationError });
+      setError({
+        kind: "validation",
+        issue: validationError
+      });
       return;
     }
 
@@ -125,26 +156,42 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
     setError(null);
 
     try {
-      const payload: Omit<Team, "id"> & { id?: Team["id"] } = { ...team };
+      const payload: Omit<Team, "id"> & {
+        id?: Team["id"]
+      } = {
+        ...team
+      };
       delete payload.id;
 
       if (isCreate) {
         const createdTeam = await createTeamAdmin(payload);
         if (routeKey.current === submittedRouteKey) {
-          navigate(`/admin/team/${createdTeam.id}`, { replace: true });
+          navigate(`/admin/team/${createdTeam.id}`, {
+            replace: true
+          });
         }
       } else if (teamId != null) {
         const updatedTeam = await updateTeamAdmin(teamId, payload);
-        if (routeKey.current === submittedRouteKey) setTeam(updatedTeam);
+        if (routeKey.current === submittedRouteKey) {
+          setTeam(updatedTeam);
+        }
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["admin-teams"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-teams"]
+      });
     } catch (saveError: unknown) {
       if (routeKey.current === submittedRouteKey) {
-        setError({ kind: "request", operation: "save", cause: saveError });
+        setError({
+          kind: "request",
+          operation: "save",
+          cause: saveError
+        });
       }
     } finally {
-      if (routeKey.current === submittedRouteKey) setSaving(false);
+      if (routeKey.current === submittedRouteKey) {
+        setSaving(false);
+      }
     }
   };
 
@@ -193,7 +240,9 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
               canSave={canSave}
               onChange={handleChange}
               onSubmit={handleSubmit}
-              onCancel={() => navigate("/admin/scoreboard")}
+              onCancel={() => {
+                return navigate("/admin/scoreboard")
+              }}
             />
           </>
         )}

@@ -22,7 +22,12 @@ type recoveredRepository struct {
 	renew      func(context.Context) (bool, error)
 }
 
-func (r *recoveredRepository) Claim(ctx context.Context, id uuid.UUID, owner string, at, deadline time.Time) (domain.CheckerJob, error) {
+func (r *recoveredRepository) Claim(
+	ctx context.Context,
+	id uuid.UUID,
+	owner string,
+	at, deadline time.Time,
+) (domain.CheckerJob, error) {
 	job, err := r.fakeRepository.Claim(ctx, id, owner, at, deadline)
 	if err == nil && r.afterClaim != nil {
 		r.afterClaim(&job)
@@ -30,14 +35,24 @@ func (r *recoveredRepository) Claim(ctx context.Context, id uuid.UUID, owner str
 	return job, err
 }
 
-func (r *recoveredRepository) SetDeadline(ctx context.Context, id uuid.UUID, owner string, at, deadline time.Time) (bool, error) {
+func (r *recoveredRepository) SetDeadline(
+	ctx context.Context,
+	id uuid.UUID,
+	owner string,
+	at, deadline time.Time,
+) (bool, error) {
 	if r.deadline != nil {
 		return r.deadline(ctx)
 	}
 	return r.fakeRepository.SetDeadline(ctx, id, owner, at, deadline)
 }
 
-func (r *recoveredRepository) Renew(ctx context.Context, id uuid.UUID, owner string, at, deadline time.Time) (bool, error) {
+func (r *recoveredRepository) Renew(
+	ctx context.Context,
+	id uuid.UUID,
+	owner string,
+	at, deadline time.Time,
+) (bool, error) {
 	if r.renew != nil {
 		return r.renew(ctx)
 	}
@@ -50,7 +65,9 @@ func TestConfirmedClaimCannotReviveCanceledOrExpiredOwner(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(t.Context())
 				defer cancel()
-				repo := &recoveredRepository{fakeRepository: newFakeRepository(nil, domain.JobActionCheckOnly)}
+				repo := &recoveredRepository{
+					fakeRepository: newFakeRepository(nil, domain.JobActionCheckOnly),
+				}
 				repo.afterClaim = func(job *domain.CheckerJob) {
 					switch scenario {
 					case "canceled":
@@ -62,7 +79,9 @@ func TestConfirmedClaimCannotReviveCanceledOrExpiredOwner(t *testing.T) {
 						job.ClaimDeadlineAt = &expired
 					}
 				}
-				worker := New(repo, nil, nil, nil, Options{LeaseDuration: time.Second}, nil)
+				worker := New(repo, nil, nil, nil, Options{
+					LeaseDuration: time.Second,
+				}, nil)
 				_, accepted, err := worker.claimJob(ctx, testJobID)
 				want := ErrLeaseLost
 				if scenario == "canceled" {
@@ -83,7 +102,9 @@ func TestConfirmedLeaseUsesLiveParentAndOriginalWindow(t *testing.T) {
 				synctest.Test(t, func(t *testing.T) {
 					ctx, cancel := context.WithCancelCause(t.Context())
 					defer cancel(context.Canceled)
-					repo := &recoveredRepository{fakeRepository: newFakeRepository(nil, domain.JobActionCheckOnly)}
+					repo := &recoveredRepository{
+						fakeRepository: newFakeRepository(nil, domain.JobActionCheckOnly),
+					}
 					confirmed := func(rpc context.Context) {
 						switch scenario {
 						case "rpc_expired":
@@ -111,9 +132,19 @@ func TestConfirmedLeaseUsesLiveParentAndOriginalWindow(t *testing.T) {
 							return true, nil // Exact-owner read-back succeeded.
 						}
 					}
-					worker := New(repo, nil, nil, nil, Options{LeaseDuration: 30 * time.Second, RenewInterval: time.Second}, nil)
-					guard := &leaseGuard{worker: worker, jobID: testJobID, ownerToken: "owner", ctx: ctx, cancelFn: cancel,
-						workflowDeadline: time.Now().Add(time.Minute), recoveryDeadline: time.Now().Add(2 * time.Minute)}
+					worker := New(repo, nil, nil, nil, Options{
+						LeaseDuration: 30 * time.Second,
+						RenewInterval: time.Second,
+					}, nil)
+					guard := &leaseGuard{
+						worker:           worker,
+						jobID:            testJobID,
+						ownerToken:       "owner",
+						ctx:              ctx,
+						cancelFn:         cancel,
+						workflowDeadline: time.Now().Add(time.Minute),
+						recoveryDeadline: time.Now().Add(2 * time.Minute),
+					}
 					err := guard.renewNow()
 					switch scenario {
 					case "rpc_expired":

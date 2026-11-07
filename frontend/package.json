@@ -8,7 +8,7 @@
     "dev:demo": "vite --mode demo",
     "generate:api": "node ../api/scripts/generate.mjs frontend",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . && cd ../api && node ../frontend/node_modules/eslint/bin/eslint.js scripts",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:e2e": "pnpm typecheck:e2e && playwright test",

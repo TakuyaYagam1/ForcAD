@@ -10,6 +10,35 @@ Python checkers, and 20 WebSocket observers. Flag traffic sends 40 batches per
 second with 100 values per batch, including duplicates. The stack runs two
 receivers and two workers with eight checker slots each.
 
+Checker jobs use persistent NATS JetStream. `LOAD_BROKER_PREFLIGHT=1` verifies
+worker drain and recovery after restarting only the isolated stack's NATS
+container before starting measured traffic. Its test streams use a separate
+namespace from application jobs. When `LOAD_REPORT_DIR` is set, the full redacted
+preflight output is saved as `broker-preflight.jsonl` beside the run artifacts.
+Historical RabbitMQ results describe the old
+transport and must be compared with a new run before claiming an improvement.
+
+`LOAD_WORKER_CPU_SHARES` sets relative CPU weight; default `0` inherits Docker settings, and idle CPU remains available to all services.
+`LOAD_API_CPU_SHARES` sets API replicas' relative CPU weight (default `0`); verify actual cgroup `cpu.weight`, whose mapping depends on the runtime. It neither reserves cores nor increases database pools.
+`LOAD_POSTGRES_CPU_SHARES` controls PostgreSQL's relative CPU priority in the isolated load stack (default `0`). Verify the actual cgroup weight; CPU shares are not a core reservation.
+`LOAD_WORKER_CPUS` sets the CPU quota per worker replica; default `0` is unlimited.
+
+`LOAD_DIAGNOSTIC_BURST_WORKERS` sets the generator worker ceiling for `flag-burst` (default `64`).
+Ordinary flag stages stay at `64`; offered rates and server limits are unchanged.
+Check actual delivery and `generator_valid`; a higher worker ceiling does not prove capacity.
+Every stage, including overload, requires a valid generator. Inspect the saved
+SLO results separately for overload stages, which do not enforce the normal SLO.
+`mean_ms` records Vegeta's complete hit duration. `result_consumer_delay_mean_ms`
+and `result_consumer_delay_max_ms` separately measure the gap from a finished hit
+to receipt by the harness, exposing consumer backpressure and scheduling delay.
+Burst pacing permits 50 ms of bounded catchup, half the 100 ms lateness budget.
+At 400 batches/s this permits up to 20 catchup starts after the delayed original;
+it changes burst timing shape and does not prove constant wire arrivals. Ordinary
+stages, the 95% delivery / 100 ms lateness gates and actual start-density reporting are unchanged.
+
+Observers reconnect every 20 seconds by default. Set `LOAD_WS_RECONNECT_INTERVAL=0`
+for persistent connections. The report records the interval; these are different workloads.
+
 Set `LOAD_TEAM_COUNT=28 LOAD_WORKER_REPLICAS=20` to check 20 worker replicas
 against 28 synthetic teams. This retains three fixture services and one PUT
 and GET per service by default. It verifies the worker pool and result
@@ -26,6 +55,16 @@ results stay at 101 across the run. It does not replace the separate flag
 submission capacity test.
 
 ## Run
+
+Set `LOAD_SPECTATORS` to choose the number of WebSocket observers independently
+of the team count. `LOAD_CHECKER_AUDIT=1` enables round and workflow auditing for
+any load profile; the `checker` profile always enables it.
+
+`LOAD_CLIENT_BUCKETS=1` enables a loopback-only test adapter that models separate
+client rate buckets using `X-Forcad-Load-Client`. It is off by default. Production
+keeps the source-IP limiter; results with client buckets describe a different
+workload from requests sharing one source IP. Each bucket uses the production
+per-client rate, burst and rejection code.
 
 From the repository root:
 
@@ -77,6 +116,43 @@ pool separately allows 32 PostgreSQL connections. HTTP RPS is not SQL RPS:
 scoreboard reads use a 500 ms cache, while other routes perform database reads.
 Size pools using acquisition waits, cancellations and PgBouncer queue metrics.
 
+`LOAD_RECEIVER_DATABASE_MAX_CONNS` sets each receiver's pool and the matching PgBouncer client budget.
+
+With `LOAD_DIAGNOSTICS=1`, `pool.log` samples every configured API and receiver.
+The default `LOAD_POOL_METRICS_TRANSPORT=exec` uses Docker exec. For a native Linux
+engine, opt into `LOAD_POOL_METRICS_TRANSPORT=direct LOAD_MONITORING=1` with
+`DOCKER_HOST=unix:///var/run/docker.sock` and `DOCKER_CONTEXT` unset to scrape
+the owned containers directly. Replica coverage, the metric whitelist and the
+one-second pause after each sampling cycle stay the same; invalid modes or
+ownership/address mismatches fail diagnostics.
+`LOAD_HTTP_INGRESS_TRANSPORT=direct` separately sends only measured REST/flag
+attacks to the owned Nginx private address, preserving the original URL and Host.
+It requires the same local Linux Docker socket and no Docker context; the default
+is `published`. Bootstrap and WebSocket traffic keep the published route.
+`http-ingress.json` records the checked container, private endpoint and matching
+loopback publication; attack reports label the transport. This diagnostic bypasses
+the published-port forwarding path and cannot qualify its end-to-end capacity.
+`LOAD_READ_PACING=recent-window` is a separate REST pacing experiment: after a
+stall it drops stale slots outside the existing 10 ms catchup window, reserving
+one recent due slot for the preceding already-issued tick when present. This
+changes recovery policy; the default `discard-backlog` drops the due backlog.
+Flag attacks always keep `discard-backlog`. Each attack records
+`generator_pacing_policy`; budgets and validation gates remain unchanged.
+Receiver samples include flag submission duration histograms for resolve,
+rate, admission, storage and total (`forcad_flag_submission_phase_duration_seconds`).
+Use them to locate which stage consumed the request deadline during a timeout.
+Diagnostics also stream the owned Nginx container into `http-trace.jsonl`, retaining
+only requests taking at least 500 ms, HTTP 499/5xx and normalized errors. The trace
+records Vegeta sequence, route, upstream timings/address, API IP mapping and
+capture counters; it excludes raw URLs, query strings, headers and error text.
+`LOAD_HTTP_PHASES=1` separately enables bounded client timing records in each
+attack's `transport_phases` report. It retains slow requests, transport failures
+and HTTP 5xx (`http_5xx`); expected 429s are not errors. The wrapper adds tracing
+overhead and Go's legacy cancellation path, so leave it unset for qualification.
+`LOAD_DIAGNOSTICS=1` alone keeps the native transport and existing timeout/caps.
+Retention has independent per-attack limits: 128 slow, 32 HTTP 5xx and 128
+transport-error records, with separate retained/dropped counters.
+
 The current Nginx configuration limits REST traffic to 150 requests/s per IP
 (burst 60); the archived 2026-10-13 runs predate that limit. This harness uses
 Nginx too, so the historical command does not establish current end-to-end
@@ -106,6 +182,12 @@ rate was 99.998526%.
 Most 503s occurred in one short burst while Windows had 221 to 404 MiB
 available and 99% CPU. Interactive host activity may have contributed, but the
 run did not establish the cause. Repeat on an idle host to isolate its effect.
+
+Reports with `generator_metric_version: 2` retain cumulative schedule debt in
+`generator_lag_*`, including skipped slots. `generator_valid` requires at least
+95% delivery and p99 lateness against recorded start slots of at most 100 ms.
+The normal SLO still requires zero HTTP errors and response p99 of at most 1 s.
+Historical results are unchanged.
 
 Reports include `generator_valid`, `slo_passed`, latency, errors, and flag
 reconciliation. A `stress` run allows REST 429 and 503 responses, so a passing

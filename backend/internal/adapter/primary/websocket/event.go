@@ -14,9 +14,8 @@ import (
 	wskit "github.com/wahrwelt-kit/go-wskit"
 )
 
-// Two receiver replicas can publish a 100-flag batch before a client writer is
-// scheduled. Keep room for those bursts and lifecycle events, while still
-// disconnecting readers that cannot keep up with sustained traffic.
+// Keep each client's FIFO bounded. Disposable notifications yield queued
+// capacity to state events when full, preserving the surviving event order.
 const clientSendBuffer = 256
 
 type Observer interface {
@@ -36,30 +35,43 @@ type Events struct {
 }
 
 // SetObserver attaches process metrics before any connection is accepted.
-func (e *Events) SetObserver(observer Observer) { e.observer = observer }
+func (e *Events) SetObserver(observer Observer) {
+	e.observer = observer
+}
 
 func New(client *redis.Client, logger *slog.Logger) *Events {
-	events := &Events{client: client, logger: logger, slots: make(chan struct{}, 2048)}
+	events := &Events{
+		client: client,
+		logger: logger,
+		slots:  make(chan struct{}, 2048),
+	}
 	hub := wskit.NewHub(
 		wskit.WithBroadcastBuf(128), wskit.WithRegisterBuf(64),
 		wskit.WithChannelTimeout(time.Second),
 		wskit.WithOnDrop(events.drop),
-		wskit.WithOnError(func(op string, err error) { logger.Warn("event transport error", "operation", op, "error", err) }),
+		wskit.WithOnError(func(op string, err error) {
+			logger.Warn("event transport error", "operation", op, "error", err)
+		}),
 	)
 	events.hub = hub
 	return events
 }
 
-func (e *Events) Connections() int          { return len(e.slots) }
-func (e *Events) ConnectionLimit() int      { return cap(e.slots) }
-func (e *Events) SlowClientDrops() uint64   { return e.dropped.Load() }
-func (e *Events) NotificationDrops() uint64 { return e.notificationsDropped.Load() }
+func (e *Events) Connections() int {
+	return len(e.slots)
+}
+func (e *Events) ConnectionLimit() int {
+	return cap(e.slots)
+}
+func (e *Events) SlowClientDrops() uint64 {
+	return e.dropped.Load()
+}
+func (e *Events) NotificationDrops() uint64 {
+	return e.notificationsDropped.Load()
+}
 
 func (e *Events) drop(subscriber wskit.Subscriber, data []byte) {
-	var event struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &event); err == nil && event.Type == "flag_stolen" {
+	if notificationEvent(data) {
 		// The activity feed is best effort. Scores come from full snapshots;
 		// a notification burst must not disconnect an otherwise healthy reader.
 		e.notificationsDropped.Add(1)
@@ -72,8 +84,12 @@ func (e *Events) drop(subscriber wskit.Subscriber, data []byte) {
 
 func (e *Events) Run(ctx context.Context) {
 	var workers sync.WaitGroup
-	workers.Go(func() { e.hub.Run(ctx) })
-	workers.Go(func() { e.subscribe(ctx) })
+	workers.Go(func() {
+		e.hub.Run(ctx)
+	})
+	workers.Go(func() {
+		e.subscribe(ctx)
+	})
 	workers.Wait()
 }
 
@@ -105,7 +121,9 @@ func (e *Events) subscribe(ctx context.Context) {
 	}
 	for ctx.Err() == nil {
 		pubsub := e.client.Subscribe(ctx, "forcad:events")
-		stop := context.AfterFunc(ctx, func() { _ = pubsub.Close() })
+		stop := context.AfterFunc(ctx, func() {
+			_ = pubsub.Close()
+		})
 		probe, cancel := context.WithTimeout(ctx, 3*time.Second)
 		_, err := pubsub.Receive(probe)
 		cancel()
@@ -137,16 +155,15 @@ func (e *Events) subscribe(ctx context.Context) {
 func (e *Events) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	select {
 	case e.slots <- struct{}{}:
-		defer func() { <-e.slots }()
+		defer func() {
+			<-e.slots
+		}()
 	default:
 		w.Header().Set("Retry-After", "1")
 		http.Error(w, "event capacity exceeded", http.StatusServiceUnavailable)
 		return
 	}
-	client, err := wskit.Accept(r.Context(), w, r, e.hub, nil,
-		wskit.WithSendBufSize(clientSendBuffer), wskit.WithWriteWait(3*time.Second),
-		wskit.WithPingInterval(20*time.Second), wskit.WithMaxMessageSize(1024),
-	)
+	client, err := e.acceptClient(w, r)
 	if err != nil {
 		return
 	}
@@ -156,8 +173,11 @@ func (e *Events) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer closed()
 	}
 	done := make(chan struct{})
-	go func() { defer close(done); client.WritePump() }()
-	client.ReadPump()
+	go func(ctx context.Context) {
+		defer close(done)
+		client.WritePump(ctx)
+	}(r.Context())
+	client.ReadPump(r.Context())
 	client.Close()
 	<-done
 }

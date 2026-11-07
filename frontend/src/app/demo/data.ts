@@ -36,32 +36,36 @@ const demoTeamNames = [
 ];
 
 export function createDemoTeams(): Team[] {
-  return demoTeamNames.map((name, index) => ({
-    id: demoUuid(index + 1),
-    name,
-    ip: `10.10.${14 + index}.8`,
-    token: `demo-team-${index + 1}`,
-    logo_path: "",
-    highlighted: index === 3,
-    active: true,
-  }));
+  return demoTeamNames.map((name, index) => {
+    return {
+      id: demoUuid(index + 1),
+      name,
+      ip: `10.10.${14 + index}.8`,
+      token: `demo-team-${index + 1}`,
+      logo_path: "",
+      highlighted: index === 3,
+      active: true,
+    }
+  });
 }
 
 export function createDemoTasks(): Task[] {
-  return ["Vault", "Market", "Notes", "Cloud"].map((name, index) => ({
-    id: demoUuid(1001 + index),
-    name,
-    checker: `demo/${name.toLowerCase()}/checker.py`,
-    gets: 1,
-    puts: 1,
-    places: 2,
-    checker_timeout: 20,
-    checker_type: "hackerdom",
-    env_path: "",
-    default_score: DEMO_DEFAULT_SCORE,
-    get_period: 10,
-    active: true,
-  }));
+  return ["Vault", "Market", "Notes", "Cloud"].map((name, index) => {
+    return {
+      id: demoUuid(1001 + index),
+      name,
+      checker: `demo/${name.toLowerCase()}/checker.py`,
+      gets: 1,
+      puts: 1,
+      places: 2,
+      checker_timeout: 20,
+      checker_type: "hackerdom",
+      env_path: "",
+      default_score: DEMO_DEFAULT_SCORE,
+      get_period: 10,
+      active: true,
+    }
+  });
 }
 
 export function createDemoTeamTasks(
@@ -69,8 +73,8 @@ export function createDemoTeamTasks(
   tasks: Task[],
 ): RawTeamTask[] {
   const examples = [STATUS_OK, STATUS_OK, STATUS_OK, STATUS_OK, 102, 104, 103, 110];
-  return teams.flatMap((team, index) =>
-    tasks.map((task, column) => {
+  return teams.flatMap((team, index) => {
+    return tasks.map((task, column) => {
       const status =
         column === 1 ? examples[index % examples.length] : STATUS_OK;
       return {
@@ -93,7 +97,8 @@ export function createDemoTeamTasks(
                   ? "Проверка ответа сервиса завершилась с ошибкой"
                   : "Сервис временно отключён",
       };
-    }),
+    })
+  },
   );
 }
 
@@ -102,16 +107,23 @@ export function createDemoHistory(
   round: number,
   nowSecs: number,
 ): TeamTaskStateRaw[] {
-  const taskOrder = [...new Set(raw.map((item) => item.task_id))];
+  const taskOrder = [...new Set(raw.map((item) => {
+    return item.task_id
+  }))];
 
-  return Array.from({ length: 7 }, (_, offset) =>
-    raw.map((item) => ({
-      ...item,
-      round: round - offset,
-      score: Math.max(0, item.score - offset * 45),
-      stolen: Math.max(0, item.stolen - offset),
-      lost: Math.max(0, item.lost - Math.floor(offset / 2)),
-      timestamp: `${nowSecs - offset * DEMO_ROUND_TIME}-${taskOrder.indexOf(item.task_id) + 1}`,
-    })),
+  return Array.from({
+    length: 7
+  }, (_, offset) => {
+    return raw.map((item) => {
+      return {
+        ...item,
+        round: round - offset,
+        score: Math.max(0, item.score - offset * 45),
+        stolen: Math.max(0, item.stolen - offset),
+        lost: Math.max(0, item.lost - Math.floor(offset / 2)),
+        timestamp: `${nowSecs - offset * DEMO_ROUND_TIME}-${taskOrder.indexOf(item.task_id) + 1}`,
+      }
+    })
+  },
   ).flat();
 }

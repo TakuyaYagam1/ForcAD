@@ -13,12 +13,18 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     expectDocumentSecurity(await page.goto("/teams"));
     expect((await scoreboardResponse).status()).toBe(200);
-    await expect(page.getByRole("region", { name: "Топ команд" })).toBeVisible();
+    await expect(page.getByRole("region", {
+      name: "Топ команд"
+    })).toBeVisible();
 
     const teamLinks = page.locator('a[href^="/team/"]');
     await expect(teamLinks).toHaveCount(2);
-    const firstTeam = teamLinks.filter({ hasText: "first" });
-    const secondTeam = teamLinks.filter({ hasText: "second" });
+    const firstTeam = teamLinks.filter({
+      hasText: "first"
+    });
+    const secondTeam = teamLinks.filter({
+      hasText: "second"
+    });
     await expect(firstTeam).toHaveCount(1);
     await expect(secondTeam).toHaveCount(1);
     const href = await firstTeam.getAttribute("href");
@@ -31,10 +37,20 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     await page.goto(`/team/${teamId}`);
     expect((await historyResponse).status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "first", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "История раундов", exact: true })).toBeVisible();
-    await expect(page.getByRole("region", { name: "История раундов команды" })).toBeVisible();
-    await expect(page.getByRole("table", { name: "История результатов команды по раундам" })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "first",
+      exact: true
+    })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "История раундов",
+      exact: true
+    })).toBeVisible();
+    await expect(page.getByRole("region", {
+      name: "История раундов команды"
+    })).toBeVisible();
+    await expect(page.getByRole("table", {
+      name: "История результатов команды по раундам"
+    })).toBeVisible();
 
     const directReloadHistory = page.waitForResponse((response) => {
       const url = new URL(response.url());
@@ -42,7 +58,10 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     await page.reload();
     expect((await directReloadHistory).status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "first", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "first",
+      exact: true
+    })).toBeVisible();
 
     const rootScoreboard = page.waitForResponse((response) => {
       const url = new URL(response.url());
@@ -50,7 +69,10 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     await page.goto("/");
     expect((await rootScoreboard).status()).toBe(200);
-    await expect(page.getByRole("heading", { name: "Рейтинг команд", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", {
+      name: "Рейтинг команд",
+      exact: true
+    })).toBeVisible();
     expect(cspViolations).toEqual([]);
   } finally {
     await context.close();

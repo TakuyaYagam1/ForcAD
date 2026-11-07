@@ -23,7 +23,12 @@ var ErrInvalidCSRF = errors.New("invalid CSRF token")
 
 type SessionStore interface {
 	Get(ctx context.Context, key string) ([]byte, error)
-	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
+	Set(
+		ctx context.Context,
+		key string,
+		value []byte,
+		ttl time.Duration,
+	) error
 	Del(ctx context.Context, keys ...string) error
 }
 
@@ -38,7 +43,11 @@ type sessionData struct {
 }
 
 func NewAuth(store SessionStore, username, password string) *Auth {
-	return &Auth{store: store, username: username, password: password}
+	return &Auth{
+		store:    store,
+		username: username,
+		password: password,
+	}
 }
 
 func equal(a, b string) bool {
@@ -69,7 +78,11 @@ func (a *Auth) Login(ctx context.Context, username, password string) (string, er
 		return "", fmt.Errorf("%s - generate session token: %w", location, err)
 	}
 	token := hex.EncodeToString(random[:32])
-	data, err := json.Marshal(sessionData{Username: a.username, PasswordVersion: marker(a.password, token, a.username), CSRFToken: hex.EncodeToString(random[32:])})
+	data, err := json.Marshal(sessionData{
+		Username:        a.username,
+		PasswordVersion: marker(a.password, token, a.username),
+		CSRFToken:       hex.EncodeToString(random[32:]),
+	})
 	if err != nil {
 		return "", fmt.Errorf("%s - encode session: %w", location, err)
 	}
@@ -80,14 +93,18 @@ func (a *Auth) Login(ctx context.Context, username, password string) (string, er
 }
 
 func (a *Auth) Status(ctx context.Context, token string) (string, error) {
+	const location = "usecase.Auth.Status"
 	username, _, err := a.StatusDetails(ctx, token)
-	return username, err
+	if err != nil {
+		return username, fmt.Errorf("%s - read session details: %w", location, err)
+	}
+	return username, nil
 }
 
 // StatusDetails reads one authenticated session, including its independent
 // random synchronizer token. Old sessions without that token require re-login.
 func (a *Auth) StatusDetails(ctx context.Context, token string) (string, string, error) {
-	const location = "usecase.Auth.Status"
+	const location = "usecase.Auth.StatusDetails"
 	if !validToken(token) {
 		return "", "", fmt.Errorf("%s - validate session token: %w", location, ErrUnauthorized)
 	}

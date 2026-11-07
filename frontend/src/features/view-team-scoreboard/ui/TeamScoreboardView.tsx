@@ -30,34 +30,57 @@ export function TeamScoreboardView() {
   const teamId = normalizeUuid(rawTeamId) ?? null;
   const invalid = teamId === null;
 
-  const teams = useScoreboardStore((state) => state.teams);
-  const tasks = useScoreboardStore((state) => state.tasks) ?? EMPTY_TASKS;
-  const current = useScoreboardStore((state) => state.teamTasks) ?? [];
+  const teams = useScoreboardStore((state) => {
+    return state.teams
+  });
+  const tasks = useScoreboardStore((state) => {
+    return state.tasks
+  }) ?? EMPTY_TASKS;
+  const current = useScoreboardStore((state) => {
+    return state.teamTasks
+  }) ?? [];
 
-  const team = teams?.find((item) => item.id === teamId);
+  const team = teams?.find((item) => {
+    return item.id === teamId
+  });
   useViewportAnimations(heroRef, team?.id);
 
-  const values = current.filter((item) => item.teamId === teamId);
-  const place = teams?.findIndex((item) => item.id === teamId);
+  const values = current.filter((item) => {
+    return item.teamId === teamId
+  });
+  const place = teams?.findIndex((item) => {
+    return item.id === teamId
+  });
 
   const sla = getCombinedSlaPercent(values);
 
-  const stolen = values.reduce((sum, value) => sum + value.stolen, 0);
-  const lost = values.reduce((sum, value) => sum + value.lost, 0);
+  const stolen = values.reduce((sum, value) => {
+    return sum + value.stolen
+  }, 0);
+  const lost = values.reduce((sum, value) => {
+    return sum + value.lost
+  }, 0);
 
   const historyQuery = useQuery({
     queryKey: ["team-history", teamId],
-    queryFn: ({ signal }) => fetchTeamStates(teamId ?? "", signal),
+    queryFn: ({ signal }) => {
+      return fetchTeamStates(teamId ?? "", signal)
+    },
     enabled: !invalid,
     refetchInterval: 10000,
   });
 
   const history = useMemo(
-    () =>
-      groupHistoryByRound(
+    () => {
+      return groupHistoryByRound(
         historyQuery.data ?? [],
-        tasks.map((task) => task.id).filter((id): id is string => id !== null),
-      ),
+        tasks.map((task) => {
+          return task.id
+        }).filter((id): id is string => {
+          return id !== null
+        }),
+      )
+    },
     [historyQuery.data, tasks],
   );
 
@@ -170,7 +193,9 @@ export function TeamScoreboardView() {
 
             <div className="services-grid">
               {(tasks ?? []).map((task) => {
-                const value = values.find((item) => item.taskId === task.id);
+                const value = values.find((item) => {
+                  return item.taskId === task.id
+                });
 
                 return (
                   <div className="service-card" key={task.id}>
@@ -196,13 +221,15 @@ export function TeamScoreboardView() {
                   type="button"
                   className="history-expand text-link"
                   aria-expanded={expandedHistory}
-                  onClick={() => setExpandedHistory(!expandedHistory)}
+                  onClick={() => {
+                    return setExpandedHistory(!expandedHistory)
+                  }}
                 >
                   {expandedHistory
                     ? t("teamScoreboard.collapseHistory")
                     : t("teamScoreboard.expandHistory", {
-                        formattedCount: formatNumber(history.length),
-                      })}
+                      formattedCount: formatNumber(history.length),
+                    })}
                 </button>
               )}
             </div>
@@ -214,7 +241,9 @@ export function TeamScoreboardView() {
                 <button
                   type="button"
                   className="text-link"
-                  onClick={() => void historyQuery.refetch()}
+                  onClick={() => {
+                    return void historyQuery.refetch()
+                  }}
                 >
                   {t("teamScoreboard.retry")}
                 </button>
@@ -230,15 +259,23 @@ export function TeamScoreboardView() {
               >
                 <table
                   className="scoreboard-table history-table"
-                  style={{ minWidth: `${Math.max(650, 182 + tasks.length * 210)}px` }}
+                  style={{
+                    minWidth: `${Math.max(650, 182 + tasks.length * 210)}px`
+                  }}
                 >
                   <caption className="sr-only">
                     {t("teamScoreboard.historyCaption")}
                   </caption>
                   <colgroup>
-                    <col style={{ width: "72px" }} />
-                    <col style={{ width: "110px" }} />
-                    {tasks.map((task) => <col key={task.id} />)}
+                    <col style={{
+                      width: "72px"
+                    }} />
+                    <col style={{
+                      width: "110px"
+                    }} />
+                    {tasks.map((task) => {
+                      return <col key={task.id} />
+                    })}
                   </colgroup>
 
                   <thead>
@@ -253,11 +290,13 @@ export function TeamScoreboardView() {
                         {t("teamScoreboard.score")}
                       </th>
 
-                      {tasks.map((task) => (
-                        <th scope="col" key={task.id}>
-                          {task.name}
-                        </th>
-                      ))}
+                      {tasks.map((task) => {
+                        return (
+                          <th scope="col" key={task.id}>
+                            {task.name}
+                          </th>
+                        )
+                      })}
                     </tr>
                   </thead>
 
@@ -267,12 +306,14 @@ export function TeamScoreboardView() {
                         const formattedRound = formatNumber(row.round);
                         const roundLabel = row.incomplete
                           ? t("teamScoreboard.incompleteRound", {
-                              round: formattedRound,
-                            })
+                            round: formattedRound,
+                          })
                           : formattedRound;
                         const serviceRoundLabel = t(
                           "teamScoreboard.roundForService",
-                          { round: roundLabel },
+                          {
+                            round: roundLabel
+                          },
                         );
 
                         return (
@@ -293,16 +334,20 @@ export function TeamScoreboardView() {
                               {formatScore(row.score)}
                             </td>
 
-                            {tasks.map((task) => (
-                              <td key={task.id} className="history-value-cell">
-                                <ServiceCell
-                                  name={`${task.name}, ${serviceRoundLabel}`}
-                                  value={row.tasks.find(
-                                    (value) => value.taskId === task.id,
-                                  )}
-                                />
-                              </td>
-                            ))}
+                            {tasks.map((task) => {
+                              return (
+                                <td key={task.id} className="history-value-cell">
+                                  <ServiceCell
+                                    name={`${task.name}, ${serviceRoundLabel}`}
+                                    value={row.tasks.find(
+                                      (value) => {
+                                        return value.taskId === task.id
+                                      },
+                                    )}
+                                  />
+                                </td>
+                              )
+                            })}
                           </tr>
                         );
                       },

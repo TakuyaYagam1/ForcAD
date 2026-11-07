@@ -1,4 +1,5 @@
 import json
+import os
 import secrets
 import sys
 import time
@@ -63,7 +64,12 @@ def main(service):
         elif action == "put":
             state = put(service, base, sys.argv[4])
             assert get(service, base, state) == sys.argv[4]
-            print(json.dumps(state, separators=(",", ":")))
+            private = json.dumps(state, separators=(",", ":"))
+            if os.environ.get("LOAD_PFR") == "1":
+                print(state["path"])
+                print(private, file=sys.stderr)
+            else:
+                print(private)
         elif action == "get":
             assert get(service, base, json.loads(sys.argv[3])) == sys.argv[4]
         else:

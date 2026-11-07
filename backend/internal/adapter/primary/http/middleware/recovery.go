@@ -23,7 +23,9 @@ func Recoverer(logger *slog.Logger) func(http.Handler) http.Handler {
 					}
 					logger.ErrorContext(ctx, "panic recovered", "panic", recovered, "stack", string(debug.Stack()))
 					if writer.Status() == 0 {
-						WriteError(writer, http.StatusInternalServerError, api.ApiError{Error: "Internal server error"})
+						WriteError(writer, http.StatusInternalServerError, api.ApiError{
+							Error: "Internal server error",
+						})
 					}
 				}
 			}(r.Context())

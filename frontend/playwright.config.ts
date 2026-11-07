@@ -30,7 +30,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 180_000,
-  expect: { timeout: 15_000 },
+  expect: {
+    timeout: 15_000
+  },
   reporter: "list",
   outputDir: process.env.FORCAD_E2E_OUTPUT_DIR || "./test-results",
   use: {

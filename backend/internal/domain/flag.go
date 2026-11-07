@@ -82,7 +82,8 @@ type RatingChange struct {
 }
 
 func CalculateRatingChange(
-	attackerScore, victimScore, hardness float64, inflation bool,
+	attackerScore, victimScore, hardness float64,
+	inflation bool,
 ) (RatingChange, error) {
 	const location = "domain.CalculateRatingChange"
 	if attackerScore < 0 || victimScore < 0 || hardness <= 1 ||
@@ -98,5 +99,8 @@ func CalculateRatingChange(
 		attackerDelta = math.Min(attackerDelta, -victimDelta)
 	}
 
-	return RatingChange{Attacker: attackerDelta, Victim: victimDelta}, nil
+	return RatingChange{
+		Attacker: attackerDelta,
+		Victim:   victimDelta,
+	}, nil
 }

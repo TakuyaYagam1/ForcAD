@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 	"uuid"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,17 +21,27 @@ import (
 
 var trafficTeamID = uuid.MustParse("00000000-0000-7000-8000-000000000001")
 
-type teamReader struct{ err error }
+type teamReader struct {
+	err error
+}
 
 func (r *teamReader) Teams(context.Context, bool) ([]domain.Team, error) {
-	return []domain.Team{{ID: trafficTeamID, Name: "Team 1", IP: "192.0.2.1", Token: "never-export-this-token"}}, r.err
+	return []domain.Team{{
+		ID:    trafficTeamID,
+		Name:  "Team 1",
+		IP:    "192.0.2.1",
+		Token: "never-export-this-token",
+	}}, r.err
 }
 
 func newTraffic(t *testing.T) (*TeamTraffic, *prometheus.Registry, *teamReader) {
 	t.Helper()
 	registry := prometheus.NewRegistry()
 	reader := &teamReader{}
-	metrics, err := NewTeamTraffic(registry, reader, []config.Team{{IP: "192.0.2.1", TrafficCIDRs: []string{"192.0.2.1/32", "2001:db8:1::/64"}}}, []string{"10.0.0.0/8"}, slog.New(slog.DiscardHandler))
+	metrics, err := NewTeamTraffic(registry, reader, []config.Team{{
+		IP:           "192.0.2.1",
+		TrafficCIDRs: []string{"192.0.2.1/32", "2001:db8:1::/64"},
+	}}, []string{"10.0.0.0/8"}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +53,11 @@ func newTraffic(t *testing.T) (*TeamTraffic, *prometheus.Registry, *teamReader) 
 
 func TestTrafficAttributionRejectsUntrustedForwarding(t *testing.T) {
 	metrics, _, _ := newTraffic(t)
-	handler := metrics.Middleware(func(*http.Request) string { return "/api/client/status/" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+	handler := metrics.Middleware(func(*http.Request) string {
+		return "/api/client/status/"
+	})(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 	for _, peer := range []string{"198.51.100.1:1234", "10.0.0.2:1234"} {
 		request := httptest.NewRequest(http.MethodGet, "/api/client/status/", nil)
 		request.RemoteAddr = peer
@@ -61,7 +76,9 @@ func TestTrafficAttributionRejectsUntrustedForwarding(t *testing.T) {
 
 func TestVerifiedTeamOverridesSourceAndLabelsStayBounded(t *testing.T) {
 	metrics, registry, _ := newTraffic(t)
-	handler := metrics.Middleware(func(*http.Request) string { return "unmatched" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := metrics.Middleware(func(*http.Request) string {
+		return "unmatched"
+	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		metrics.ResolveTeam(r.Context(), trafficTeamID)
 		w.WriteHeader(http.StatusTooManyRequests)
 	}))
@@ -81,7 +98,10 @@ func TestVerifiedTeamOverridesSourceAndLabelsStayBounded(t *testing.T) {
 
 func TestWebSocketGaugeBalancesAndDoesNotPolluteRESTLatency(t *testing.T) {
 	metrics, _, _ := newTraffic(t)
-	handler := metrics.Middleware(func(*http.Request) string { t.Fatal("websocket classified as REST"); return "" })(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := metrics.Middleware(func(*http.Request) string {
+		t.Fatal("websocket classified as REST")
+		return ""
+	})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusSwitchingProtocols)
 		closed := metrics.WebSocketOpened(r.Context())
 		if got := metricValue(metrics.sockets.WithLabelValues(trafficTeamID.String())); got != 1 {
@@ -99,7 +119,9 @@ func TestWebSocketGaugeBalancesAndDoesNotPolluteRESTLatency(t *testing.T) {
 
 func TestRejectedWebSocketHandshakeIsCounted(t *testing.T) {
 	metrics, _, _ := newTraffic(t)
-	handler := metrics.Middleware(func(*http.Request) string { return "/api/events/ws" })(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := metrics.Middleware(func(*http.Request) string {
+		return "/api/events/ws"
+	})(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
 	request := httptest.NewRequest(http.MethodGet, "/api/events/ws", nil)
@@ -138,6 +160,24 @@ func TestTrafficConcurrentRefreshAndRequests(t *testing.T) {
 		})
 	}
 	workers.Wait()
+}
+
+func TestSubmissionPhaseHistogramIsExported(t *testing.T) {
+	metrics, registry, _ := newTraffic(t)
+	metrics.ObserveSubmissionPhase("admission", "error", 2*time.Second)
+	families, err := registry.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, family := range families {
+		if family.GetName() == "forcad_flag_submission_phase_duration_seconds" {
+			if len(family.Metric) != 1 || family.Metric[0].GetHistogram().GetSampleCount() != 1 {
+				t.Fatalf("unexpected submission phase histogram: %+v", family.Metric)
+			}
+			return
+		}
+	}
+	t.Fatal("submission phase histogram is not registered")
 }
 
 func metricValue(collector prometheus.Collector) float64 {

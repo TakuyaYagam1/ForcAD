@@ -17,14 +17,15 @@ const (
 
 // NewMetricsHandler creates a bounded handler for the network counters.
 func NewMetricsHandler(ctx context.Context, inventory Inventory, lister CounterLister) (http.Handler, error) {
+	const location = "nftables.NewMetricsHandler"
 	if ctx == nil {
-		return nil, fmt.Errorf("nftables.NewMetricsHandler - parent context is required")
+		return nil, fmt.Errorf("%s - parent context is required", location)
 	}
 	if lister == nil {
-		return nil, fmt.Errorf("nftables.NewMetricsHandler - counter lister is required")
+		return nil, fmt.Errorf("%s - counter lister is required", location)
 	}
 	if err := validateInventory(inventory); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s - validate inventory: %w", location, err)
 	}
 	return &metricsHandler{
 		parent:    ctx,
@@ -65,15 +66,21 @@ func (handler *metricsHandler) ServeHTTP(writer http.ResponseWriter, request *ht
 	started := time.Now()
 	select {
 	case handler.inFlight <- struct{}{}:
-		defer func() { <-handler.inFlight }()
+		defer func() {
+			<-handler.inFlight
+		}()
 		handler.writeMetrics(writer, request, handler.scrape(request.Context(), started))
 	default:
-		handler.writeMetrics(writer, request, scrapeSnapshot{duration: time.Since(started).Seconds()})
+		handler.writeMetrics(writer, request, scrapeSnapshot{
+			duration: time.Since(started).Seconds(),
+		})
 	}
 }
 
 func (handler *metricsHandler) scrape(requestContext context.Context, started time.Time) scrapeSnapshot {
-	snapshot := scrapeSnapshot{teams: make([]teamSample, len(handler.inventory.Teams))}
+	snapshot := scrapeSnapshot{
+		teams: make([]teamSample, len(handler.inventory.Teams)),
+	}
 	for index, team := range handler.inventory.Teams {
 		snapshot.teams[index].teamIP = team.TeamIP
 	}
@@ -91,11 +98,17 @@ func (handler *metricsHandler) scrape(requestContext context.Context, started ti
 		if err == nil {
 			for index := range snapshot.teams {
 				teamIP := snapshot.teams[index].teamIP
-				if value, ok := values[counterLabel{teamIP: teamIP, direction: "rx"}]; ok {
+				if value, ok := values[counterLabel{
+					teamIP:    teamIP,
+					direction: "rx",
+				}]; ok {
 					snapshot.teams[index].receive = value
 					snapshot.teams[index].hasReceive = true
 				}
-				if value, ok := values[counterLabel{teamIP: teamIP, direction: "tx"}]; ok {
+				if value, ok := values[counterLabel{
+					teamIP:    teamIP,
+					direction: "tx",
+				}]; ok {
 					snapshot.teams[index].transmit = value
 					snapshot.teams[index].hasTransmit = true
 				}

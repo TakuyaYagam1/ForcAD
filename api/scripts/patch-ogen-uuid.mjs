@@ -56,19 +56,21 @@ async function patchGeneratedUUIDs(directory) {
     source = ensureUUIDImport(source, '\t"strconv"\n\n', "UUID");
     source = replaceMany(source, "json.EncodeUUID(e, unwrapped)", "e.Str(unwrapped.String())", "UUID JSON encoder");
     source = replaceMany(source, "json.DecodeUUID(d)", "decodeUUID(d)", "UUID JSON decoder");
-    if (source.includes("func decodeUUID(d *jx.Decoder)")) return source;
+    if (source.includes("func decodeUUID(d *jx.Decoder)")) {
+      return source;
+    }
     return replaceOnce(source, "// Encode encodes UUID as json.\nfunc (s UUID)", [
-        "func decodeUUID(d *jx.Decoder) (uuid.UUID, error) {",
-        "\tvalue, err := d.Str()",
-        "\tif err != nil {",
-        "\t\treturn uuid.UUID{}, err",
-        "\t}",
-        "\treturn uuid.Parse(string(value))",
-        "}",
-        "",
-        "// Encode encodes UUID as json.\nfunc (s UUID)",
-      ].join("\n"),
-      "UUID helper insertion point",
+      "func decodeUUID(d *jx.Decoder) (uuid.UUID, error) {",
+      "\tvalue, err := d.Str()",
+      "\tif err != nil {",
+      "\t\treturn uuid.UUID{}, err",
+      "\t}",
+      "\treturn uuid.Parse(string(value))",
+      "}",
+      "",
+      "// Encode encodes UUID as json.\nfunc (s UUID)",
+    ].join("\n"),
+    "UUID helper insertion point",
     );
   });
 }

@@ -45,8 +45,13 @@ type ProcessDiagnostic struct {
 // MarshalJSON preserves nested diagnostics in logger adapters that stringify
 // arbitrary structs but support JSON marshalers.
 func (diagnostic ProcessDiagnostic) MarshalJSON() ([]byte, error) {
+	const location = "checker.ProcessDiagnostic.MarshalJSON"
 	type diagnosticJSON ProcessDiagnostic
-	return jsonv2.Marshal(diagnosticJSON(diagnostic))
+	data, err := jsonv2.Marshal(diagnosticJSON(diagnostic))
+	if err != nil {
+		return data, fmt.Errorf("%s - encode process diagnostic: %w", location, err)
+	}
+	return data, nil
 }
 
 type ProcessSignal struct {
@@ -85,23 +90,38 @@ func (state *checkerWait) reportDiagnostic(phase string, stack bool) bool {
 		return false
 	}
 	state.diagnosticCount++
-	event := ProcessDiagnostic{Phase: phase, PID: state.process.command.Process.Pid, RequestedAt: time.Now().UTC(),
-		ProcessReaped: state.result.ProcessReaped, OutputComplete: state.result.OutputComplete,
-		TimedOut: state.result.TimedOut, Canceled: state.result.Canceled, OutputLimited: state.result.OutputLimited,
-		ExitCode: state.result.ExitCode, Signals: append([]ProcessSignal(nil), state.signals...)}
+	event := ProcessDiagnostic{
+		Phase:          phase,
+		PID:            state.process.command.Process.Pid,
+		RequestedAt:    time.Now().UTC(),
+		ProcessReaped:  state.result.ProcessReaped,
+		OutputComplete: state.result.OutputComplete,
+		TimedOut:       state.result.TimedOut,
+		Canceled:       state.result.Canceled,
+		OutputLimited:  state.result.OutputLimited,
+		ExitCode:       state.result.ExitCode,
+		Signals:        append([]ProcessSignal(nil), state.signals...),
+	}
 	select {
 	case processDiagnosticSlots <- struct{}{}:
 	default:
 		return false
 	}
 	go func() {
-		defer func() { <-processDiagnosticSlots }()
+		defer func() {
+			<-processDiagnosticSlots
+		}()
 		collectAndReportDiagnostic(event, stack, handler, collectProcessSnapshot)
 	}()
 	return true
 }
 
-func collectAndReportDiagnostic(event ProcessDiagnostic, stack bool, handler func(ProcessDiagnostic), collect func(int) *ProcessSnapshot) {
+func collectAndReportDiagnostic(
+	event ProcessDiagnostic,
+	stack bool,
+	handler func(ProcessDiagnostic),
+	collect func(int) *ProcessSnapshot,
+) {
 	event.CollectedAt = time.Now().UTC()
 	// Capture the Go stack first: a proc read itself may block in the kernel.
 	if stack {
@@ -118,8 +138,9 @@ func collectAndReportDiagnostic(event ProcessDiagnostic, stack bool, handler fun
 }
 
 func (state *checkerWait) reportUnreapedDiagnostic() {
+	const location = "checker.checkerWait.reportUnreapedDiagnostic"
 	dispatched := state.reportDiagnostic("unreaped", true)
 	if state.process.command != nil && state.process.command.Process != nil {
-		state.outcome.cleanupErr = fmt.Errorf("pid=%d phase=unreaped diagnostic_dispatched=%t: %w", state.process.command.Process.Pid, dispatched, state.outcome.cleanupErr)
+		state.outcome.cleanupErr = fmt.Errorf("%s - pid=%d phase=unreaped diagnostic_dispatched=%t: %w", location, state.process.command.Process.Pid, dispatched, state.outcome.cleanupErr)
 	}
 }
