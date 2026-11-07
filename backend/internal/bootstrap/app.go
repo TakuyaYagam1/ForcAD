@@ -17,13 +17,15 @@ import (
 
 	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/websocket"
+	natsbroker "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/nats"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/rabbitmq"
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	checkerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/checker"
 )
 
-type apiHandler struct{ http.Handler }
+type apiHandler struct {
+	http.Handler
+}
 type scheduledWorker interface {
 	Run(ctx context.Context) error
 }
@@ -36,14 +38,38 @@ type Application struct {
 	events    *websocket.Events
 	game      *usecase.Game
 	flags     *usecase.Flags
-	broker    *rabbitmq.Broker
+	broker    *natsbroker.Broker
 	checker   *checkerworker.Worker
 	scheduler scheduledWorker
 	traffic   *prometheus.TeamTraffic
 }
 
-func NewApplication(cfg config.Config, handler apiHandler, metrics *prometheus.Metrics, logger *slog.Logger, events *websocket.Events, game *usecase.Game, flags *usecase.Flags, broker *rabbitmq.Broker, checker *checkerworker.Worker, scheduler scheduledWorker, traffic *prometheus.TeamTraffic) *Application {
-	return &Application{config: cfg, handler: handler, metrics: metrics, logger: logger, events: events, game: game, flags: flags, broker: broker, checker: checker, scheduler: scheduler, traffic: traffic}
+func NewApplication(
+	cfg config.Config,
+	handler apiHandler,
+	metrics *prometheus.Metrics,
+	logger *slog.Logger,
+	events *websocket.Events,
+	game *usecase.Game,
+	flags *usecase.Flags,
+	broker *natsbroker.Broker,
+	checker *checkerworker.Worker,
+	scheduler scheduledWorker,
+	traffic *prometheus.TeamTraffic,
+) *Application {
+	return &Application{
+		config:    cfg,
+		handler:   handler,
+		metrics:   metrics,
+		logger:    logger,
+		events:    events,
+		game:      game,
+		flags:     flags,
+		broker:    broker,
+		checker:   checker,
+		scheduler: scheduler,
+		traffic:   traffic,
+	}
 }
 
 func RunApplication(cfg config.Config, logger *Logger) (runErr error) {
@@ -54,41 +80,66 @@ func RunApplication(cfg config.Config, logger *Logger) (runErr error) {
 	if err != nil {
 		return fmt.Errorf("%s - initialize application: %w", location, err)
 	}
-	defer func() { runErr = errors.Join(runErr, cleanupResources(cleanup, cfg.ShutdownTimeout)) }()
+	defer func() {
+		runErr = errors.Join(runErr, cleanupResources(cleanup, cfg.ShutdownTimeout))
+	}()
 	app.metrics.Registry.MustRegister(promclient.NewCounterFunc(promclient.CounterOpts{
-		Name: "forcad_log_dropped_total", Help: "Log entries dropped because the bounded output queue was full.",
-	}, func() float64 { return float64(logger.dropped.Load()) }))
-	return app.Run(ctx)
+		Name: "forcad_log_dropped_total",
+		Help: "Log entries dropped because the bounded output queue was full.",
+	}, func() float64 {
+		return float64(logger.dropped.Load())
+	}))
+	if err := app.Run(ctx); err != nil {
+		return fmt.Errorf("%s - run application: %w", location, err)
+	}
+	return nil
 }
 
 // Pool cleanup normally finishes immediately after handlers drain. A broken
 // dependency retaining a connection must not prevent the process supervisor
 // from replacing an unhealthy worker forever.
 func cleanupResources(cleanup func(), timeout time.Duration) error {
+	const location = "bootstrap.cleanupResources"
 	done := make(chan struct{})
-	go func() { cleanup(); close(done) }()
+	go func() {
+		cleanup()
+		close(done)
+	}()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
 	case <-done:
 		return nil
 	case <-timer.C:
-		return errors.New("bootstrap.RunApplication - resource cleanup deadline exceeded")
+		return fmt.Errorf("%s - resource cleanup deadline exceeded", location)
 	}
 }
 
-func (a *Application) Run(ctx context.Context) error {
+func (a *Application) Run(ctx context.Context) (runErr error) {
 	const location = "bootstrap.Application.Run"
+	defer func() {
+		runErr = errors.Join(runErr, a.broker.Close())
+	}()
 	defer a.game.Close()
 	if _, err := a.game.Lifecycle(ctx); err != nil {
 		return fmt.Errorf("%s - read initialized game: %w", location, err)
+	}
+	// Workers bind the shared durable without changing its fleet-wide limits.
+	// Provision it even while the game is stopped and the SQL outbox is empty.
+	if a.config.Role == "ticker" || a.config.Role == "all" {
+		brokerCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		err := a.broker.Ensure(brokerCtx)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("%s - prepare checker stream: %w", location, err)
+		}
 	}
 	if err := a.traffic.Refresh(ctx); err != nil {
 		a.logger.Warn("initial team metrics inventory unavailable", "error", err)
 	}
 	servers, err := a.listenServers(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	defer closeListeners(servers)
 	workCtx, forceStop := context.WithCancel(context.WithoutCancel(ctx))
@@ -104,7 +155,6 @@ func (a *Application) Run(ctx context.Context) error {
 	background := a.startBackground(backgroundCtx)
 	jobs := a.startJobs(workCtx, schedulerCtx, failures)
 	a.logger.Info("application ready", "role", a.config.Role, "http_addr", a.config.HTTPAddr, "metrics_addr", a.config.MetricsAddr)
-	var runErr error
 	select {
 	case <-ctx.Done():
 	case <-a.metrics.DrainRequested():
@@ -136,7 +186,10 @@ func (a *Application) Run(ctx context.Context) error {
 	a.logger.Info("application stopped", "role", a.config.Role)
 	// A process can fail cleanup while an operator-requested drain is already
 	// running. Replacement must still produce a nonzero result in that case.
-	return errors.Join(runErr, checkerFailure(a.checker))
+	if err := errors.Join(runErr, checkerFailure(a.checker)); err != nil {
+		return fmt.Errorf("%s - finish application: %w", location, err)
+	}
+	return nil
 }
 
 // Waits are bounded even when a dependency violates context cancellation.
@@ -188,7 +241,10 @@ func listenHTTP(ctx context.Context, address string, handler http.Handler) (boun
 	if err != nil {
 		return boundHTTP{}, fmt.Errorf("%s - bind listener: %w", location, err)
 	}
-	return boundHTTP{server: newHTTPServer(handler), listener: listener}, nil
+	return boundHTTP{
+		server:   newHTTPServer(handler),
+		listener: listener,
+	}, nil
 }
 
 func closeListeners(servers []boundHTTP) {
@@ -224,13 +280,21 @@ func shutdownHTTP(ctx context.Context, servers []boundHTTP) *sync.WaitGroup {
 
 func (a *Application) startBackground(ctx context.Context) *sync.WaitGroup {
 	var background sync.WaitGroup
-	background.Go(func() { a.traffic.Run(ctx) })
+	background.Go(func() {
+		a.traffic.Run(ctx)
+	})
 	if a.config.Role == "api" || a.config.Role == "all" {
-		background.Go(func() { a.events.Run(ctx) })
-		background.Go(func() { a.game.Run(ctx) })
+		background.Go(func() {
+			a.events.Run(ctx)
+		})
+		background.Go(func() {
+			a.game.Run(ctx)
+		})
 	}
 	if a.config.Role == "receiver" || a.config.Role == "all" {
-		background.Go(func() { a.flags.Run(ctx) })
+		background.Go(func() {
+			a.flags.Run(ctx)
+		})
 	}
 	return &background
 }

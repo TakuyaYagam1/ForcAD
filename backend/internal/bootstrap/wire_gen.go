@@ -11,7 +11,6 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
-	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
 	"log/slog"
 )
 
@@ -20,13 +19,13 @@ import (
 // initialize owns process-scoped resources; Wire composes their cleanup in
 // reverse order on either startup failure or normal shutdown.
 func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Application, func(), error) {
-	pool, cleanup, err := postgres.NewPool(ctx, cfg)
+	pool, cleanup, err := newPostgresPool(ctx, cfg)
 	if err != nil {
 		return nil, nil, err
 	}
 	gameStore := postgres.NewGameStore(pool)
 	repository := postgres.New(pool)
-	store, cleanup2, err := redisadapter.New(ctx, cfg)
+	store, cleanup2, err := newRedisStore(ctx, cfg)
 	if err != nil {
 		cleanup()
 		return nil, nil, err

@@ -39,8 +39,15 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 // cross-origin browser requests. Responses are Cache-Control no-store.
 //
 // POST /api/admin/login/
-func (s *Server) handleAdminLoginRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleAdminLoginRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("adminLogin"),
@@ -58,7 +65,9 @@ func (s *Server) handleAdminLoginRequest(args [0]string, argsEscaped bool, w htt
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -182,8 +191,15 @@ func (s *Server) handleAdminLoginRequest(args [0]string, argsEscaped bool, w htt
 // Ends the authenticated session. Requires its X-CSRF-Token header.
 //
 // POST /api/admin/logout/
-func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleAdminLogoutRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("adminLogout"),
@@ -201,7 +217,9 @@ func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w ht
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -354,8 +372,15 @@ func (s *Server) handleAdminLogoutRequest(args [0]string, argsEscaped bool, w ht
 // Start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
 //
 // POST /api/admin/game/{action}/
-func (s *Server) handleChangeAdminGameStateRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleChangeAdminGameStateRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("changeAdminGameState"),
@@ -373,7 +398,9 @@ func (s *Server) handleChangeAdminGameStateRequest(args [1]string, argsEscaped b
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -556,8 +583,15 @@ func (s *Server) handleChangeAdminGameStateRequest(args [1]string, argsEscaped b
 // Publish an organizer announcement.
 //
 // POST /api/admin/events/
-func (s *Server) handleCreateAdminEventRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleCreateAdminEventRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminEvent"),
@@ -575,7 +609,9 @@ func (s *Server) handleCreateAdminEventRequest(args [0]string, argsEscaped bool,
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -743,8 +779,15 @@ func (s *Server) handleCreateAdminEventRequest(args [0]string, argsEscaped bool,
 // Create a task.
 //
 // POST /api/admin/tasks/
-func (s *Server) handleCreateAdminTaskRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleCreateAdminTaskRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTask"),
@@ -762,7 +805,9 @@ func (s *Server) handleCreateAdminTaskRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -930,8 +975,15 @@ func (s *Server) handleCreateAdminTaskRequest(args [0]string, argsEscaped bool, 
 // The server generates the team token and ignores any supplied token value.
 //
 // POST /api/admin/teams/
-func (s *Server) handleCreateAdminTeamRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleCreateAdminTeamRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTeam"),
@@ -949,7 +1001,9 @@ func (s *Server) handleCreateAdminTeamRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1117,8 +1171,15 @@ func (s *Server) handleCreateAdminTeamRequest(args [0]string, argsEscaped bool, 
 // The route is registered but has no create handler and returns 404.
 //
 // POST /api/admin/teamtasks/
-func (s *Server) handleCreateAdminTeamTaskRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleCreateAdminTeamTaskRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTeamTask"),
@@ -1136,7 +1197,9 @@ func (s *Server) handleCreateAdminTeamTaskRequest(args [0]string, argsEscaped bo
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1289,8 +1352,15 @@ func (s *Server) handleCreateAdminTeamTaskRequest(args [0]string, argsEscaped bo
 // Deactivate a task.
 //
 // DELETE /api/admin/tasks/{task_id}/
-func (s *Server) handleDeleteAdminTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleDeleteAdminTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTask"),
@@ -1308,7 +1378,9 @@ func (s *Server) handleDeleteAdminTaskRequest(args [1]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1476,8 +1548,15 @@ func (s *Server) handleDeleteAdminTaskRequest(args [1]string, argsEscaped bool, 
 // Deactivate a team.
 //
 // DELETE /api/admin/teams/{team_id}/
-func (s *Server) handleDeleteAdminTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleDeleteAdminTeamRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTeam"),
@@ -1495,7 +1574,9 @@ func (s *Server) handleDeleteAdminTeamRequest(args [1]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1663,8 +1744,15 @@ func (s *Server) handleDeleteAdminTeamRequest(args [1]string, argsEscaped bool, 
 // The route is registered but has no delete handler and returns 404.
 //
 // DELETE /api/admin/teamtasks/{teamtask_id}/
-func (s *Server) handleDeleteAdminTeamTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleDeleteAdminTeamTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTeamTask"),
@@ -1682,7 +1770,9 @@ func (s *Server) handleDeleteAdminTeamTaskRequest(args [1]string, argsEscaped bo
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1850,8 +1940,15 @@ func (s *Server) handleDeleteAdminTeamTaskRequest(args [1]string, argsEscaped bo
 // Check the administration API service.
 //
 // GET /api/admin/health/
-func (s *Server) handleGetAdminHealthRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminHealthRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminHealth"),
@@ -1869,7 +1966,9 @@ func (s *Server) handleGetAdminHealthRequest(args [0]string, argsEscaped bool, w
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -1974,8 +2073,15 @@ func (s *Server) handleGetAdminHealthRequest(args [0]string, argsEscaped bool, w
 // Read administration API Prometheus metrics.
 //
 // GET /api/admin/metrics
-func (s *Server) handleGetAdminMetricsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminMetricsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminMetrics"),
@@ -1993,7 +2099,9 @@ func (s *Server) handleGetAdminMetricsRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -2099,8 +2207,15 @@ func (s *Server) handleGetAdminMetricsRequest(args [0]string, argsEscaped bool, 
 // no-store.
 //
 // GET /api/admin/status/
-func (s *Server) handleGetAdminSessionStatusRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminSessionStatusRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminSessionStatus"),
@@ -2118,7 +2233,9 @@ func (s *Server) handleGetAdminSessionStatusRequest(args [0]string, argsEscaped 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -2271,8 +2388,15 @@ func (s *Server) handleGetAdminSessionStatusRequest(args [0]string, argsEscaped 
 // Get one task, including administration fields.
 //
 // GET /api/admin/tasks/{task_id}/
-func (s *Server) handleGetAdminTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTask"),
@@ -2290,7 +2414,9 @@ func (s *Server) handleGetAdminTaskRequest(args [1]string, argsEscaped bool, w h
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -2458,8 +2584,15 @@ func (s *Server) handleGetAdminTaskRequest(args [1]string, argsEscaped bool, w h
 // List all tasks, including inactive tasks.
 //
 // GET /api/admin/tasks/
-func (s *Server) handleGetAdminTasksRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTasksRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTasks"),
@@ -2477,7 +2610,9 @@ func (s *Server) handleGetAdminTasksRequest(args [0]string, argsEscaped bool, w 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -2630,8 +2765,15 @@ func (s *Server) handleGetAdminTasksRequest(args [0]string, argsEscaped bool, w 
 // Get one team, including administration fields.
 //
 // GET /api/admin/teams/{team_id}/
-func (s *Server) handleGetAdminTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTeamRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeam"),
@@ -2649,7 +2791,9 @@ func (s *Server) handleGetAdminTeamRequest(args [1]string, argsEscaped bool, w h
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -2817,8 +2961,15 @@ func (s *Server) handleGetAdminTeamRequest(args [1]string, argsEscaped bool, w h
 // The route is registered but has no retrieve handler and returns 404.
 //
 // GET /api/admin/teamtasks/{teamtask_id}/
-func (s *Server) handleGetAdminTeamTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTeamTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeamTask"),
@@ -2836,7 +2987,9 @@ func (s *Server) handleGetAdminTeamTaskRequest(args [1]string, argsEscaped bool,
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3004,8 +3157,15 @@ func (s *Server) handleGetAdminTeamTaskRequest(args [1]string, argsEscaped bool,
 // Get checker history for a team and task pair.
 //
 // GET /api/admin/teamtasks/
-func (s *Server) handleGetAdminTeamTaskHistoryRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTeamTaskHistoryRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeamTaskHistory"),
@@ -3023,7 +3183,9 @@ func (s *Server) handleGetAdminTeamTaskHistoryRequest(args [0]string, argsEscape
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3195,8 +3357,15 @@ func (s *Server) handleGetAdminTeamTaskHistoryRequest(args [0]string, argsEscape
 // List all teams, including inactive teams.
 //
 // GET /api/admin/teams/
-func (s *Server) handleGetAdminTeamsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetAdminTeamsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeams"),
@@ -3214,7 +3383,9 @@ func (s *Server) handleGetAdminTeamsRequest(args [0]string, argsEscaped bool, w 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3367,8 +3538,15 @@ func (s *Server) handleGetAdminTeamsRequest(args [0]string, argsEscaped bool, w 
 // Get public flag data grouped by task and team address.
 //
 // GET /api/client/attack_data/
-func (s *Server) handleGetClientAttackDataRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientAttackDataRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientAttackData"),
@@ -3386,7 +3564,9 @@ func (s *Server) handleGetClientAttackDataRequest(args [0]string, argsEscaped bo
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3504,8 +3684,15 @@ func (s *Server) handleGetClientAttackDataRequest(args [0]string, argsEscaped bo
 // Get public checker results for one team and service.
 //
 // GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
-func (s *Server) handleGetClientCheckerLogsRequest(args [2]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientCheckerLogsRequest(
+	args [2]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientCheckerLogs"),
@@ -3523,7 +3710,9 @@ func (s *Server) handleGetClientCheckerLogsRequest(args [2]string, argsEscaped b
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3659,8 +3848,15 @@ func (s *Server) handleGetClientCheckerLogsRequest(args [2]string, argsEscaped b
 // Get the current game configuration.
 //
 // GET /api/client/config/
-func (s *Server) handleGetClientConfigRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientConfigRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientConfig"),
@@ -3678,7 +3874,9 @@ func (s *Server) handleGetClientConfigRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3783,8 +3981,15 @@ func (s *Server) handleGetClientConfigRequest(args [0]string, argsEscaped bool, 
 // Get the CTFtime standings.
 //
 // GET /api/client/ctftime/
-func (s *Server) handleGetClientCtftimeScoreboardRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientCtftimeScoreboardRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientCtftimeScoreboard"),
@@ -3802,7 +4007,9 @@ func (s *Server) handleGetClientCtftimeScoreboardRequest(args [0]string, argsEsc
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -3907,8 +4114,15 @@ func (s *Server) handleGetClientCtftimeScoreboardRequest(args [0]string, argsEsc
 // Read recent public events or events after a cursor.
 //
 // GET /api/client/events/
-func (s *Server) handleGetClientEventsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientEventsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientEvents"),
@@ -3926,7 +4140,9 @@ func (s *Server) handleGetClientEventsRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4050,8 +4266,15 @@ func (s *Server) handleGetClientEventsRequest(args [0]string, argsEscaped bool, 
 // Check the client API service.
 //
 // GET /api/client/health/
-func (s *Server) handleGetClientHealthRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientHealthRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientHealth"),
@@ -4069,7 +4292,9 @@ func (s *Server) handleGetClientHealthRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4174,8 +4399,15 @@ func (s *Server) handleGetClientHealthRequest(args [0]string, argsEscaped bool, 
 // Read client API Prometheus metrics.
 //
 // GET /api/client/metrics
-func (s *Server) handleGetClientMetricsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientMetricsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientMetrics"),
@@ -4193,7 +4425,9 @@ func (s *Server) handleGetClientMetricsRequest(args [0]string, argsEscaped bool,
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4298,8 +4532,15 @@ func (s *Server) handleGetClientMetricsRequest(args [0]string, argsEscaped bool,
 // Get the current runtime status.
 //
 // GET /api/client/status/
-func (s *Server) handleGetClientStatusRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientStatusRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientStatus"),
@@ -4317,7 +4558,9 @@ func (s *Server) handleGetClientStatusRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4422,8 +4665,15 @@ func (s *Server) handleGetClientStatusRequest(args [0]string, argsEscaped bool, 
 // List tasks visible to participants.
 //
 // GET /api/client/tasks/
-func (s *Server) handleGetClientTasksRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientTasksRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTasks"),
@@ -4441,7 +4691,9 @@ func (s *Server) handleGetClientTasksRequest(args [0]string, argsEscaped bool, w
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4546,8 +4798,15 @@ func (s *Server) handleGetClientTasksRequest(args [0]string, argsEscaped bool, w
 // Get participant-visible task history for a team.
 //
 // GET /api/client/teams/{team_id}/
-func (s *Server) handleGetClientTeamHistoryRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientTeamHistoryRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTeamHistory"),
@@ -4565,7 +4824,9 @@ func (s *Server) handleGetClientTeamHistoryRequest(args [1]string, argsEscaped b
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4689,8 +4950,15 @@ func (s *Server) handleGetClientTeamHistoryRequest(args [1]string, argsEscaped b
 // List teams visible to participants.
 //
 // GET /api/client/teams/
-func (s *Server) handleGetClientTeamsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetClientTeamsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTeams"),
@@ -4708,7 +4976,9 @@ func (s *Server) handleGetClientTeamsRequest(args [0]string, argsEscaped bool, w
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4813,8 +5083,15 @@ func (s *Server) handleGetClientTeamsRequest(args [0]string, argsEscaped bool, w
 // Check the event service.
 //
 // GET /api/events/health/
-func (s *Server) handleGetEventsHealthRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetEventsHealthRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getEventsHealth"),
@@ -4832,7 +5109,9 @@ func (s *Server) handleGetEventsHealthRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -4937,8 +5216,15 @@ func (s *Server) handleGetEventsHealthRequest(args [0]string, argsEscaped bool, 
 // Check the flag receiver service.
 //
 // GET /flags/health/
-func (s *Server) handleGetFlagReceiverHealthRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetFlagReceiverHealthRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getFlagReceiverHealth"),
@@ -4956,7 +5242,9 @@ func (s *Server) handleGetFlagReceiverHealthRequest(args [0]string, argsEscaped 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5061,8 +5349,15 @@ func (s *Server) handleGetFlagReceiverHealthRequest(args [0]string, argsEscaped 
 // Read flag receiver Prometheus metrics.
 //
 // GET /api/http-receiver/metrics
-func (s *Server) handleGetReceiverMetricsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetReceiverMetricsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getReceiverMetrics"),
@@ -5080,7 +5375,9 @@ func (s *Server) handleGetReceiverMetricsRequest(args [0]string, argsEscaped boo
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5185,8 +5482,15 @@ func (s *Server) handleGetReceiverMetricsRequest(args [0]string, argsEscaped boo
 // Used to initialize and resynchronize clients after event-stream reconnects.
 //
 // GET /api/client/scoreboard/
-func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleGetScoreboardRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getScoreboard"),
@@ -5204,7 +5508,9 @@ func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5300,8 +5606,15 @@ func (s *Server) handleGetScoreboardRequest(args [0]string, argsEscaped bool, w 
 // public and contains only participant-visible scoreboard updates and flag-steal notifications.
 //
 // GET /api/events/ws
-func (s *Server) handleOpenEventStreamRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleOpenEventStreamRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("openEventStream"),
@@ -5319,7 +5632,9 @@ func (s *Server) handleOpenEventStreamRequest(args [0]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5424,8 +5739,15 @@ func (s *Server) handleOpenEventStreamRequest(args [0]string, argsEscaped bool, 
 // Both /flags and /flags/ are accepted by the backend.
 //
 // PUT /flags/
-func (s *Server) handleSubmitFlagsRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleSubmitFlagsRequest(
+	args [0]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("submitFlags"),
@@ -5443,7 +5765,9 @@ func (s *Server) handleSubmitFlagsRequest(args [0]string, argsEscaped bool, w ht
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5611,8 +5935,15 @@ func (s *Server) handleSubmitFlagsRequest(args [0]string, argsEscaped bool, w ht
 // Replace a task's editable fields.
 //
 // PUT /api/admin/tasks/{task_id}/
-func (s *Server) handleUpdateAdminTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleUpdateAdminTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTask"),
@@ -5630,7 +5961,9 @@ func (s *Server) handleUpdateAdminTaskRequest(args [1]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -5813,8 +6146,15 @@ func (s *Server) handleUpdateAdminTaskRequest(args [1]string, argsEscaped bool, 
 // Replace a team's editable fields.
 //
 // PUT /api/admin/teams/{team_id}/
-func (s *Server) handleUpdateAdminTeamRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleUpdateAdminTeamRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTeam"),
@@ -5832,7 +6172,9 @@ func (s *Server) handleUpdateAdminTeamRequest(args [1]string, argsEscaped bool, 
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.
@@ -6015,8 +6357,15 @@ func (s *Server) handleUpdateAdminTeamRequest(args [1]string, argsEscaped bool, 
 // The route is registered but has no update handler and returns 404.
 //
 // PUT /api/admin/teamtasks/{teamtask_id}/
-func (s *Server) handleUpdateAdminTeamTaskRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
-	statusWriter := &codeRecorder{ResponseWriter: w}
+func (s *Server) handleUpdateAdminTeamTaskRequest(
+	args [1]string,
+	argsEscaped bool,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	statusWriter := &codeRecorder{
+		ResponseWriter: w,
+	}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTeamTask"),
@@ -6034,7 +6383,9 @@ func (s *Server) handleUpdateAdminTeamTaskRequest(args [1]string, argsEscaped bo
 	defer span.End()
 
 	// Add Labeler to context.
-	labeler := &Labeler{attrs: otelAttrs}
+	labeler := &Labeler{
+		attrs: otelAttrs,
+	}
 	ctx = contextWithLabeler(ctx, labeler)
 
 	// Run stopwatch.

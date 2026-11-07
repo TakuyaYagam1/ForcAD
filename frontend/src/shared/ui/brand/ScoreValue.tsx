@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 
 import { formatScore } from "@/shared/lib/formatScore";
 
-export function ScoreValue({ value }: { value: number }) {
+export function ScoreValue({ value }: {
+  value: number
+}) {
   const { t } = useTranslation("common");
   const score = Number.isFinite(value) ? Math.round(value) : 0;
   const [display, setDisplay] = useState(score);
@@ -33,13 +35,17 @@ export function ScoreValue({ value }: { value: number }) {
 
     frame = requestAnimationFrame(tick);
 
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      return cancelAnimationFrame(frame)
+    };
   }, [score]);
 
   return (
     <span
       className="score-value"
-      aria-label={t("score.ariaLabel", { value: formatScore(score) })}
+      aria-label={t("score.ariaLabel", {
+        value: formatScore(score)
+      })}
     >
       {formatScore(display)}
     </span>

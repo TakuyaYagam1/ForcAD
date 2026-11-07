@@ -29,7 +29,12 @@ func validateExtraCheckTimeout(ctx context.Context, queries *sqlc.Queries, task 
 
 // Each extra CHECK gets a random instant in a separate part of the available
 // round window. Two seconds remain after its full action timeout for completion.
-func addExtraChecks(jobs []schedulerJobRecord, at time.Time, roundTime, count int32, random io.Reader) ([]schedulerJobRecord, error) {
+func addExtraChecks(
+	jobs []schedulerJobRecord,
+	at time.Time,
+	roundTime, count int32,
+	random io.Reader,
+) ([]schedulerJobRecord, error) {
 	const location = "postgres.addExtraChecks"
 	if count < 0 || count > 8 || at.IsZero() || roundTime <= 0 {
 		return nil, fmt.Errorf("%s - invalid extra check settings", location)
@@ -64,9 +69,15 @@ func addExtraChecks(jobs []schedulerJobRecord, at time.Time, roundTime, count in
 			start := at.Add(time.Second + time.Duration(index)*slot + time.Duration(offset.Int64()))
 			end := at.Add(time.Duration(roundTime) * time.Second)
 			result = append(result, schedulerJobRecord{
-				RunID: job.RunID, Round: job.Round, TeamID: job.TeamID, TaskID: job.TaskID,
-				Action: string(domain.JobActionCheckOnly), Payload: body,
-				NotBefore: &start, ExpiresAt: &end, AggregateRound: true,
+				RunID:          job.RunID,
+				Round:          job.Round,
+				TeamID:         job.TeamID,
+				TaskID:         job.TaskID,
+				Action:         string(domain.JobActionCheckOnly),
+				Payload:        body,
+				NotBefore:      &start,
+				ExpiresAt:      &end,
+				AggregateRound: true,
 			})
 		}
 	}
@@ -78,14 +89,19 @@ func addExtraChecks(jobs []schedulerJobRecord, at time.Time, roundTime, count in
 func groupedResult(ctx context.Context, queries *sqlc.Queries, row sqlc.CompleteCheckerJobClaimRow) (domain.CheckerResult, bool, bool, error) {
 	const location = "postgres.groupedResult"
 	results, err := queries.GroupedCheckerResults(ctx, sqlc.GroupedCheckerResultsParams{
-		RunID: row.RunID, TeamID: row.TeamID, TaskID: row.TaskID,
+		RunID:  row.RunID,
+		TeamID: row.TeamID,
+		TaskID: row.TaskID,
 	})
 	if err != nil {
 		return domain.CheckerResult{}, false, false, fmt.Errorf("%s - read round results: %w", location, err)
 	}
 	result, ready, counted, err := aggregateResults(results)
 	result.Round = row.Round
-	return result, ready, counted, err
+	if err != nil {
+		return result, ready, counted, fmt.Errorf("%s - aggregate checker results: %w", location, err)
+	}
+	return result, ready, counted, nil
 }
 
 func aggregateResults(rows []sqlc.GroupedCheckerResultsRow) (domain.CheckerResult, bool, bool, error) {
@@ -93,12 +109,17 @@ func aggregateResults(rows []sqlc.GroupedCheckerResultsRow) (domain.CheckerResul
 	if len(rows) == 0 {
 		return domain.CheckerResult{}, false, false, fmt.Errorf("%s - empty round group", location)
 	}
-	selected := domain.CheckerResult{Status: domain.TaskStatusUp, PublicMessage: "OK"}
+	selected := domain.CheckerResult{
+		Status:        domain.TaskStatusUp,
+		PublicMessage: "OK",
+	}
 	for _, row := range rows {
 		if !row.FinishedAt.Valid {
 			return domain.CheckerResult{}, false, false, nil
 		}
-		current := domain.CheckerResult{Status: domain.TaskStatusCheckFailed}
+		current := domain.CheckerResult{
+			Status: domain.TaskStatusCheckFailed,
+		}
 		if len(row.Result) > 0 {
 			if err := json.Unmarshal(row.Result, &current); err != nil {
 				return domain.CheckerResult{}, false, false, fmt.Errorf("%s - decode result: %w", location, err)

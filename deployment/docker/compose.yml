@@ -3,6 +3,9 @@ name: forcad
 x-memory: &memory
   mem_reservation: "${FORCAD_SERVICE_MEMORY_RESERVATION:-1g}"
   mem_limit: "${FORCAD_SERVICE_MEMORY:-0}"
+  logging:
+    driver: local
+    options: {max-size: "10m", max-file: "3", mode: non-blocking, max-buffer-size: "4m"}
 
 x-service: &service
   <<: *memory
@@ -15,7 +18,7 @@ x-service: &service
       format: raw
     - path: ../../config/runtime/redis_environment.env
       format: raw
-    - path: ../../config/runtime/rabbitmq_environment.env
+    - path: ../../config/runtime/nats_environment.env
       format: raw
   restart: on-failure
   pids_limit: ${FORCAD_SERVICE_PIDS:-512}
@@ -43,13 +46,17 @@ x-runtime-settings: &runtime-settings
   FORCAD_CHECKER_OUTPUT_LIMIT_BYTES: "${FORCAD_CHECKER_OUTPUT_LIMIT_BYTES:-1048576}"
   FLAG_RATE: "${FLAG_RATE:-200}"
   FLAG_BURST: "${FLAG_BURST:-400}"
+  NATS_STREAM: "${NATS_STREAM:-FORCAD_CHECKERS}"
+  NATS_SUBJECT: "${NATS_SUBJECT:-forcad.checker.jobs}"
+  NATS_CONSUMER: "${NATS_CONSUMER:-forcad-workers}"
+  NATS_MAX_ACK_PENDING: "${NATS_MAX_ACK_PENDING:-1024}"
 
 x-app-dependencies: &app-dependencies
   pgbouncer:
     condition: service_healthy
   redis:
     condition: service_healthy
-  rabbitmq:
+  nats:
     condition: service_healthy
   initializer:
     condition: service_completed_successfully
@@ -73,9 +80,14 @@ x-worker: &worker-service
 services:
   api:
     <<: *app-service
+    mem_reservation: "${FORCAD_API_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_API_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: api
+      DATABASE_MIN_CONNS: "${FORCAD_API_DATABASE_MIN_CONNS:-0}"
+      GOGC: "${FORCAD_API_GOGC:-100}"
+      GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-off}"
     env_file:
       - path: ../../config/runtime/admin.env
         format: raw
@@ -83,7 +95,7 @@ services:
         format: raw
       - path: ../../config/runtime/redis_environment.env
         format: raw
-      - path: ../../config/runtime/rabbitmq_environment.env
+      - path: ../../config/runtime/nats_environment.env
         format: raw
     deploy:
       replicas: ${FORCAD_API_REPLICAS:-4}
@@ -95,6 +107,7 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: receiver
+      GOMEMLIMIT: "${FORCAD_RECEIVER_GOMEMLIMIT:-off}"
     deploy:
       replicas: ${FORCAD_RECEIVER_REPLICAS:-2}
 
@@ -103,6 +116,7 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: worker
+      GOMEMLIMIT: "${FORCAD_WORKER_GOMEMLIMIT:-off}"
     mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
     mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
     pids_limit: ${FORCAD_WORKER_PIDS:-2048}
@@ -111,6 +125,8 @@ services:
 
   ticker:
     <<: *app-service
+    mem_reservation: "${FORCAD_TICKER_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_TICKER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: ticker
@@ -131,7 +147,7 @@ services:
         format: raw
       - path: ../../config/runtime/redis_environment.env
         format: raw
-      - path: ../../config/runtime/rabbitmq_environment.env
+      - path: ../../config/runtime/nats_environment.env
         format: raw
     environment:
       <<: *runtime-settings
@@ -202,6 +218,8 @@ services:
 
   redis:
     <<: *memory
+    mem_reservation: "${FORCAD_REDIS_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_REDIS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
     command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxclients 10000"]
     ulimits:
@@ -221,28 +239,40 @@ services:
       retries: 5
       start_period: 10s
 
-  rabbitmq:
+  nats:
     <<: *memory
-    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
-    hostname: rabbitmq
+    mem_reservation: "${FORCAD_NATS_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_NATS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    image: forcad_nats:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/nats/Dockerfile
     restart: on-failure
     env_file:
-      - path: ../../config/runtime/rabbitmq_environment.env
+      - path: ../../config/runtime/nats_environment.env
         format: raw
+    volumes:
+      - forcad-nats:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
     ports:
-      - "127.0.0.1:5672:5672"
-      - "127.0.0.1:15672:15672"
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
     healthcheck:
-      test:
-        - CMD-SHELL
-        - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8222/healthz?js-enabled-only=true'"]
       interval: 10s
-      timeout: 5s
+      timeout: 3s
       retries: 5
-      start_period: 20s
+      start_period: 5s
 
   pgbouncer:
     <<: *memory
+    mem_reservation: "${FORCAD_PGBOUNCER_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_PGBOUNCER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     build:
       context: ../..
       dockerfile: deployment/docker/pgbouncer/Dockerfile
@@ -288,6 +318,9 @@ services:
 
   postgres:
     <<: *memory
+    mem_reservation: "${FORCAD_POSTGRES_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_POSTGRES_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    shm_size: "${FORCAD_POSTGRES_SHM_SIZE:-64m}"
     image: forcad_postgres:local
     build:
       context: ../..
@@ -305,7 +338,10 @@ services:
     depends_on:
       postgres-data:
         condition: service_completed_successfully
-    command: ["postgres", "--max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-500}"]
+    command:
+      - postgres
+      - --max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-500}
+      - --shared-buffers=${FORCAD_POSTGRES_SHARED_BUFFERS:-128MB}
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -338,4 +374,5 @@ services:
     restart: "no"
 
 volumes:
+  forcad-nats:
   forcad-config: {}

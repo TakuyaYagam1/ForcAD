@@ -29,6 +29,7 @@ def exact_keys(value, names, location):
 
 def network_layout(config):
     settings = config["network"]
+    participant_prefix = 28 if config["teams"]["members_per_team"] > 5 else 29
     parsed = {
         name: ipaddress.IPv4Network(settings[name], strict=True)
         for name in ("router_vpn", "forcad", "participant_vpn", "admin_vpn")
@@ -40,8 +41,10 @@ def network_layout(config):
         raise ValueError("network.forcad must be between /24 and /30")
     if not 24 <= parsed["admin_vpn"].prefixlen <= 30:
         raise ValueError("network.admin_vpn must be between /24 and /30")
-    if not 24 <= parsed["participant_vpn"].prefixlen <= 29:
-        raise ValueError("network.participant_vpn must fit one /29 per team")
+    if not 23 <= parsed["participant_vpn"].prefixlen <= participant_prefix:
+        raise ValueError(
+            f"network.participant_vpn must fit one /{participant_prefix} per team"
+        )
     if team_base.prefixlen != 24:
         raise ValueError("network.team_network_base must be a /24 network")
 
@@ -71,9 +74,14 @@ def network_layout(config):
         first_host(parsed["forcad"]),
     }:
         raise ValueError("env.public_host must be a usable host in network.forcad")
-    if parsed["participant_vpn"].num_addresses // 8 < len(team_networks):
-        raise ValueError("network.participant_vpn must provide one /29 per team")
-    participant_groups = list(parsed["participant_vpn"].subnets(new_prefix=29))
+    group_size = 1 << (32 - participant_prefix)
+    if parsed["participant_vpn"].num_addresses // group_size < len(team_networks):
+        raise ValueError(
+            f"network.participant_vpn must provide one /{participant_prefix} per team"
+        )
+    participant_groups = list(
+        parsed["participant_vpn"].subnets(new_prefix=participant_prefix)
+    )
     participant_server = first_host(parsed["participant_vpn"])
     for group in participant_groups[: len(team_networks)]:
         available = sum(address != participant_server for address in group.hosts())
@@ -95,6 +103,7 @@ def network_layout(config):
         "forcad_router": first_host(parsed["forcad"]),
         "forcad_host": public_host,
         "participant_server": participant_server,
+        "participant_prefix": participant_prefix,
         "admin_server": admin_server,
         "team_vlan_start": vlan_start,
         "allowed_networks": [
@@ -215,6 +224,8 @@ def load_config(path):
         "vpn",
     )
     exact_keys(config["teams"], ("members_per_team", "entries"), "teams")
+    if isinstance(config["env"], dict):
+        config["env"].setdefault("capacity", "default")
     exact_keys(
         config["env"],
         (
@@ -227,6 +238,7 @@ def load_config(path):
             "monitoring",
             "router_metrics",
             "game_metrics",
+            "capacity",
         ),
         "env",
     )
@@ -259,7 +271,7 @@ def load_config(path):
         "forcad",
     )
     team_config = config["teams"]
-    integer(team_config["members_per_team"], 1, 5, "teams.members_per_team")
+    integer(team_config["members_per_team"], 1, 7, "teams.members_per_team")
     entries = team_config["entries"]
     if not isinstance(entries, list) or not 1 <= len(entries) <= 32:
         raise ValueError("teams.entries must contain 1 to 32 teams")
@@ -277,6 +289,11 @@ def load_config(path):
         elif team["logo"] is not None:
             safe_asset(team["logo"], "public/teams", f"teams.entries[{index}].logo")
     env = config["env"]
+    if not isinstance(env["capacity"], str) or env["capacity"] not in {
+        "default",
+        "chrp-final",
+    }:
+        raise ValueError("env.capacity must be default or chrp-final")
     for field in (
         "public_host",
         "brand_name",
@@ -499,7 +516,9 @@ def load_config(path):
 def teams(config):
     result = []
     layout = network_layout(config)
-    subnets = list(layout["participant_vpn"].subnets(new_prefix=29))
+    subnets = list(
+        layout["participant_vpn"].subnets(new_prefix=layout["participant_prefix"])
+    )
     team_config = config["teams"]
     for number, entry in enumerate(team_config["entries"], 1):
         name = validate_team_name(entry["name"])
@@ -706,6 +725,14 @@ def game_metrics(config):
     # Keep IP fragments too: a port-only BPF would lose non-initial fragments.
     target_filter = " or ".join(f"host {team['vulnbox']}" for team in inventory)
     capture_filter = f"ip and net {layout['participant_vpn']} and ({target_filter})"
+    service = template(
+        "router/game-metrics.service.in",
+        INTERFACE=config["router"]["vpn_interface"],
+        FILTER=capture_filter,
+    )
+    if config["env"]["capacity"] == "chrp-final":
+        service = service.replace("MemoryMax=1G", "MemoryHigh=4G\nMemoryMax=infinity")
+        service = service.replace("CPUQuota=100%", "CPUWeight=10")
     return {
         "router/game-metrics.zeek": (ROOT / "router/game-metrics.zeek").read_text(),
         "router/game-inventory.zeek": (
@@ -717,11 +744,7 @@ def game_metrics(config):
             "redef Telemetry::metrics_port = 9911/tcp;\n"
             'redef Telemetry::metrics_endpoint_name = "router";\n'
         ),
-        "router/game-metrics.service": template(
-            "router/game-metrics.service.in",
-            INTERFACE=config["router"]["vpn_interface"],
-            FILTER=capture_filter,
-        ),
+        "router/game-metrics.service": service,
         "forcad/game-sensors.yml": (f'- targets: ["{layout["forcad_router"]}:9911"]\n'),
     }
 
@@ -771,7 +794,10 @@ def forcad_environment(config):
         "VITE_BRAND_PRIMARY": env["brand_primary"],
         "VITE_BRAND_ACCENT": env["brand_accent"],
     }
-    return "".join(f'{key}="{value}"\n' for key, value in values.items())
+    result = "".join(f'{key}="{value}"\n' for key, value in values.items())
+    if env["capacity"] == "chrp-final":
+        result += (ROOT.parent / "deployment/final/limits.env.example").read_text()
+    return result
 
 
 def forcad_assets(config):

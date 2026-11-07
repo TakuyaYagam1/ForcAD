@@ -97,7 +97,12 @@ teams:
 		values := make([]string, 100)
 		for item := range 100 {
 			values[item] = fmt.Sprintf("%031d=", team*100+item)
-			_, err := repo.Create(t.Context(), domain.Flag{Value: values[item], TeamID: victimID, TaskID: taskID, Round: 1}, nil)
+			_, err := repo.Create(t.Context(), domain.Flag{
+				Value:  values[item],
+				TeamID: victimID,
+				TaskID: taskID,
+				Round:  1,
+			}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -109,11 +114,18 @@ teams:
 	}
 	servers := make([]*applicationProcess, 0, 2)
 	for range 2 {
-		values := map[string]string{"FORCAD_ROLE": "receiver", "DATABASE_URL": dsn,
-			"REDIS_ADDR": redisAddr, "REDIS_DB": "15", "DATABASE_MAX_CONNS": "4"}
+		values := map[string]string{
+			"FORCAD_ROLE":        "receiver",
+			"DATABASE_URL":       dsn,
+			"REDIS_ADDR":         redisAddr,
+			"REDIS_DB":           "15",
+			"DATABASE_MAX_CONNS": "4",
+		}
 		servers = append(servers, startApplication(t, values))
 	}
-	client := &http.Client{Timeout: 20 * time.Second}
+	client := &http.Client{
+		Timeout: 20 * time.Second,
+	}
 	for attempt := range 2 {
 		start := make(chan struct{})
 		latencies := make(chan time.Duration, 20)

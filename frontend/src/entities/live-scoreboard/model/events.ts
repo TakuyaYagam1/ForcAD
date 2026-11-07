@@ -38,7 +38,9 @@ export interface FlagNotification {
 
 export function publicEventToLiveEvent(event: PublicEventRecord): LiveEvent | null {
   const ts = Date.parse(event.created_at);
-  if (!event.id || !Number.isFinite(ts)) return null;
+  if (!event.id || !Number.isFinite(ts)) {
+    return null;
+  }
   if (event.kind === "admin_message") {
     return {
       id: event.id,
@@ -92,26 +94,42 @@ export function notificationToLiveEvent(
 
 export function resolveEventNames(
   event: LiveEvent,
-  teams: readonly { id: string; name: string }[] | null,
-  tasks: readonly { id: string; name: string }[] | null,
+  teams: readonly {
+    id: string;
+    name: string
+  }[] | null,
+  tasks: readonly {
+    id: string;
+    name: string
+  }[] | null,
 ): LiveEvent {
-  if (event.kind === "admin_message") return event;
+  if (event.kind === "admin_message") {
+    return event;
+  }
   return {
     ...event,
     attackerName:
-      teams?.find((team) => team.id === event.attackerId)?.name ??
+      teams?.find((team) => {
+        return team.id === event.attackerId
+      })?.name ??
       event.attackerName,
     victimName:
-      teams?.find((team) => team.id === event.victimId)?.name ??
+      teams?.find((team) => {
+        return team.id === event.victimId
+      })?.name ??
       event.victimName,
     taskName:
-      tasks?.find((task) => task.id === event.taskId)?.name ??
+      tasks?.find((task) => {
+        return task.id === event.taskId
+      })?.name ??
       event.taskName,
   };
 }
 
 export function mergeLiveEvents(current: LiveEvent[], incoming: LiveEvent[]): LiveEvent[] {
-  const byID = new Map(current.map((event) => [event.id, event]));
+  const byID = new Map(current.map((event) => {
+    return [event.id, event]
+  }));
   for (const event of incoming) {
     const previous = byID.get(event.id);
     if (
@@ -121,12 +139,18 @@ export function mergeLiveEvents(current: LiveEvent[], incoming: LiveEvent[]): Li
       event.delta === undefined &&
       previous.delta !== undefined
     ) {
-      byID.set(event.id, { ...previous, ...event, delta: previous.delta });
+      byID.set(event.id, {
+        ...previous,
+        ...event,
+        delta: previous.delta
+      });
       continue;
     }
     byID.set(event.id, event);
   }
   return [...byID.values()]
-    .sort((a, b) => b.ts - a.ts || b.id.localeCompare(a.id))
+    .sort((a, b) => {
+      return b.ts - a.ts || b.id.localeCompare(a.id)
+    })
     .slice(0, 100);
 }

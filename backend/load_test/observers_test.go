@@ -1,10 +1,12 @@
 package load_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -25,22 +27,40 @@ type streamReport struct {
 }
 
 type observers struct {
-	cancel          context.CancelFunc
-	wait            sync.WaitGroup
-	connections     atomic.Int64
-	messages        atomic.Int64
-	failures        atomic.Int64
-	errorOnce       sync.Once
-	err             error
-	streamErrorOnce sync.Once
-	streamError     string
+	cancel            context.CancelFunc
+	reconnectInterval time.Duration
+	dialTimeout       time.Duration
+	wait              sync.WaitGroup
+	connections       atomic.Int64
+	messages          atomic.Int64
+	failures          atomic.Int64
+	errorOnce         sync.Once
+	err               error
+	streamErrorOnce   sync.Once
+	streamError       string
 }
 
-func observe(ctx context.Context, d *deployment, flags *catalog, directory string) *observers {
+func observe(
+	ctx context.Context,
+	d *deployment,
+	flags *catalog,
+	directory string,
+	spectators int,
+) *observers {
 	ctx, cancel := context.WithCancel(ctx)
-	o := &observers{cancel: cancel}
-	for range teamCount {
-		o.wait.Go(func() { o.spectator(ctx, d.origin) })
+	o := &observers{
+		cancel: cancel,
+	}
+	interval, err := webSocketReconnectInterval()
+	if err != nil {
+		o.fail(err)
+		return o
+	}
+	o.reconnectInterval = interval
+	for range spectators {
+		o.wait.Go(func() {
+			o.spectator(ctx, d.origin)
+		})
 	}
 	o.wait.Go(func() {
 		tick := time.NewTicker(3 * time.Second)
@@ -57,34 +77,84 @@ func observe(ctx context.Context, d *deployment, flags *catalog, directory strin
 			}
 		}
 	})
-	o.wait.Go(func() { o.sample(ctx, d, directory) })
-	if os.Getenv("LOAD_PROFILE") == "checker" {
-		o.wait.Go(func() { o.sampleCheckerLifecycle(ctx, d, directory) })
+	o.wait.Go(func() {
+		o.sample(ctx, d, directory)
+	})
+	if os.Getenv("LOAD_PROFILE") == "checker" || os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+		o.wait.Go(func() {
+			o.sampleCheckerLifecycle(ctx, d, directory)
+		})
 	}
 	if os.Getenv("LOAD_DIAGNOSTICS") == "1" {
-		o.wait.Go(func() { o.sampleDatabase(ctx, d, directory) })
-		o.wait.Go(func() { o.samplePool(ctx, d, directory) })
+		o.wait.Go(func() {
+			o.traceHTTP(ctx, d, directory)
+		})
+		o.wait.Go(func() {
+			o.sampleDatabase(ctx, d, directory)
+		})
+		o.wait.Go(func() {
+			o.samplePool(ctx, d, directory)
+		})
 	}
 	return o
 }
 
-func (o *observers) fail(err error) { o.errorOnce.Do(func() { o.err = err }) }
+func webSocketReconnectInterval() (time.Duration, error) {
+	raw := os.Getenv("LOAD_WS_RECONNECT_INTERVAL")
+	if raw == "" {
+		return 20 * time.Second, nil
+	}
+	interval, err := time.ParseDuration(raw)
+	if err != nil || interval < 0 || interval > 12*time.Hour || interval > 0 && interval < time.Millisecond {
+		return 0, fmt.Errorf("load.webSocketReconnectInterval - LOAD_WS_RECONNECT_INTERVAL must be 0 or a duration between 1ms and 12h")
+	}
+	return interval, nil
+}
+
+func (o *observers) fail(err error) {
+	o.errorOnce.Do(func() {
+		o.err = err
+	})
+}
 
 func (o *observers) stop() (streamReport, error) {
 	o.cancel()
 	o.wait.Wait()
-	return streamReport{Connections: o.connections.Load(), Messages: o.messages.Load(), Failures: o.failures.Load(), FirstError: o.streamError}, o.err
+	return streamReport{
+		Connections: o.connections.Load(),
+		Messages:    o.messages.Load(),
+		Failures:    o.failures.Load(),
+		FirstError:  o.streamError,
+	}, o.err
 }
 
 func (o *observers) streamFailed(err error) {
 	o.failures.Add(1)
-	o.streamErrorOnce.Do(func() { o.streamError = time.Now().UTC().Format(time.RFC3339Nano) + " " + err.Error() })
+	o.streamErrorOnce.Do(func() {
+		o.streamError = time.Now().UTC().Format(time.RFC3339Nano) + " " + err.Error()
+	})
 }
 
 func (o *observers) spectator(ctx context.Context, origin string) {
+	var messageBuffer spectatorMessageBuffer
 	for ctx.Err() == nil {
-		cycle, cancel := context.WithTimeout(ctx, 20*time.Second)
-		conn, response, err := websocket.Dial(cycle, "ws"+strings.TrimPrefix(origin, "http")+"/api/events/ws", &websocket.DialOptions{HTTPHeader: http.Header{"Origin": {origin}}})
+		cycle := ctx
+		cancel := func() {
+		}
+		if o.reconnectInterval > 0 {
+			cycle, cancel = context.WithTimeout(ctx, o.reconnectInterval)
+		}
+		dialTimeout := o.dialTimeout
+		if dialTimeout <= 0 {
+			dialTimeout = 20 * time.Second
+		}
+		dial, cancelDial := context.WithTimeout(cycle, dialTimeout)
+		conn, response, err := websocket.Dial(dial, "ws"+strings.TrimPrefix(origin, "http")+"/api/events/ws", &websocket.DialOptions{
+			HTTPHeader: http.Header{
+				"Origin": {origin},
+			},
+		})
+		cancelDial()
 		if err != nil {
 			if response != nil {
 				response.Body.Close()
@@ -96,7 +166,11 @@ func (o *observers) spectator(ctx context.Context, origin string) {
 			o.connections.Add(1)
 			conn.SetReadLimit(1 << 20)
 			for {
-				_, body, readErr := conn.Read(cycle)
+				_, reader, readErr := conn.Reader(cycle)
+				var body []byte
+				if readErr == nil {
+					body, readErr = messageBuffer.read(reader)
+				}
 				if readErr != nil {
 					if cycle.Err() == nil {
 						o.streamFailed(readErr)
@@ -116,6 +190,30 @@ func (o *observers) spectator(ctx context.Context, origin string) {
 			return
 		}
 	}
+}
+
+const spectatorBufferRetention = 64 << 10
+
+// Each spectator owns one buffer across connections. Message bytes are borrowed
+// until the next read and are consumed synchronously by json.Valid.
+type spectatorMessageBuffer struct {
+	data bytes.Buffer
+}
+
+func (b *spectatorMessageBuffer) read(reader io.Reader) ([]byte, error) {
+	const location = "load.spectatorMessageBuffer.read"
+	b.data.Reset()
+	_, err := b.data.ReadFrom(reader)
+	body := b.data.Bytes()
+	if b.data.Cap() > spectatorBufferRetention {
+		// The returned slice still owns its bytes for the caller's validation;
+		// this spectator must not retain an unusually large frame afterwards.
+		b.data = bytes.Buffer{}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("%s - read complete WebSocket message: %w", location, err)
+	}
+	return body, nil
 }
 
 func waitContext(ctx context.Context, duration time.Duration) bool {
@@ -203,8 +301,7 @@ func resourceCommandOutput(ctx context.Context, cmd *exec.Cmd) ([]byte, error) {
 		return data, nil
 	}
 	var stderr string
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		// Output retains a bounded prefix/suffix of stderr on failure. Keep it:
 		// exit status 1 alone cannot distinguish a Docker error from a Windows
 		// process killed after the command's context deadline.

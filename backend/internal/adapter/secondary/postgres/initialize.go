@@ -63,7 +63,12 @@ func (g *GameStore) Initialize(ctx context.Context, document config.Document) (b
 	return true, nil
 }
 
-func initializeGameConfig(ctx context.Context, q *sqlc.Queries, game config.Game, start time.Time) error {
+func initializeGameConfig(
+	ctx context.Context,
+	q *sqlc.Queries,
+	game config.Game,
+	start time.Time,
+) error {
 	const location = "postgres.initializeGameConfig"
 	flagLifetime, err := checkedInt32(game.FlagLifetime)
 	if err != nil {
@@ -82,11 +87,16 @@ func initializeGameConfig(ctx context.Context, q *sqlc.Queries, game config.Game
 		return fmt.Errorf("%s - convert extra check count: %w", location, err)
 	}
 	err = q.InitializeGame(ctx, sqlc.InitializeGameParams{
-		FlagLifetime: &flagLifetime, GameHardness: new(game.GameHardness),
-		Inflation: new(game.Inflation), VolgaAttacksMode: new(game.VolgaAttacksMode),
-		RoundTime: &roundTime, Rounds: rounds, Mode: new(game.Mode),
-		Timezone: new(game.Timezone), StartTime: gameStamp(start),
-		ExtraChecks: extraChecks,
+		FlagLifetime:     &flagLifetime,
+		GameHardness:     new(game.GameHardness),
+		Inflation:        new(game.Inflation),
+		VolgaAttacksMode: new(game.VolgaAttacksMode),
+		RoundTime:        &roundTime,
+		Rounds:           rounds,
+		Mode:             new(game.Mode),
+		Timezone:         new(game.Timezone),
+		StartTime:        gameStamp(start),
+		ExtraChecks:      extraChecks,
 	})
 	if err != nil {
 		return fmt.Errorf("%s - insert game configuration: %w", location, err)
@@ -106,8 +116,12 @@ func initializeTeams(ctx context.Context, q *sqlc.Queries, teams []config.Team) 
 			token = hex.EncodeToString(value[:])
 		}
 		_, err := q.InsertGameTeam(ctx, sqlc.InsertGameTeamParams{
-			Name: team.Name, Ip: team.IP, Token: token,
-			Highlighted: new(team.Highlighted), Active: new(true), LogoPath: new(team.LogoPath),
+			Name:        team.Name,
+			Ip:          team.IP,
+			Token:       token,
+			Highlighted: new(team.Highlighted),
+			Active:      new(true),
+			LogoPath:    new(team.LogoPath),
 		})
 		if err != nil {
 			return fmt.Errorf("%s - insert game team: %w", location, err)
@@ -159,10 +173,17 @@ func initialTaskParams(task config.Task) (sqlc.InsertGameTaskParams, error) {
 		*item.output = value
 	}
 	return sqlc.InsertGameTaskParams{
-		Name: new(task.Name), Checker: new(task.Checker), EnvPath: task.EnvPath,
-		Gets: &converted.gets, Puts: &converted.puts, Places: &converted.places,
-		CheckerTimeout: &converted.timeout, CheckerType: new(task.CheckerType),
-		GetPeriod: &converted.getPeriod, DefaultScore: &converted.defaultScore, Active: new(true),
+		Name:           new(task.Name),
+		Checker:        new(task.Checker),
+		EnvPath:        task.EnvPath,
+		Gets:           &converted.gets,
+		Puts:           &converted.puts,
+		Places:         &converted.places,
+		CheckerTimeout: &converted.timeout,
+		CheckerType:    new(task.CheckerType),
+		GetPeriod:      &converted.getPeriod,
+		DefaultScore:   &converted.defaultScore,
+		Active:         new(true),
 	}, nil
 }
 
@@ -172,10 +193,15 @@ func saveInitialSnapshot(ctx context.Context, q *sqlc.Queries) error {
 	if err != nil {
 		return fmt.Errorf("%s - load initialized team task cells: %w", location, err)
 	}
-	state := domain.GameState{TeamTasks: make([]domain.PublicCell, 0, len(cells))}
+	state := domain.GameState{
+		TeamTasks: make([]domain.PublicCell, 0, len(cells)),
+	}
 	for _, cell := range cells {
 		state.TeamTasks = append(state.TeamTasks, domain.PublicCell{
-			TeamID: cell.TeamID, TaskID: cell.TaskID, Status: cell.Status, Score: cell.Score,
+			TeamID: cell.TeamID,
+			TaskID: cell.TaskID,
+			Status: cell.Status,
+			Score:  cell.Score,
 		})
 	}
 	snapshot, err := json.Marshal(state)
@@ -183,7 +209,8 @@ func saveInitialSnapshot(ctx context.Context, q *sqlc.Queries) error {
 		return fmt.Errorf("%s - encode initial game snapshot: %w", location, err)
 	}
 	if _, err := q.SaveGameSnapshot(ctx, sqlc.SaveGameSnapshotParams{
-		SnapshotRound: new(int32(0)), Snapshot: snapshot,
+		SnapshotRound: new(int32(0)),
+		Snapshot:      snapshot,
 	}); err != nil {
 		return fmt.Errorf("%s - save initial game snapshot: %w", location, err)
 	}

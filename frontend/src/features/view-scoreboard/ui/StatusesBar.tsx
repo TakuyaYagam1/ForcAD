@@ -11,21 +11,41 @@ export function StatusesBar({
   roundStart?: number | null;
 }) {
   const { t } = useTranslation("public");
-  const roundTime = useScoreboardStore((state) => state.roundTime);
-  const runtimeRound = useScoreboardStore((state) => state.runtimeRound);
+  const roundTime = useScoreboardStore((state) => {
+    return state.roundTime
+  });
+  const runtimeRound = useScoreboardStore((state) => {
+    return state.runtimeRound
+  });
   const currentRoundStart = useScoreboardStore(
-    (state) => state.currentRoundStart,
+    (state) => {
+      return state.currentRoundStart
+    },
   );
   const displayRound = runtimeRound ?? round;
   const timerStart = currentRoundStart ?? roundStart;
-  const phase = useScoreboardStore((state) => state.phase);
-  const roundWaiting = useScoreboardStore((state) => state.roundWaiting);
-  const pausedAt = useScoreboardStore((state) => state.pausedAt);
-  const pausedSeconds = useScoreboardStore((state) => state.pausedSeconds);
-  const [now, setNow] = useState(() => Date.now());
+  const phase = useScoreboardStore((state) => {
+    return state.phase
+  });
+  const roundWaiting = useScoreboardStore((state) => {
+    return state.roundWaiting
+  });
+  const pausedAt = useScoreboardStore((state) => {
+    return state.pausedAt
+  });
+  const pausedSeconds = useScoreboardStore((state) => {
+    return state.pausedSeconds
+  });
+  const [now, setNow] = useState(() => {
+    return Date.now()
+  });
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => {
+      return setNow(Date.now())
+    }, 1000);
+    return () => {
+      return window.clearInterval(timer)
+    };
   }, []);
   const startMs = timerStart
     ? timerStart < 10_000_000_000
@@ -43,13 +63,13 @@ export function StatusesBar({
     !displayRound
       ? null
       : Math.max(
-          0,
-          Math.floor(
-            (effectiveNow - startMs) / 1000 -
+        0,
+        Math.floor(
+          (effectiveNow - startMs) / 1000 -
               (currentRoundStart ? 0 : (roundTime ?? 0)) -
               pausedSeconds,
-          ),
-        );
+        ),
+      );
   const timerSeconds =
     elapsed === null || !roundTime
       ? null
@@ -78,14 +98,22 @@ export function StatusesBar({
       >
         <span
           className="round-track-progress"
-          style={{ transform: `scaleX(${progress / 100})` }}
+          style={{
+            transform: `scaleX(${progress / 100})`
+          }}
         />
-        {Array.from({ length: 18 }, (_, index) => (
-          <i key={index} className="round-tick" />
-        ))}
+        {Array.from({
+          length: 18
+        }, (_, index) => {
+          return (
+            <i key={index} className="round-tick" />
+          )
+        })}
         <span
           className="round-head"
-          style={{ transform: `translateX(${progress}cqw)` }}
+          style={{
+            transform: `translateX(${progress}cqw)`
+          }}
           aria-hidden="true"
         />
       </div>

@@ -25,9 +25,17 @@ type flagsState struct {
 func (s *flagsState) ActiveIDByToken(context.Context, string) (uuid.UUID, error) {
 	return uuid.MustParse("00000000-0000-7000-8000-000000000001"), nil
 }
-func (s *flagsState) IsActiveTeam(context.Context, uuid.UUID) (bool, error) { return true, nil }
-func (s *flagsState) Lifecycle(context.Context) (domain.Lifecycle, error)   { return s.life, nil }
-func (s *flagsState) Allow(_ context.Context, scope string, cost, _, _ int) (bool, error) {
+func (s *flagsState) IsActiveTeam(context.Context, uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (s *flagsState) Lifecycle(context.Context) (domain.Lifecycle, error) {
+	return s.life, nil
+}
+func (s *flagsState) Allow(
+	_ context.Context,
+	scope string,
+	cost, _, _ int,
+) (bool, error) {
 	s.cost = cost
 	s.scope = scope
 	return s.rateAllowed, nil
@@ -47,14 +55,28 @@ func (s *flagsState) SubmitBatch(_ context.Context, submission domain.FlagSubmis
 			continue
 		}
 		s.submitted[value] = true
-		results[i].Attack = domain.AttackResult{AttackerID: submission.TeamID, AttackerDelta: 2.5}
+		results[i].Attack = domain.AttackResult{
+			AttackerID:    submission.TeamID,
+			AttackerDelta: 2.5,
+		}
 	}
 	return results, nil
 }
-func (s *flagsState) Publish(context.Context, string, any) error { return nil }
+func (s *flagsState) Publish(context.Context, string, any) error {
+	return nil
+}
 
 func newTestFlags() (*Flags, *flagsState) {
-	state := &flagsState{life: domain.Lifecycle{Config: domain.GameConfig{GameRunning: true, RealRound: 1}}, rateAllowed: true, submitted: map[string]bool{}}
+	state := &flagsState{
+		life: domain.Lifecycle{
+			Config: domain.GameConfig{
+				GameRunning: true,
+				RealRound:   1,
+			},
+		},
+		rateAllowed: true,
+		submitted:   map[string]bool{},
+	}
 	service := NewFlags(state, state, state, state, state, slog.New(slog.DiscardHandler), 200, 400)
 	return service, state
 }

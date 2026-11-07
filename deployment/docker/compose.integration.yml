@@ -55,18 +55,25 @@ services:
       timeout: 2s
       retries: 30
 
-  rabbitmq:
-    image: rabbitmq:4.3.6-management-alpine@sha256:3ef7f7e89fed709a78f79b8b5f4e30e1312a1d4089da752e23595566d9d61a95
+  nats:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/nats/Dockerfile
     environment:
-      RABBITMQ_DEFAULT_USER: forcad_test
-      RABBITMQ_DEFAULT_PASS: local-integration-password
-      RABBITMQ_DEFAULT_VHOST: forcad_test
+      NATS_USER: forcad_test
+      NATS_PASSWORD: local-integration-password
     ports:
-      - "127.0.0.1::5672"
+      - "127.0.0.1:${FORCAD_TEST_NATS_PORT:-0}:4222"
+    volumes:
+      - nats-data:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     healthcheck:
-      test:
-        - CMD-SHELL
-        - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8222/healthz?js-enabled-only=true'"]
       interval: 2s
-      timeout: 5s
+      timeout: 3s
       retries: 30
+
+volumes:
+  nats-data: {}

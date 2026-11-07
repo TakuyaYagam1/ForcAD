@@ -15,7 +15,12 @@ type GameService interface {
 	Tasks(ctx context.Context, public bool) ([]domain.Task, error)
 	History(ctx context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error)
 	PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error)
-	CheckerLogs(ctx context.Context, teamID, taskID uuid.UUID, beforeID *uuid.UUID, limit int32) (domain.CheckerLogPage, error)
+	CheckerLogs(
+		ctx context.Context,
+		teamID, taskID uuid.UUID,
+		beforeID *uuid.UUID,
+		limit int32,
+	) (domain.CheckerLogPage, error)
 	Scoreboard(ctx context.Context) (domain.Scoreboard, error)
 	Standings(ctx context.Context) ([]usecase.Standing, error)
 	AttackData(ctx context.Context, service *string) (map[string]map[string][]string, error)

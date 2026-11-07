@@ -56,7 +56,13 @@ var imageIDPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
 // MaintenanceRunner runs one Docker command. Maintenance keeps command output
 // private because Compose can include resolved configuration in diagnostics.
-type MaintenanceRunner func(context.Context, string, []string, io.Writer, io.Writer) error
+type MaintenanceRunner func(
+	context.Context,
+	string,
+	[]string,
+	io.Writer,
+	io.Writer,
+) error
 
 // MaintenanceOptions selects a confirmed local reset or clean operation.
 type MaintenanceOptions struct {
@@ -67,51 +73,77 @@ type MaintenanceOptions struct {
 
 // RunMaintenance resets game state, or performs the guarded local full reset.
 // Clean additionally removes only ForcAD-generated runtime files.
-func RunMaintenance(ctx context.Context, root string, options MaintenanceOptions, out io.Writer, runner MaintenanceRunner, resetData func(context.Context) error) error {
+func RunMaintenance(
+	ctx context.Context,
+	root string,
+	options MaintenanceOptions,
+	out io.Writer,
+	runner MaintenanceRunner,
+	resetData func(context.Context) error,
+) error {
+	const location = "operator.RunMaintenance"
+
 	if err := validateMaintenance(ctx, options, runner, resetData); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 
 	paths, err := pathsFor(root)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if err := validateMaintenanceFiles(paths); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	composeArgs, err := ComposeArgs(root, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	project, err := readComposeProject(ctx, runner, composeArgs)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if err := verifyProjectOwnership(ctx, runner, project.Name, paths.deployment); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 
 	if options.Full || options.Clean {
-		target, err := prepareFullReset(ctx, runner, project, paths)
-		if err != nil {
-			return err
-		}
-		if err := stopComposeProject(ctx, runner, composeArgs); err != nil {
-			return err
-		}
-		if err := runPostgresCleanupContainer(ctx, runner, target.imageID, filepath.Dir(target.dataPath), true); err != nil {
-			return maintenanceCommandError(ctx, "remove the verified local PostgreSQL data directory", err)
+		if err := removeLocalPostgresData(ctx, runner, composeArgs, project, paths); err != nil {
+			return fmt.Errorf("%s - remove verified PostgreSQL data: %w", location, err)
 		}
 	} else if err := resetGameData(ctx, runner, composeArgs, project, resetData); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 
 	if options.Clean {
 		if err := removeGeneratedRuntimeFiles(paths); err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 	}
-	return writeMaintenanceMessage(ctx, options.completionMessage(), out)
+	if err := writeMaintenanceMessage(ctx, options.completionMessage(), out); err != nil {
+		return fmt.Errorf("%s - write maintenance result: %w", location, err)
+	}
+	return nil
+}
+
+func removeLocalPostgresData(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	composeArgs []string,
+	project composeProject,
+	paths projectPaths,
+) error {
+	const location = "operator.removeLocalPostgresData"
+	target, err := prepareFullReset(ctx, runner, project, paths)
+	if err != nil {
+		return fmt.Errorf("%s - prepare guarded reset: %w", location, err)
+	}
+	if err := stopComposeProject(ctx, runner, composeArgs); err != nil {
+		return fmt.Errorf("%s - stop verified Compose project: %w", location, err)
+	}
+	if err := runPostgresCleanupContainer(ctx, runner, target.imageID, filepath.Dir(target.dataPath), true); err != nil {
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "remove the verified local PostgreSQL data directory", err))
+	}
+	return nil
 }
 
 func (options MaintenanceOptions) completionMessage() string {
@@ -128,7 +160,7 @@ func validateMaintenanceFiles(paths projectPaths) error {
 	const location = "operator.validateMaintenanceFiles"
 	root := filepath.Dir(filepath.Dir(paths.config))
 	if err := rejectSymlinkComponents(root); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	for _, directory := range []string{paths.configDir, paths.deployment, paths.runtime} {
 		info, err := os.Lstat(directory)
@@ -139,7 +171,7 @@ func validateMaintenanceFiles(paths projectPaths) error {
 			return fmt.Errorf("%s - refusing a non-directory maintenance path: %s", location, directory)
 		}
 	}
-	for _, path := range []string{paths.config, paths.canonicalCompose, paths.adminEnv, paths.postgresEnv, paths.rabbitmqEnv, paths.redisEnv} {
+	for _, path := range []string{paths.config, paths.canonicalCompose, paths.adminEnv, paths.postgresEnv, paths.natsEnv, paths.redisEnv} {
 		info, err := os.Lstat(path)
 		if err != nil {
 			return fmt.Errorf("%s - required maintenance file is unavailable: %s", location, path)
@@ -149,14 +181,17 @@ func validateMaintenanceFiles(paths projectPaths) error {
 		}
 	}
 	if _, err := effectiveComposePath(paths); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
-	return validateGeneratedRuntimeFiles(paths)
+	if err := validateGeneratedRuntimeFiles(paths); err != nil {
+		return fmt.Errorf("%s - validate generated runtime files: %w", location, err)
+	}
+	return nil
 }
 
 func validateGeneratedRuntimeFiles(paths projectPaths) error {
 	const location = "operator.validateGeneratedRuntimeFiles"
-	for _, path := range []string{paths.adminEnv, paths.postgresEnv, paths.postgresRuntimeEnv, paths.gameConfig, paths.rabbitmqEnv, paths.redisEnv, paths.generatedCompose} {
+	for _, path := range []string{paths.adminEnv, paths.postgresEnv, paths.postgresRuntimeEnv, paths.gameConfig, paths.natsEnv, paths.legacyBrokerEnv, paths.redisEnv, paths.generatedCompose} {
 		info, err := os.Lstat(path)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
@@ -173,18 +208,13 @@ func validateGeneratedRuntimeFiles(paths projectPaths) error {
 
 func verifyFullResetSupport(project composeProject) error {
 	const location = "operator.verifyFullResetSupport"
-	for _, name := range []string{"postgres", "redis", "rabbitmq"} {
+	for _, name := range []string{"postgres", "redis", "nats"} {
 		if _, ok := project.Services[name]; !ok {
-			return fmt.Errorf("%s - full reset supports only the built-in PostgreSQL, Redis, and RabbitMQ services", location)
+			return fmt.Errorf("%s - full reset supports only the built-in PostgreSQL, Redis, and NATS services", location)
 		}
 	}
-	for name, volume := range project.Volumes {
-		if volume.External || name != "forcad-config" {
-			return fmt.Errorf("%s - full reset refuses external or unrecognized Docker volumes", location)
-		}
-	}
-	if len(project.Services["redis"].Volumes) != 0 || len(project.Services["rabbitmq"].Volumes) != 0 {
-		return fmt.Errorf("%s - full reset refuses nonstandard Redis or RabbitMQ mounts", location)
+	if err := verifyResetStorageVolumes(project); err != nil {
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	postgres := project.Services["postgres"]
 	if strings.TrimSpace(postgres.Image) != "forcad_postgres:local" || len(postgres.Volumes) != 1 {
@@ -197,7 +227,31 @@ func verifyFullResetSupport(project composeProject) error {
 	return nil
 }
 
-func runPostgresCleanupContainer(ctx context.Context, runner MaintenanceRunner, imageID, parent string, removeData bool) error {
+func verifyResetStorageVolumes(project composeProject) error {
+	const location = "operator.verifyFullResetSupport"
+	for name, volume := range project.Volumes {
+		if volume.External || (name != "forcad-config" && name != "forcad-nats") ||
+			(volume.Name != "" && volume.Name != project.Name+"_"+name) {
+			return fmt.Errorf("%s - full reset refuses external or unrecognized Docker volumes", location)
+		}
+	}
+	if len(project.Services["redis"].Volumes) != 0 {
+		return fmt.Errorf("%s - full reset refuses nonstandard Redis mounts", location)
+	}
+	natsMounts := project.Services["nats"].Volumes
+	if _, ok := project.Volumes["forcad-nats"]; !ok || len(natsMounts) != 1 ||
+		natsMounts[0].Type != "volume" || natsMounts[0].Source != "forcad-nats" || natsMounts[0].Target != "/data" {
+		return fmt.Errorf("%s - full reset requires the standard NATS data volume", location)
+	}
+	return nil
+}
+
+func runPostgresCleanupContainer(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	imageID, parent string,
+	removeData bool,
+) error {
 	const location = "operator.runPostgresCleanupContainer"
 	if strings.ContainsAny(parent, ",\r\n\x00") {
 		return fmt.Errorf("%s - unsupported character in PostgreSQL storage path", location)
@@ -216,7 +270,10 @@ func runPostgresCleanupContainer(ctx context.Context, runner MaintenanceRunner, 
 		"--security-opt=no-new-privileges", "--mount", mount,
 		"--entrypoint=/bin/sh", imageID, "-c", script,
 	}
-	return runDocker(ctx, runner, args, io.Discard)
+	if err := runDocker(ctx, runner, args, io.Discard); err != nil {
+		return fmt.Errorf("%s - run guarded PostgreSQL cleanup container: %w", location, err)
+	}
+	return nil
 }
 
 func verifyPostgresMount(project composeProject, dataPath string) error {
@@ -236,7 +293,7 @@ func supportedPostgresTarget(target string) bool {
 
 func presentStorageServices(services map[string]composeService) []string {
 	var found []string
-	for _, name := range []string{"postgres", "redis", "rabbitmq"} {
+	for _, name := range []string{"postgres", "redis", "nats"} {
 		if _, ok := services[name]; ok {
 			found = append(found, name)
 		}
@@ -249,7 +306,7 @@ func postgresDataPath(paths projectPaths) (string, error) {
 	root := filepath.Dir(filepath.Dir(paths.config))
 	data := filepath.Join(root, "docker_volumes", "postgres", "data")
 	if err := rejectSymlinkComponents(root); err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - %w", location, err)
 	}
 	for _, path := range []string{filepath.Join(root, "docker_volumes"), filepath.Join(root, "docker_volumes", "postgres")} {
 		info, err := os.Lstat(path)
@@ -272,7 +329,10 @@ func ensureNoMountedPaths(dataPath string) error {
 	if err != nil {
 		return fmt.Errorf("%s - could not inspect local mount table; refusing full reset", location)
 	}
-	return hasMountedPath(dataPath, contents)
+	if err := hasMountedPath(dataPath, contents); err != nil {
+		return fmt.Errorf("%s - validate nested mounts: %w", location, err)
+	}
+	return nil
 }
 
 func hasMountedPath(dataPath string, contents []byte) error {
@@ -349,14 +409,24 @@ func rejectSymlinkComponents(path string) error {
 	return nil
 }
 
-func runDocker(ctx context.Context, runner MaintenanceRunner, args []string, stdout io.Writer) error {
+func runDocker(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	args []string,
+	stdout io.Writer,
+) error {
+	const location = "operator.runDocker"
+
 	if err := ctx.Err(); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if stdout == nil {
 		stdout = io.Discard
 	}
-	return runner(ctx, "docker", args, stdout, io.Discard)
+	if err := runner(ctx, "docker", args, stdout, io.Discard); err != nil {
+		return fmt.Errorf("%s - execute Docker command: %w", location, err)
+	}
+	return nil
 }
 
 func maintenanceCommandError(ctx context.Context, operation string, _ error) error {
@@ -385,25 +455,32 @@ func writeMaintenanceMessage(ctx context.Context, message string, out io.Writer)
 func removeGeneratedRuntimeFiles(paths projectPaths) error {
 	const location = "operator.removeGeneratedRuntimeFiles"
 	if err := validateGeneratedRuntimeFiles(paths); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	root, err := os.OpenRoot(paths.runtime)
 	if err != nil {
 		return fmt.Errorf("%s - open generated runtime directory: %w", location, err)
 	}
-	defer func() { _ = root.Close() }()
-	for _, name := range []string{"admin.env", "postgres_environment.env", "postgres_runtime.env", "game.yml", "rabbitmq_environment.env", "redis_environment.env"} {
+	defer func() {
+		_ = root.Close()
+	}()
+	for _, name := range []string{"admin.env", "postgres_environment.env", "postgres_runtime.env", "game.yml", "nats_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
 		if err := root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("%s - remove generated runtime file %s: %w", location, name, err)
 		}
 	}
 	if err := removeGeneratedCompose(paths); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	return nil
 }
 
-func validateMaintenance(ctx context.Context, options MaintenanceOptions, runner MaintenanceRunner, resetData func(context.Context) error) error {
+func validateMaintenance(
+	ctx context.Context,
+	options MaintenanceOptions,
+	runner MaintenanceRunner,
+	resetData func(context.Context) error,
+) error {
 	const location = "operator.validateMaintenance"
 	if ctx == nil {
 		return fmt.Errorf("%s - maintenance context must not be nil", location)
@@ -432,44 +509,60 @@ type fullResetTarget struct {
 	imageID  string
 }
 
-func prepareFullReset(ctx context.Context, runner MaintenanceRunner, project composeProject, paths projectPaths) (fullResetTarget, error) {
+func prepareFullReset(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	project composeProject,
+	paths projectPaths,
+) (fullResetTarget, error) {
+	const location = "operator.prepareFullReset"
+
 	if err := verifyFullResetSupport(project); err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	if err := requireLocalDocker(ctx, runner); err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	dataPath, err := postgresDataPath(paths)
 	if err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	if err := verifyPostgresMount(project, dataPath); err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	if err := ensureNoMountedPaths(dataPath); err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	imageID, err := cachedPostgresImage(ctx, project.Services["postgres"].Image, runner)
 	if err != nil {
-		return fullResetTarget{}, err
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, err)
 	}
 	if err := runPostgresCleanupContainer(ctx, runner, imageID, filepath.Dir(dataPath), false); err != nil {
-		return fullResetTarget{}, maintenanceCommandError(ctx, "validate the local PostgreSQL data directory", err)
+		return fullResetTarget{}, fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "validate the local PostgreSQL data directory", err))
 	}
-	return fullResetTarget{dataPath: dataPath, imageID: imageID}, nil
+	return fullResetTarget{
+		dataPath: dataPath,
+		imageID:  imageID,
+	}, nil
 }
 
-func resetGameData(ctx context.Context, runner MaintenanceRunner, composeArgs []string, project composeProject, resetData func(context.Context) error) error {
+func resetGameData(
+	ctx context.Context,
+	runner MaintenanceRunner,
+	composeArgs []string,
+	project composeProject,
+	resetData func(context.Context) error,
+) error {
 	const location = "operator.resetGameData"
 	if err := runDocker(ctx, runner, append(append([]string(nil), composeArgs[1:]...), "stop", "--timeout", composeStopTimeoutSeconds), io.Discard); err != nil {
-		return maintenanceCommandError(ctx, "stop game services", err)
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "stop game services", err))
 	}
 	storages := presentStorageServices(project.Services)
 	if len(storages) != 0 {
 		args := append(append([]string(nil), composeArgs[1:]...), "up", "-d", "--wait", "--no-deps")
 		args = append(args, storages...)
 		if err := runDocker(ctx, runner, args, io.Discard); err != nil {
-			return maintenanceCommandError(ctx, "start storage services", err)
+			return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "start storage services", err))
 		}
 	}
 	if err := resetData(ctx); err != nil {
@@ -478,13 +571,17 @@ func resetGameData(ctx context.Context, runner MaintenanceRunner, composeArgs []
 		}
 		return fmt.Errorf("%s - storage reset failed; game services remain stopped", location)
 	}
-	return stopComposeProject(ctx, runner, composeArgs)
+	if err := stopComposeProject(ctx, runner, composeArgs); err != nil {
+		return fmt.Errorf("%s - remove stopped Compose project: %w", location, err)
+	}
+	return nil
 }
 
 func stopComposeProject(ctx context.Context, runner MaintenanceRunner, composeArgs []string) error {
+	const location = "operator.stopComposeProject"
 	args := append(append([]string(nil), composeArgs[1:]...), "down", "--volumes", "--remove-orphans", "--timeout", composeStopTimeoutSeconds)
 	if err := runDocker(ctx, runner, args, io.Discard); err != nil {
-		return maintenanceCommandError(ctx, "stop the Compose project", err)
+		return fmt.Errorf("%s - %w", location, maintenanceCommandError(ctx, "stop the Compose project", err))
 	}
 	return nil
 }

@@ -9,9 +9,13 @@ import (
 )
 
 func TestSnapshotJSONPreservesEncodingError(t *testing.T) {
-	run := DispatchRun{Snapshot: &RoundSnapshot{
-		TeamTasks: []PublicCell{{Score: math.NaN()}},
-	}}
+	run := DispatchRun{
+		Snapshot: &RoundSnapshot{
+			TeamTasks: []PublicCell{{
+				Score: math.NaN(),
+			}},
+		},
+	}
 	data, err := run.SnapshotJSON()
 	if _, ok := errors.AsType[*json.UnsupportedValueError](err); !ok {
 		t.Fatalf("SnapshotJSON() error = %v, want an encoding error", err)

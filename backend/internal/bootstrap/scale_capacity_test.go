@@ -16,13 +16,22 @@ import (
 func scaleComposeFixture(t *testing.T, workerPool int) string {
 	t.Helper()
 	services := make(map[string]any)
-	for role, pool := range map[string]int{"api": 16, "receiver": 32, "worker": workerPool, "ticker": 8} {
-		services[role] = map[string]any{"environment": map[string]string{
-			"FORCAD_" + strings.ToUpper(role) + "_DATABASE_MAX_CONNS": fmt.Sprint(pool),
-			"DATABASE_PASSWORD": "must-not-appear-in-scale-output",
-		}}
+	for role, pool := range map[string]int{
+		"api":      16,
+		"receiver": 32,
+		"worker":   workerPool,
+		"ticker":   8,
+	} {
+		services[role] = map[string]any{
+			"environment": map[string]string{
+				"FORCAD_" + strings.ToUpper(role) + "_DATABASE_MAX_CONNS": fmt.Sprint(pool),
+				"DATABASE_PASSWORD": "must-not-appear-in-scale-output",
+			},
+		}
 	}
-	data, err := json.Marshal(map[string]any{"services": services})
+	data, err := json.Marshal(map[string]any{
+		"services": services,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,8 +40,18 @@ func scaleComposeFixture(t *testing.T, workerPool int) string {
 
 func scaleInspectFixture(workerPool int) string {
 	var lines []string
-	for role, count := range map[string]int{"api": 4, "receiver": 2, "worker": 2, "ticker": 1} {
-		pool := map[string]int{"api": 16, "receiver": 32, "worker": workerPool, "ticker": 8}[role]
+	for role, count := range map[string]int{
+		"api":      4,
+		"receiver": 2,
+		"worker":   2,
+		"ticker":   1,
+	} {
+		pool := map[string]int{
+			"api":      16,
+			"receiver": 32,
+			"worker":   workerPool,
+			"ticker":   8,
+		}[role]
 		for range count {
 			lines = append(lines, fmt.Sprintf("%s true service FORCAD_ROLE=%s FORCAD_%s_DATABASE_MAX_CONNS=%d", role, role, strings.ToUpper(role), pool))
 		}
@@ -41,14 +60,23 @@ func scaleInspectFixture(workerPool int) string {
 }
 
 func TestCapacityInspectTemplateIncludesOnlyBudgetEnvironment(t *testing.T) {
-	format, err := template.New("inspect").Funcs(template.FuncMap{"split": strings.Split}).Parse(applicationCapacityTemplate)
+	format, err := template.New("inspect").Funcs(template.FuncMap{
+		"split": strings.Split,
+	}).Parse(applicationCapacityTemplate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	container := map[string]any{
-		"Config": map[string]any{"Labels": map[string]string{"com.docker.compose.service": "worker", "com.docker.compose.oneoff": "False"},
-			"Env": []string{"FORCAD_ROLE=worker", "FORCAD_WORKER_DATABASE_MAX_CONNS=32", "DATABASE_PASSWORD=hidden", "ADMIN_PASSWORD=hidden"}},
-		"State": map[string]any{"Running": true},
+		"Config": map[string]any{
+			"Labels": map[string]string{
+				"com.docker.compose.service": "worker",
+				"com.docker.compose.oneoff":  "False",
+			},
+			"Env": []string{"FORCAD_ROLE=worker", "FORCAD_WORKER_DATABASE_MAX_CONNS=32", "DATABASE_PASSWORD=hidden", "ADMIN_PASSWORD=hidden"},
+		},
+		"State": map[string]any{
+			"Running": true,
+		},
 	}
 	var out bytes.Buffer
 	if err := format.Execute(&out, container); err != nil {
@@ -119,7 +147,14 @@ func TestControlScaleChecksDeployedBudgetsBeforeMutation(t *testing.T) {
 				t.Fatal(err)
 			}
 			mutations, reads := 0, 0
-			runner := func(ctx context.Context, name string, command []string, _ []string, _ io.Reader, out, _ io.Writer) error {
+			runner := func(
+				ctx context.Context,
+				name string,
+				command []string,
+				_ []string,
+				_ io.Reader,
+				out, _ io.Writer,
+			) error {
 				if ctx.Err() != nil || name != "docker" {
 					t.Fatal("invalid preflight runner context or executable")
 				}
@@ -169,7 +204,15 @@ func TestScaleFailsClosedWhenDeployedCapacityCannotBeRead(t *testing.T) {
 	failure := errors.New("pooler unavailable")
 	calls := 0
 	err := checkScaleCapacity(t.Context(), []string{"docker", "compose"}, []string{"up", "--no-recreate", "--scale", "worker=20"},
-		func(context.Context, string, []string, []string, io.Reader, io.Writer, io.Writer) error {
+		func(
+			context.Context,
+			string,
+			[]string,
+			[]string,
+			io.Reader,
+			io.Writer,
+			io.Writer,
+		) error {
 			calls++
 			return failure
 		})
@@ -182,7 +225,15 @@ func TestDeclarativeStartDoesNotRequireAnExistingPooler(t *testing.T) {
 	t.Setenv("FORCAD_WORKER_REPLICAS", "20")
 	called := false
 	if err := checkScaleCapacity(t.Context(), []string{"docker", "compose"}, []string{"up", "-d", "--build"},
-		func(context.Context, string, []string, []string, io.Reader, io.Writer, io.Writer) error {
+		func(
+			context.Context,
+			string,
+			[]string,
+			[]string,
+			io.Reader,
+			io.Writer,
+			io.Writer,
+		) error {
 			called = true
 			return nil
 		}); err != nil || called {
@@ -193,7 +244,14 @@ func TestDeclarativeStartDoesNotRequireAnExistingPooler(t *testing.T) {
 func TestScaleWorkerOnlyDeploymentAccountsForAbsentAndOrphanRoles(t *testing.T) {
 	for _, orphan := range []bool{false, true} {
 		t.Run(fmt.Sprint(orphan), func(t *testing.T) {
-			runner := func(_ context.Context, _ string, args []string, _ []string, _ io.Reader, out, _ io.Writer) error {
+			runner := func(
+				_ context.Context,
+				_ string,
+				args []string,
+				_ []string,
+				_ io.Reader,
+				out, _ io.Writer,
+			) error {
 				joined := strings.Join(args, " ")
 				var data string
 				switch {

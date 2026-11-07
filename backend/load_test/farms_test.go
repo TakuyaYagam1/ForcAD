@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +24,69 @@ type storedFlag struct {
 type catalog struct {
 	mu    sync.RWMutex
 	flags []storedFlag
+	index *catalogIndex
+}
+
+type catalogIndex struct {
+	flags   []storedFlag
+	all     []int
+	own     map[int][]int
+	foreign map[int][]int
+}
+
+var invalidFlagValues = func() [batchSize]string {
+	var values [batchSize]string
+	for i := range batchSize {
+		values[i] = "Z" + fmt.Sprintf("%030d=", i)
+	}
+	return values
+}()
+
+func indexCatalog(flags []storedFlag) *catalogIndex {
+	index := &catalogIndex{
+		flags:   flags,
+		all:     make([]int, len(flags)),
+		own:     make(map[int][]int),
+		foreign: make(map[int][]int),
+	}
+	for i, flag := range flags {
+		index.all[i] = i
+		index.own[flag.Owner] = append(index.own[flag.Owner], i)
+	}
+	for owner, own := range index.own {
+		foreign := make([]int, 0, len(flags)-len(own))
+		for i, flag := range flags {
+			if flag.Owner != owner {
+				foreign = append(foreign, i)
+			}
+		}
+		index.foreign[owner] = foreign
+	}
+	return index
+}
+
+func (c *catalog) replace(flags []storedFlag) {
+	index := indexCatalog(flags)
+	c.mu.Lock()
+	c.flags, c.index = flags, index
+	c.mu.Unlock()
+}
+
+func (c *catalog) snapshot() *catalogIndex {
+	c.mu.RLock()
+	index := c.index
+	c.mu.RUnlock()
+	if index != nil {
+		return index
+	}
+	// Support literal catalogs in local fixtures; refreshed catalogs are indexed
+	// before publication, so measured requests do not take this initialization path.
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.index == nil {
+		c.index = indexCatalog(c.flags)
+	}
+	return c.index
 }
 
 func (c *catalog) refresh(ctx context.Context, d *deployment) error {
@@ -38,9 +102,7 @@ ORDER BY f.round DESC,f.id) f`)
 	if err := json.Unmarshal(data, &flags); err != nil {
 		return fmt.Errorf("load.catalog.refresh - decode flags: %w", err)
 	}
-	c.mu.Lock()
-	c.flags = flags
-	c.mu.Unlock()
+	c.replace(flags)
 	return nil
 }
 
@@ -57,7 +119,7 @@ func (c *catalog) wait(ctx context.Context, d *deployment) error {
 		if err != nil {
 			return err
 		}
-		if count == int64(teamCount*3) && len(c.flags) >= teamCount*3 {
+		if count == int64(teamCount*3) && len(c.snapshot().flags) >= teamCount*3 {
 			return nil
 		}
 		select {
@@ -92,7 +154,12 @@ type farm struct {
 }
 
 func newFarm(origin string, flags *catalog) *farm {
-	return &farm{origin: origin, catalog: flags, pending: make(map[string]flagRequest), expected: make(map[int]map[string]bool)}
+	return &farm{
+		origin:   origin,
+		catalog:  flags,
+		pending:  make(map[string]flagRequest),
+		expected: make(map[int]map[string]bool),
+	}
 }
 
 func (f *farm) target(target *vegeta.Target) error {
@@ -108,34 +175,40 @@ func (f *farm) target(target *vegeta.Target) error {
 	}
 	address := f.origin + "/flags?load_request=" + strconv.FormatUint(n, 10)
 	f.pending[address] = request
-	*target = vegeta.Target{Method: http.MethodPut, URL: address, Body: body,
-		Header: http.Header{"Content-Type": {"application/json"}, "X-Team-Token": {fmt.Sprintf("%016x", team)}}}
+	*target = vegeta.Target{
+		Method: http.MethodPut,
+		URL:    address,
+		Body:   body,
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+			"X-Team-Token": {fmt.Sprintf("%016x", team)},
+		},
+	}
 	return nil
 }
 
 func (f *farm) batch(team int, turn uint64) flagRequest {
-	f.catalog.mu.RLock()
-	defer f.catalog.mu.RUnlock()
-	request := flagRequest{team: team, values: make([]string, batchSize), flags: make([]storedFlag, batchSize)}
-	var foreign, own []storedFlag
-	for _, flag := range f.catalog.flags {
-		if flag.Owner == team {
-			own = append(own, flag)
-		} else {
-			foreign = append(foreign, flag)
-		}
+	index := f.catalog.snapshot()
+	request := flagRequest{
+		team:   team,
+		values: make([]string, batchSize),
+		flags:  make([]storedFlag, batchSize),
+	}
+	foreign, own := index.foreign[team], index.own[team]
+	if own == nil {
+		foreign = index.all
 	}
 	for i := range batchSize {
 		switch {
 		case i < 70 && len(foreign) > 0:
-			request.flags[i] = foreign[(int(turn)*70+i)%len(foreign)]
+			request.flags[i] = index.flags[foreign[(int(turn)*70+i)%len(foreign)]]
 		case i >= 70 && i < 80 && len(own) > 0:
-			request.flags[i] = own[(i-70)%len(own)]
+			request.flags[i] = index.flags[own[(i-70)%len(own)]]
 		}
 		if request.flags[i].ID != "" {
 			request.values[i] = request.flags[i].Value
 		} else {
-			request.values[i] = "Z" + fmt.Sprintf("%030d=", i)
+			request.values[i] = invalidFlagValues[i]
 		}
 	}
 	return request
@@ -254,9 +327,21 @@ func readTarget(origin, path string) vegeta.Targeter {
 		selected := path
 		if selected == "" {
 			selected = readPaths[index%len(readPaths)]
-			index++
 		}
-		*target = vegeta.Target{Method: http.MethodGet, URL: origin + selected}
+		*target = vegeta.Target{
+			Method: http.MethodGet,
+			URL:    origin + selected,
+		}
+		if os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+			clients, err := spectatorCount()
+			if err != nil {
+				return err
+			}
+			target.Header = http.Header{
+				"X-Forcad-Load-Client": {fmt.Sprintf("client-%d", index%clients)},
+			}
+		}
+		index++
 		return nil
 	}
 }

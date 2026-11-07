@@ -101,7 +101,7 @@ enforce the HTTP/DNS behavior of arbitrary checker code. Stronger restrictions
 require deployment network isolation, not a blanket ban on private team IPs.
 
 The runner removes reserved platform connection variables (`DATABASE_*`,
-`POSTGRES_*`, `PGBOUNCER_*`, `RABBITMQ_*`, `FORCAD_RUNTIME_DB_*`, AMQP/Redis URLs and passwords), admin
+`POSTGRES_*`, `PGBOUNCER_*`, `NATS_*`, `FORCAD_RUNTIME_DB_*`, NATS/Redis URLs and passwords), admin
 credentials, the control token, the configuration path and libpq credential-file
 settings from the child environment. OS settings and checker-specific variables
 remain available; `env_path` still prepends the executable search path. Use

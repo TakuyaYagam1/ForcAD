@@ -30,7 +30,9 @@ func TestTransactionPooler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = admin.Close(context.Background()) }()
+	defer func() {
+		_ = admin.Close(context.Background())
+	}()
 	var existing *string
 	if err := admin.QueryRow(ctx, `SELECT to_regclass('public.gameconfig')::text`).Scan(&existing); err != nil {
 		t.Fatal(err)
@@ -41,12 +43,20 @@ func TestTransactionPooler(t *testing.T) {
 	if err := db.Migrate(ctx, direct); err != nil {
 		t.Fatal(err)
 	}
-	settings := map[string]string{"FORCAD_ROLE": "receiver", "DATABASE_URL": direct, "DATABASE_POOLER_ADDR": address, "DATABASE_MAX_CONNS": "16"}
-	cfg, err := config.Load(func(key string) (string, bool) { value, ok := settings[key]; return value, ok })
+	settings := map[string]string{
+		"FORCAD_ROLE":          "receiver",
+		"DATABASE_URL":         direct,
+		"DATABASE_POOLER_ADDR": address,
+		"DATABASE_MAX_CONNS":   "16",
+	}
+	cfg, err := config.Load(func(key string) (string, bool) {
+		value, ok := settings[key]
+		return value, ok
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	pool, closePool, err := postgres.NewPool(ctx, cfg)
+	pool, closePool, err := postgres.NewPool(ctx, poolerOptions(cfg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +96,9 @@ func TestTransactionPooler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer func() { _ = stats.Close(context.Background()) }()
+		defer func() {
+			_ = stats.Close(context.Background())
+		}()
 		rows, err := stats.Query(t.Context(), "SHOW POOLS")
 		if err != nil {
 			t.Fatal(err)
@@ -127,7 +139,11 @@ func TestTransactionPooler(t *testing.T) {
 		workers.Wait()
 	})
 	t.Run("timeouts are enforced on server connections", func(t *testing.T) {
-		for name, want := range map[string]string{"statement_timeout": "5s", "lock_timeout": "2s", "idle_in_transaction_session_timeout": "10s"} {
+		for name, want := range map[string]string{
+			"statement_timeout":                   "5s",
+			"lock_timeout":                        "2s",
+			"idle_in_transaction_session_timeout": "10s",
+		} {
 			var actual string
 			if err := pool.QueryRow(t.Context(), `SELECT current_setting($1)`, name).Scan(&actual); err != nil {
 				t.Fatal(err)
@@ -142,7 +158,9 @@ func TestTransactionPooler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer func() { _ = first.Rollback(context.Background()) }()
+		defer func() {
+			_ = first.Rollback(context.Background())
+		}()
 		if _, err = first.Exec(t.Context(), `SELECT 1`); err != nil {
 			t.Fatal(err)
 		}
@@ -150,7 +168,9 @@ func TestTransactionPooler(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer func() { _ = second.Rollback(context.Background()) }()
+		defer func() {
+			_ = second.Rollback(context.Background())
+		}()
 		if _, err = second.Exec(t.Context(), `SELECT 1`); err != nil {
 			t.Fatal(err)
 		}
@@ -160,11 +180,14 @@ func TestTransactionPooler(t *testing.T) {
 			t.Fatal("receiver exceeded its two server connections")
 		}
 		settings["FORCAD_ROLE"] = "ticker"
-		tickerConfig, err := config.Load(func(key string) (string, bool) { value, ok := settings[key]; return value, ok })
+		tickerConfig, err := config.Load(func(key string) (string, bool) {
+			value, ok := settings[key]
+			return value, ok
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		ticker, closeTicker, err := postgres.NewPool(t.Context(), tickerConfig)
+		ticker, closeTicker, err := postgres.NewPool(t.Context(), poolerOptions(tickerConfig))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -173,4 +196,22 @@ func TestTransactionPooler(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+}
+
+func poolerOptions(cfg config.Config) postgres.PoolOptions {
+	name := "forcad-" + cfg.Role
+	if instance, err := os.Hostname(); err == nil && instance != "" {
+		name += "/" + instance
+	}
+	if len(name) > 63 {
+		name = name[:63]
+	}
+	return postgres.PoolOptions{
+		URL:                cfg.DatabaseURL,
+		MaxConns:           cfg.DatabaseMaxConns,
+		MinConns:           cfg.DatabaseMinConns,
+		Timeout:            cfg.DatabaseTimeout,
+		ApplicationName:    name,
+		TransactionPooling: cfg.DatabasePoolerAddr != "",
+	}
 }

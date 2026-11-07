@@ -17,9 +17,16 @@ test("browser schemas validate without attempting dynamic code generation", asyn
   try {
     await import("../src/shared/lib/schemaRuntime.ts");
     const { AdminSession } = await import("../src/shared/api/generated/schemas/admin/adminSession.zod.ts");
-    const valid = { status: "ok", username: "fixture", csrf_token: "a".repeat(64) };
+    const valid = {
+      status: "ok",
+      username: "fixture",
+      csrf_token: "a".repeat(64)
+    };
     assert.equal(AdminSession.safeParse(valid).success, true);
-    assert.equal(AdminSession.safeParse({ ...valid, csrf_token: "invalid" }).success, false);
+    assert.equal(AdminSession.safeParse({
+      ...valid,
+      csrf_token: "invalid"
+    }).success, false);
     assert.equal(attempts, 0, "Schema initialization or parsing attempted dynamic code generation");
   } finally {
     globalThis.Function = original;

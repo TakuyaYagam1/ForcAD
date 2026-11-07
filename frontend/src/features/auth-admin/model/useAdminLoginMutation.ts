@@ -3,10 +3,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useAdminAuthStore, type AdminLoginPayload } from "./useAdminAuth";
 
 export function useAdminLoginMutation() {
-  const login = useAdminAuthStore((s) => s.login);
+  const login = useAdminAuthStore((s) => {
+    return s.login
+  });
 
   return useMutation({
     mutationKey: ["adminLogin"],
-    mutationFn: (payload: AdminLoginPayload) => login(payload),
+    mutationFn: (payload: AdminLoginPayload) => {
+      return login(payload)
+    },
   });
 }

@@ -38,11 +38,11 @@ func RunNetworkConfigCommand(ctx context.Context, args []string, out io.Writer) 
 	}
 	document, err := config.LoadDocument(options.configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	inventory, err := nftables.InventoryFromDocument(document)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	encoder := json.NewEncoder(out)
 	encoder.SetIndent("", "  ")
@@ -65,11 +65,11 @@ func RunNetworkRulesCommand(ctx context.Context, args []string, out io.Writer) e
 	}
 	inventory, err := nftables.ReadInventory(options.configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	rules, err := nftables.RenderRules(inventory)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if _, err := io.WriteString(out, rules); err != nil {
 		return fmt.Errorf("%s - write nftables rules: %w", location, err)
@@ -90,16 +90,26 @@ func RunNetworkMetricsCommand(ctx context.Context, args []string, out io.Writer)
 	}
 	inventory, err := nftables.ReadInventory(options.configPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	handler, err := nftables.NewMetricsHandler(ctx, inventory, nftables.ExecCounterLister{})
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
-	return serveNetworkMetrics(ctx, options.listen, handler, out)
+	if err := serveNetworkMetrics(ctx, options.listen, handler, out); err != nil {
+		return fmt.Errorf("%s - run network metrics server: %w", location, err)
+	}
+	return nil
 }
 
-func parseNetworkOptions(command string, args []string, out io.Writer, withListen bool) (networkOptions, error) {
+func parseNetworkOptions(
+	command string,
+	args []string,
+	out io.Writer,
+	withListen bool,
+) (networkOptions, error) {
+	const location = "bootstrap.parseNetworkOptions"
+
 	options := flag.NewFlagSet(command, flag.ContinueOnError)
 	options.SetOutput(out)
 	configPath := options.String("config", "", "configuration file")
@@ -109,15 +119,18 @@ func parseNetworkOptions(command string, args []string, out io.Writer, withListe
 		options.StringVar(&listen, "listen", listen, "metrics listen address")
 	}
 	if err := options.Parse(args); err != nil {
-		return networkOptions{}, err
+		return networkOptions{}, fmt.Errorf("%s - %w", location, err)
 	}
 	if options.NArg() != 0 {
-		return networkOptions{}, fmt.Errorf("unexpected command arguments")
+		return networkOptions{}, fmt.Errorf("%s - unexpected command arguments", location)
 	}
 	if *configPath == "" {
-		return networkOptions{}, fmt.Errorf("--config is required")
+		return networkOptions{}, fmt.Errorf("%s - --config is required", location)
 	}
-	return networkOptions{configPath: *configPath, listen: listen}, nil
+	return networkOptions{
+		configPath: *configPath,
+		listen:     listen,
+	}, nil
 }
 
 func networkOutput(out io.Writer) io.Writer {
@@ -127,16 +140,29 @@ func networkOutput(out io.Writer) io.Writer {
 	return out
 }
 
-func serveNetworkMetrics(ctx context.Context, address string, handler http.Handler, out io.Writer) error {
+func serveNetworkMetrics(
+	ctx context.Context,
+	address string,
+	handler http.Handler,
+	out io.Writer,
+) error {
 	const location = "bootstrap.serveNetworkMetrics"
 	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", address)
 	if err != nil {
 		return fmt.Errorf("%s - listen for network metrics: %w", location, err)
 	}
-	return serveNetworkMetricsWithListener(ctx, listener, handler, out)
+	if err := serveNetworkMetricsWithListener(ctx, listener, handler, out); err != nil {
+		return fmt.Errorf("%s - serve network metrics listener: %w", location, err)
+	}
+	return nil
 }
 
-func serveNetworkMetricsWithListener(ctx context.Context, listener net.Listener, handler http.Handler, out io.Writer) error {
+func serveNetworkMetricsWithListener(
+	ctx context.Context,
+	listener net.Listener,
+	handler http.Handler,
+	out io.Writer,
+) error {
 	const location = "bootstrap.serveNetworkMetricsWithListener"
 	server := &http.Server{
 		Handler:           handler,
@@ -146,7 +172,9 @@ func serveNetworkMetricsWithListener(ctx context.Context, listener net.Listener,
 		MaxHeaderBytes:    1 << 20,
 	}
 	serveResult := make(chan error, 1)
-	go func() { serveResult <- server.Serve(listener) }()
+	go func() {
+		serveResult <- server.Serve(listener)
+	}()
 	if _, err := fmt.Fprintf(out, "Serving network metrics on %s\n", listener.Addr()); err != nil {
 		_ = server.Close()
 		if serveErr := <-serveResult; serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {

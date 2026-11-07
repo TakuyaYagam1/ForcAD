@@ -55,7 +55,7 @@ make -C deployment security-semgrep
 | `security-secrets` | Gitleaks scans tracked files, non-ignored untracked files, and all reachable Git history. It requires a full checkout. Tracked files stay in scope when ignored; symlinks are excluded from the current-file copy, and report values are redacted. |
 | `security-semgrep` | Local rules scan `backend/internal`, `backend/config`, `backend/cmd`, `frontend/src`, and production source under `infrastracture/`. The infrastructure scan excludes `infrastracture/tests/` and rendered bundles under `infrastracture/runtime/`. Rules cover selected Python, Go, JavaScript, and TypeScript patterns, including dynamic execution, unsafe YAML or pickle loads, shell calls, disabled TLS, bare Go HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not catch every way to use these APIs. |
 | `security-go-vuln` | `govulncheck` checks reachable vulnerabilities in backend packages. |
-| `security-images` | Builds selected project image targets and scans their final images with pinned Trivy. Defaults to `runtime`, `worker`, `nginx`, `postgres`, and `pgbouncer`. |
+| `security-images` | Builds selected project image targets and scans their final images with pinned Trivy. Defaults to `runtime`, `worker`, `nginx`, `postgres`, `pgbouncer`, and `nats`. |
 
 The `security-image` target scans an existing local image by image ID. It does
 not build, pull, or publish it:
@@ -64,7 +64,7 @@ not build, pull, or publish it:
 make -C deployment security-image IMAGE=forcad-nginx:local
 ```
 
-Build and scan the five repository images locally with the pinned Trivy
+Build and scan the six repository images locally with the pinned Trivy
 container:
 
 ```sh
@@ -77,13 +77,13 @@ Select targets explicitly with:
 make -C deployment security-images IMAGE_TARGETS='runtime worker'
 ```
 
-The supported targets are `runtime`, `worker`, `nginx`, `postgres`, and
-`pgbouncer`; the workflow scans all five independently. Runtime and initializer
+The supported targets are `runtime`, `worker`, `nginx`, `postgres`, `pgbouncer`,
+and `nats`; the workflow scans all six independently. Runtime and initializer
 share a filesystem, while the worker includes the Python checker runtime. Trivy
 scans packages it detects in the final images, including OS and Go/Python
-packages, nginx, PostgreSQL, and PgBouncer; coverage of source-built C/C++
+packages, nginx, PostgreSQL, PgBouncer, and NATS; coverage of source-built C/C++
 binaries is limited. JavaScript build dependencies remain in the
-`security-filesystem` scope. Redis, RabbitMQ, Prometheus, and Grafana are
+`security-filesystem` scope. Redis, Prometheus, and Grafana are
 externally supplied and are not built or scanned by this image matrix. The
 scanner keeps local build cache, removes its temporary image tag and archive,
 and does not start application containers, sign, or publish images. JSON, table

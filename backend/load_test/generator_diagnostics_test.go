@@ -46,7 +46,13 @@ func TestAttackReportsGeneratorDiagnostics(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	report := attack(t.Context(), attackOptions{rps: 1000, duration: 50 * time.Millisecond, workers: 1, target: readTarget(server.URL, "/"), validate: validateRead(false)})
+	report := attack(t.Context(), attackOptions{
+		rps:      1000,
+		duration: 50 * time.Millisecond,
+		workers:  1,
+		target:   readTarget(server.URL, "/"),
+		validate: validateRead(false),
+	})
 	if report.LagMaxMS <= 0 || report.LagP999MS < report.LagP99MS || report.LagP999MS > report.LagMaxMS {
 		t.Fatalf("invalid generator lag tail: p99=%f p999=%f max=%f", report.LagP99MS, report.LagP999MS, report.LagMaxMS)
 	}

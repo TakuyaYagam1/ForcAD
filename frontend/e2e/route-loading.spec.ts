@@ -16,10 +16,15 @@ test("a lazy route announces loading while its page chunk is pending", async ({ 
       await chunkGate;
       await route.continue();
     });
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/", {
+      waitUntil: "domcontentloaded"
+    });
     await expect(page.getByRole("status")).toHaveAttribute("aria-busy", "true");
     releaseChunk();
-    await expect(page.getByRole("heading", { name: "Рейтинг команд", exact: true }))
+    await expect(page.getByRole("heading", {
+      name: "Рейтинг команд",
+      exact: true
+    }))
       .toBeVisible();
   } finally {
     releaseChunk();
@@ -30,22 +35,33 @@ test("a lazy route announces loading while its page chunk is pending", async ({ 
 test("a failed lazy route offers an accessible retry action", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
-  const failChunk = (route: Route) => route.fulfill({
-    status: 503,
-    headers: { "cache-control": "no-store" },
-    contentType: "application/javascript",
-    body: "throw new Error('Route chunk unavailable');",
-  });
+  const failChunk = (route: Route) => {
+    return route.fulfill({
+      status: 503,
+      headers: {
+        "cache-control": "no-store"
+      },
+      contentType: "application/javascript",
+      body: "throw new Error('Route chunk unavailable');",
+    })
+  };
 
   try {
     await page.route(scoreboardChunk, failChunk);
     await page.goto("/");
     await expect(page.getByRole("alert")).toContainText("Страница не загрузилась");
-    await expect(page.getByRole("button", { name: "Перезагрузить страницу" }))
+    await expect(page.getByRole("button", {
+      name: "Перезагрузить страницу"
+    }))
       .toBeVisible();
     await page.unroute(scoreboardChunk, failChunk);
-    await page.getByRole("button", { name: "Перезагрузить страницу" }).click();
-    await expect(page.getByRole("heading", { name: "Рейтинг команд", exact: true }))
+    await page.getByRole("button", {
+      name: "Перезагрузить страницу"
+    }).click();
+    await expect(page.getByRole("heading", {
+      name: "Рейтинг команд",
+      exact: true
+    }))
       .toBeVisible();
   } finally {
     await context.close();

@@ -12,11 +12,28 @@ import (
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
 )
 
-type operatorCommandRunner func(context.Context, string, []string, []string, io.Reader, io.Writer, io.Writer) error
+type operatorCommandRunner func(
+	context.Context,
+	string,
+	[]string,
+	[]string,
+	io.Reader,
+	io.Writer,
+	io.Writer,
+) error
 
 // RunOperatorCommand runs local setup or forwards a Compose command to Docker.
-func RunOperatorCommand(ctx context.Context, command string, args []string, out io.Writer) error {
-	return runOperatorCommand(ctx, command, args, out, execOperatorCommand, os.Getwd)
+func RunOperatorCommand(
+	ctx context.Context,
+	command string,
+	args []string,
+	out io.Writer,
+) error {
+	const location = "bootstrap.RunOperatorCommand"
+	if err := runOperatorCommand(ctx, command, args, out, execOperatorCommand, os.Getwd); err != nil {
+		return fmt.Errorf("%s - execute operator command: %w", location, err)
+	}
+	return nil
 }
 
 func runOperatorCommand(
@@ -42,26 +59,29 @@ func runOperatorCommand(
 	}
 
 	if command == "setup" {
-		return runSetupCommand(args, out, workingDirectory)
+		if err := runSetupCommand(args, out, workingDirectory); err != nil {
+			return fmt.Errorf("%s - prepare setup: %w", location, err)
+		}
+		return nil
 	}
 
 	root, commandArgs, err := extractLeadingProjectRoot(args)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	root, err = resolveProjectRoot(root, workingDirectory)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	composeArgs, err := localoperator.ComposeArgs(root, os.Getenv("TEST") != "")
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if runner == nil {
 		return fmt.Errorf("%s - Docker Compose command runner is required", location)
 	}
 	if err := checkScaleCapacity(ctx, composeArgs, commandArgs, runner); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	composeArgs = append(composeArgs, commandArgs...)
 	if err := runner(ctx, composeArgs[0], composeArgs[1:], nil, os.Stdin, out, os.Stderr); err != nil {
@@ -111,7 +131,15 @@ func resolveProjectRoot(root string, workingDirectory func() (string, error)) (s
 	return root, nil
 }
 
-func execOperatorCommand(ctx context.Context, name string, args []string, environment []string, stdin io.Reader, stdout, stderr io.Writer) error {
+func execOperatorCommand(
+	ctx context.Context,
+	name string,
+	args []string,
+	environment []string,
+	stdin io.Reader,
+	stdout, stderr io.Writer,
+) error {
+	const location = "bootstrap.execOperatorCommand"
 	// #nosec G702 -- This local CLI deliberately forwards operator arguments to Docker without a shell.
 	command := exec.CommandContext(ctx, name, args...)
 	if len(environment) > 0 {
@@ -120,7 +148,10 @@ func execOperatorCommand(ctx context.Context, name string, args []string, enviro
 	command.Stdin = stdin
 	command.Stdout = stdout
 	command.Stderr = stderr
-	return command.Run()
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("%s - execute %s: %w", location, name, err)
+	}
+	return nil
 }
 
 func runSetupCommand(args []string, out io.Writer, workingDirectory func() (string, error)) error {
@@ -130,7 +161,7 @@ func runSetupCommand(args []string, out io.Writer, workingDirectory func() (stri
 	projectRoot := options.String("project-root", "", "ForcAD project root (defaults to the current directory)")
 	redis := options.String("redis", "", "external Redis host or host:port")
 	database := options.String("database", "", "external database host or host:port")
-	rabbitMQ := options.String("rabbitmq", "", "external RabbitMQ host or host:port")
+	nats := options.String("nats", "", "external NATS host or host:port")
 	if err := options.Parse(args); err != nil {
 		return fmt.Errorf("%s - parse setup command: %w", location, err)
 	}
@@ -139,12 +170,14 @@ func runSetupCommand(args []string, out io.Writer, workingDirectory func() (stri
 	}
 	root, err := resolveProjectRoot(*projectRoot, workingDirectory)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if err := localoperator.Setup(root, localoperator.SetupOptions{
-		Redis: *redis, Database: *database, RabbitMQ: *rabbitMQ,
+		Redis:    *redis,
+		Database: *database,
+		NATS:     *nats,
 	}); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	_, err = fmt.Fprintln(out, "Setup complete")
 	if err != nil {

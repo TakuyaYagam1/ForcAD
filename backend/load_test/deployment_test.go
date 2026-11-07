@@ -37,11 +37,21 @@ func openDeployment() (*deployment, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s - locate repository: %w", location, err)
 	}
-	d := &deployment{origin: origin, root: root, compose: []string{"compose", "--project-name", project,
-		"--project-directory", filepath.Join(root, "deployment/docker"),
-		"-f", filepath.Join(root, "deployment/docker/compose.yml"),
-		"-f", filepath.Join(repo, "deployment/docker/compose.e2e.yml"),
-		"-f", filepath.Join(repo, "backend/load_test/compose.yml")}}
+	d := &deployment{
+		origin: origin,
+		root:   root,
+		compose: []string{"compose", "--env-file", filepath.Join(root, "compose.env"), "--project-name", project,
+			"--project-directory", filepath.Join(root, "deployment/docker"),
+			"-f", filepath.Join(root, "deployment/docker/compose.yml"),
+			"-f", filepath.Join(repo, "deployment/docker/compose.e2e.yml"),
+			"-f", filepath.Join(repo, "backend/load_test/compose.yml")},
+	}
+	if os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+		d.compose = append(d.compose, "-f", filepath.Join(repo, "backend/load_test/compose.final.yml"))
+	}
+	if os.Getenv("LOAD_MONITORING") == "1" {
+		d.compose = append(d.compose, "-f", filepath.Join(root, "deployment/docker/compose.monitoring.yml"), "--profile", "monitoring")
+	}
 	switch os.Getenv("LOAD_DATABASE_STORAGE") {
 	case "", "disk":
 	case "memory":
@@ -115,12 +125,21 @@ func (d *deployment) start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%s - create cookie jar: %w", location, err)
 	}
-	client := &http.Client{Jar: jar, Timeout: 10 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{
+		Jar:     jar,
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	defer client.CloseIdleConnections()
 	var session struct {
 		CSRFToken string `json:"csrf_token"`
 	}
-	if err := d.post(ctx, client, "/api/admin/login/", map[string]any{"username": credentials["ADMIN_USERNAME"], "password": credentials["ADMIN_PASSWORD"]}, "", &session); err != nil {
+	if err := d.post(ctx, client, "/api/admin/login/", map[string]any{
+		"username": credentials["ADMIN_USERNAME"],
+		"password": credentials["ADMIN_PASSWORD"],
+	}, "", &session); err != nil {
 		return err
 	}
 	if len(session.CSRFToken) != 64 {
@@ -130,10 +149,20 @@ func (d *deployment) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return d.post(ctx, client, "/api/admin/game/start_final/", map[string]any{"confirm": true, "generation": generation}, session.CSRFToken, nil)
+	return d.post(ctx, client, "/api/admin/game/start_final/", map[string]any{
+		"confirm":    true,
+		"generation": generation,
+	}, session.CSRFToken, nil)
 }
 
-func (d *deployment) post(ctx context.Context, client *http.Client, path string, body any, csrfToken string, result any) error {
+func (d *deployment) post(
+	ctx context.Context,
+	client *http.Client,
+	path string,
+	body any,
+	csrfToken string,
+	result any,
+) error {
 	const location = "load.deployment.post"
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -165,4 +194,6 @@ func (d *deployment) post(ctx context.Context, client *http.Client, path string,
 	return nil
 }
 
-func sqlString(value string) string { return "'" + strings.ReplaceAll(value, "'", "''") + "'" }
+func sqlString(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
+}

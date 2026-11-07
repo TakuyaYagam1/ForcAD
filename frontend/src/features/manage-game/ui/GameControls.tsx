@@ -22,32 +22,52 @@ type GameAction = ConfirmedAction | "pause" | "resume";
 
 export function GameControls() {
   const { t } = useTranslation("admin");
-  const phase = useScoreboardStore((state) => state.phase);
-  const practice = useScoreboardStore((state) => state.practice);
-  const canStart = useScoreboardStore((state) => state.canStart);
-  const canStartPractice = useScoreboardStore((state) => state.canStartPractice);
-  const resetPending = useScoreboardStore((state) => state.resetPending);
-  const scheduledStart = useScoreboardStore((state) => state.scheduledStart);
-  const generation = useScoreboardStore((state) => state.generation);
+  const phase = useScoreboardStore((state) => {
+    return state.phase
+  });
+  const practice = useScoreboardStore((state) => {
+    return state.practice
+  });
+  const canStart = useScoreboardStore((state) => {
+    return state.canStart
+  });
+  const canStartPractice = useScoreboardStore((state) => {
+    return state.canStartPractice
+  });
+  const resetPending = useScoreboardStore((state) => {
+    return state.resetPending
+  });
+  const scheduledStart = useScoreboardStore((state) => {
+    return state.scheduledStart
+  });
+  const generation = useScoreboardStore((state) => {
+    return state.generation
+  });
   const [confirmationGeneration, setConfirmationGeneration] = useState(0);
   const [confirmation, setConfirmation] = useState<ConfirmedAction | null>(null);
   const [error, setError] = useState<unknown | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const action = phase === "paused" ? "resume" : "pause";
   const mutation = useMutation({
-    mutationFn: async (next: GameAction) =>
-      changeAdminGameState(next, {
+    mutationFn: async (next: GameAction) => {
+      return changeAdminGameState(next, {
         generation:
           next === "pause" || next === "resume"
             ? generation
             : confirmationGeneration,
         ...(next === "finish" || next === "start_final"
-          ? { confirm: true }
+          ? {
+            confirm: true
+          }
           : {}),
-      }),
+      })
+    },
     onMutate: async () => {
       setError(null);
-      await queryClient.cancelQueries({ queryKey: ["game-runtime"], exact: true });
+      await queryClient.cancelQueries({
+        queryKey: ["game-runtime"],
+        exact: true
+      });
     },
     onSuccess: (runtime) => {
       setQuerySnapshot(queryClient, ["game-runtime"], runtime);
@@ -55,10 +75,15 @@ export function GameControls() {
       setConfirmation(null);
     },
     onError: (cause) => {
-      void queryClient.refetchQueries({ queryKey: ["game-runtime"], exact: true });
+      void queryClient.refetchQueries({
+        queryKey: ["game-runtime"],
+        exact: true
+      });
       setError(cause);
     },
-    onSettled: () => refreshGameQueries(queryClient),
+    onSettled: () => {
+      return refreshGameQueries(queryClient)
+    },
     retry: false,
   });
   const disabled = mutation.isPending || phase === "unknown" || resetPending;
@@ -76,12 +101,12 @@ export function GameControls() {
   const scheduledDate = scheduledStart ? new Date(scheduledStart) : null;
   const scheduleLabel = scheduledDate && !Number.isNaN(scheduledDate.getTime())
     ? new Intl.DateTimeFormat(getLocale(), {
-        day: "numeric",
-        month: "long",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZoneName: "short",
-      }).format(scheduledDate)
+      day: "numeric",
+      month: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(scheduledDate)
     : null;
   const errorMessage = error === null
     ? null
@@ -92,7 +117,9 @@ export function GameControls() {
     <section className="mb-5" aria-label={t("game.sectionLabel")}>
       <div className="flex flex-wrap items-center justify-end gap-4">
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={disabled || !playing} onClick={() => mutation.mutate(action)}>
+          <Button variant="outline" disabled={disabled || !playing} onClick={() => {
+            return mutation.mutate(action)
+          }}>
             {mutation.isPending && (mutation.variables === "pause" || mutation.variables === "resume")
               ? <LoaderCircle className="animate-spin" />
               : phase === "paused" ? <Play /> : <Pause />}
@@ -100,14 +127,18 @@ export function GameControls() {
           </Button>
           {canStart && canStartPractice && (
             <Button variant="outline" disabled={disabled}
-              onClick={() => openConfirmation("start_practice")}>
+              onClick={() => {
+                return openConfirmation("start_practice")
+              }}>
               <Play /> {t("game.startPractice")}
             </Button>
           )}
           <Button variant={canStart ? "default" : "destructive"}
             className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
             disabled={disabled || (!canStart && !playing)}
-            onClick={() => openConfirmation(canStart ? "start_final" : "finish")}>
+            onClick={() => {
+              return openConfirmation(canStart ? "start_final" : "finish")
+            }}>
             {canStart ? <Play /> : <Flag />}
             {canStart ? t("game.startFinal") : finishLabel}
           </Button>
@@ -115,24 +146,28 @@ export function GameControls() {
       </div>
       {errorMessage && !confirmation && <p className="mt-3 text-sm text-red-300" role="alert">{errorMessage}</p>}
       <Dialog open={confirmation !== null} onOpenChange={(open) => {
-        if (!mutation.isPending && !open) setConfirmation(null);
+        if (!mutation.isPending && !open) {
+          setConfirmation(null);
+        }
       }}>
         <DialogContent onOpenAutoFocus={(event) => {
           event.preventDefault();
           cancelRef.current?.focus();
         }}>
           <DialogHeader>
-            <DialogTitle>{t("game.confirmTitle", { action: confirmLabel })}</DialogTitle>
+            <DialogTitle>{t("game.confirmTitle", {
+              action: confirmLabel
+            })}</DialogTitle>
             <DialogDescription>
               {confirmation === "start_practice"
                 ? t("game.practiceConfirmation", {
-                    date: scheduleLabel ?? t("game.scheduleUnavailable"),
-                  })
+                  date: scheduleLabel ?? t("game.scheduleUnavailable"),
+                })
                 : confirmation === "start_final"
                   ? t("game.finalConfirmation")
-                : practice
-                  ? t("game.finishPracticeConfirmation")
-                  : t("game.finishConfirmation")}
+                  : practice
+                    ? t("game.finishPracticeConfirmation")
+                    : t("game.finishConfirmation")}
             </DialogDescription>
           </DialogHeader>
           {staleConfirmation && <p className="text-sm text-amber-200" role="alert">
@@ -141,12 +176,18 @@ export function GameControls() {
           {errorMessage && <p className="text-sm text-red-300" role="alert">{errorMessage}</p>}
           <DialogFooter>
             <Button ref={cancelRef} variant="outline" disabled={mutation.isPending}
-              onClick={() => setConfirmation(null)}>{t("common.cancel")}</Button>
+              onClick={() => {
+                return setConfirmation(null)
+              }}>{t("common.cancel")}</Button>
             <Button variant={starting ? "default" : "destructive"}
               className={starting ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
               disabled={disabled || staleConfirmation || (starting ? !canStart : !playing)
                 || (confirmation === "start_practice" && !canStartPractice)}
-              onClick={() => { if (confirmation) mutation.mutate(confirmation); }}>
+              onClick={() => {
+                if (confirmation) {
+                  mutation.mutate(confirmation);
+                }
+              }}>
               {mutation.isPending && <LoaderCircle className="animate-spin" />}
               {confirmLabel}
             </Button>

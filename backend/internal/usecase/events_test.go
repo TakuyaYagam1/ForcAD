@@ -35,7 +35,10 @@ func (r *eventRepositoryFixture) ListEvents(_ context.Context, after string, lim
 	return []domain.Event{r.created}, nil
 }
 
-func (r *eventRepositoryFixture) CreateAnnouncement(_ context.Context, title, markdown, author string) (domain.Event, error) {
+func (r *eventRepositoryFixture) CreateAnnouncement(
+	_ context.Context,
+	title, markdown, author string,
+) (domain.Event, error) {
 	r.title, r.markdown, r.author = title, markdown, author
 	r.createCalls++
 	if r.createErr != nil {
@@ -77,11 +80,16 @@ func TestEventListUsesStableCursorAndHardPageLimit(t *testing.T) {
 func TestAnnouncementIsSavedBeforeBestEffortNotification(t *testing.T) {
 	announcementID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
 	created := domain.Event{
-		ID: domain.AnnouncementEventID(announcementID), Kind: domain.EventAdminMessage,
+		ID:        domain.AnnouncementEventID(announcementID),
+		Kind:      domain.EventAdminMessage,
 		CreatedAt: time.Now(),
 	}
-	repository := &eventRepositoryFixture{created: created}
-	publisher := &eventPublisherFixture{err: errors.New("event transport unavailable")}
+	repository := &eventRepositoryFixture{
+		created: created,
+	}
+	publisher := &eventPublisherFixture{
+		err: errors.New("event transport unavailable"),
+	}
 	service := NewEvents(repository, publisher, slog.New(slog.DiscardHandler))
 	got, err := service.Announce(t.Context(), "  Round update  ", "  Starts soon.  ", " admin ")
 	if err != nil {

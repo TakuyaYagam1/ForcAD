@@ -12,10 +12,10 @@ without connecting to Docker or storage.
 
 | Command | Behavior |
 | --- | --- |
-| `setup` | Validate YAML, back it up, fill missing credentials, write private runtime files and configure external storage. Accepts `--redis`, `--database`, `--rabbitmq` with a host or `host:port`. |
+| `setup` | Validate YAML, back it up, fill missing credentials, write private runtime files and configure external storage. Accepts `--redis`, `--database`, `--nats` with a host or `host:port`. |
 | `build` | Build container images. Accepts Compose build options and service names. |
 | `start` / `up` | Build and start containers in the background. `-w N` / `--workers N` sets worker replicas. Other arguments go to Compose `up`. |
-| `worker` | Prepare configuration for external PostgreSQL, Redis and RabbitMQ, then build and start workers with their local PgBouncer. Requires all three storage addresses; accepts `-w N` / `--workers N`, default 1. |
+| `worker` | Prepare configuration for external PostgreSQL, Redis and NATS, then build and start workers with their local PgBouncer. Requires all three storage addresses; accepts `-w N` / `--workers N`, default 1. |
 | `scale` | Change replicas with repeatable `-s SERVICE COUNT` / `--service SERVICE COUNT`. Leaves existing containers intact and does not start dependencies. |
 | `pause` | Pause the game clock and flag acceptance. Containers keep running; checker actions already in progress may finish. |
 | `resume` | Resume the paused game, accounting for elapsed pause time. Does not reset scores or revive a finished game. |
@@ -67,7 +67,7 @@ the worker containers, and the main deployment must already be initialized.
 
 ```sh
 ./control.sh worker --database db.internal:5432 \
-  --redis cache.internal:6379 --rabbitmq broker.internal:5672 -w 3
+  --redis cache.internal:6379 --nats broker.internal:4222 -w 3
 ```
 
 ## Compatibility

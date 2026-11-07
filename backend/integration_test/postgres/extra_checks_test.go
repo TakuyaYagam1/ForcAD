@@ -43,8 +43,12 @@ func newExtraCheckFixture(t *testing.T) extraCheckFixture {
 		t.Fatalf("start: %v, %v", started, err)
 	}
 	request := domain.ScheduleRequest{
-		ScheduleID: "classic_rounds", At: start, StartAt: start,
-		Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic,
+		ScheduleID:    "classic_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
 	}
 	run, err := repository.Prepare(ctx, request)
 	if err != nil || run == nil {
@@ -72,16 +76,27 @@ func (f extraCheckFixture) claim(t *testing.T, at time.Time, expected int) []dom
 	return jobs
 }
 
-func (f extraCheckFixture) complete(t *testing.T, job domain.CheckerJob, at time.Time, status int32) {
+func (f extraCheckFixture) complete(
+	t *testing.T,
+	job domain.CheckerJob,
+	at time.Time,
+	status int32,
+) {
 	t.Helper()
 	ok, err := f.repository.Complete(context.Background(), job.ID, "worker", at,
-		domain.CheckerResult{Round: job.Round, Status: status})
+		domain.CheckerResult{
+			Round:  job.Round,
+			Status: status,
+		})
 	if err != nil || !ok {
 		t.Fatalf("complete = %t, %v", ok, err)
 	}
 }
 
-func (f extraCheckFixture) assertScore(t *testing.T, status, checks, passed int32) {
+func (f extraCheckFixture) assertScore(
+	t *testing.T,
+	status, checks, passed int32,
+) {
 	t.Helper()
 	var actualStatus, actualChecks, actualPassed int32
 	if err := f.pool.QueryRow(context.Background(), `SELECT status, checks, checks_passed FROM TeamTasks`).
@@ -137,7 +152,10 @@ func TestExtraChecksCompleteConcurrentlyOnlyOnce(t *testing.T) {
 	for _, job := range jobs {
 		wait.Go(func() {
 			ok, err := f.repository.Complete(context.Background(), job.ID, "worker", at.Add(time.Second),
-				domain.CheckerResult{Round: 1, Status: domain.TaskStatusUp})
+				domain.CheckerResult{
+					Round:  1,
+					Status: domain.TaskStatusUp,
+				})
 			if err != nil {
 				errorsFound <- err
 			} else if !ok {
@@ -153,7 +171,10 @@ func TestExtraChecksCompleteConcurrentlyOnlyOnce(t *testing.T) {
 	f.assertScore(t, domain.TaskStatusUp, 1, 1)
 	for _, job := range jobs {
 		ok, err := f.repository.Complete(context.Background(), job.ID, "worker", at.Add(2*time.Second),
-			domain.CheckerResult{Round: 1, Status: domain.TaskStatusUp})
+			domain.CheckerResult{
+				Round:  1,
+				Status: domain.TaskStatusUp,
+			})
 		if err != nil || ok {
 			t.Fatalf("duplicate completion = %t, %v", ok, err)
 		}
@@ -249,11 +270,17 @@ func TestExtraChecksCanBeReclaimedAfterWorkerRestart(t *testing.T) {
 			t.Fatalf("reclaim = %+v, %v", claimed, err)
 		}
 		if ok, err := restarted.Complete(ctx, job.ID, "worker", at.Add(3*time.Second),
-			domain.CheckerResult{Round: 1, Status: 104}); err != nil || ok {
+			domain.CheckerResult{
+				Round:  1,
+				Status: 104,
+			}); err != nil || ok {
 			t.Fatalf("stale worker completion = %t, %v", ok, err)
 		}
 		if ok, err := restarted.Complete(ctx, job.ID, "replacement", at.Add(3*time.Second),
-			domain.CheckerResult{Round: 1, Status: domain.TaskStatusUp}); err != nil || !ok {
+			domain.CheckerResult{
+				Round:  1,
+				Status: domain.TaskStatusUp,
+			}); err != nil || !ok {
 			t.Fatalf("replacement completion = %t, %v", ok, err)
 		}
 	}

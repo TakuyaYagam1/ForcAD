@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/middleware"
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
@@ -32,7 +34,15 @@ func (h *authHandler) HandleSessionCookie(ctx context.Context, _ api.OperationNa
 
 func sessionCookie(ctx context.Context, token string, expired bool) string {
 	//nolint:gosec // Secure is enabled from TLS, configured HTTPS, or a trusted proxy.
-	c := http.Cookie{Name: "session", Value: token, Path: "/", MaxAge: int(usecase.SessionTTL.Seconds()), HttpOnly: true, Secure: middleware.IsSecureRequest(ctx), SameSite: http.SameSiteLaxMode}
+	c := http.Cookie{
+		Name:     "session",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   int(usecase.SessionTTL.Seconds()),
+		HttpOnly: true,
+		Secure:   middleware.IsSecureRequest(ctx),
+		SameSite: http.SameSiteLaxMode,
+	}
 	if expired {
 		c.MaxAge = -1
 		c.Expires = time.Unix(1, 0)
@@ -50,7 +60,10 @@ func (h *authHandler) AdminLogin(ctx context.Context, req *api.AdminLoginRequest
 	if err != nil {
 		return nil, fmt.Errorf("%s - read created session: %w", location, err)
 	}
-	return &api.AdminSessionHeaders{SetCookie: api.NewOptString(sessionCookie(ctx, token, false)), Response: api.AdminSession{Status: api.AdminSessionStatusOk, Username: username, CsrfToken: csrf}}, nil
+	return &api.AdminSessionHeaders{
+		SetCookie: api.NewOptString(sessionCookie(ctx, token, false)),
+		Response:  response.AdminSession(username, csrf),
+	}, nil
 }
 
 func (h *authHandler) AdminLogout(ctx context.Context) (api.AdminLogoutRes, error) {
@@ -58,11 +71,16 @@ func (h *authHandler) AdminLogout(ctx context.Context) (api.AdminLogoutRes, erro
 	if err := h.auth.Logout(ctx, middleware.Session(ctx)); err != nil {
 		return nil, fmt.Errorf("%s - end administrator session: %w", location, err)
 	}
-	return &api.StatusResponseHeaders{SetCookie: api.NewOptString(sessionCookie(ctx, "", true)), Response: api.StatusResponse{Status: api.StatusResponseStatusOk}}, nil
+	return &api.StatusResponseHeaders{
+		SetCookie: api.NewOptString(sessionCookie(ctx, "", true)),
+		Response: api.StatusResponse{
+			Status: api.StatusResponseStatusOk,
+		},
+	}, nil
 }
 
 func (h *authHandler) GetAdminSessionStatus(ctx context.Context) (api.GetAdminSessionStatusRes, error) {
 	username, _ := ctx.Value(usernameKey).(string)
 	csrf, _ := ctx.Value(csrfContextKey{}).(string)
-	return &api.AdminSession{Status: api.AdminSessionStatusOk, Username: username, CsrfToken: csrf}, nil
+	return new(response.AdminSession(username, csrf)), nil
 }

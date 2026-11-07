@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,7 +28,9 @@ func collectDiagnosticLines(ctx context.Context, cmd *exec.Cmd, consume func(str
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	stopClose := context.AfterFunc(ctx, func() { _ = output.Close() })
+	stopClose := context.AfterFunc(ctx, func() {
+		_ = output.Close()
+	})
 	defer stopClose()
 	scanner := bufio.NewScanner(output)
 	scanner.Buffer(make([]byte, 64<<10), 1<<20)
@@ -63,7 +66,9 @@ func (o *observers) sampleDatabase(ctx context.Context, d *deployment, directory
 		return
 	}
 	container := strings.TrimSpace(string(ids))
-	if len(container) != 64 || strings.IndexFunc(container, func(r rune) bool { return (r < '0' || r > '9') && (r < 'a' || r > 'f') }) != -1 {
+	if len(container) != 64 || strings.IndexFunc(container, func(r rune) bool {
+		return (r < '0' || r > '9') && (r < 'a' || r > 'f')
+	}) != -1 {
 		o.fail(fmt.Errorf("%s - require one full PostgreSQL container ID", location))
 		return
 	}
@@ -126,7 +131,12 @@ func flagLogTimeout(elapsed time.Duration) time.Duration {
 	return max(2*time.Minute, elapsed/10)
 }
 
-func saveFlagLog(ctx context.Context, d *deployment, directory string, elapsed time.Duration) error {
+func saveFlagLog(
+	ctx context.Context,
+	d *deployment,
+	directory string,
+	elapsed time.Duration,
+) error {
 	const location = "load.saveFlagLog"
 	// A continuous high-rate run can produce millions of unrelated access lines.
 	// Stream them with bounded memory, scaling the final scan budget with the run.
@@ -152,21 +162,66 @@ func saveFlagLog(ctx context.Context, d *deployment, directory string, elapsed t
 	return nil
 }
 
-func (o *observers) samplePool(ctx context.Context, d *deployment, directory string) {
-	const location = "load.observers.samplePool"
-	apiReplicas := 2
-	if raw := os.Getenv("LOAD_API_REPLICAS"); raw != "" {
-		var err error
-		apiReplicas, err = strconv.Atoi(raw)
-		if err != nil || apiReplicas < 1 || apiReplicas > 16 {
-			o.fail(fmt.Errorf("%s - LOAD_API_REPLICAS must be an integer between 1 and 16", location))
-			return
+type poolMetricReplica struct {
+	role, index string
+}
+
+func poolMetricReplicas() ([]poolMetricReplica, error) {
+	const location = "load.poolMetricReplicas"
+	var replicas []poolMetricReplica
+	for _, role := range []string{"receiver", "api"} {
+		// test_deployment.sh --load uses these settings, default 2, bounds 1..16.
+		name := "LOAD_" + strings.ToUpper(role) + "_REPLICAS"
+		count := 2
+		if raw := os.Getenv(name); raw != "" {
+			var err error
+			count, err = strconv.Atoi(raw)
+			if err != nil || count < 1 || count > 16 {
+				return nil, fmt.Errorf("%s - %s must be an integer between 1 and 16", location, name)
+			}
+		}
+		for index := 1; index <= count; index++ {
+			replicas = append(replicas, poolMetricReplica{role, strconv.Itoa(index)})
 		}
 	}
-	replicas := []struct{ role, index string }{{"receiver", "1"}, {"receiver", "2"}}
-	for index := 1; index <= apiReplicas; index++ {
-		replicas = append(replicas, struct{ role, index string }{"api", strconv.Itoa(index)})
+	return replicas, nil
+}
+
+func keepPoolMetric(line string) bool {
+	if strings.HasPrefix(line, "forcad_database_") || strings.HasPrefix(line, "forcad_redis_pool_") || strings.HasPrefix(line, "forcad_flag_submission_phase_duration_seconds") || strings.HasPrefix(line, "forcad_websocket_") {
+		return true
 	}
+	name := line
+	if index := strings.IndexAny(line, "{ \t"); index >= 0 {
+		name = line[:index]
+	}
+	switch name {
+	case "forcad_redis_connections", "forcad_redis_connections_idle",
+		"go_goroutines", "forcad_log_dropped_total",
+		"go_gc_duration_seconds", "go_gc_duration_seconds_sum", "go_gc_duration_seconds_count",
+		"go_threads", "go_memstats_heap_alloc_bytes", "go_memstats_heap_objects",
+		"go_memstats_heap_inuse_bytes", "go_gc_cpu_fraction", "go_sched_gomaxprocs_threads":
+		return true
+	default:
+		return false
+	}
+}
+
+func (o *observers) samplePool(ctx context.Context, d *deployment, directory string) {
+	const location = "load.observers.samplePool"
+	replicas, err := poolMetricReplicas()
+	if err != nil {
+		o.fail(err)
+		return
+	}
+	scrape, closeScraper, err := newPoolMetricScraper(ctx, d, replicas)
+	if err != nil {
+		if ctx.Err() == nil {
+			o.fail(err)
+		}
+		return
+	}
+	defer closeScraper()
 	file, err := os.OpenFile(filepath.Join(directory, "pool.log"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		o.fail(fmt.Errorf("%s - create samples: %w", location, err))
@@ -175,28 +230,44 @@ func (o *observers) samplePool(ctx context.Context, d *deployment, directory str
 	defer file.Close()
 	for ctx.Err() == nil {
 		for _, replica := range replicas {
-			data, err := d.command(ctx, "", "exec", "-T", "--index", replica.index, replica.role, "wget", "-qO-", "http://127.0.0.1:9090/metrics")
+			data, err := scrape(ctx, replica)
 			if err != nil {
 				if ctx.Err() == nil {
 					o.fail(err)
 				}
 				return
 			}
-			if _, err := fmt.Fprintf(file, "%s %s-%s\n", time.Now().UTC().Format(time.RFC3339Nano), replica.role, replica.index); err != nil {
-				o.fail(fmt.Errorf("%s - write sample header: %w", location, err))
+			if err := writePoolMetricSample(file, time.Now().UTC(), replica, data); err != nil {
+				o.fail(err)
 				return
-			}
-			for line := range strings.SplitSeq(string(data), "\n") {
-				if strings.HasPrefix(line, "forcad_database_") || strings.HasPrefix(line, "forcad_redis_pool_") || strings.HasPrefix(line, "forcad_websocket_") || strings.HasPrefix(line, "go_goroutines ") || strings.HasPrefix(line, "forcad_log_dropped_total ") {
-					if _, err := fmt.Fprintln(file, line); err != nil {
-						o.fail(fmt.Errorf("%s - write metric: %w", location, err))
-						return
-					}
-				}
 			}
 		}
 		if !waitContext(ctx, time.Second) {
 			return
 		}
 	}
+}
+
+func writePoolMetricSample(
+	output io.Writer,
+	now time.Time,
+	replica poolMetricReplica,
+	data []byte,
+) error {
+	const location = "load.writePoolMetricSample"
+	buffer := bufio.NewWriterSize(output, 16<<10)
+	if _, err := fmt.Fprintf(buffer, "%s %s-%s\n", now.UTC().Format(time.RFC3339Nano), replica.role, replica.index); err != nil {
+		return fmt.Errorf("%s - write sample header: %w", location, err)
+	}
+	for line := range strings.SplitSeq(string(data), "\n") {
+		if keepPoolMetric(line) {
+			if _, err := fmt.Fprintln(buffer, line); err != nil {
+				return fmt.Errorf("%s - write metric: %w", location, err)
+			}
+		}
+	}
+	if err := buffer.Flush(); err != nil {
+		return fmt.Errorf("%s - flush sample: %w", location, err)
+	}
+	return nil
 }

@@ -149,8 +149,23 @@ func TestPublicHistoryIncludesOnlyCompletedRoundSnapshots(t *testing.T) {
 		VALUES($1,$2,1,101,'completed','private completed','private command')`, teams[0], extraTaskID); err != nil {
 		t.Fatal(err)
 	}
-	snapshot, err := json.Marshal(domain.RoundSnapshot{Round: 1, RoundStart: 1700000000,
-		TeamTasks: []domain.PublicCell{{TeamID: teams[0], TaskID: tasks[0], Status: 101, Score: 2500, Checks: 1, ChecksPassed: 1, Message: "UP"}, {TeamID: teams[1], TaskID: tasks[0], Status: 104}}})
+	snapshot, err := json.Marshal(domain.RoundSnapshot{
+		Round:      1,
+		RoundStart: 1700000000,
+		TeamTasks: []domain.PublicCell{{
+			TeamID:       teams[0],
+			TaskID:       tasks[0],
+			Status:       101,
+			Score:        2500,
+			Checks:       1,
+			ChecksPassed: 1,
+			Message:      "UP",
+		}, {
+			TeamID: teams[1],
+			TaskID: tasks[0],
+			Status: 104,
+		}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

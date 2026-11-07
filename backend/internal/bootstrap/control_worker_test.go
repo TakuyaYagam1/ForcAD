@@ -26,7 +26,7 @@ func workerCommandProject(t *testing.T) string {
 	if err := os.WriteFile(configPath, []byte(operatorProjectConfig), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services:\n  config-loader: {}\n  pgbouncer: {}\n  worker: {}\n  postgres: {}\n  redis: {}\n  rabbitmq: {}\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services:\n  config-loader: {}\n  pgbouncer: {}\n  worker: {}\n  postgres: {}\n  redis: {}\n  nats: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := localoperator.Setup(root, localoperator.SetupOptions{}); err != nil {
@@ -45,14 +45,20 @@ func TestWorkerReusesCredentialsAndStagesBeforeStartingNoDependencies(t *testing
 	t.Setenv("TEST", "")
 	t.Setenv("FORCAD_WORKER_REPLICAS", "2")
 	var got [][]string
-	runner := func(_ context.Context, name string, args, environment []string, _ io.Reader, _, _ io.Writer) error {
+	runner := func(
+		_ context.Context,
+		name string,
+		args, environment []string,
+		_ io.Reader,
+		_, _ io.Writer,
+	) error {
 		got = append(got, append([]string{name}, args...))
 		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
 			t.Fatalf("worker child environment = %q", environment)
 		}
 		return nil
 	}
-	args := []string{"--redis", "cache.example:6380", "--database", "db.example:5433", "--rabbitmq", "broker.example:5673", "-w", "20", "--fast"}
+	args := []string{"--redis", "cache.example:6380", "--database", "db.example:5433", "--nats", "broker.example:4223", "-w", "20", "--fast"}
 	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); err != nil {
 		t.Fatal(err)
 	}
@@ -70,10 +76,10 @@ func TestWorkerReusesCredentialsAndStagesBeforeStartingNoDependencies(t *testing
 	}
 	if *after.Admin != *before.Admin || after.Storages.DB.Password != before.Storages.DB.Password ||
 		*after.Storages.DB.Runtime != *before.Storages.DB.Runtime ||
-		after.Storages.Redis.Password != before.Storages.Redis.Password || after.Storages.RabbitMQ.Password != before.Storages.RabbitMQ.Password {
+		after.Storages.Redis.Password != before.Storages.Redis.Password || after.Storages.NATS.Password != before.Storages.NATS.Password {
 		t.Fatal("worker command replaced deployment credentials")
 	}
-	if after.Storages.DB.Host != "db.example" || after.Storages.Redis.Port != 6380 || after.Storages.RabbitMQ.Port != 5673 {
+	if after.Storages.DB.Host != "db.example" || after.Storages.Redis.Port != 6380 || after.Storages.NATS.Port != 4223 {
 		t.Fatal("worker command did not apply external addresses")
 	}
 	if os.Getenv("FORCAD_WORKER_REPLICAS") != "2" {
@@ -86,7 +92,13 @@ func TestWorkerConfigStagingFailurePreventsApplications(t *testing.T) {
 	t.Setenv("TEST", "")
 	failure := errors.New("config staging failed")
 	calls := 0
-	runner := func(_ context.Context, _ string, args, environment []string, _ io.Reader, _, _ io.Writer) error {
+	runner := func(
+		_ context.Context,
+		_ string,
+		args, environment []string,
+		_ io.Reader,
+		_, _ io.Writer,
+	) error {
 		calls++
 		if calls != 1 || !reflect.DeepEqual(args[len(args)-5:], []string{"run", "--rm", "--no-deps", "--build", "config-loader"}) {
 			t.Fatalf("unexpected command after staging failure: %q", args)
@@ -96,7 +108,7 @@ func TestWorkerConfigStagingFailurePreventsApplications(t *testing.T) {
 		}
 		return failure
 	}
-	args := []string{"--redis", "cache.example", "--database", "db.example", "--rabbitmq", "broker.example", "-w", "20"}
+	args := []string{"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example", "-w", "20"}
 	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); !errors.Is(err, failure) {
 		t.Fatalf("staging failure = %v, want %v", err, failure)
 	}
@@ -107,7 +119,7 @@ func TestWorkerConfigStagingFailurePreventsApplications(t *testing.T) {
 
 func TestWorkerRejectsIncompleteOptionsBeforeSetup(t *testing.T) {
 	root := t.TempDir()
-	for _, args := range [][]string{nil, {"--redis", "cache.example"}, {"--redis", "cache.example", "--database", "db.example", "--rabbitmq", "broker.example", "-w", "-1"}} {
+	for _, args := range [][]string{nil, {"--redis", "cache.example"}, {"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example", "-w", "-1"}} {
 		if err := runWorkerCommand(t.Context(), root, args, io.Discard, nil); err == nil {
 			t.Fatalf("accepted worker options %q", args)
 		}
@@ -127,7 +139,7 @@ func TestWorkerRefusesToGenerateNewStorageCredentials(t *testing.T) {
 	if err := os.WriteFile(path, []byte(operatorProjectConfig), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	args := []string{"--redis", "cache.example", "--database", "db.example", "--rabbitmq", "broker.example"}
+	args := []string{"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example"}
 	if err := runWorkerCommand(t.Context(), root, args, io.Discard, nil); err == nil {
 		t.Fatal("worker accepted a configuration without deployment credentials")
 	}

@@ -24,7 +24,9 @@ func TestGameDBErrorPreservesSentinelsAndContext(t *testing.T) {
 		t.Fatalf("missing-row error is missing its origin: %v", missing)
 	}
 
-	conflict := gameDBError(&pgconn.PgError{Code: "23505"})
+	conflict := gameDBError(&pgconn.PgError{
+		Code: "23505",
+	})
 	if !errors.Is(conflict, domain.ErrConflict) {
 		t.Fatalf("gameDBError(unique violation) = %v, want ErrConflict", conflict)
 	}

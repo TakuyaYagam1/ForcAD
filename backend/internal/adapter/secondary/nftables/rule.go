@@ -17,12 +17,13 @@ const (
 
 // RenderRules returns an nftables script that creates only the monitoring table.
 func RenderRules(inventory Inventory) (string, error) {
+	const location = "nftables.RenderRules"
 	if err := validateInventory(inventory); err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - validate inventory: %w", location, err)
 	}
 	fingerprint, err := inventoryFingerprint(inventory)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - fingerprint inventory: %w", location, err)
 	}
 	var script strings.Builder
 	// The create operation makes a repeated nft -f apply fail before adding
@@ -33,7 +34,9 @@ func RenderRules(inventory Inventory) (string, error) {
 	// while addresses still precede postrouting SNAT.
 	fmt.Fprintf(&script, "add chain inet %s sources { type filter hook forward priority -9; policy accept; }\n", tableName)
 	comment := inventoryComment(fingerprint)
-	for _, family := range []struct{ name, addressType string }{{"v4", "ipv4_addr"}, {"v6", "ipv6_addr"}} {
+	for _, family := range []struct {
+		name, addressType string
+	}{{"v4", "ipv4_addr"}, {"v6", "ipv6_addr"}} {
 		fmt.Fprintf(&script, "add set inet %s sources_%s { type %s . %s; flags dynamic,timeout; timeout %s; size %d; counter; comment \"%s\"; }\n", tableName, family.name, family.addressType, family.addressType, sourceSetTimeout, sourceSetSize, comment)
 	}
 	for _, team := range inventory.Teams {
@@ -43,7 +46,7 @@ func RenderRules(inventory Inventory) (string, error) {
 	for _, team := range inventory.Teams {
 		address, err := netip.ParseAddr(team.TeamIP)
 		if err != nil {
-			return "", fmt.Errorf("nftables.RenderRules - invalid team IP in inventory")
+			return "", fmt.Errorf("%s - invalid team IP in inventory", location)
 		}
 		if address.Is4() {
 			fmt.Fprintf(&script, "add rule inet %s sources ip daddr %s update @sources_v4 { ip saddr . ip daddr counter }\n", tableName, team.TeamIP)
@@ -53,7 +56,7 @@ func RenderRules(inventory Inventory) (string, error) {
 		for _, value := range team.Networks {
 			prefix, err := netip.ParsePrefix(value)
 			if err != nil {
-				return "", fmt.Errorf("nftables.RenderRules - invalid network in inventory")
+				return "", fmt.Errorf("%s - invalid network in inventory", location)
 			}
 			family := "ip"
 			if prefix.Addr().Is6() {

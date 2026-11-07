@@ -61,8 +61,9 @@ function TaskNumberField({
         required
         type="number"
         value={task[field]}
-        onChange={(event) =>
-          onChange(field, Number(event.currentTarget.value) || 0)
+        onChange={(event) => {
+          return onChange(field, Number(event.currentTarget.value) || 0)
+        }
         }
       />
     </div>
@@ -96,7 +97,10 @@ export function TaskForm({
           <CardTitle className="text-sm text-slate-100">
             {isCreate
               ? t("task.newTitle")
-              : t("task.existingTitle", { name: task.name, id: task.id ?? "-" })}
+              : t("task.existingTitle", {
+                name: task.name,
+                id: task.id ?? "-"
+              })}
           </CardTitle>
           <CardDescription className="text-xs text-slate-400">
             {t("task.formDescription")}
@@ -112,7 +116,9 @@ export function TaskForm({
               required
               maxLength={MAX_TASK_NAME_LENGTH}
               value={task.name}
-              onChange={(event) => onChange("name", event.target.value)}
+              onChange={(event) => {
+                return onChange("name", event.target.value)
+              }}
             />
           </div>
 
@@ -124,7 +130,9 @@ export function TaskForm({
               required
               maxLength={MAX_CHECKER_PATH_LENGTH}
               value={task.checker}
-              onChange={(event) => onChange("checker", event.target.value)}
+              onChange={(event) => {
+                return onChange("checker", event.target.value)
+              }}
             />
           </div>
 
@@ -162,7 +170,9 @@ export function TaskForm({
               id="checker_type"
               maxLength={32}
               value={task.checker_type}
-              onChange={(event) => onChange("checker_type", event.target.value)}
+              onChange={(event) => {
+                return onChange("checker_type", event.target.value)
+              }}
             />
           </div>
 
@@ -172,7 +182,9 @@ export function TaskForm({
               disabled={saving}
               id="env_path"
               value={task.env_path}
-              onChange={(event) => onChange("env_path", event.target.value)}
+              onChange={(event) => {
+                return onChange("env_path", event.target.value)
+              }}
             />
           </div>
 
@@ -207,7 +219,9 @@ export function TaskForm({
             <Checkbox
               disabled={saving}
               checked={task.active}
-              onCheckedChange={(value) => onChange("active", Boolean(value))}
+              onCheckedChange={(value) => {
+                return onChange("active", Boolean(value))
+              }}
             />
             {t("task.active")}
           </label>

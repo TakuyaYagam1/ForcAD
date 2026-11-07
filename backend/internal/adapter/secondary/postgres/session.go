@@ -21,11 +21,7 @@ func (r *Repository) Get(ctx context.Context) (domain.Session, error) {
 	return domainSession(row), nil
 }
 
-func (r *Repository) SetPaused(
-	ctx context.Context,
-	paused bool,
-	at time.Time,
-) (domain.Session, error) {
+func (r *Repository) SetPaused(ctx context.Context, paused bool, at time.Time) (domain.Session, error) {
 	const location = "postgres.Repository.SetPaused"
 
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -85,12 +81,15 @@ func (r *Repository) SaveSnapshot(ctx context.Context, snapshot domain.RoundSnap
 		return fmt.Errorf("%s - lock session for snapshot update: %w", location, err)
 	}
 	if _, err := queries.InsertCompletedRoundSnapshot(ctx, sqlc.InsertCompletedRoundSnapshotParams{
-		Round: snapshot.Round, RoundStart: float64(snapshot.RoundStart), Snapshot: body,
+		Round:      snapshot.Round,
+		RoundStart: float64(snapshot.RoundStart),
+		Snapshot:   body,
 	}); err != nil {
 		return fmt.Errorf("%s - insert completed round snapshot: %w", location, err)
 	}
 	rows, err := queries.SaveGameSnapshot(ctx, sqlc.SaveGameSnapshotParams{
-		SnapshotRound: &snapshot.Round, Snapshot: body,
+		SnapshotRound: &snapshot.Round,
+		Snapshot:      body,
 	})
 	if err != nil {
 		return fmt.Errorf("%s - update current game snapshot: %w", location, err)

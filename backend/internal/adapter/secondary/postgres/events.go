@@ -28,33 +28,44 @@ func (r *Repository) ListEvents(ctx context.Context, after string, limit int) ([
 		if err != nil {
 			return nil, fmt.Errorf("%s - query latest events: %w", location, err)
 		}
-		return mapEvents(rows)
+		events, err := mapEvents(rows)
+		if err != nil {
+			return nil, fmt.Errorf("%s - map latest events: %w", location, err)
+		}
+		return events, nil
 	}
 	if len(after) > 128 {
 		return nil, fmt.Errorf("%s - validate cursor: %w", location, domain.ErrEventCursorInvalid)
 	}
 	cursor, err := r.eventCursor(ctx, after)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s - read event cursor: %w", location, err)
 	}
 	rows, err := r.queries.ListPublicEventsAfter(ctx, sqlc.ListPublicEventsAfterParams{
-		EventID: after, CursorTime: cursor, PageSize: int32(limit),
+		EventID:    after,
+		CursorTime: cursor,
+		PageSize:   int32(limit),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - query events after cursor: %w", location, err)
 	}
-	return mapEvents(rows)
+	events, err := mapEvents(rows)
+	if err != nil {
+		return nil, fmt.Errorf("%s - map events after cursor: %w", location, err)
+	}
+	return events, nil
 }
 
 func (r *Repository) eventCursor(ctx context.Context, value string) (pgtype.Timestamptz, error) {
 	const location = "postgres.Repository.eventCursor"
 	key, err := parseEventCursor(value)
 	if err != nil {
-		return pgtype.Timestamptz{}, err
+		return pgtype.Timestamptz{}, fmt.Errorf("%s - parse cursor: %w", location, err)
 	}
 	if key.kind == domain.EventFlagStolen {
 		cursor, err := r.queries.ReadFlagEventCursor(ctx, sqlc.ReadFlagEventCursorParams{
-			FlagID: key.flagID, AttackerID: key.attackerID,
+			FlagID:     key.flagID,
+			AttackerID: key.attackerID,
 		})
 		return validateEventCursorRead(location, "flag", cursor, err)
 	}
@@ -70,32 +81,44 @@ type eventCursorKey struct {
 }
 
 func parseEventCursor(value string) (eventCursorKey, error) {
+	const location = "postgres.parseEventCursor"
 	parts := strings.Split(value, ":")
 	switch {
 	case len(parts) == 3 && parts[0] == string(domain.EventFlagStolen):
 		flagID, err := uuid.Parse(parts[1])
 		if err != nil {
-			return eventCursorKey{}, invalidEventCursor()
+			return eventCursorKey{}, fmt.Errorf("%s - validate flag cursor ID: %w", location, invalidEventCursor())
 		}
 		attackerID, err := uuid.Parse(parts[2])
 		if err != nil || domain.FlagEventID(flagID, attackerID) != value {
-			return eventCursorKey{}, invalidEventCursor()
+			return eventCursorKey{}, fmt.Errorf("%s - validate attacker cursor ID: %w", location, invalidEventCursor())
 		}
-		return eventCursorKey{kind: domain.EventFlagStolen, flagID: flagID, attackerID: attackerID}, nil
+		return eventCursorKey{
+			kind:       domain.EventFlagStolen,
+			flagID:     flagID,
+			attackerID: attackerID,
+		}, nil
 	case len(parts) == 2 && parts[0] == string(domain.EventAdminMessage):
 		id, err := uuid.Parse(parts[1])
 		if err != nil || domain.AnnouncementEventID(id) != value {
-			return eventCursorKey{}, invalidEventCursor()
+			return eventCursorKey{}, fmt.Errorf("%s - validate announcement cursor ID: %w", location, invalidEventCursor())
 		}
-		return eventCursorKey{kind: domain.EventAdminMessage, announcementID: id}, nil
+		return eventCursorKey{
+			kind:           domain.EventAdminMessage,
+			announcementID: id,
+		}, nil
 	default:
-		return eventCursorKey{}, invalidEventCursor()
+		return eventCursorKey{}, fmt.Errorf("%s - validate cursor shape: %w", location, invalidEventCursor())
 	}
 }
 
-func validateEventCursorRead(location, source string, cursor pgtype.Timestamptz, err error) (pgtype.Timestamptz, error) {
+func validateEventCursorRead(
+	location, source string,
+	cursor pgtype.Timestamptz,
+	err error,
+) (pgtype.Timestamptz, error) {
 	if errors.Is(err, pgx.ErrNoRows) || err == nil && !cursor.Valid {
-		return pgtype.Timestamptz{}, invalidEventCursor()
+		return pgtype.Timestamptz{}, fmt.Errorf("%s - validate %s event cursor: %w", location, source, invalidEventCursor())
 	}
 	if err != nil {
 		return pgtype.Timestamptz{}, fmt.Errorf("%s - read %s event cursor: %w", location, source, err)
@@ -104,30 +127,41 @@ func validateEventCursorRead(location, source string, cursor pgtype.Timestamptz,
 }
 
 func invalidEventCursor() error {
-	return fmt.Errorf("postgres.Repository.eventCursor - validate cursor: %w", domain.ErrEventCursorInvalid)
+	const location = "postgres.invalidEventCursor"
+	return fmt.Errorf("%s - validate cursor: %w", location, domain.ErrEventCursorInvalid)
 }
 
-func (r *Repository) CreateAnnouncement(ctx context.Context, title, markdown, author string) (domain.Event, error) {
+func (r *Repository) CreateAnnouncement(
+	ctx context.Context,
+	title, markdown, author string,
+) (domain.Event, error) {
 	const location = "postgres.Repository.CreateAnnouncement"
 	row, err := r.queries.InsertPublicAnnouncement(ctx, sqlc.InsertPublicAnnouncementParams{
-		Title: title, Markdown: markdown, Author: author,
+		Title:    title,
+		Markdown: markdown,
+		Author:   author,
 	})
 	if err != nil {
 		return domain.Event{}, fmt.Errorf("%s - insert public announcement: %w", location, gameDBError(err))
 	}
 	id := domain.AnnouncementEventID(row.ID)
 	return domain.Event{
-		ID: id, Kind: domain.EventAdminMessage, CreatedAt: row.CreatedAt.Time,
-		Title: new(row.Title), Markdown: new(row.Markdown), Author: new(row.Author),
+		ID:        id,
+		Kind:      domain.EventAdminMessage,
+		CreatedAt: row.CreatedAt.Time,
+		Title:     new(row.Title),
+		Markdown:  new(row.Markdown),
+		Author:    new(row.Author),
 	}, nil
 }
 
 func mapEvents(payloads []string) ([]domain.Event, error) {
+	const location = "postgres.mapEvents"
 	result := make([]domain.Event, 0, len(payloads))
 	for _, payload := range payloads {
 		event, err := decodeEvent(payload)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s - decode public event: %w", location, err)
 		}
 		result = append(result, event)
 	}

@@ -14,16 +14,43 @@ func TestFlagIsLiveIncludesLifetimeBoundary(t *testing.T) {
 		lifetime  int32
 		want      bool
 	}{
-		{name: "oldest live round", flagRound: 5, lifetime: 5, want: true},
-		{name: "one round beyond lifetime", flagRound: 4, lifetime: 5, want: false},
-		{name: "current round", flagRound: 10, lifetime: 5, want: true},
-		{name: "future flag round", flagRound: 11, lifetime: 5, want: true},
-		{name: "zero lifetime", flagRound: 10, lifetime: 0, want: false},
+		{
+			name:      "oldest live round",
+			flagRound: 5,
+			lifetime:  5,
+			want:      true,
+		},
+		{
+			name:      "one round beyond lifetime",
+			flagRound: 4,
+			lifetime:  5,
+			want:      false,
+		},
+		{
+			name:      "current round",
+			flagRound: 10,
+			lifetime:  5,
+			want:      true,
+		},
+		{
+			name:      "future flag round",
+			flagRound: 11,
+			lifetime:  5,
+			want:      true,
+		},
+		{
+			name:      "zero lifetime",
+			flagRound: 10,
+			lifetime:  0,
+			want:      false,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			flag := Flag{Round: test.flagRound}
+			flag := Flag{
+				Round: test.flagRound,
+			}
 			if got := flag.IsLive(10, test.lifetime); got != test.want {
 				t.Fatalf("IsLive() = %v, want %v", got, test.want)
 			}
@@ -68,11 +95,36 @@ func TestCalculateRatingChangeRejectsInvalidInputs(t *testing.T) {
 		name                       string
 		attacker, victim, hardness float64
 	}{
-		{name: "negative attacker score", attacker: -1, victim: 0, hardness: 10},
-		{name: "negative victim score", attacker: 0, victim: -1, hardness: 10},
-		{name: "hardness at lower bound", attacker: 0, victim: 0, hardness: 1},
-		{name: "not a number", attacker: math.NaN(), victim: 0, hardness: 10},
-		{name: "infinite hardness", attacker: 0, victim: 0, hardness: math.Inf(1)},
+		{
+			name:     "negative attacker score",
+			attacker: -1,
+			victim:   0,
+			hardness: 10,
+		},
+		{
+			name:     "negative victim score",
+			attacker: 0,
+			victim:   -1,
+			hardness: 10,
+		},
+		{
+			name:     "hardness at lower bound",
+			attacker: 0,
+			victim:   0,
+			hardness: 1,
+		},
+		{
+			name:     "not a number",
+			attacker: math.NaN(),
+			victim:   0,
+			hardness: 10,
+		},
+		{
+			name:     "infinite hardness",
+			attacker: 0,
+			victim:   0,
+			hardness: math.Inf(1),
+		},
 	}
 
 	for _, test := range tests {

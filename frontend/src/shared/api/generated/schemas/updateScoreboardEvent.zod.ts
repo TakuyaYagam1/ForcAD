@@ -10,22 +10,22 @@ import * as zod from 'zod';
 export const UpdateScoreboardEvent = zod.object({
   "type": zod.enum(['update_scoreboard']),
   "payload": zod.object({
-  "data": zod.object({
-  "round_start": zod.int(),
-  "round": zod.int(),
-  "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
-})
-}),
+    "data": zod.object({
+      "round_start": zod.int(),
+      "round": zod.int(),
+      "team_tasks": zod.array(zod.object({
+        "team_id": zod.uuid(),
+        "task_id": zod.uuid(),
+        "status": zod.int(),
+        "stolen": zod.int(),
+        "lost": zod.int(),
+        "score": zod.number(),
+        "checks": zod.int(),
+        "checks_passed": zod.int(),
+        "message": zod.string().nullable()
+      }))
+    })
+  }),
   "timestamp": zod.string()
 })
 

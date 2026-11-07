@@ -2,7 +2,9 @@ import type { RealtimeEventMessage } from "../api/realtime.ts";
 import type { Scoreboard } from "../api/generated/schemas/client/scoreboard.zod.ts";
 
 type PublicEvent = RealtimeEventMessage["type"];
-type EventData<T extends PublicEvent> = Extract<RealtimeEventMessage, { type: T }>["payload"];
+type EventData<T extends PublicEvent> = Extract<RealtimeEventMessage, {
+  type: T
+}>["payload"];
 
 interface SocketEventMap {
   connect: undefined;
@@ -50,7 +52,9 @@ export class EventSocket {
 
   constructor(options: EventSocketOptions) {
     this.options = options;
-    this.createSocket = options.createSocket ?? ((url) => new WebSocket(url));
+    this.createSocket = options.createSocket ?? ((url) => {
+      return new WebSocket(url)
+    });
     this.schedule = options.schedule ?? globalThis.setTimeout.bind(globalThis);
     this.cancel = options.cancel ?? globalThis.clearTimeout.bind(globalThis);
     this.random = options.random ?? Math.random;
@@ -76,7 +80,9 @@ export class EventSocket {
 
   connect(): this {
     this.manuallyDisconnected = false;
-    if (this.socket) return this;
+    if (this.socket) {
+      return this;
+    }
     if (this.reconnectTimer !== undefined) {
       this.cancel(this.reconnectTimer);
       this.reconnectTimer = undefined;
@@ -84,10 +90,18 @@ export class EventSocket {
 
     const socket = this.createSocket(this.options.url);
     this.socket = socket;
-    socket.addEventListener("open", () => this.handleOpen(socket));
-    socket.addEventListener("message", (event) => this.handleMessage(socket, event));
-    socket.addEventListener("error", () => this.handleError(socket));
-    socket.addEventListener("close", () => this.handleClose(socket));
+    socket.addEventListener("open", () => {
+      return this.handleOpen(socket)
+    });
+    socket.addEventListener("message", (event) => {
+      return this.handleMessage(socket, event)
+    });
+    socket.addEventListener("error", () => {
+      return this.handleError(socket)
+    });
+    socket.addEventListener("close", () => {
+      return this.handleClose(socket)
+    });
     return this;
   }
 
@@ -100,7 +114,9 @@ export class EventSocket {
 
     const socket = this.socket;
     this.socket = null;
-    if (socket) socket.close(1000, "Client disconnected");
+    if (socket) {
+      socket.close(1000, "Client disconnected");
+    }
     if (this.isConnected) {
       this.isConnected = false;
       this.dispatch("disconnect");
@@ -109,7 +125,9 @@ export class EventSocket {
   }
 
   private handleOpen(socket: WebSocket): void {
-    if (this.socket !== socket) return;
+    if (this.socket !== socket) {
+      return;
+    }
 
     const reconnect = this.hasConnected;
     this.hasConnected = true;
@@ -119,20 +137,29 @@ export class EventSocket {
 
     if (reconnect && this.options.resync) {
       void this.options.resync().then(
-        (scoreboard) => this.dispatch("init_scoreboard", { data: scoreboard }),
-        (error: unknown) =>
-          this.dispatch(
+        (scoreboard) => {
+          return this.dispatch("init_scoreboard", {
+            data: scoreboard
+          })
+        },
+        (error: unknown) => {
+          return this.dispatch(
             "connect_error",
             error instanceof Error ? error : new Error("Scoreboard resync failed."),
-          ),
+          )
+        },
       );
     }
   }
 
   private handleMessage(socket: WebSocket, event: MessageEvent): void {
-    if (this.socket !== socket) return;
+    if (this.socket !== socket) {
+      return;
+    }
     const message = this.options.parseMessage(event.data);
-    if (message) this.dispatch(message.type, message.payload);
+    if (message) {
+      this.dispatch(message.type, message.payload);
+    }
   }
 
   private handleError(socket: WebSocket): void {
@@ -142,13 +169,17 @@ export class EventSocket {
   }
 
   private handleClose(socket: WebSocket): void {
-    if (this.socket !== socket) return;
+    if (this.socket !== socket) {
+      return;
+    }
     this.socket = null;
     if (this.isConnected) {
       this.isConnected = false;
       this.dispatch("disconnect");
     }
-    if (!this.manuallyDisconnected) this.scheduleReconnect();
+    if (!this.manuallyDisconnected) {
+      this.scheduleReconnect();
+    }
   }
 
   private scheduleReconnect(): void {
@@ -172,10 +203,15 @@ export class EventSocket {
     payload?: SocketEventMap[Event],
   ): void {
     const handlers = this.listeners.get(event);
-    if (!handlers) return;
+    if (!handlers) {
+      return;
+    }
     for (const handler of handlers) {
-      if (payload === undefined) handler();
-      else handler(payload);
+      if (payload === undefined) {
+        handler();
+      } else {
+        handler(payload);
+      }
     }
   }
 }

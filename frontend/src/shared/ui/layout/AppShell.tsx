@@ -7,19 +7,35 @@ import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
 import { LanguageSwitch } from "./LanguageSwitch";
 
-export function AppShell({ children, headerActions, showNavigation = true }: { children: ReactNode; headerActions?: ReactNode; showNavigation?: boolean }) {
+export function AppShell({ children, headerActions, showNavigation = true }: {
+  children: ReactNode;
+  headerActions?: ReactNode;
+  showNavigation?: boolean
+}) {
   const { t } = useTranslation("shell");
   const location = useLocation();
   const mainRef = usePageEntrance(location.pathname, location.key);
 
   const round = useScoreboardStore(
-    (state) => state.runtimeRound ?? state.round,
+    (state) => {
+      return state.runtimeRound ?? state.round
+    },
   );
-  const teams = useScoreboardStore((state) => state.teams);
-  const error = useScoreboardStore((state) => state.error);
-  const connected = useScoreboardStore((state) => state.connected);
-  const phase = useScoreboardStore((state) => state.phase);
-  const resultsPending = useScoreboardStore((state) => state.resultsPending);
+  const teams = useScoreboardStore((state) => {
+    return state.teams
+  });
+  const error = useScoreboardStore((state) => {
+    return state.error
+  });
+  const connected = useScoreboardStore((state) => {
+    return state.connected
+  });
+  const phase = useScoreboardStore((state) => {
+    return state.phase
+  });
+  const resultsPending = useScoreboardStore((state) => {
+    return state.resultsPending
+  });
 
   return (
     <div className="brand-app">
@@ -32,7 +48,9 @@ export function AppShell({ children, headerActions, showNavigation = true }: { c
           <Link
             to="/"
             className="brand-lockup"
-            aria-label={t("home", { brand: brand.name })}
+            aria-label={t("home", {
+              brand: brand.name
+            })}
           >
             <BrandLogo />
             <span>{brand.name}</span>
@@ -49,7 +67,9 @@ export function AppShell({ children, headerActions, showNavigation = true }: { c
           <div className={`header-tools${showNavigation ? "" : " header-tools--admin"}`}>
             <div className="header-status">
               {teams && !error && round > 0 && (
-                <span className="header-round">{t("round", { round })}</span>
+                <span className="header-round">{t("round", {
+                  round
+                })}</span>
               )}
               <span
                 className={`connection-dot ${error || (!connected && teams) ? "connection-dot--error" : teams ? "connection-dot--ready" : ""}`}
@@ -130,5 +150,7 @@ function BrandLogo() {
     );
   }
 
-  return <img src={brand.logo} alt="" onError={() => setImageFailed(true)} />;
+  return <img src={brand.logo} alt="" onError={() => {
+    return setImageFailed(true)
+  }} />;
 }

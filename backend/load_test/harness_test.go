@@ -118,7 +118,13 @@ func TestSaturatedGeneratorCannotPassSLO(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	report := attack(t.Context(), attackOptions{rps: 1000, duration: 200 * time.Millisecond, workers: 1, target: readTarget(server.URL, "/"), validate: validateRead(false)})
+	report := attack(t.Context(), attackOptions{
+		rps:      1000,
+		duration: 200 * time.Millisecond,
+		workers:  1,
+		target:   readTarget(server.URL, "/"),
+		validate: validateRead(false),
+	})
 	if report.GeneratorValid || report.SLOPassed {
 		t.Fatalf("under-delivery reported as success: %+v", report)
 	}
@@ -155,20 +161,33 @@ func TestFarmValidatesResponseOrderAndLength(t *testing.T) {
 		}
 		rows := make([]map[string]string, size)
 		for i := range rows {
-			rows[i] = map[string]string{"flag": "wrong", "msg": "Flag is invalid"}
+			rows[i] = map[string]string{
+				"flag": "wrong",
+				"msg":  "Flag is invalid",
+			}
 		}
 		body, err := json.Marshal(rows)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := f.validate(&vegeta.Result{URL: target.URL, Code: 200, Body: body}); err == nil {
+		if err := f.validate(&vegeta.Result{
+			URL:  target.URL,
+			Code: 200,
+			Body: body,
+		}); err == nil {
 			t.Fatal("incomplete or reordered response accepted")
 		}
 	}
 }
 
 func TestOwnOnlyCatalogDoesNotPanic(t *testing.T) {
-	f := newFarm("http://127.0.0.1", &catalog{flags: []storedFlag{{ID: "own", Value: "own-flag", Owner: 1}}})
+	f := newFarm("http://127.0.0.1", &catalog{
+		flags: []storedFlag{{
+			ID:    "own",
+			Value: "own-flag",
+			Owner: 1,
+		}},
+	})
 	request := f.batch(1, 0)
 	if request.flags[0].ID != "" || request.flags[70].ID != "own" {
 		t.Fatal("own flag used in foreign slots")

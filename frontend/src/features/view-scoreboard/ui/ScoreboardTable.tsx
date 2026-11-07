@@ -61,24 +61,30 @@ export function ScoreboardTable({
     ["127.0.0.1", "localhost"].includes(window.location.hostname) &&
     new URLSearchParams(search).get("preview") === "large";
 
-  const ranks = new Map(teams.map((team, index) => [team.id, index + 1]));
+  const ranks = new Map(teams.map((team, index) => {
+    return [team.id, index + 1]
+  }));
   useViewportAnimations(frameRef, teams.length > 0);
 
   const cells = useMemo(
-    () =>
-      new Map(
-        teamTasks.map((value) => [`${value.teamId}:${value.taskId}`, value]),
-      ),
+    () => {
+      return new Map(
+        teamTasks.map((value) => {
+          return [`${value.teamId}:${value.taskId}`, value]
+        }),
+      )
+    },
     [teamTasks],
   );
 
-  if (!teams.length)
+  if (!teams.length) {
     return (
       <div className="empty-state">
         <h2>{t("scoreboard.table.noTeamsTitle")}</h2>
         <p>{t("scoreboard.table.noTeamsDescription")}</p>
       </div>
     );
+  }
 
   return (
     <div
@@ -97,19 +103,27 @@ export function ScoreboardTable({
             {t("scoreboard.table.caption")}
           </caption>
           <colgroup>
-            <col style={{ width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)" }} />
-            <col style={{ width: onCellClick ? "18rem" : "15%" }} />
-            <col style={{ width: onCellClick ? "9rem" : "6%" }} />
-            {tasks.map((task) => (
-              <col
-                key={task.id}
-                style={{
-                  width: onCellClick
-                    ? `calc((100% - 506px) / ${tasks.length})`
-                    : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
-                }}
-              />
-            ))}
+            <col style={{
+              width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)"
+            }} />
+            <col style={{
+              width: onCellClick ? "18rem" : "15%"
+            }} />
+            <col style={{
+              width: onCellClick ? "9rem" : "6%"
+            }} />
+            {tasks.map((task) => {
+              return (
+                <col
+                  key={task.id}
+                  style={{
+                    width: onCellClick
+                      ? `calc((100% - 506px) / ${tasks.length})`
+                      : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
+                  }}
+                />
+              )
+            })}
           </colgroup>
 
           <thead>
@@ -124,17 +138,21 @@ export function ScoreboardTable({
                 {t("scoreboard.table.score")}
               </th>
 
-              {tasks.map((task) => (
-                <th scope="col" key={task.id}>
-                  {onTaskClick ? (
-                    <button type="button" onClick={() => onTaskClick(task.id)}>
-                      {task.name}
-                    </button>
-                  ) : (
-                    task.name
-                  )}
-                </th>
-              ))}
+              {tasks.map((task) => {
+                return (
+                  <th scope="col" key={task.id}>
+                    {onTaskClick ? (
+                      <button type="button" onClick={() => {
+                        return onTaskClick(task.id)
+                      }}>
+                        {task.name}
+                      </button>
+                    ) : (
+                      task.name
+                    )}
+                  </th>
+                )
+              })}
             </tr>
           </thead>
 
@@ -155,10 +173,11 @@ export function ScoreboardTable({
                     <button
                       type="button"
                       className="team-identity"
-                      onClick={() =>
-                        onTeamClick
+                      onClick={() => {
+                        return onTeamClick
                           ? onTeamClick(team.id)
                           : navigate(`/team/${team.id}`)
+                      }
                       }
                     >
                       <TeamAvatar name={team.name} src={team.logo_path} />
@@ -181,13 +200,20 @@ export function ScoreboardTable({
                         <ServiceCell
                           value={
                             previewLarge && rank === 1 && taskIndex === 0 && value
-                              ? { ...value, score: 12345.67, stolen: 1234, lost: 1234 }
+                              ? {
+                                ...value,
+                                score: 12345.67,
+                                stolen: 1234,
+                                lost: 1234
+                              }
                               : value
                           }
                           name={`${team.name} · ${task.name}`}
                           onClick={
                             onCellClick
-                              ? () => onCellClick(team.id, task.id)
+                              ? () => {
+                                return onCellClick(team.id, task.id)
+                              }
                               : undefined
                           }
                         />

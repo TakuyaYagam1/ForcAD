@@ -1,0 +1,1337 @@
+CHRP worker sizing, 2026-11-05
+
+Current status, 2026-11-06: NAT controls sustain more than10000 successful
+REST RPS on the published port, with API4/RX4 and synthetic checker traffic.
+Matched NAT2x8 /15m, mirrored2x8 /15m, NAT2x8 /15m delivered conservative
+QPC successful rates10553.655,9650.897,10553.019/s respectively. All three
+had onlyHTTP200 in steady traffic; mirrored failed actual delivery. This is
+evidence for a host networking effect, not a proven NATS broker speedup.
+
+Matched5m worker matrix, offered10600 REST/s; all strictPASS:
+Workers x slots | Successful QPC lower/s | REST p99ms | Worst full round seconds
+2x8             |10522.525               |91.425      |18.568
+1x16            |10551.717               |77.454      |19.250
+2x6             |10551.846               |81.299      |21.869
+2x4             |10569.493               |70.714      |28.337
+Each verified6 correct full rounds,5 starting within steady; zero503,
+transport errors,expired/overdue jobs,action timeouts,OOM,restarts orswap.
+Sub0.5%RPS differences from single short runs are not proven improvements.
+
+Selected candidate:2workers x6slots, preserving2processes,28.131s nominal
+margin to the initial50s job deadline and a lower sampled worker CPU peak
+than2x8. This is not a universal optimum. Its own two15m repeats and one
+continuous5h run are still required; earlier2x8 controls do not qualify2x6.
+First selected2x6 /15m: strictPASS, QPC10550.313/s, worst round21.764s.
+Second identical2x6 /15m: strictPASS, QPC10563.521/s, worst round22.010s.
+Both repeats qualify the selected2x6 candidate for its continuous5h test.
+Own2x6 soak started2026-11-06 08:55MSK; continuous5h traffic confirmed.
+IN PROGRESS, not yet qualified; expected finish around14:00MSK.
+As of09:56MSK,60 consecutive rounds verified by bounded progress journal;
+worst22.174s, no expired/overdue or bad closed rounds. Final audit pending.
+All these tests use synthetic fixtures, not final championship checkers.
+Details, exact artifacts, host envelopes and comparison limitations follow.
+
+Historical results before the matched NAT controls:
+
+Latest diagnostic: 2x8, direct REST/flag connection to Nginx and least_conn,
+9,478.50 REST/s; all 2,843,647 REST requests and 11,999 flag batches HTTP200.
+Six correct rounds, worst40.633s. Still FAIL: generator delivered94.785% of10k.
+This direct-bridge result does not qualify the published loopback port.
+
+Latest image fix9bfb7c7,4x8 /5m: actual9002.58 REST/s,one REST503,
+zero expired jobs, worst round42.994s. Strict10k qualification still FAIL.
+The matched pre-fixf71bcee control delivered7407.51/s with95276 REST503s,
+five expired jobs and worst round60.530s. Details and limitations follow below.
+
+Combined10000 REST RPS /5m, fixed source13c3ed3 (pooled JX), API4/RX4:
+Workers x slots | Delivered REST/s | REST503 | REST timeouts | Expired jobs | Worst round
+2x12            |8010              |24051    |0              |56            |61.443s
+2x16            |7294              |89304    |0              |5             |63.083s
+4x8             |7082              |76583    |0              |0             |64.039s
+8x4             |6900              |80550    |8              |1             |64.743s
+4x4             |8618              |1193     |0              |104           |64.249s
+No combined configuration is qualified yet. Counts below include lower-REST
+checker-only runs and earlier source revisions; their PASS is not a10k PASS.
+
+Scope: synthetic fixtures and combined HTTP probes; no final-service or10k qualification.
+28 teams, 3 services, 40 PUT/team (14/13/13), 60-second rounds, checker timeout20s.
+API4/RX4, 224 WebSocket observers, checker profile: REST100/s and2 flag batches/s
+of100 values. Each complete round requires84 UP results and1120 stored PUT flags.
+Worker CPU quotas disabled; per-worker database maximum4 and CPU shares256
+(actual cgroup weight35). Replica changes therefore also change aggregate worker
+connection/CPU-weight budgets; these are whole-configuration comparisons.
+
+1 worker x16 slots: PASS, native exit0 and all strict artifact-audit guards PASS.
+Source7f0c3fa. Steady duration5m; six complete rounds took44.171-46.404s.
+Each had84 finished UP jobs and1120 PUT/stored flags, with no mismatched cells.
+Maximum publish-to-action wait43.367s; no overdue/expired jobs or action timeouts.
+Round7 was partial at normal shutdown and is excluded from complete-round claims.
+Steady REST29998 HTTP200,p9920.46ms; flags600 batches HTTP200,p9929.08ms.
+Sampled worker peak12.74 logical CPU equivalents and0.225GiB RAM; host CPU peak45.32%.
+No sampled container restarts/OOM, swap use or PgBouncer client waits.
+Independent Windows QPC clock calibration and internal clock checks passed.
+This demonstrates one worker can meet this synthetic minute-round workload;
+it does not certify the same configuration at5000/10000 REST RPS or final checkers.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_checker_workers1_slots16-20261105-210003/
+Report: combined/20261105-180054-checker-2324967272/report.json
+Resources: combined/20261105-180054-checker-2324967272/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+
+
+
+2 workers x8 slots: PASS, native exit0 and all strict artifact-audit guards PASS.
+Same source/profile/API4/RX4 and16 total checker slots as1x16.
+Six complete rounds took43.132-45.469s; each84 UP and1120 PUT/stored flags.
+No overdue/expired jobs, action timeouts, mismatched cells or sampled restarts/OOM.
+Steady REST29998 HTTP200,p9920.06ms; flags600 HTTP200,p9929.36ms.
+Sampled fleet worker peak13.67 CPU equivalents and0.219GiB RAM; host peak45.50%.
+No sampled PgBouncer waits or swap use; independent clock calibration passed.
+The worst-round difference versus1x16 is under1s in these short runs; it does
+not demonstrate a material throughput advantage from the extra worker process.
+Per-worker pool4/shares256 remain unchanged: aggregate worker pools8 versus4,
+and total cgroup CPU weight70 versus35. This is not a resource-identical causal test.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_checker_workers2_slots8-20261105-210926/
+Report: combined/20261105-181014-checker-487808560/report.json
+Resources: combined/20261105-181014-checker-487808560/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+
+2 workers x16 slots: PASS, native exit0 and all strict artifact-audit guards PASS.
+Same synthetic checker profile/API4/RX4;32 total slots, versus16 in the first runs.
+Six complete rounds took39.755-40.710s, each84 UP and1120 PUT/stored flags.
+Maximum publish-to-action wait34.214s. No bad/overdue/expired jobs, action timeouts,
+sampled restarts/OOM, swap use or PgBouncer client waits. Clock calibration passed.
+Steady REST29996 HTTP200,p9921.99ms; flags600 HTTP200,p9934.66ms.
+Sampled fleet worker peak24.13 CPU equivalents and0.420GiB RAM; host peak61.39%.
+The worst round leaves19.29s before the60s limit for these fixtures at REST100/s.
+This is a candidate, not a final configuration: combined high REST/flag traffic,
+the single-worker32-slot comparison and the long run remain to be qualified.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_checker_workers2_slots16-20261105-211815/
+Report: combined/20261105-181906-checker-2489788891/report.json
+Resources: combined/20261105-181906-checker-2489788891/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+
+1 worker x32 slots: PASS, native exit0 and all strict artifact-audit guards PASS.
+Same source and synthetic checker profile/API4/RX4; six complete rounds,
+worst40.668s versus40.710s for2x16. This short comparison shows no material
+round-time advantage for either32-slot layout. Maximum publish-to-action wait32.332s.
+No correctness failures, sampled restarts/OOM, swap use or PgBouncer client waits.
+Steady REST30000 requests,p9921.74ms; flags600 batches,p9933.28ms; all HTTP200.
+Sampled worker peak20.08 CPU equivalents and0.403GiB RAM; host peak56.76%.
+Independent clock calibration passed. Combined high-load capacity is unqualified.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_checker_workers1_slots32-20261105-212843/
+Report: combined/20261105-182933-checker-462212485/report.json
+Resources: combined/20261105-182933-checker-462212485/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+
+4 workers x16 slots: PASS, native exit0 and all strict artifact-audit guards PASS.
+Same source and synthetic checker profile/API4/RX4;64 total checker slots.
+Seven complete rounds took39.247-40.766s, each84 UP and1120 PUT/stored flags.
+Steady REST30000 HTTP200,p9922.28ms; flags600 HTTP200,p9941.18ms.
+Accepted36123 equals committed36123 in steady traffic; no transport errors.
+Sampled worker fleet peak29.26 CPU equivalents and0.823GiB RAM.
+No sampled restarts/OOM, swap use or PgBouncer waits. Clock calibration passed.
+The worst round is within0.1s of2x16 and1x32, while worker resource peaks
+are higher. This short synthetic test does not justify preferring64 over32 slots;
+combined high HTTP/flag traffic and final checker workloads remain unqualified.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_checker_workers4_slots16-20261105-213701/
+Report: combined/20261105-183751-checker-2410713783/report.json
+Resources: combined/20261105-183751-checker-2410713783/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+
+2 workers x16 slots, combined 10000 REST RPS /15m: FAIL, native exit2.
+Source7f0c3fa; API4/RX4,224 WebSockets, same teams/services/PUT geometry.
+Steady flag offer40 batches/s x100 values; native HTTP transport, no phase observer.
+REST delivered6633.30 requests/s (66.33% of offer):5767549 HTTP200 and202421 HTTP503,
+zero transport errors; p95388.43ms,p99603.55ms. Successful HTTP200 throughput was
+about6408/s. Generator delivery and REST SLO gates failed; this does not qualify10k.
+Flags35768 batches, all HTTP200, zero transport errors,p95313.39ms,p99522.74ms;
+accepted427469 equals committed427469. The flag stage passed its own gates.
+Sixteen rounds reached terminal results; eleven exceeded60s (worst65.542s).
+Rounds5/6 had83/82 UP results and1107/1093 stored PUT flags:40 PUTs missing in total.
+Three checker jobs expired with status110; action timeout count0.
+No sampled container OOM/restarts or swap use. Host CPU peaked95.06% in WSL and
+99.07% in Windows; minimum available RAM22.65GiB WSL /10.36GiB Windows.
+PgBouncer API client waits peaked19 (sampled maxwait0.007s), with all32 API
+server connections active in some samples; receiver/worker client waits remained0.
+Worker fleet sampled peak19.81 CPU equivalents and0.411GiB RAM.
+Independent clock calibration passed. CPU contention between host, generator,
+HTTP handling and checker processes is a demonstrated constraint; its individual
+costs and the exact REST503 cause require further isolation. No five-hour run started.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers2_slots16_coalesced_rest10k-20261105-214802/
+Report: combined/20261105-184852-load-3389227368/report.json
+Resources: combined/20261105-184852-load-3389227368/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+
+Worker sizing campaign:28 teams /10000 REST RPS, source7f0c3fa held fixed.
+Short comparisons use5-minute steady stages, API4/RX4,224 WebSockets,40 flag
+batches/s x100 values, per-worker pool4 and CPU shares256, no CPU quota.
+Changing slots at fixed replica count preserves aggregate worker pool/CPU weights.
+Changing replica count is a whole-configuration comparison. No passing worker
+configuration is established until both HTTP delivery/SLO and all checker rounds pass.
+
+2 workers x8 slots, combined10000 REST RPS /5m: FAIL, native exit2.
+REST2636117 requests, actual8787.01/s:2634516 HTTP200 and1601 HTTP503;
+zero transport errors,p99295.97ms. Delivery87.87% fails the95% generator gate.
+Flags11984 batches, all HTTP200,p99315.59ms; accepted=committed118813.
+At the steady checkpoint122 checker jobs had expired, with missing PUTs in
+rounds2-6. Faster REST therefore does not qualify this16-slot configuration.
+Final diagnostics and all failed round checks are retained in the strict audit.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k-20261105-222133/
+Report: combined/20261105-192224-load-694572169/report.json
+Resources: combined/20261105-192224-load-694572169/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+
+2 workers x12 slots, combined10000 REST RPS /5m: FAIL, native exit2.
+Same source and all budgets as2x8; only worker concurrency8 ->12.
+REST2352029 requests, actual7840.09/s:2309798 HTTP200 and42231 HTTP503;
+zero transport errors,p99485.62ms. Delivery78.40% fails the generator gate.
+Flags11935 batches, all HTTP200,p99900.21ms; accepted=committed132166.
+61 checker jobs expired. Six terminal rounds, with missing UP/PUT results in
+rounds2-6; worst62.264s.24 slots still do not satisfy the combined workload.
+History audit candidates and preserved optimizations: HISTORY-CHRP-20261105.txt.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots12_rest10k-20261105-222949/
+Report: combined/20261105-193038-load-2785623114/report.json
+Resources: combined/20261105-193038-load-2785623114/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+
+2 workers x12 slots with pooled JX,10000 REST RPS /5m: FAIL, native exit2.
+Source13c3ed3. Launch settings match the preceding7f0c3fa2x12 run except output
+directory; only production change is public attack-data encoding/buffer reuse.
+REST2403134 requests, actual8010.44/s:2379083 HTTP200 and24051 HTTP503;
+zero transport errors,p99438.82ms. Generator delivery80.10% remains insufficient.
+Flags11952 batches, all HTTP200,p99448.71ms; accepted=committed133516.
+56 checker jobs expired; worst terminal round61.443s. Strict correctness failed.
+No sampled OOM/restarts/swap; independent clock calibration qualified.
+Observed versus the prior single5m run: REST7840 ->8010/s,503 count42231 ->24051,
+flagp99900 ->449ms. This pair shows a smaller failure, not a qualified configuration
+or proof that all differences are caused by JX; host variability is not isolated.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots12_rest10k-20261105-224721/
+Report: combined/20261105-194813-load-4258709579/report.json
+Resources: combined/20261105-194813-load-4258709579/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+
+2 workers x16 slots with pooled JX,10000 REST RPS /5m: FAIL, native exit2.
+Source13c3ed3; identical profile/budgets to2x12 JX except concurrency12 ->16.
+REST2188267 requests, actual7294.21/s:2098963 HTTP200 and89304 HTTP503;
+zero transport errors,p99537.04ms. Generator delivery72.94% fails its gate.
+Flags11925 batches, all HTTP200,p99566.61ms; accepted=committed145128.
+Five checker jobs expired in round5 (79 UP,1053 stored flags). Six terminal
+rounds; round4 took60.288s and round5 took63.083s. No action timeouts.
+No sampled OOM/restarts/swap; independent clock calibration qualified.
+More slots reduced expired jobs versus2x12 but worsened HTTP delivery/errors.
+This32-slot layout does not qualify the full workload or the five-hour test.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots16_rest10k-20261105-225551/
+Report: combined/20261105-195637-load-3690309908/report.json
+Resources: combined/20261105-195637-load-3690309908/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+
+4 workers x8 slots with pooled JX,10000 REST RPS /5m: FAIL, native exit2.
+Source13c3ed3;32 total slots, versus2x16. Per-worker pool4/shares256 unchanged,
+so aggregate worker pools16 vs8 and cgroup weights140 vs70 are different.
+REST2124553 requests, actual7081.81/s:2047970 HTTP200 and76583 HTTP503;
+zero transport errors,p99610.28ms. Generator delivery70.82% fails its gate.
+Flags11921 batches, all HTTP200,p99837.13ms; accepted=committed154391.
+All six terminal rounds had84 UP and1120 PUT/stored flags, no expired jobs or
+action timeouts. Round5 took64.039s; correct output still misses the minute SLA.
+Strict audit failed; clock calibration qualified. This is not a10k PASS.
+JetStream:30 steady samples (first2.656s missed), max ack_pending84 of1024,
+never-delivered pending0, queue drained between observed rounds. Redelivery is
+not a cumulative counter. Final logs confirm early deliveries before SQLSentAt
+is marked, causing1s delayed NAKs; their effect on round timing is unisolated.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k-20261105-230407/
+Report: combined/20261105-200457-load-1444834920/report.json
+Resources: combined/20261105-200457-load-1444834920/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+Broker: nats-queue.jsonl, nats-queue-summary.json
+
+8 workers x4 slots with pooled JX,10000 REST RPS /5m: FAIL, native exit2.
+Source13c3ed3;32 total slots. Per-worker pool4/shares256 unchanged; aggregate
+worker pools32 and cgroup weight280, versus16/140 in4x8.
+REST2069955 requests, actual6899.65/s:1989397 HTTP200,80550 HTTP503 and
+8 deadline failures at approximately3s; p99642.78ms. Delivery69.00% is invalid.
+Flags11872 batches, all HTTP200,p99907.82ms; accepted=committed153928.
+One checker job expired in round5 (83 UP,1106 stored flags); worst64.743s.
+No action timeouts, sampled OOM/restarts or swap use; clocks qualified.
+CPU peaks95.99% WSL /99.61% Windows. More worker processes at32 total slots
+did not improve this run's combined capacity. Native and strict audits failed.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers8_slots4_rest10k-20261105-231339/
+Report: combined/20261105-201428-load-1056479043/report.json
+Resources: combined/20261105-201428-load-1056479043/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+Broker: nats-queue.jsonl
+
+4 workers x4 slots with pooled JX,10000 REST RPS /5m: FAIL, native exit2.
+Source13c3ed3;16 slots, per-worker pool4/shares256 unchanged from4x8.
+REST2585490 requests, actual8618.30/s:2584297 HTTP200 and1193 HTTP503;
+zero transport errors,p99311.01ms. Delivery86.18% remains invalid.
+Flags11971 batches, all HTTP200,p99294.71ms; accepted=committed120279.
+104 checker jobs expired, with missing PUTs; worst terminal round64.249s.
+Strict audit failed; clock calibration qualified. Reduced concurrency improves
+HTTP behavior but cannot qualify the fixture checks in this run.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots4_rest10k-20261105-232223/
+Report: combined/20261105-202313-load-3135989723/report.json
+Resources: combined/20261105-202313-load-3135989723/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+Broker: nats-queue.jsonl
+
+Generator CPU diagnostic,4x4 /10000 REST RPS /3m: not a qualification run.
+Source13c3ed3 plus a frozen test-driver overlay adding go test -cpuprofile.
+REST9107.48/s,84 HTTP503, generator invalid;60 expired checker jobs.
+The shorter early-round test has less accumulated PFR data than the5m probes;
+its higher RPS must not be attributed to profiling or a capacity improvement.
+CPU profile:566.78 CPU-seconds over280.95s for the whole test, including setup
+and recovery. Cumulative samples include io.ReadAll19.58%, WebSocket observer
+15.52%, json.Valid10.97%, background GC11.57%; these stacks overlap and must
+not be added as independent costs. This profile does not isolate API CPU costs.
+The next diagnostic captures CPU/allocation profiles from all four API replicas.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots4_rest10k_gen_profile-20261105-233044/
+Report: combined/20261105-203133-load-3195455333/report.json
+CPU profile: combined/generator.pprof
+Analysis: combined/generator-cpu-top.txt, combined/generator-cpu-cumulative.txt
+Full log: console.log
+Audit: audit-strict.json
+
+4 workers x8 slots with grouped attack data,10000 REST RPS /5m: FAIL.
+Source07a68b0, ordinary build without profiler overlays. Native exit2.
+REST2181124 requests, actual7270.41/s:2103418 HTTP200,77695 HTTP503 and
+11 deadline failures; p95347.97ms,p99560.33ms. Delivery72.70% is invalid.
+Flags11908 batches, all HTTP200,p95439.71ms,p99704.50ms;
+accepted=committed154838. All six terminal rounds returned84 UP and1120 PUT,
+no expired jobs or action timeouts; worst round61.903s misses the minute SLA.
+No sampled OOM/restarts or swap; independent clock calibration qualified.
+This repeat does not demonstrate a material capacity improvement over13c3ed3.
+Captured REST response bodies total61,115,673,801 bytes, mean28,020 bytes per
+request across all routes/statuses; this excludes headers and wire framing.
+
+CPU attribution during a100.04s steady interval: generator2.93 logical CPUs,
+remaining controller cgroup0.46, Docker daemon1.72,containerd0.67. Host busy
+28.01 logical CPUs, including4.40 softirq. Container CPU counters are separate
+from daemon cgroups. Repeated pool-metric docker exec calls are a measurable
+candidate for observer overhead; their contribution is not yet isolated.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k-20261106-000901/
+Report: combined/20261105-210955-load-186357592/report.json
+Resources: combined/20261105-210955-load-186357592/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+CPU attribution: cpu-attribution.jsonl
+
+4x8 with direct pool metrics,10000 REST RPS /5m: FAIL, native exit2.
+Sourcef71bcee changes only the test collector versus07a68b0; application code,
+workload and configured pools/limits are unchanged. All eight API/receiver
+pool logs retain the same whitelist and diagnostic gates.
+REST2222254 requests, actual7407.51/s:2126978 HTTP200 and95276 HTTP503;
+no transport errors,p95347.07ms,p99550.39ms. Delivery74.08% remains invalid.
+Flags11944 batches, all HTTP200,p95535.62ms,p99949.61ms;
+accepted=committed155499. Five jobs expired in round5; worst round60.530s.
+No sampled OOM/restarts; clock calibration qualified. Direct collection does
+not resolve capacity503s or demonstrate a material throughput gain.
+
+Measured steady120.080s window21:31:04.020..21:33:04.100Z:
+worker cgroups1463.294 CPU-seconds=12.186 logical CPUs (user8.920/system3.266).
+Persistent Go worker processes used15.06 CPU-seconds=0.1254 CPU;98.97% of
+worker CPU was outside those processes. Only Python child processes and
+occasional runtime/health processes were observed besides the persistent Go
+worker. Python import/startup versus checker HTTP logic remains unseparated.
+Docker/containerd CPU did not materially drop after removing pool docker exec.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k_direct_metrics-20261106-002842/
+Report: combined/20261105-212932-load-1714665409/report.json
+Resources: combined/20261105-212932-load-1714665409/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+CPU attribution: cpu-attribution.jsonl
+
+4x8 with precompiled Python stdlib,10000 REST RPS /5m: FAIL, native exit2.
+Source9bfb7c7 versusf71bcee changes only checker-base image preparation; the
+matched direct collector, application code, pools/limits and traffic are intact.
+REST2700920 requests, actual9002.58/s:2700919 HTTP200 andone HTTP503;
+no transport failures,p95132.62ms,p99288.38ms. Delivery90.03% is invalid.
+Flags11984 batches, all HTTP200,p95172.08ms,p99318.94ms;
+accepted=committed160215. All six complete rounds had84 UP and1120 PUT/stored
+flags, no expired/bad jobs or action timeouts; worst round42.994s.
+No sampled OOM/restarts; clock calibration qualified. Host CPU peak84.30%
+WSL/96.25% Windows. A60.03s steady counter interval measured worker CPU2.463
+cores versus about12 in the pre-fix control; this window is not a run-wide mean.
+REST captured bodies total84,893,004,497 bytes, mean31,431/request. Correct
+and faster worker rounds expose more PFR data; this is not a lighter fixture.
+This proves a substantial combined-run improvement but not a10k PASS. The
+generator still skipped299080 offered slots; no latency/delivery gate changed.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k_direct_metrics-20261106-004124/
+Report: combined/20261105-214213-load-3531680012/report.json
+Resources: combined/20261105-214213-load-3531680012/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+CPU attribution: cpu-attribution.jsonl
+
+1x32 with precompiled stdlib,10000 REST RPS /5m: FAIL, native exit2.
+Source9bfb7c7, same32 slots and direct collector as the preceding4x8 run.
+Per-worker pool4/shares256 retained; aggregate pool4/weight35 versus16/140.
+REST2705016 requests, actual9016.22/s:2705003 HTTP200 and13 HTTP503;
+no transport failures,p95128.71ms,p99271.61ms. Generator delivery90.16% fails.
+Flags11983 batches, all HTTP200,p95150.13ms,p99252.65ms;
+accepted=committed157636. All six full rounds had84 UP and1120 PUT/stored flags,
+worst42.826s, with no expired/bad jobs or action timeouts. Clock qualified;
+no sampled OOM/restarts. WSL CPU peak83.63%, Windows96.45%.
+Combining32 slots in one worker does not materially change combined throughput.
+
+Runtime attribution started too late for the requested60s steady measurement:
+only2.007s before steady ended. Its deltas cannot represent steady CPU costs.
+Persistent proxy lifetime counters and earlier group snapshots prove one
+docker-proxy consumed419.22 CPU-seconds during the startup-plus-steady interval,
+at least62.18% of docker.service CPU in that interval. It is not yet mapped to
+the ingress port here; the next run collects a proper steady attribution window.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers1_slots32_rest10k_direct_metrics-20261106-005018/
+Report: combined/20261105-215102-load-3391813668/report.json
+Resources: combined/20261105-215102-load-3391813668/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+CPU attribution: cpu-attribution.jsonl,runtime-process-cpu.json
+
+2x8 with precompiled stdlib,10000 REST RPS /5m: FAIL, native exit2.
+Application image9bfb7c7 (HEADdebb6f2 adds documentation only), direct metrics.
+16 total slots; per-worker pool4/shares256, aggregate pool8/weight70.
+REST2692621 requests, actual8975.20/s:2692531 HTTP200 and90 HTTP503;
+no transport failures,p95135.26ms,p99289.21ms. Delivery89.75% is invalid.
+Flags11976 batches, all HTTP200,p95170.05ms,p99296.96ms;
+accepted=committed161014. All six complete rounds had84 UP and1120 PUT/stored
+flags,worst43.927s, no expired/bad jobs or action timeouts. Clocks qualified;
+no sampled OOM/restarts. Reducing to16 slots did not improve combined throughput.
+
+Qualified steady window22:02:02.372..22:03:02.410Z,60.038s:
+docker.service2.3418CPU=dockerd0.9524+docker-proxy1.3891 (99.988% attributed).
+Busy proxyPID2985465 was mapped by owned Nginx projected port inspection and
+filtered ss LISTEN to8080/tcp ->127.0.0.1:44758. Other two proxies used0CPU.
+containerd.service0.7804CPU=containerd0.07845+21shims0.59879+residual0.1032.
+Fixture namespace deltas forListenOverflows,ListenDrops,TCPSynRetrans and
+Tcp.RetransSegs were all0. Their PythonTCPServer backlog is5, but this window
+does not show it overflowing. Proxy cost is proven, its throughput effect is not.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics-20261106-005937/
+Report: combined/20261105-220026-load-2243864462/report.json
+Resources: combined/20261105-220026-load-2243864462/resources.jsonl
+Full log: console.log
+Audit: audit-strict.json
+Summary: result-summary.json
+CPU attribution: cpu-attribution.jsonl,runtime-process-cpu.json
+
+Isolated host userland-proxy=false experiment: bootstrap FAIL, no load result.
+Only /etc/docker/daemon.json changed; original configuration backed up root-only.
+Engine identity verified, no running containers,43 stopped containers belonging
+to the archived20261103 load project preserved exactly across restart. No demo
+or production stack was started, stopped or removed.
+NATS preflight passed, then TestLoad failed in0.30s: published loopback POST
+/api/admin/login/ received TCP reset. No measured stages ran. Native exit2;
+owned run containers were removed. Auditor initially encountered a stages:null
+TypeError. Fixe2577ea now records an explicit failed audit with the bootstrap
+error/no stages/zero rounds;27 regression checks passed and this report was re-audited.
+At22:14:05Z the original daemon configuration was restored byte-for-byte and
+engine/container-state checks passed. This experiment is not a throughput A/B.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics-20261106-010940/
+Bootstrap report: combined/20261105-221025-load-4251201234/report.json
+Full log: console.log
+Native completion/exit: completion.json,exit-code.txt
+Failed audit/summary after auditor fix: audit-strict.json,result-summary.json
+
+2x8 direct-ingress control, round-robin API,10000 REST RPS /5m: FAIL.
+Source1ad6920 adds only an opt-in generator DialContext to owned Nginx:8080.
+Logical URLs/Host/headers/bodies/limits/pacing/gates remain unchanged. Bootstrap
+and224 WebSocket connections retain the published route. Docker proxy enabled.
+REST2841937 requests, actual9473.11/s:2841656 HTTP200 and281 HTTP503;
+no transport errors,p9591.67ms,p99207.06ms. Delivery94.731% is invalid.
+Flags11998 batches, all HTTP200,p95104.63ms,p99178.03ms;
+accepted=committed161109. Six correct rounds,worst40.987s,0expired/bad/timeouts.
+Clocks qualified; no OOM/restarts. WSL/Windows CPU peaks84.42%/86.85%.
+Qualified60.017s window: proxy CPU0.3429 versus1.3891 in the published control;
+dockerd1.0119CPU,containerd group0.7813CPU. Bypassing the REST/flag proxy path
+improves delivered RPS by5.55%, but does not alone remove503s or qualify10k.
+API counters show attack-data shares about19.3%,30.7%,30.6%,19.4% across nodes;
+total request counts were close to equal. The cyclic route mix and round-robin
+selection concentrated expensive routes. This is measured distribution, not
+proof that every failure was caused by that distribution.
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics_direct_ingress-20261106-012334/
+Report/resources: combined/20261105-222426-load-1720365099/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Routing: combined/20261105-222426-load-1720365099/http-ingress.json
+Distribution: api-request-distribution.json
+CPU: cpu-attribution.jsonl,runtime-process-cpu.json
+
+2x8 direct ingress with API least_conn,10000 REST RPS /5m: FAIL on generator.
+Source4d8396f changes one Nginx API-upstream directive versus1ad6920; receiver,
+worker,SQL,pools,traffic,collector and validation unchanged. Native exit2.
+All2843647 REST requests HTTP200,actual9478.50/s,p9586.61ms,p99205.21ms;
+no transport or validation failures. Delivery94.785% still invalidates the run.
+Flags11999 batches, all HTTP200,p9598.38ms,p99178.13ms;
+accepted=committed161097. Six complete84-UP/1120-PUT rounds,worst40.633s,
+no expired/bad jobs or action timeouts. Clocks qualified,no OOM/restarts.
+WSL/Windows CPU peaks84.09%/87.12%. Each API now handles approximately one sixth
+of its own REST count per route; the previous route-mix concentration is gone.
+Observed503 count fell281->0 in this matched run. This is not a10k PASS or a
+published-port capacity claim. The next diagnostic profiles the generator on
+the same5m workload; it writes the CPU profile to native ext4 during the run.
+Directive reference: https://nginx.org/en/docs/http/ngx_http_upstream_module.html#least_conn
+
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics_direct_ingress-20261106-013624/
+Report/resources: combined/20261105-223710-load-2378955614/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Routing: combined/20261105-223710-load-2378955614/http-ingress.json
+Distribution: api-request-distribution.json
+
+Offline report-IO probe, no load stack running, three repeats per case:
+Same2,097,145-byte metrics payload,58,798 whole lines, SHA256 parity verified.
+No fsync; own scratch files only. /mnt/c is9p(v9fs), /opt isext4.
+Median wall seconds, line writes /8KiB chunks /16KiB chunks:
+Windows workspace:13.539655 /0.057806 /0.035659.
+Native Linux:0.023537 /0.000635 /0.000462.
+Write calls:58,798 /256 /128. No cleanup errors. Buffering/report storage has
+not yet been changed in load runs; this microbenchmark does not establish its
+contribution to missed RPS. Artifact: .cache/io-probe.json, helper probe-report-io.py.
+
+Generator controls, unchanged2x8/direct-ingress/full final synthetic workload:
+
+Generator result-consumer telemetry, discard-backlog, source69b9b7f.
+Native exit2, strict audit passed=False.
+REST actual9442.28/s, statuses{'200': 2832790}, p9589.909ms,p99209.445ms.
+Hit mean16.191ms; post-hit consumer wait mean3.287ms.
+Generator delivery94.423%, skipped167205, discard events959.
+Flags11993 batches, statuses{'200': 11993}, p99179.653ms; accepted=committed161332.
+Complete rounds6, worst40.366s; all84 UP/1120 PUT.
+No sampled OOM/restarts; external clock calibration qualified.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics_direct_ingress-20261106-020324/
+Report/resources: combined/20261105-230408-load-499289572/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+
+Buffered pool metric collector, discard-backlog, source294ddca.
+Native exit2, strict audit passed=False.
+REST actual9428.57/s, statuses{'200': 2828793}, p9594.610ms,p99212.851ms.
+Hit mean16.666ms; post-hit consumer wait mean3.103ms.
+Generator delivery94.286%, skipped171148, discard events996.
+Flags11989 batches, statuses{'200': 11989}, p99175.476ms; accepted=committed160603.
+Complete rounds6, worst40.611s; all84 UP/1120 PUT.
+No sampled OOM/restarts; external clock calibration qualified.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics_direct_ingress-20261106-021653/
+Report/resources: combined/20261105-231740-load-504736059/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+
+Experimental recent-window REST pacing, source72ff730.
+Native exit0, strict audit passed=True.
+REST actual9534.20/s, statuses{'200': 2860740}, p9597.753ms,p99210.103ms.
+Hit mean17.017ms; post-hit consumer wait mean3.718ms.
+Generator delivery95.342%, skipped139260, discard events3394.
+Flags11995 batches, statuses{'200': 11995}, p99171.404ms; accepted=committed160849.
+Complete rounds7, worst40.603s; all84 UP/1120 PUT.
+No sampled OOM/restarts; external clock calibration qualified.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10k_direct_metrics_direct_ingress_recent-20261106-024712/
+Report/resources: combined/20261105-234803-load-202141162/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+
+Buffering preserved exact metric output and reduced write calls, but did not
+improve full-run RPS in this A/B. The recent-window experiment keeps the10ms
+catchup budget and all gates; default pacing and flag pacing remain unchanged.
+Recent-window passed the native95% delivery floor, but9534RPS DOES NOT meet
+the10000 successful REST RPS goal. Next explicit control offers10600RPS; this
+is a stronger offered load, not a change to delivery/latency/round criteria.
+Neither direct-ingress result qualifies the published-port path.
+
+2x8 direct ingress, recent-window, offered10600 REST RPS /5m: FAIL.
+Application code unchanged versus the preceding recent10000 control.
+REST3,005,706 requests, all HTTP200, actual10018.88/s; no transport/validation
+errors, p9598.178ms,p99219.346ms. Whole-wrapper clock-ratio estimate through drain:10016.841/s. It is not a
+strict per-stage lower bound if frequency varies. This does NOT override generator failure:
+delivery94.518% < unchanged95% floor;174294 skipped slots,4187 discard events.
+Flags11998 batches, statuses{'200': 11998}, p99181.012ms; accepted=committed161101.
+All six complete rounds84 UP/1120 PUT, worst41.002s. No expired/bad jobs,
+action timeouts, sampled OOM/restarts or PgBouncer waiting clients. Clocks qualified.
+The application processed>10k successful RPS on this diagnostic path, but the
+offered schedule was not delivered faithfully enough: no qualifying PASS.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_recent-20261106-030039/
+Report/resources: combined/20261106-000125-load-3087099964/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+
+Auditor21fc46c adds --min-successful-rest-rps10000, checking each steady stage
+initially using HTTP200 counts / monotonic drain duration times the whole-wrapper
+clock ratio. Review found that this cannot strictly bound a subinterval if clock
+frequency changes: an attack-specific QPC-bracketing correction is required.
+Native95%-delivery PASS alone cannot qualify10k. All existing gates remain;36 auditor unit/CLI checks passed.
+
+2x8 published ingress, recent-window, offered10600 REST RPS /5m: FAIL.
+Source21fc46c changes auditor/docs only; app/generator match the direct10600
+control. Same base diagnostics; both clock probes sampled every5s.
+REST2,839,304 requests, all HTTP200, actual9464.315/s, p95148.273ms,
+p99286.166ms; no transport/validation failures. Delivery89.286% invalid,
+340692 skipped slots. Same worker configuration on direct ingress delivered
+10018.877/s: published path lost5.535% relative throughput in this pair.
+Flags11975 batches, statuses{'200': 11975}, p99305.439ms; accepted=committed161059.
+All6 complete rounds84 UP/1120 PUT, worst44.395s.
+Native exit2, no qualifying10k PASS. The network path and generator delivery
+are separate constraints from worker round capacity. This pair does not prove
+every possible worker layout is insufficient or eliminate host variability.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_recent-20261106-030942/
+Report/resources: combined/20261106-001026-load-1342627827/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+
+Stage-clock correction and generator buffer validation:
+The previous whole-wrapper ratio is not a strict bound for a stage if clock
+frequency varies inside that wrapper. Qualification now requires absolute
+CLOCK_MONOTONIC anchors enclosing time.Now start/drain, identical kernel boot
+and time-namespace identities in the attack and external samples, and nearest
+outer QPC samples. Successful RPS lower=N200/(QPC_after_end-QPC_before_start).
+No interpolation; coarse probe intervals lower the bound. Legacy reports lacking
+anchors remain explicitly unverified; no old run is retroactively qualified.
+New launcher probes every0.2s; previous5s sampler was not changed mid-run.
+43 auditor tests and11 probe tests passed; full load_test race passed13.973s,
+golangci-lint0 issues, layout/error/Python-style checks passed. A real3s probe
+returned16 samples,1.1403ms max roundtrip, tick10000, no realtime steps.
+
+Generator-only WS buffer changeeaccd83: same224 spectators,20s reconnect,
+1MiB message read limit, full EOF reads and json.Valid/counting; per-spectator
+retention capped64KiB. No server WS framing or message policy changed.
+Offline microbenchmark, three250ms repetitions/case, Linux/i9-13900KF:
+flag-stolen: median321.0ns/513B/1alloc ->229.9ns/0B/0alloc;
+status:1699ns/4938B/6alloc ->659.9ns/0B/0alloc;
+scoreboard:13190ns/~39899B/13alloc ->4738ns/~1B/0alloc.
+These compare body reading plus JSON validation, not whole network throughput.
+A full-run improvement has not yet been established.
+
+2x8 direct ingress, source14f34dc, offered10600 REST RPS /5m: PASS.
+First full native and strict-audit PASS above10000 actual successful REST RPS.
+Includes generator WS-buffer reuse, absolute stage clock anchors and0.2s QPC
+probes. Passive NATS counter sampler added before steady. Those observation
+changes mean this is not a pure single-variable WS-buffer throughput A/B.
+REST3,080,472 requests, all HTTP200, actual10268.235/s, mean15.360ms,
+p9581.177ms,p99187.530ms; no transport/validation failures. Delivery96.870%,
+scheduled lateness p9915.877ms; unchanged10ms catchup/100ms lateness/95% floor.
+Exact external QPC bracket300.2482603s gives successful lower10259.750/s,
+without interpolation. Native exit0; strict audit passed, no limitations.
+Flags11994 batches, all HTTP200,p9587.480ms,p99156.549ms;
+accepted=committed161825. All7 complete rounds84 UP/1120 PUT; worst41.085s,
+no expired/bad jobs, missed PUTs or action timeouts. No OOM/restarts; swap0.
+WSL/Windows CPU peaks85.52%/87.07%; available RAM minima23.398/10.364GiB.
+Peak role CPU cores: API11.82,worker4.61,Postgres3.58,Nginx3.29,
+PgBouncer1.00,receiver0.47,NATS0.04. These are sampled nonconcurrent peaks.
+PgBouncer waiting clients/maxwait0; active server peaks API12,RX1,worker1.
+NATS35 valid samples, peak84messages/0never-delivered pending;11 samples
+fully drained. One monitor error occurred during cleanup outside steady.
+This qualifies this5m diagnostic direct-ingress run only. Published-port,
+same-code worker comparisons, repeat and5h qualification remain outstanding.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_recent-20261106-032425/
+Report/resources: combined/20261106-002510-load-3391372546/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Queue: nats-queue.jsonl; host: linux-host-resources.jsonl,windows-host-resources.jsonl
+Clock: clock-calibration.jsonl; exact brackets in audit-strict.json
+
+2x8 published ingress, source14f34dc, offered10600 REST RPS /5m: FAIL.
+Snapshot hashes match the qualified032425 direct run exactly; only measured
+REST/flag ingress route differs in settings (report directory excluded). Both
+use WS-buffer reuse and0.2s clock probes; same28/40PUT/224WS/API4/RX4 workload.
+REST2,922,808 requests, all HTTP200, actual9742.689/s, mean31.501ms,
+p95131.043ms,p99269.490ms. QPC-bracket successful lower9738.180/s.
+Delivery91.912% invalid,257192 skipped slots; no transport/validation failures.
+Flags11979 batches, all HTTP200,p95155.095ms,p99261.751ms;
+accepted=committed160439. Six complete84-UP/1120-PUT rounds, worst45.187s;
+74 trailing results belong to the one partial round, not a missing full round.
+No expired/bad jobs, missed PUTs, action timeouts, OOM or restarts; swap0.
+PgBouncer wait/maxwait0, active server peaks API21,RX1,worker1. NATS peak84,
+undelivered pending0,11 fully-drained samples; startup/cleanup monitor errors
+fall outside steady. WSL/Windows CPU peaks85.77%/96.04%, available RAM
+minima23.633/10.371GiB. Host variation remains a comparison limitation.
+Qualified60.0277s steady runtime window: Docker group2.322cores, proxy1.410,
+dockerd0.912; containerd group0.745cores (persistent shims0.564). More than
+99.99% of Docker group CPU attributed. Fixture ListenOverflows,ListenDrops,
+TCPSynRetrans,RetransSegs all had zero delta. This proves runtime cost, not
+that it alone explains every throughput difference.
+Published delivered5.12% less REST than the paired direct run, whose lower
+bound exceeded10k. This published run does not qualify10k or justify5h yet.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_recent-20261106-033229/
+Report/resources: combined/20261106-003313-load-394310821/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Runtime: runtime-process-cpu.json; queues: nats-queue.jsonl
+
+1x16 published ingress, offered10600 REST RPS /5m: FAIL.
+Application/generator/profile match2x8; snapshot differs only in results text.
+Settings change only worker replicas2->1 and slots8->16, holding16 slots;
+per-replica DB pool4 and shares256 retained, so aggregate worker client budget
+and CPU weight decrease with replicas. Passive Windows process CPU sampler
+was added before steady; comparison manifest is source-profile-comparison.json.
+REST2,921,293 requests, all HTTP200, actual9737.621/s; mean31.636ms,
+p95138.143ms,p99267.423ms; QPC successful lower9729.644/s.
+Delivery91.864% invalid,258705 skipped slots; no transport/validation failures.
+Flags11986 batches, all HTTP200,p95159.994ms,p99247.267ms;
+accepted=committed159929. All6 complete rounds84 UP/1120 PUT, worst46.462s;
+75 history results belong to the trailing partial round. No expired/bad jobs,
+missing full-round PUTs, action timeouts, sampled OOM/restarts; swap0.
+PgBouncer API peak5waiting,2ms maxwait,32active servers; other roles0waiting.
+NATS41 samples, peak83messages, max undelivered0, fully drained10 samples.
+Runtime60s window qualified=True, proxy mean1.437cores.
+WSL/Windows CPU peaks85.33%/96.33%; available RAM minima23.643/10.265GiB.
+1x16 did not improve throughput over2x8 (9737.6 versus9742.7, about0.05%
+difference); both miss10k with similar host peaks. This is not proof about all
+possible worker layouts. Next2x4 tests lower parallelism with the same2 replicas
+and all round/PUT/load validation intact. No5h qualification started.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers1_slots16_rest10600_direct_metrics_recent-20261106-034028/
+Report/resources: combined/20261106-004113-load-3802483746/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+CPU: runtime-process-cpu.json,windows-process-cpu.jsonl; queues: nats-queue.jsonl
+
+2x4 published ingress, offered10600 REST RPS /5m: FAIL on rounds and generator.
+Same app/generator/profile as2x8, only per-worker concurrency8->4; unchanged
+2replicas,pool4/shares256 per worker, HTTP, timing and integrity gates.
+REST2,966,161 requests, all HTTP200, actual9887.086/s,p95122.771ms,
+p99251.324ms. QPC successful lower9876.453/s; delivery93.274% invalid.
+Flags11988 batches, statuses{'200': 11988},p99259.666ms; accepted=committed151701.
+Four jobs expired with status110: rounds5 and6 each had82 UP instead of84.
+Round5 PUT/stored1094/1120 (26missing), round6 1093/1120 (27missing).
+The six ended rounds include these two FAILED rounds: they are not six correct
+rounds. Largest result completion52.879s and publish-to-actionwait49.647s do
+not override job deadline expiry or the53 missing PUTs. No action timeouts.
+This run cannot be ranked as a valid higher-capacity layout: checker workload
+did not finish correctly. No deadline or correctness gate has been relaxed.
+No OOM/restarts; swap0; PgBouncer waiting/maxwait0. WSL/Windows CPU peaks
+85.23%/95.89%; worker sampled peak4.05cores. Next2x6 tests the middle ground.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots4_rest10600_direct_metrics_recent-20261106-034851/
+Report/resources: combined/20261106-004934-load-3400625183/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Diagnosis: report.json checker.failed_jobs/rounds, checker-lifecycle.jsonl
+Queues: nats-queue.jsonl; CPU: runtime-process-cpu.json,windows-process-cpu.jsonl
+
+2x6 published ingress, offered10600 REST RPS /5m: FAIL on generator, rounds correct.
+Fixed app/generator/profile versus2x8/2x4; only slots8->6 per worker.
+REST2,876,342 requests, all HTTP200, actual9587.639/s,p95146.752ms,
+p99303.365ms. External QPC successful lower9580.727/s; delivery90.449% invalid.
+Flags11968 batches, statuses{'200': 11968},p99327.795ms; accepted=committed161434.
+All6 complete rounds84 UP/1120 PUT, worst46.547s, trailing73 results accounted
+for in the partial round. No bad/expired/overdue jobs or action timeouts.
+No OOM/restarts; swap0. WSL/Windows CPU peaks87.38%/96.51%; available RAM
+minima23.479/8.838GiB. API PgBouncer waiting peak1,maxwait0; active peak32.
+Runtime counter window stopped after50.021s; it is NOT a qualified60s window
+and is not used as comparable full-minute CPU attribution.
+Lowering slots did not monotonically improve REST delivery. This supports
+controlled repeats rather than extrapolating capacity from one short run.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots6_rest10600_direct_metrics_recent-20261106-035748/
+Report/resources: combined/20261106-005834-load-1462316436/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Queues: nats-queue.jsonl; host CPU: windows-process-cpu.jsonl
+
+Deadline interpretation of the failed2x4 run (no rule changed):
+Scheduler initial deadline is publication+checkerTimeout20s+grace30s=50s,
+not the60s round boundary. Worker can renew a live lease before actions.
+Four status110 expirations occurred50.064/50.319/50.740/50.769s after send.
+Round complete=true means every job has finished_at, including expiration;
+82UP+2expired can therefore be complete yet INVALID. Existing audit rejects it.
+Max publish-to-actionwait ignores jobs without action records. Reports lack
+claim/deadline history, so absence of a claim or renewal cannot be proven here.
+Sources: scheduler/scheduler.go initialJobDeadline, checker/lease.go renewNow,
+queries/repository.sql ClaimCheckerJob/SetCheckerJobDeadline/ExpireCheckerJobs,
+load_test/checker_audit_test.go. No deadline increase or scheduler rewrite made.
+
+Redis separation, completed published2x8 run033229 (saved artifacts only):
+23 steady resource samples: Redis mean0.04633core, peak0.2123core; memory peak
+5.246MiB steady/5.633MiB whole run. Eight API/RX replicas each have275 steady
+pool samples; pending,acquisition timeouts,wait count/wait seconds all0.
+Connection gauges were NOT recorded: the whitelist omitted the exported
+forcad_redis_connections and forcad_redis_connections_idle. Missing != zero.
+Commitb79dccd retains exactly those two existing metrics, rejecting name suffixes;
+focused whitelist test,layout and golangci-lint0issues passed. No new scrape,
+polling interval or workload change. Runs before that commit cannot prove
+connection peaks. Command latency and command/network timeout distributions
+remain unmeasured by these pool counters; no claim that Redis has no such errors.
+
+2x5 published ingress, offered10600 REST RPS /5m: FAIL; one REST503.
+Same fixed app/traffic as2x6/2x8. Commitb79dccd adds only two Redis connection
+gauges to existing collector output; no new scrape or timing/workload change.
+REST2,940,054 requests:2,940,053 HTTP200 and1 HTTP503; actual9798.987/s,
+p95130.666ms,p99255.755ms. QPC successful lower9789.454/s.
+Generator delivery92.443% invalid. FirstError contains the Vegeta HTTPstatus
+string, not the response body. Full reads.rejections has capacity=1: the exact
+Service capacity exceeded body maps to API middleware.Admission (256 slots),
+before handler/SQL. The older failing route was not saved. This is not evidence
+of PgBouncer max-client exhaustion; no limit was raised to hide the rejection.
+Flags11973 batches, statuses{'200': 11973},p99250.290ms; accepted=committed156147.
+All6 full rounds84 UP/1120 PUT, worst50.717s, maxpublish-to-actionwait47.237s;
+trailing67results belong to the partial round. No expired/bad/overdue jobs,
+action timeouts, sampled OOM/restarts or swap use. PgBouncer API wait peak6,
+maxwait2ms, active32; other roles0waiting. These brief samples do not prove
+the cause of a single503. WSL/Windows CPU peaks85.78%/95.99%.
+Redis connection gauges are now present for all eight API/RX replicas;
+per-replica whole-run peaks saved in redis-pool-connection-summary.json.
+They exclude worker/ticker and PubSub connections, and do not measure server
+connected_clients or command latency. Missing server totals remain a limitation.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots5_rest10600_direct_metrics_recent-20261106-040709/
+Report/resources: combined/20261106-010754-load-2144079457/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Queue/host: nats-queue.jsonl,linux-host-resources.jsonl,windows-process-cpu.jsonl
+
+4x4 published ingress, offered10600 REST RPS /5m: FAIL on delivered REST.
+Same16 slots as2x8 and1x16; per-worker pool4/shares256 retained, so total
+worker client budget/weight rises with replicas (no CPU reservation or quota).
+App/traffic unchanged; b79dccd Redis-gauge diagnostic retained.
+REST2,919,275 requests, all HTTP200, actual9729.432/s,p95134.364ms,
+p99270.400ms; external QPC successful lower9719.817/s.
+Delivery91.787% invalid,260723 skipped slots; no transport/validation failures.
+Flags11980 batches, statuses{'200': 11980},p99313.124ms; accepted=committed162833.
+All6 full rounds84 UP/1120 PUT, worst44.709s, maxpublish-to-actionwait40.019s;
+trailing71 results accounted for in the partial round. No bad/expired/overdue
+jobs, action timeouts, sampled OOM/restarts or swap use. PgBouncer API wait
+peak11,4ms maxwait,32active; other roles0waiting. WSL/Windows CPU peaks
+84.76%/96.34%. Redis server/worker/ticker connection totals not captured.
+Same16-slot healthy layouts:1x16=9737.6/s,2x8=9742.7/s,4x4=9729.4/s.
+Differences below0.2% do not establish a speed advantage; none meets10k.
+Next4x16 holds4 replicas while testing whether earlier checker completion
+outweighs the larger CPU burst. Final timing/HTTP/PUT criteria unchanged.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots4_rest10600_direct_metrics_recent-20261106-041739/
+Report/resources: combined/20261106-011829-load-2782575470/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Queue/host: nats-queue.jsonl,linux-host-resources.jsonl,windows-process-cpu.jsonl
+
+4x16 published ingress, offered10600 REST RPS /5m: FAIL on delivered REST.
+Same4 replicas as4x4; concurrency4->16,64total slots. Pool4/shares256 per
+worker and all app,traffic,timeout,SLO/physical-clock settings unchanged.
+REST2,925,671 requests, all HTTP200, actual9750.688/s,p95134.278ms,
+p99277.994ms; external QPC successful lower9743.921/s.
+Delivery91.988% invalid,254260 skipped slots. No transport/validation failures.
+Flags11985 batches, statuses{'200': 11985},p99302.968ms; accepted=committed157217.
+All7 full rounds84 UP/1120 PUT, worst42.964s; maxpublish-to-actionwait35.807s.
+No bad/expired/overdue jobs, action timeouts, sampled OOM/restarts or swap use.
+PgBouncer waiting/maxwait0. WSL/Windows CPU peaks84.72%/96.04%. Worker
+sampled peak6.82cores/0.759GiB versus2x8 4.92cores/0.206GiB; these are
+separate sampled peaks, not a CPU budget reservation or precise causal gain.
+60.023s runtime window qualified, all fixture TCP ListenOverflows,ListenDrops,
+TCPSynRetrans andRetransSegs deltas0 in that window. It does not cover all5m.
+An attempted late counter read found recovery already started and refused
+the read; no full-stage counter claim is made.
+4x16 reduces queue wait but gives only0.08% higher REST than2x8. Healthy
+same-code published layouts still fail10k actual;2x4 also fails checker health.
+2x8 selected for the15m repeat as a lower-resource candidate with correct
+short-run rounds. This is not a proven universal optimum or5h qualification.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots16_rest10600_direct_metrics_recent-20261106-042545/
+Report/resources: combined/20261106-012635-load-793942206/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Runtime counters: runtime-process-cpu.json; queue: nats-queue.jsonl
+
+2x8 published ingress continuous15m repeat: FAIL; full worker rounds correct.
+Offered10600REST/s, same28teams/40PUT/60s/3fixtures,API4/RX4,224WS,
+40flag batches/sx100values,PFR,all gates and resource settings unchanged.
+REST8,610,439 requests:8,610,438 HTTP200 and1 HTTP503; actual9567.152/s,
+p95145.204ms,p99260.944ms. QPC successful lower9564.155/s.
+Generator delivery90.256% invalid; no transport errors.
+Flags35950 batches, statuses{'200': 35950},p95152.185ms,p99251.290ms;
+accepted=committed459400. All16 snapshot-complete rounds84 UP/1120 PUT,
+worst44.628s, maxpublish-to-actionwait41.923s. Final history has84results
+attributable to the trailing snapshot-partial round (non-atomic snapshot order);
+do not relabel it a seventeenth fully validated round. No bad/expired/overdue
+jobs, action timeouts, sampled OOM/restarts or swap use.
+PgBouncer API waiting peak7,2ms maxwait,32active; other roles0waiting.
+Important separation: pgx client pool waits are not PgBouncer waiting clients.
+At01:48:44Z all4 API pgx pools had sampled inuse peaks16 and cumulative
+EmptyAcquireWaitTime1339..1556seconds each (sums across many waits), canceled
+acquisitions0. No per-query wait histogram or root-cause proof from those sums.
+Do not infer an absent client queue from short PgBouncer waits.
+Prometheus API up4; exactly one503 counter on /api/client/config/ at instance
+172.18.0.21:9090. Native reads.rejections={capacity:1} confirms delivery of
+that capacity response; middleware.Admission256 rejects before config handler
+or SQL. WS/metrics/health are outside/bypassed by this REST admission group.
+This identifies the rejecting layer, not the full cause of in-flight pressure.
+Config handler uses Game.Lifecycle/sharedLifecycle with singleflight,noTTL,
+one SELECT ReadGameLifecycle; generic error503 would be a different class.
+Vegeta first_error displays HTTPstatus, not body. Previous2x5 capacity503
+classification corrected in its section; no HTTP/DB/worker limits were raised.
+WSL/Windows CPU peaks86.25%/96.99%; available RAM minima23.390/8.747GiB.
+Late60.029s steady runtime window qualified: proxy1.277cores,dockerd0.682,
+Docker group1.959,containerd group0.614. Fixture TCP counters all zero delta
+within that window. This is a phase sample, not a complete-run TCP guarantee.
+No valid15m published10k pass; therefore no5h qualification launched.
+Next matched15m direct-ingress2x8 diagnostic tests the network-path effect at
+the same full profile. Direct results will not qualify the published port.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_verify15m_recent-20261106-043444/
+Report/resources: combined/20261106-013529-load-97121691/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+HTTP/DB snapshot: prometheus-route-status-initial.json,prometheus-route-status-diagnostics.json
+Runtime: runtime-process-cpu.json; queue: nats-queue.jsonl; host: windows-process-cpu.jsonl
+
+2x8 direct ingress continuous15m: FAIL on local TCP source-port allocation.
+Same profile/source as the published15m repeat, only measured HTTP ingress
+changed; bootstrap/224WS retain the published port. REST9,305,358 HTTP200
+plus419 transport errors, successful QPC lower10335.647/s. Generator valid
+97.545%, p9568.157ms,p99159.300ms. Flags35972 HTTP200 plus2 transport errors,
+p99128.732ms; accepted=committed452830. No delivered HTTP503 in steady.
+All recorded transport failures report dial172.18.0.22:8080 EADDRNOTAVAIL;
+first sampled REST failure05:01:01.447MSK, flag failures05:01:01.598 and
+05:01:02.873MSK. The dialer has no explicit LocalAddr binding. Linux connect(2)
+documents this unbound-socket error as ephemeral-port exhaustion, before HTTP:
+https://man7.org/linux/man-pages/man2/connect.2.html
+All16 snapshot-complete rounds84 UP/1120PUT, worst40.953s, wait38.464s;
+84 trailing results are not a seventeenth fully snapshot-validated round.
+No expired/bad/overdue jobs, action timeouts, sampled OOM/restarts or swap use.
+PgBouncer waiting/maxwait0, APIactivepeak24. WSL/Windows CPU85.07%/89.97%,
+available RAM23.246/8.158GiB. Late60.023s runtime window qualified:
+proxy0.253cores vs published1.277cores; Docker group1.215 vs1.959cores.
+These phase samples support extra published-path cost, not a universal ceiling.
+Fixture TCP counter deltas0 in that window only. Owned containers after[].
+Despite >10k physical successful RPS, transport errors make this a failed run.
+No5h qualification or published-port PASS is claimed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_verify15m_recent-20261106-045452/
+Report/resources: combined/20261106-015539-load-3699698378/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Runtime: runtime-process-cpu.json; queue: nats-queue.jsonl
+
+2x8 direct ingress6m with unchanged10s client idle timeout: PASS, limited duration.
+No host sysctl/network setting or app/traffic/gate changed; duration6m instead15m.
+REST3,693,342 all HTTP200, actual10259.279/s, QPC lower10254.592/s,
+p9572.850ms,p99181.127ms, generator96.786% valid. Flags14387 all HTTP200,
+p99157.001ms; accepted=committed184143. All8 full rounds84 UP/1120PUT,
+worst40.705s,wait37.400s; no bad/expired/overdue jobs, timeouts, OOM/restarts
+or swap use. PgBouncer waiting0. WSL/Windows CPU81.79%/88.50%.
+Read-only1s TCP sampler covered only the final32 steady samples after startup
+fixes, not all6m and not the earlier failed15m. It found3771 occupied source
+ports to owned Nginx:8080 out of4096, with separate peaks2933 TIME_WAIT and
+1253 ESTABLISHED. Root-netns sockets include generator and docker-proxy;
+TIME_WAIT has no PID. No synchronous4096-port/error correlation was captured.
+Host WSL networking=mirrored, range44620..48715, reserved ports empty,
+tcp_tw_reuse2. Microsoft WSL contributor describes this4096-port HNS reservation:
+https://github.com/microsoft/WSL/issues/40169
+Do not expand a guest sysctl blindly: Windows reservation is separate.
+The successful6m run does not overturn the failed15m or establish5h stability.
+Next isolated experiment changes generator idle timeout10->30s in a frozen
+source overlay only, holding server timeout15s and all connection caps/rates/
+SLO/clock gates unchanged. Hypothesis: fewer client-initiated idle closes and
+less source TIME_WAIT; it remains unproven until the controlled repeat ends.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_portdiag6m_recent-20261106-052757/
+Report/resources: combined/20261106-022847-load-1922101811/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+TCP: ingress-tcp.jsonl,ingress-tcp-summary.json; initial sampler failures retained
+as ingress-tcp-launch-failed.jsonl and ingress-tcp-launch-healthwait.jsonl.
+
+2x8 direct ingress15m with30s generator idle timeout: PASS, not published capacity.
+Frozen generator-only overlay: IdleConnTimeout10->30s; exact source/profile
+comparison saved. App, server15s idle timeout, connection caps, offered10600,
+worker2x8/API4/RX4, flags/WS and every latency/clock/correctness gate unchanged.
+REST9,330,118 all HTTP200, actual10366.796/s, successful QPC lower10363.716/s;
+p9565.983ms,p99153.942ms. Generator valid97.800%; transport errors0.
+Flags35987 all HTTP200,p9572.068ms,p99133.998ms; accepted=committed444203.
+All17 full rounds84 UP/1120PUT, worst40.618s, wait37.887s, trailingresults0.
+Round-start intervals60.000040..60.104963s. No bad/expired/overdue jobs,
+action timeouts, sampled OOM/restarts or swap. Nativeexit0 and strictauditPASS.
+Whole-run PgBouncer API waiting peak9,maxwait5ms,32active; other roles0waiting.
+WSL/Windows CPU84.04%/88.60%, available RAM23.393/10.080GiB. Worker
+sampled peak4.92cores/0.205GiB; API11.60cores/0.520GiB. Ownedcontainersafter[].
+TCP sampler covers all15m:900 steady samples, maxgap1.149s, no sampler errors.
+Peak unique source ports2076/4096, TIME_WAIT898, versus3771 and2933 in the
+late-only6m10s observation. Three-minute port peaks2076,1994,2016,1999,1991;
+no increasing sampled occupancy. /proc TCP walks are not atomic; socket-state
+counts can contain transitions, and TIME_WAIT cannot be attributed to a PID.
+NATS90steady samples: messages/ackpending peaks84, undeliveredpeak0,
+30fullydrained samples, num_redelivered peak16 (not an exactly-once claim).
+Every persisted round is correct; sampled queue repeatedly drains.
+This15m repeat did not reproduce419REST+2flag local-port errors from10s.
+It supports the idle-lifetime correction, but does not establish5h stability.
+The matched published15m idle30s case is now running; directPASS does not
+certify the Docker published-port path. No5h launched before that qualification.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_idle30s_verify15m_recent-20261106-054213/
+Report/resources: combined/20261106-024259-load-168558502/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+TCP/queue: ingress-tcp-summary.json,nats-queue-summary.json and their raw JSONLs
+Source parity: source-profile-comparison.json
+
+2x8 published ingress15m with30s generator idle timeout: FAIL; port pressure removed.
+Exact frozen app/generator overlay and profile match the clean direct054213;
+only measured HTTP ingress route differs. Source parity saved for both the
+route comparison and earlier published10s->30s generator-only comparison.
+REST8,622,430:8,622,404 HTTP200+26 HTTP503, all26 native rejection class
+capacity (API admission256, not an HTTP body inferred from FirstError).
+Actual9580.466/s, successful QPC lower9577.944/s; generator90.382% invalid,
+p95147.353ms,p99264.851ms. No transport errors. Flags35957 allHTTP200,
+p99267.277ms; accepted=committed452931.
+All16 snapshot-complete rounds84 UP/1120PUT, worst45.343s, wait42.190s;
+84trailing results attributable to the snapshot-partial round, not a seventeenth
+fully validated round. No bad/expired/overdue jobs, action timeouts, OOM/restarts
+or swap use. Nativeexit2 and strictauditFAIL; no5h qualification.
+Whole-run PgBouncer API waitingpeak3,maxwait2ms,32active; other roles0waiting.
+WSL/Windows CPU85.51%/97.02%, availableRAM23.448/10.109GiB. Worker peak
+5.37cores/0.206GiB. Ownedcontainersafter[]. API requests remain balanced:
+attack_data counters355097..363078 across4replicas, not the former RR skew.
+TCP900steady samples,maxgap1.184s,no sampler errors: uniqueportspeak1939/4096,
+TIME_WAIT680,ESTABLISHED1266. NATS90steady samples: messages/ackpending84,
+undelivered0,19fullydrained snapshots,num_redelivered gaugepeak16.
+The port correction did not restore published throughput; direct30s passed
+10363.716successful/s versus published9577.944successful/s with sameworkers,
+app/generator/profile. This isolates a path-dependent performance difference;
+it is not a universal proof that every possible worker layout must fail.
+Next matched published15m keeps all code/settings and changes WSL networking
+mirrored->NAT only. Config backup/hashes and preserved43stoppedcontainers are
+recorded; CPU32/RAM28GB retained. A reboot and default ephemeral-range change
+are part of that environment comparison, not an application limit increase.
+No result for the NAT candidate is claimed before its native+external audit.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_verify15m_recent-20261106-060028/
+Report/resources: combined/20261106-030113-load-2769937590/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+TCP/queue: ingress-tcp-summary.json,nats-queue-summary.json and raw JSONLs
+API balance: api-request-distribution.json; parity: source-profile-comparison.json
+Successful direct-run queue retry review: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_direct_ingress_idle30s_verify15m_recent-20261106-054213/queue-delivery-review.json
+
+NAT preparation notes (not load-capacity results):
+062046 stopped before TestLoad: DockerHub metadata connection timed out.
+Original .wslconfig was restored byte-for-byte. Preparation-only062809 built
+7images from the unchanged source under mirrored, verified healthy services,
+recorded immutable IDs, then exited before TestLoad and removed its containers.
+063140 stopped before containers/TestLoad at the native no-overwrite image guard.
+Offline copy now checks all7 exact image IDs instead of requiring absent tags,
+uses up --no-build --pull never, and retains only its own dedicated image tags.
+The measured NAT attempt063340 is now in its15m steady phase. Actual runtime
+image IDs, API4/RX4/worker2 geometry and unchanged app/generator source/profile
+were verified; bootstrap overlays and VM/config backup are recorded separately.
+No NAT performance result or5h qualification is claimed before completion.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-063340/
+Evidence: host-network-experiment.json,prepared-image-pins.json,
+runtime-image-parity.json,source-profile-comparison.json
+
+2x8 published NAT15m with pinned current images: PASS, first qualified published10k.
+API4/RX4/28teams/40PUT/60s/3syntheticfixtures, flags40batches/sx100,224WS,
+restoffered10600,recent-window,idle30s,pools/caps/SLO unchanged. No runtime
+build/pull; all7 exact-source image IDs and actual container parity recorded.
+REST9,501,231 all HTTP200, actual10556.921/s;
+successful QPC lower10553.655/s.
+Generator99.594% valid,p9543.233ms,p9987.096ms.
+Flags35998 allHTTP200,p9545.283ms,p9971.870ms;
+accepted=committed443179. All16 snapshot-complete rounds84UP/1120PUT,
+worst18.199s,wait16.936s.84trailingresults attributable to snapshot-partialround,
+not another validated fullround. Round-start gaps60.000046..60.100476s.
+No bad/expired/overdue jobs, action timeouts, transport errors, sampled OOM/
+restarts or swap use. Nativeexit0 and strictauditPASS. Ownedcontainersafter[].
+Whole-run PgBouncer API waitingpeak8,maxwait1ms,32active; other roles0waiting.
+WSL/Windows CPU peaks88.64%/87.63%, availableRAM
+24.171/12.143GiB. Whole-run worker sampledpeak10.35cores/0.205GiB;
+role peaks need not coincide. Steady fixture CPU combined sampledpeak1.229cores.
+Host also runs synthetic services and generator, not remote final services.
+TCP900steady samples,maxgap1.113s,no errors:
+ports1930/28232,TIME_WAIT683.
+NATS90steady samples: messages/ackpending84,undelivered0,
+60fullydrained,num_redelivered gaugepeak16. No increasing sampled backlog.
+This is a positive full-profile15m result, not5h stability or a universal optimum.
+Prior mirrored baseline had identical app/generator source/settings, but normal
+build image IDs were not retained and the VM was restarted for NAT. The large
+round-time change45.343->18.199s requires an exact-image reverse mirrored
+control before attributing all improvement to networking mode. That control
+holds7immutable image IDs and all runtime settings fixed. No5h started.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-063340/
+Report/resources: combined/20261106-033420-load-670790148/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json
+Evidence: host-network-experiment.json,prepared-image-pins.json,
+runtime-image-parity.json,source-profile-comparison.json,round-cadence-summary.json
+Queues/resources: ingress-tcp-summary.json,nats-queue-summary.json,
+fixture-resource-summary.json and original raw JSONLs
+
+2x8 exact-image reverse mirrored15m control: FAIL on generator delivery.
+All actual runtime image IDs (including auxiliary services), app/generator
+source, overlay hashes and runtime settings equal NAT063340; output path and
+network environment differ. Both use fresh VMs; current per-run boot recorded
+separately from the mode-switch preflight (WSL may idle/restart between them).
+REST8,687,303 all HTTP200, actual9652.519/s, QPC successful lower9650.897/s;
+generator91.062% invalid (852691skipped),p95134.862ms,p99246.937ms.
+Flags35953 allHTTP200,p99299.582ms; accepted=committed452122.
+No503 or transport errors in this controlled pair. Failing RPS is not a count
+of failed HTTP requests: shared generator/host did not deliver the offered rate.
+All16 fullrounds84UP/1120PUT, worst44.927s, wait42.728s;84trailingresults are
+snapshot-partial, not a seventeenth fully verified round.15fullrounds started
+inside steady. No bad/expired/overdue/openpast jobs, action timeouts, OOM/
+restarts or swap. Nativeexit2/strictFAIL/runnerexit2. Ownedcontainersafter[].
+NAT counterpart:10553.655successful/s,p9987.096ms,worst18.199s, same images.
+Whole-run PgBouncer API waitingpeak11,maxwait1ms,32active; other roles0waiting.
+WSL/Windows CPU peaks83.51%/96.79%, availableRAM23.647/11.525GiB.
+Steady worker CPU samplemean/peak2.615/5.289cores vs NAT2.218/9.304cores;
+NAT finishes its checker work sooner, so separate peaks alone are misleading.
+TCP900steady samples,noerrors,maxgap1.269s:
+ports1938/4096,TIME_WAIT678. No sampled source-port exhaustion.
+NATS90steady samples,30fullydrained; messages/ackpendingpeak78,
+undelivered0,redeliverygauge16. No increasing between-round backlog observed.
+Generator179steady samples: mean4.001,peak4.878CPUcores,
+RSSpeak309.88MiB,swap0. Sampler overhead0.000589core.
+No equivalent generator CPU measurement exists for the firstNAT control.
+This reverse control reproduces slower delivery/rounds under mirrored with
+identical runtime images. Next return-to-NAT repeat uses the same generator
+observer to complete A/B/A before drawing a unique-cause or5h conclusion.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-065841/
+Report/resources: combined/20261106-035925-load-3452121268/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity: runtime-image-parity.json,source-profile-comparison.json
+Diagnostics: ingress-tcp-summary.json,nats-queue-summary.json,
+generator-process-summary.json,round-cadence-summary.json and raw JSONLs
+
+2x8 published return-to-NAT15m: PASS; A/B/A delivery difference reproduced.
+Exactsame runtime image IDs, app/generator source+overlays and settings as both
+NAT063340 and mirrored065841; same5s generator observer as mirrored control.
+REST9,499,026 allHTTP200, actual10554.471/s,QPC successful lower
+10553.019/s. Generator99.570% valid,
+p9543.473ms,p9988.482ms. Flags35999 allHTTP200,p9976.802ms;
+accepted=committed440972. No HTTP5xx, transport errors or rejected steady batches.
+All16 fullrounds84UP/1120PUT, worst18.154s,wait16.904s;
+84trailingresults attributable to snapshot-partialround.15fullrounds started
+inside steady; startgapmax60.100422s. No bad/expired/overdue/openpast jobs,
+action timeouts, OOM/restarts or swap. Native0/strictPASS/runner0;ownedafter[].
+Whole-run PgBouncer waiting/maxwait0. WSL/Windows CPUpeaks87.97%/87.64%,
+availableRAM24.197/12.558GiB. Generator179fullycontained CPUintervals:
+mean3.519,sampledpeak4.987cores,RSSpeak252.83MiB,swap0.
+Complete-interval mean user/system cores2.640/0.879,versus
+mirrored2.500/1.513cores (complete-interval total4.013; earlier boundary-inclusive
+summary4.001 retained separately). CPU is native generator, not all Windows.
+TCP900samples,maxgap1.128s,noerrors: ports1925/28232,
+TIME_WAIT685. NATS89steady snapshots: messages/ackpending84,
+undelivered0,59fullydrained,redeliverygauge16,no growing sampled backlog.
+A/B/A successful physical RPS:10553.655 NAT ->9650.897 mirrored ->10553.019 NAT.
+The repeat supports an environment-dependent delivery/round-time loss on this
+host under mirrored. It does not identify a unique Windows/HNS implementation
+fault or certify a remote production network/final service checker workload.
+2x8 now satisfies two published15m NAT prerequisites; dry-run5h guard accepted
+both exact-source/image controls. No5h started: first compare worker geometry
+with matched5m durations, including its own2x8baseline (payload-age ramp differs
+from15m). Any smaller chosen winner needs its own repeat/long-run qualification.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-072104/
+Report/resources: combined/20261106-042143-load-2226624964/{report.json,resources.jsonl}
+Full log/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity: runtime-image-parity.json,source-profile-comparison.json
+Diagnostics: generator-process-complete-interval-summary.json,generator-cpu-split.json,
+ingress-tcp-summary.json,nats-queue-summary.json,round-cadence-summary.json
+5h prerequisite dryrun only: soak-qualification-check.json
+
+NAT matched5m worker baseline2x8: PASS.
+Same exact-source images/app/generator as published15m NAT controls, only
+steady duration/checkpoint15m->5m and outputpath. Other5m layouts compare
+against this shorter baseline, not the15m payload-age mix. API4/RX4,28teams/
+40PUT,flags40x100,224WS,offer10600,pacingrecent,idle30s,pools/limits unchanged.
+REST3,160,593 allHTTP200,actual10535.305/s,
+QPC successful lower10522.525/s,p9538.014ms,p9991.425ms.
+Flags11999 allHTTP200,p9987.977ms;accepted=committed151257.
+All6 fullrounds84UP/1120PUT (5started inside steady),worst18.568s,
+wait16.825s;84trailingresults snapshot-partial. No bad/expired/overdue/
+openpast jobs, actiontimeouts, transporterrors,OOM/restarts orswap.
+Native0/strictPASS/runner0;ownedafter[]. Whole-run PgBouncer API waitingpeak25,
+maxwait1ms,32active; otherroles0waiting. WSL/Windows CPUpeaks85.04%/86.81%.
+Steady generator3.261mean/4.717peakCPUcores,RSS166.22MiB,swap0; onlyfully
+contained CPUintervals. REST meanbody29612.371B. Worker steady CPUmean/peak
+2.287/9.165cores,RAMsumpeak184.84MiB (24sampleframes).
+NATS30validsnapshots,23empty;TCP300validsamples,maxgap1.072s,
+portspeak1932/28232,TIME_WAIT679,no sampler errors. No increasing sampled backlog.
+Per-workerDB4/shares256 retained;aggregateDB8/shares512 for2replicas.
+Next1x16 keeps16actionslots but reduces aggregateDB to4 andshares256: complete
+layout comparison, not isolated process overhead with equal aggregate budgets.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots8_rest10600_direct_metrics_idle30s_offline_verify5m_recent-20261106-074006/
+Report/resources: combined/20261106-044041-load-2516570056/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity: runtime-image-parity.json,source-profile-comparison.json
+Derived steady-only resources/queue/cadence: steady-diagnostics.json
+
+NAT matched5m1x16 control: PASS; same16slots in one worker.
+App/generator source,overlay hashes,all actualruntime images,5mprofile and
+API4/RX4/28teams/40PUT/flags40x100/224WS/offer10600 unchanged versus074006.
+Replicas2->1,concurrency8->16. Per-workerDB4/shares256 retained, aggregateDB
+8->4/shares512->256; not pureprocesscount under identical aggregate budgets.
+REST3,167,014 allHTTP200,actual10556.707/s,
+QPC successful lower10551.717/s,p9533.615ms,p9977.454ms.
+MeanRESTbody29582.674B,delivery99.592%valid.
+Flags11997 allHTTP200,p9976.357ms;accepted=committed142457.
+All6 fullrounds84UP/1120PUT (5inside steady),worst19.250s,
+wait17.981s;84trailingresults snapshot-partial. No bad/expired/overdue/
+openpast jobs,actiontimeouts,transporterrors,OOM/restarts orswap.
+Native0/strictPASS/runner0;ownedafter[]. Whole-run PgBouncer waiting/maxwait0,
+APIserveractivepeak15. WSL/Windows CPUpeaks85.78%/85.59%. Steady worker
+CPUmean/peak2.065/8.085cores,RAMsumpeak179.50MiB; generator3.270meanCPU,
+RSSpeak140.95MiB. Queue30validsamples,20empty;TCP300valid,ports1892/28232,
+noSYN backlog or samplererrors. Detailed scope/limits in steady-diagnostics.json.
+This short control shows one worker executes the synthetic16slot workload,
+not5h qualification or worker-failure tolerance. RPSdifference vs2x8 is<0.3%
+in one short run; meanbody differs0.100%, exactpayloads not matched. No proven
+speed advantage. Mediansteady round18.568s versus2x8 16.887s.
+Next2x6 keeps2replicas/aggregateDB8/shares512 and changes onlyconcurrency8->6.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers1_slots16_rest10600_direct_metrics_idle30s_offline_verify5m_recent-20261106-074806/
+Report/resources: combined/20261106-044846-load-3190061820/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity/runtimehost: runtime-image-parity.json,source-profile-comparison.json,
+runtime-host-envelope.json; derived steady-only: steady-diagnostics.json
+
+NAT matched5m2x6 control: PASS;12totalactionslots.
+Same2replicas,per-workerDB4/shares256 (aggregateDB8/shares512),app/generator
+source,allimages,5mprofile/API4/RX4/28teams/40PUT/flags40x100/224WS/offer10600
+versus2x8baseline. Onlyactionconcurrency8->6 andoutputpath differ.
+REST3,167,212 allHTTP200,actual10557.366/s,
+QPC successful lower10551.846/s,p9537.079ms,p9981.299ms.
+MeanRESTbody29730.983B,delivery99.598%valid.
+Flags12000 allHTTP200,p9976.432ms;accepted=committed152665.
+All6 fullrounds84UP/1120PUT (5inside steady),worst21.869s,
+wait19.864s;84trailingresults snapshot-partial. No bad/expired/overdue/
+openpast jobs,actiontimeouts,transporterrors,OOM/restarts orswap.
+Native0/strictPASS/runner0;ownedafter[]. PgBouncer waiting/maxwait0.
+Whole-run WSL/Windows CPUpeaks87.28%/87.11%. Steady worker mean/peak
+2.120/7.677cores,RAM164.85MiB;baseline2x8 2.287/9.165cores/184.84MiB.
+Mediansteady round20.540s versus2x8 16.887s. Generator3.256meanCPUcores,
+RSS182.50MiB,swap0. NATS30validsnapshots,20empty;TCP300valid,maxgap1.105s,
+ports1928/28232,TIME_WAIT678,noSYN backlog or sampler errors. No sampled growth.
+RPSdifference+0.279% is not a proven advantage from one short run; meanbody
+larger0.401% and exactpayloads differ. Fewer slots reduce sampledpeakCPU/RAM,
+with longer rounds; longer-term reliability still unqualified. Next8slot2x4.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots6_rest10600_direct_metrics_idle30s_offline_verify5m_recent-20261106-075604/
+Report/resources: combined/20261106-045643-load-1849666556/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity: runtime-image-parity.json,source-profile-comparison.json,runtime-host-envelope.json
+Derived steady-only resources/queue/cadence: steady-diagnostics.json
+
+NAT matched5m2x4 control: PASS;8totalactionslots.
+Same2replicas,per-workerDB4/shares256 (aggregateDB8/shares512),app/generator,
+allimages,profile and limits versus2x8/2x6; only actionconcurrency/outputpath.
+REST3,172,788 allHTTP200,actual10575.950/s,QPC successful lower10569.493/s,
+p9532.122ms,p9970.714ms. MeanRESTbody29868B; exactpayloads differ.
+Flags12000 allHTTP200,p9974.163ms;accepted=committed148604.
+All6fullrounds84UP/1120PUT (5inside steady),worst28.337s,wait26.998s,
+84trailingresults snapshot-partial. Initial50sdeadline margin21.663s.
+No bad/expired/overdue/openpast jobs,actiontimeouts,transporterrors,OOM,
+restarts orswap. Native0/strictPASS/runner0;ownedafter[].
+Steady worker mean/peak2.282/5.906CPUcores,RAM136.36MiB. Generator3.227
+meanCPUcores,RSS153.11MiB,swap0;59fully-contained intervals295.556s.
+NATS30validsnapshots,19empty,ACKpendingpeak66,undelivered0,finalACK0.
+TCP300validsnapshots,ports1924/28232,TIME_WAIT680,noSYN backlog/errors.
+Round start interval maximum60.100s. Lower worker peak trades longer rounds;
+selected2x6 retains6.468s more nominal jobdeadline margin than2x4.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots4_rest10600_direct_metrics_idle30s_offline_verify5m_recent-20261106-080418/
+Report/resources: combined/20261106-050452-load-469657521/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity/runtimehost: runtime-image-parity.json,source-profile-comparison.json,
+runtime-host-envelope.json; derived steady-only: steady-diagnostics.json
+
+Selected NAT 2x6 /15m, first qualification repeat: strict PASS.
+Same images, source and generator overlays as the matched 2x6 /5m control;
+only duration/checkpoint 5m->15m and output path differ. Runtime boot changed
+on natural WSL idle restart; per-run boot/monotonic/QPC evidence passed.
+REST: 9,499,186 HTTP200; actual 10554.649/s, conservative QPC 10550.313/s;
+p95/p99 42.065/87.787ms. Mean body 43064.35B reflects longer payload history.
+Flags: 35,999 HTTP200, p95/p99 45.693/75.346ms; accepted=committed 449982.
+All 16 full rounds correct: 84 UP,1120 PUT/stored flags each; 15 started in
+steady. 84 trailing results are snapshot-partial. Worst round21.764s,
+wait20.192s, maximum start interval60.101s. No bad/expired/overdue/openpast
+jobs,action timeouts,transport errors,OOM,restarts orswap.
+Native0/strictPASS/runner0; ownedafter[]. PgBouncer waiting/maxwait0.
+Steady worker mean/peak2.284/7.945cores, RAM169.71MiB. Generator mean3.539
+cores, RSS198.27MiB,swap0;179 fully-contained intervals896.691s.
+NATS90 valid samples,49 empty, ACKpeak84, undelivered0. TCP900 valid samples,
+maxgap1.110s,ports1930/28232,TIME_WAIT680,noSYN backlog or sampler errors.
+Whole-run Linux/Windows CPU peaks85.519%/86.851%; available RAM minima
+24.171/12.701GiB. Role means/peaks and sampler limitations in steady-diagnostics.
+Bounded progress observer attached mid-run: confirmed rounds1..12 across two
+snapshots; it measures stored flags, not independent PUT action logs. Final
+native audit verifies exact PUT counts. Later repeats attach it from startup.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots6_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-081645/
+Report/resources: combined/20261106-051725-load-3890121059/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity/runtimehost: runtime-image-parity.json,source-profile-comparison.json,
+runtime-host-envelope.json; derived steady-only: steady-diagnostics.json
+
+Selected NAT 2x6 /15m, second qualification repeat: strict PASS.
+All actual images, source/overlays and settings match the first15m repeat;
+only output path differs. Same actual NAT boot, externally calibrated clocks.
+REST: 9,508,490 HTTP200; actual10564.987/s, conservative QPC10563.521/s,
+p95/p99 40.756/82.047ms; mean body43079.63B.
+Flags: 36,000 HTTP200, p95/p99 44.468/71.359ms; accepted=committed451802.
+All16 full rounds correct,15 started inside steady;84UP/1120PUT/storedflags
+per round, mismatches0.84trailing results snapshot-partial. Worst22.010s,
+wait20.301s, maximum start interval60.100s. No bad/expired/overdue/openpast
+jobs,action timeouts,transport errors,OOM,restarts orswap.
+Native0/strictPASS/runner0;ownedafter[]. PgBouncer waiting/maxwait0.
+Steady worker mean/peak2.394/8.146cores,RAM184.34MiB; generator3.543mean
+cores,RSS236.73MiB,swap0;179fully-contained intervals896.727s.
+NATS90valid steady samples,58empty,ACKpeak84,undelivered0. One URLError
+67.627s after steady,9.879s after native report finished, belongs to cleanup.
+TCP900valid steady samples,maxgap1.121s,ports1934/28232,TIME_WAIT684,
+noSYN backlog/errors. Whole-run Linux/Windows CPU85.683%/88.317%; available
+RAM minima24.069/12.678GiB. Detailed role resources in steady-diagnostics.
+JX handler/response compatibility tests and fuzz seeds rerun after traffic:
+PASS; command,exit0 and log in jx-compatibility-tests.{json,log}.
+Five-hour admission dry-run accepted these two matching2x6 controls, with
+unchanged gates,18000s continuous steady,minimum300 correct full rounds,
+and minimum10000 successful REST RPS verified independently through QPC.
+This is readiness, not proof of five-hour stability.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots6_rest10600_direct_metrics_idle30s_offline_verify15m_recent-20261106-083440/
+Report/resources: combined/20261106-053519-load-2746915925/{report.json,resources.jsonl}
+Logs/audit: console.log,audit-strict.json,result-summary.json,runner-result.json
+Parity/runtimehost: runtime-image-parity.json,source-profile-comparison.json,
+runtime-host-envelope.json; steady-diagnostics.json;soak-qualification-check.json
+
+Selected NAT2x6 continuous5h soak: IN PROGRESS, NOT QUALIFIED YET.
+Unit: forcad-nats-traced-20261106-085511; started08:55:13MSK2026-11-06.
+Native TestLoad entered one steady5h stage; duration/checkpoint5h, HTTP phases0.
+Two selected2x6 /15m controls accepted by qualification-prerequisites.json.
+Runtime images, source and overlays match083440; differences only duration,
+checkpoint and output path. Actual CPUs32, Linux RAM27.4GiB, NAT networking.
+Offered REST10600/s; final gate still >=10000 successful/s through external QPC.
+Flags40batches/s x100values,224WS,28teams,3syntheticfixtures,40PUT/team/round,
+60s rounds. Final minimum300 correct fullrounds, zero unexpected503/errors,
+no missing PUT, no expired/overdue jobs or OOM/restarts. Final audit pending.
+Windows QPC probe21600s; CPU/RAM,ownedstate,PgBouncer,NATS,TCP,generator and
+bounded five-minute checker progress journals attached. Progress journal
+counts stored flags; exact PUT action-log verification remains final audit.
+Sleep from AC is disabled in the existing Windows power plan; no change made.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers2_slots6_rest10600_direct_metrics_idle30s_offline_soak5h_recent-20261106-085512/
+Native report/resources when finalized: combined/20261106-055551-load-2220656028/{report.json,resources.jsonl}
+Live: console.log,checker-progress.jsonl,linux-host-resources.jsonl,
+windows-host-resources.jsonl,ingress-tcp.jsonl,generator-process.jsonl,nats-queue.jsonl
+Provenance: qualification-prerequisites.json,runtime-image-parity.json,
+source-profile-comparison.json,runtime-host-envelope.json,launch.json
+
+Selected2x6 soak checkpoint, 09:56MSK2026-11-06: IN PROGRESS.
+Same live unit forcad-nats-traced-20261106-085511. At least one hour of
+continuous steady traffic elapsed; this does not establish a5h PASS.
+Bounded journal snapshots cover all60 consecutive closed rounds1..60:
+84UP/1120storedflags each, worst22.174s; bad closed/expired/overdue0.
+These are stored-flag observations; independent exact PUT action-log,
+HTTP success, p95/p99 and accepted/committed checks remain final native audit.
+Since unit launch, 123 Windows/367 Linux samples:
+CPU peaks 87.565%/86.537%,
+Windows available RAM minimum 11.419GiB,
+available commit minimum 5.447GiB;
+Linux swap use0. Sampled maxima are not instantaneous peaks. No observed
+OOM/restarts; queue continues to drain. All samplers cover the long duration.
+Progress artifact: checkpoint-60-rounds.json in the085512 soak directory.
+Earlier one-shot API/receiver counters in api-request-distribution.json and
+receiver-traffic-counters.json are timestamped, non-atomic server observations,
+not native ingress delivery proof. Receiver snapshot recorded92688 HTTP200,
+zero5xx and1179360 accepted flags; all submission phase outcomes were ok.
+Full5h report, exit code and strict audit still pending; no limits changed.

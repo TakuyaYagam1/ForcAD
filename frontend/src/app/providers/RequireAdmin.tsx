@@ -11,10 +11,18 @@ interface Props {
 export function RequireAdmin({ children }: Props) {
   const { t } = useTranslation("admin");
   const location = useLocation();
-  const error = useAdminAuthStore((s) => s.error);
-  const isAuthenticated = useAdminAuthStore((s) => s.isAuthenticated);
-  const isAuthChecked = useAdminAuthStore((s) => s.isAuthChecked);
-  const checkSession = useAdminAuthStore((s) => s.checkSession);
+  const error = useAdminAuthStore((s) => {
+    return s.error
+  });
+  const isAuthenticated = useAdminAuthStore((s) => {
+    return s.isAuthenticated
+  });
+  const isAuthChecked = useAdminAuthStore((s) => {
+    return s.isAuthChecked
+  });
+  const checkSession = useAdminAuthStore((s) => {
+    return s.checkSession
+  });
 
   useEffect(() => {
     if (!isAuthChecked) {
@@ -30,19 +38,24 @@ export function RequireAdmin({ children }: Props) {
     );
   }
 
-  if (!isAuthenticated && error)
+  if (!isAuthenticated && error) {
     return (
       <div className="notice" role="alert">
         <AdminAuthErrorMessage error={error} />
-        <button type="button" onClick={() => void checkSession()}>
+        <button type="button" onClick={() => {
+          return void checkSession()
+        }}>
           {t("common.retry")}
         </button>
       </div>
     );
+  }
 
   if (!isAuthenticated) {
     return (
-      <Navigate to="/admin/login" replace state={{ from: location.pathname }} />
+      <Navigate to="/admin/login" replace state={{
+        from: location.pathname
+      }} />
     );
   }
 

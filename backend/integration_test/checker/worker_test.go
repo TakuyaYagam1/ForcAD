@@ -55,10 +55,28 @@ func TestWorkerPersistsWorkflowAndAcknowledgesRedelivery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	team := domain.Team{ID: teamID, Name: "red", IP: "192.0.2.5", Token: "0123456789abcdef", Active: true}
-	task := domain.Task{ID: taskID, Name: "service", Checker: "/fixture/checker", Puts: 1,
-		Places: 3, CheckerTimeout: 1, CheckerType: "hackerdom_pfr", Active: true}
-	payload, err := json.Marshal(domain.JobPayload{Team: team, Task: task, Workflow: string(domain.JobActionPutsOnly)})
+	team := domain.Team{
+		ID:     teamID,
+		Name:   "red",
+		IP:     "192.0.2.5",
+		Token:  "0123456789abcdef",
+		Active: true,
+	}
+	task := domain.Task{
+		ID:             taskID,
+		Name:           "service",
+		Checker:        "/fixture/checker",
+		Puts:           1,
+		Places:         3,
+		CheckerTimeout: 1,
+		CheckerType:    "hackerdom_pfr",
+		Active:         true,
+	}
+	payload, err := json.Marshal(domain.JobPayload{
+		Team:     team,
+		Task:     task,
+		Workflow: string(domain.JobActionPutsOnly),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,11 +92,20 @@ func TestWorkerPersistsWorkflowAndAcknowledgesRedelivery(t *testing.T) {
 		if request.Action != processchecker.ActionPut {
 			t.Errorf("runner action = %q, want PUT", request.Action)
 		}
-		return processchecker.Result{Action: request.Action, Status: processchecker.StatusUp,
-			PublicMessage: "put-public", PrivateMessage: "put-private", Command: "put fixture"}, nil
+		return processchecker.Result{
+			Action:         request.Action,
+			Status:         processchecker.StatusUp,
+			PublicMessage:  "put-public",
+			PrivateMessage: "put-private",
+			Command:        "put fixture",
+		}, nil
 	})
 	worker := checkerworker.New(repo, repo, postgres.NewGameStore(pool), runner,
-		checkerworker.Options{LeaseDuration: 30 * time.Second, RenewInterval: 10 * time.Second, WorkConcurrency: 2}, nil)
+		checkerworker.Options{
+			LeaseDuration:   30 * time.Second,
+			RenewInterval:   10 * time.Second,
+			WorkConcurrency: 2,
+		}, nil)
 	if err := worker.Handle(ctx, jobID); err != nil {
 		t.Fatal(err)
 	}
@@ -172,9 +199,27 @@ func TestCheckerLogWriteFailureDoesNotCompleteTheJob(t *testing.T) {
 		VALUES ($1, 'checker-log-failure', 7, TRUE, EXTRACT(EPOCH FROM now()), '{}'::jsonb)`, runID); err != nil {
 		t.Fatal(err)
 	}
-	team := domain.Team{ID: teamID, Name: "red", IP: "192.0.2.5", Token: "1123456789abcdef", Active: true}
-	task := domain.Task{ID: taskID, Name: "service", Checker: "/fixture/checker", CheckerTimeout: 1, Places: 3, CheckerType: "hackerdom", Active: true}
-	payload, err := json.Marshal(domain.JobPayload{Team: team, Task: task, Workflow: string(domain.JobActionCheckOnly)})
+	team := domain.Team{
+		ID:     teamID,
+		Name:   "red",
+		IP:     "192.0.2.5",
+		Token:  "1123456789abcdef",
+		Active: true,
+	}
+	task := domain.Task{
+		ID:             taskID,
+		Name:           "service",
+		Checker:        "/fixture/checker",
+		CheckerTimeout: 1,
+		Places:         3,
+		CheckerType:    "hackerdom",
+		Active:         true,
+	}
+	payload, err := json.Marshal(domain.JobPayload{
+		Team:     team,
+		Task:     task,
+		Workflow: string(domain.JobActionCheckOnly),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,10 +242,17 @@ func TestCheckerLogWriteFailureDoesNotCompleteTheJob(t *testing.T) {
 
 	repo := postgres.New(pool)
 	runner := runnerFunc(func(_ context.Context, request processchecker.Request) (processchecker.Result, error) {
-		return processchecker.Result{Action: request.Action, Status: processchecker.StatusUp, PublicMessage: "UP"}, nil
+		return processchecker.Result{
+			Action:        request.Action,
+			Status:        processchecker.StatusUp,
+			PublicMessage: "UP",
+		}, nil
 	})
 	worker := checkerworker.New(repo, repo, postgres.NewGameStore(pool), runner,
-		checkerworker.Options{LeaseDuration: 30 * time.Second, RenewInterval: 10 * time.Second}, nil)
+		checkerworker.Options{
+			LeaseDuration: 30 * time.Second,
+			RenewInterval: 10 * time.Second,
+		}, nil)
 	if err := worker.Handle(ctx, jobID); err == nil {
 		t.Fatal("worker acknowledged a job after its public log write failed")
 	}

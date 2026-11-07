@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
-	"github.com/TakuyaYagam1/ForcAD/internal/domain"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/request"
 )
 
 type gameHandler struct {
@@ -16,13 +18,9 @@ type gameHandler struct {
 func (h *gameHandler) ChangeAdminGameState(ctx context.Context, req api.OptGameActionRequest, params api.ChangeAdminGameStateParams) (api.ChangeAdminGameStateRes, error) {
 	const location = "httpv1.gameHandler.ChangeAdminGameState"
 	action := string(params.Action)
-	var generation *int64
-	data, _ := req.Get()
-	if (action == "finish" || action == "start_final") && !data.Confirm.Or(false) {
-		return nil, fmt.Errorf("%s - game action confirmation is required: %w", location, &domain.ValidationError{Message: "Game action confirmation is required"})
-	}
-	if value, ok := data.Generation.Get(); ok {
-		generation = &value
+	generation, err := request.GameAction(req, action)
+	if err != nil {
+		return nil, fmt.Errorf("%s - validate game action: %w", location, err)
 	}
 	if err := h.game.ChangeState(ctx, action, generation); err != nil {
 		return nil, fmt.Errorf("%s - change game state: %w", location, err)
@@ -31,7 +29,7 @@ func (h *gameHandler) ChangeAdminGameState(ctx context.Context, req api.OptGameA
 	if err != nil {
 		return nil, fmt.Errorf("%s - read updated game status: %w", location, err)
 	}
-	return runtimeStatus(runtime), nil
+	return response.RuntimeStatus(runtime), nil
 }
 
 func (h *gameHandler) GetClientConfig(ctx context.Context) (*api.GameConfig, error) {
@@ -40,7 +38,7 @@ func (h *gameHandler) GetClientConfig(ctx context.Context) (*api.GameConfig, err
 	if err != nil {
 		return nil, fmt.Errorf("%s - read game configuration: %w", location, err)
 	}
-	return new(gameConfig(life.Config)), nil
+	return new(response.GameConfig(life.Config)), nil
 }
 
 func (h *gameHandler) GetClientStatus(ctx context.Context) (*api.GameRuntimeStatus, error) {
@@ -49,15 +47,19 @@ func (h *gameHandler) GetClientStatus(ctx context.Context) (*api.GameRuntimeStat
 	if err != nil {
 		return nil, fmt.Errorf("%s - read game status: %w", location, err)
 	}
-	return runtimeStatus(runtime), nil
+	return response.RuntimeStatus(runtime), nil
 }
 
 func (h *gameHandler) GetClientAttackData(ctx context.Context, params api.GetClientAttackDataParams, w http.ResponseWriter) error {
+	const location = "httpv1.gameHandler.GetClientAttackData"
 	service, hasService := params.Service.Get()
 	var filter *string
 	if hasService {
 		filter = &service
 	}
 	ifNoneMatch, _ := params.IfNoneMatch.Get()
-	return writeAttackData(ctx, h.game, filter, ifNoneMatch, w)
+	if err := writeAttackData(ctx, h.game, filter, ifNoneMatch, w); err != nil {
+		return fmt.Errorf("%s - write attack data: %w", location, err)
+	}
+	return nil
 }

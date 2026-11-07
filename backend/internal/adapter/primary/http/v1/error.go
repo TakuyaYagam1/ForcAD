@@ -14,7 +14,12 @@ import (
 )
 
 func errorHandler(logger *slog.Logger) api.ErrorHandler {
-	return func(ctx context.Context, w http.ResponseWriter, r *http.Request, err error) {
+	return func(
+		ctx context.Context,
+		w http.ResponseWriter,
+		r *http.Request,
+		err error,
+	) {
 		status, message, mapped := commonRequestError(err)
 		if !mapped {
 			status, message, mapped = flagRequestError(err, w)
@@ -34,7 +39,9 @@ func errorHandler(logger *slog.Logger) api.ErrorHandler {
 		if status == http.StatusServiceUnavailable {
 			w.Header().Set("Retry-After", "1")
 		}
-		middleware.WriteError(w, status, api.ApiError{Error: message})
+		middleware.WriteError(w, status, api.ApiError{
+			Error: message,
+		})
 	}
 }
 

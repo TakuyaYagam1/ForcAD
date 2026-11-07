@@ -16,7 +16,9 @@ type queuedSubscriber struct {
 }
 
 func (s *queuedSubscriber) Send(data []byte) bool {
-	defer func() { s.attempt <- struct{}{} }()
+	defer func() {
+		s.attempt <- struct{}{}
+	}()
 	select {
 	case s.message <- data:
 		return true
@@ -25,22 +27,38 @@ func (s *queuedSubscriber) Send(data []byte) bool {
 	}
 }
 
-func (s *queuedSubscriber) Close() { s.once.Do(func() { close(s.closed) }) }
+func (s *queuedSubscriber) Close() {
+	s.once.Do(func() {
+		close(s.closed)
+	})
+}
 
 func TestNotificationOverflowPreservesStateDelivery(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	events := New(nil, slog.New(slog.DiscardHandler))
 	done := make(chan struct{})
-	go func() { defer close(done); events.Run(ctx) }()
-	t.Cleanup(func() { cancel(); <-done })
-	subscriber := &queuedSubscriber{message: make(chan []byte, 1), attempt: make(chan struct{}, 4), closed: make(chan struct{})}
+	go func() {
+		defer close(done)
+		events.Run(ctx)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+	subscriber := &queuedSubscriber{
+		message: make(chan []byte, 1),
+		attempt: make(chan struct{}, 4),
+		closed:  make(chan struct{}),
+	}
 	if err := events.hub.Register(subscriber); err != nil {
 		t.Fatal(err)
 	}
 	waitSubscriber(t, events)
 	publish := func(event string) {
 		t.Helper()
-		if err := events.Publish(ctx, event, map[string]int{"sequence": 1}); err != nil {
+		if err := events.Publish(ctx, event, map[string]int{
+			"sequence": 1,
+		}); err != nil {
 			t.Fatal(err)
 		}
 		select {

@@ -33,8 +33,10 @@ func (g *Game) CheckerLogs(
 		rows = []domain.CheckerLog{}
 	}
 	page := domain.CheckerLogPage{
-		TeamID: teamID, TaskID: taskID, Limit: limit,
-		Logs: rows,
+		TeamID: teamID,
+		TaskID: taskID,
+		Limit:  limit,
+		Logs:   rows,
 	}
 	if len(rows) > int(limit) {
 		page.HasMore = true

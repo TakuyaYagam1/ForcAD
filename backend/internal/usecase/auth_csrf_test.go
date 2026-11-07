@@ -8,7 +8,9 @@ import (
 )
 
 func TestCSRFTokenIsIndependentAndBoundToSessionLifetime(t *testing.T) {
-	store := &memoryStore{values: make(map[string][]byte)}
+	store := &memoryStore{
+		values: make(map[string][]byte),
+	}
 	auth := NewAuth(store, "admin", "test-password")
 	first, err := auth.Login(t.Context(), "admin", "test-password")
 	if err != nil {
@@ -50,13 +52,18 @@ func TestCSRFTokenIsIndependentAndBoundToSessionLifetime(t *testing.T) {
 }
 
 func TestLegacySessionWithoutCSRFRequiresLogin(t *testing.T) {
-	store := &memoryStore{values: make(map[string][]byte)}
+	store := &memoryStore{
+		values: make(map[string][]byte),
+	}
 	auth := NewAuth(store, "admin", "test-password")
 	token, err := auth.Login(t.Context(), "admin", "test-password")
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy, err := json.Marshal(sessionData{Username: "admin", PasswordVersion: marker("test-password", token, "admin")})
+	legacy, err := json.Marshal(sessionData{
+		Username:        "admin",
+		PasswordVersion: marker("test-password", token, "admin"),
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

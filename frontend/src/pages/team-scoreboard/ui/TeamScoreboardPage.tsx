@@ -13,7 +13,9 @@ export function TeamScoreboardPage() {
     <AppShell>
       {isInvalid ? (
         <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          {t("teamScoreboard.invalidIdWithValue", { id: rawTeamId ?? "" })}
+          {t("teamScoreboard.invalidIdWithValue", {
+            id: rawTeamId ?? ""
+          })}
         </div>
       ) : (
         <TeamScoreboardWidget />

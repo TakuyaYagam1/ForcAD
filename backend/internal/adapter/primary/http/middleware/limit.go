@@ -14,7 +14,9 @@ func BodyLimit(next http.Handler) http.Handler {
 			limit = 32 << 10
 		}
 		if r.ContentLength > limit {
-			WriteError(w, http.StatusRequestEntityTooLarge, api.ApiError{Error: "Request body too large"})
+			WriteError(w, http.StatusRequestEntityTooLarge, api.ApiError{
+				Error: "Request body too large",
+			})
 			return
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, limit)
@@ -32,10 +34,14 @@ func Admission(limit int) func(http.Handler) http.Handler {
 			}
 			select {
 			case slots <- struct{}{}:
-				defer func() { <-slots }()
+				defer func() {
+					<-slots
+				}()
 			default:
 				w.Header().Set("Retry-After", "1")
-				WriteError(w, http.StatusServiceUnavailable, api.ApiError{Error: "Service capacity exceeded"})
+				WriteError(w, http.StatusServiceUnavailable, api.ApiError{
+					Error: "Service capacity exceeded",
+				})
 				return
 			}
 			next.ServeHTTP(w, r)

@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -22,13 +23,16 @@ type checkerOutput struct {
 }
 
 func newCheckerOutput() (*checkerOutput, error) {
-	output := &checkerOutput{done: make(chan error, 2)}
+	const location = "checker.newCheckerOutput"
+	output := &checkerOutput{
+		done: make(chan error, 2),
+	}
 	for i := range output.readers {
 		reader, writer, err := os.Pipe()
 		if err != nil {
 			output.closeReaders()
 			output.closeWriters()
-			return nil, err
+			return nil, fmt.Errorf("%s - create output pipe: %w", location, err)
 		}
 		output.readers[i], output.writers[i] = reader, writer
 	}
@@ -36,12 +40,21 @@ func newCheckerOutput() (*checkerOutput, error) {
 }
 
 func (output *checkerOutput) start(capture *outputCapture, limit chan<- struct{}) {
+	const location = "checker.checkerOutput.start"
 	streams := [...]outputStream{outputStdout, outputStderr}
 	for i, reader := range output.readers {
 		go func() {
-			_, err := io.Copy(captureWriter{capture: capture, stream: streams[i], limit: limit}, reader)
+			_, err := io.Copy(captureWriter{
+				capture: capture,
+				stream:  streams[i],
+				limit:   limit,
+			}, reader)
 			_ = reader.Close()
-			output.done <- err
+			if err != nil {
+				output.done <- fmt.Errorf("%s - copy checker output: %w", location, err)
+				return
+			}
+			output.done <- nil
 		}()
 	}
 }

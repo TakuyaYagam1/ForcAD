@@ -16,13 +16,18 @@ func TestRedisSubscriberStopsOnCancellation(t *testing.T) {
 	if addr == "" {
 		t.Skip("FORCAD_TEST_REDIS_ADDR is not set")
 	}
-	client := redis.NewClient(&redis.Options{Addr: addr})
+	client := redis.NewClient(&redis.Options{
+		Addr: addr,
+	})
 	defer client.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	events := websocket.New(client, slog.New(slog.DiscardHandler))
 	done := make(chan struct{})
-	go func() { defer close(done); events.Run(ctx) }()
+	go func() {
+		defer close(done)
+		events.Run(ctx)
+	}()
 	deadline := time.NewTimer(2 * time.Second)
 	defer deadline.Stop()
 	tick := time.NewTicker(10 * time.Millisecond)

@@ -7,12 +7,17 @@ import (
 )
 
 func handleControlHelp(args []string, out io.Writer) (bool, error) {
+	const location = "bootstrap.handleControlHelp"
+
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" || args[0] == "-h" {
-		return true, writeControlHelp(out, args)
+		if err := writeControlHelp(out, args); err != nil {
+			return true, fmt.Errorf("%s - write help: %w", location, err)
+		}
+		return true, nil
 	}
 	if len(args) == 2 && (args[1] == "--help" || args[1] == "-h") {
 		if err := writeControlHelp(out, []string{"help", args[0]}); err != nil {
-			return true, err
+			return true, fmt.Errorf("%s - %w", location, err)
 		}
 		return true, flag.ErrHelp
 	}
@@ -86,10 +91,10 @@ func writeControlHelp(out io.Writer, args []string) error {
 
 func controlUsage(command string) (string, bool) {
 	usages := map[string]string{
-		"setup":            "setup [--redis ADDR] [--database ADDR] [--rabbitmq ADDR]",
+		"setup":            "setup [--redis ADDR] [--database ADDR] [--nats ADDR]",
 		"build":            "build [--fast] [COMPOSE_BUILD_OPTIONS] [SERVICE...]",
 		"start":            "start [-w N | --workers N] [--fast] [COMPOSE_UP_OPTIONS] [SERVICE...]",
-		"worker":           "worker --redis ADDR --database ADDR --rabbitmq ADDR [-w N | --workers N] [--fast]",
+		"worker":           "worker --redis ADDR --database ADDR --nats ADDR [-w N | --workers N] [--fast]",
 		"scale":            "scale -s SERVICE COUNT [-s SERVICE COUNT...] (also --service; celery maps to worker)",
 		"stop":             "stop [--timeout SECONDS] [SERVICE...]",
 		"down":             "down [COMPOSE_DOWN_OPTIONS]",

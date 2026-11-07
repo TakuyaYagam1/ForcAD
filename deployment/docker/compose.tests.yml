@@ -31,5 +31,5 @@ services:
   postgres-data:
     restart: "no"
 
-  rabbitmq:
+  nats:
     restart: "no"

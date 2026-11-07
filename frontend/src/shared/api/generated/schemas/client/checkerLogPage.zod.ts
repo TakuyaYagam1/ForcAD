@@ -17,17 +17,21 @@ export const CheckerLogPage = zod.object({
   "has_more": zod.boolean(),
   "next_before_id": zod.uuid().optional(),
   "logs": zod.array(zod.object({
-  "id": zod.uuid(),
-  "round": zod.int(),
-  "action": zod.string(),
-  "stage": zod.string(),
-  "started_at": zod.iso.datetime({"offset":true}),
-  "finished_at": zod.iso.datetime({"offset":true}),
-  "duration_ms": zod.int().min(checkerLogPageLogsItemDurationMsMin),
-  "timed_out": zod.boolean(),
-  "status": zod.int(),
-  "public_message": zod.string()
-}))
+    "id": zod.uuid(),
+    "round": zod.int(),
+    "action": zod.string(),
+    "stage": zod.string(),
+    "started_at": zod.iso.datetime({
+      "offset":true
+    }),
+    "finished_at": zod.iso.datetime({
+      "offset":true
+    }),
+    "duration_ms": zod.int().min(checkerLogPageLogsItemDurationMsMin),
+    "timed_out": zod.boolean(),
+    "status": zod.int(),
+    "public_message": zod.string()
+  }))
 })
 
 export type CheckerLogPage = zod.input<typeof CheckerLogPage>;

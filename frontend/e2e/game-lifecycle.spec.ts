@@ -11,9 +11,18 @@ import {
 } from "./support";
 
 interface ScoreboardResponse {
-  teams: Array<{ id: string; name: string }>;
-  tasks: Array<{ id: string; name: string }>;
-  runtime: { phase: string; practice: boolean };
+  teams: Array<{
+    id: string;
+    name: string
+  }>;
+  tasks: Array<{
+    id: string;
+    name: string
+  }>;
+  runtime: {
+    phase: string;
+    practice: boolean
+  };
 }
 
 test("public stream resynchronizes after a missed practice pause", async ({ browser }) => {
@@ -26,8 +35,12 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
   const publicCSPViolations = await observeCSP(publicPage);
   const adminCSPViolations = await observeCSP(adminPage);
   const pageErrors: string[] = [];
-  publicPage.on("pageerror", (error) => pageErrors.push(error.message));
-  adminPage.on("pageerror", (error) => pageErrors.push(error.message));
+  publicPage.on("pageerror", (error) => {
+    return pageErrors.push(error.message)
+  });
+  adminPage.on("pageerror", (error) => {
+    return pageErrors.push(error.message)
+  });
   const observation = await observePublicStream(publicPage);
   let adminAuthenticated = false;
 
@@ -41,21 +54,32 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       return url.pathname === "/api/client/status/" && response.request().method() === "GET";
     });
     await publicPage.goto("/");
-    await expect(publicPage.getByRole("heading", { name: "Рейтинг команд", exact: true })).toBeVisible();
+    await expect(publicPage.getByRole("heading", {
+      name: "Рейтинг команд",
+      exact: true
+    })).toBeVisible();
     const [scoreboardResponse, runtimeResponse] = await Promise.all([
       initialScoreboard,
       initialRuntime,
     ]);
-    await expect.poll(() => observation.connections).toBeGreaterThan(0);
+    await expect.poll(() => {
+      return observation.connections
+    }).toBeGreaterThan(0);
     expect(scoreboardResponse.status()).toBe(200);
     expect(runtimeResponse.status()).toBe(200);
-    expect((await runtimeResponse.json() as { phase?: unknown }).phase).toBe("waiting");
+    expect((await runtimeResponse.json() as {
+      phase?: unknown
+    }).phase).toBe("waiting");
     const initialScoreboardBody = await scoreboardResponse.json() as ScoreboardResponse;
-    const firstTeam = initialScoreboardBody.teams.find((team) => team.name === "first");
+    const firstTeam = initialScoreboardBody.teams.find((team) => {
+      return team.name === "first"
+    });
     const firstTask = initialScoreboardBody.tasks[0];
     expect(firstTeam).toBeDefined();
     expect(firstTask).toBeDefined();
-    if (!firstTeam || !firstTask) throw new Error("The local E2E scoreboard fixture is incomplete.");
+    if (!firstTeam || !firstTask) {
+      throw new Error("The local E2E scoreboard fixture is incomplete.");
+    }
 
     await loginAsAdmin(adminPage, credentials);
     adminAuthenticated = true;
@@ -65,8 +89,13 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       exact: true,
     })).toBeEnabled();
 
-    const runningBeforeStart = observation.phases.filter((phase) => phase === "running").length;
-    await adminPage.getByRole("button", { name: "Начать тестовую игру", exact: true }).click();
+    const runningBeforeStart = observation.phases.filter((phase) => {
+      return phase === "running"
+    }).length;
+    await adminPage.getByRole("button", {
+      name: "Начать тестовую игру",
+      exact: true
+    }).click();
     await adminPage.getByRole("dialog").getByRole("button", {
       name: "Начать тестовую игру",
       exact: true,
@@ -91,8 +120,9 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     const firstTaskScore = publicPage.locator(
       `[data-team-id="${firstTeam.id}"] .service-column`,
     ).first().locator(".service-metric").nth(1).locator("strong");
-    await expect.poll(async () =>
-      (await firstTaskScore.textContent() ?? "").replace(/\D/g, ""),
+    await expect.poll(async () => {
+      return (await firstTaskScore.textContent() ?? "").replace(/\D/g, "")
+    },
     ).toBe(String(staleScore));
     await expect(adminPage.getByRole("button", {
       name: "Завершить тестовую игру",
@@ -107,9 +137,14 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     await publicContext.setOffline(true);
     await observation.disconnect();
     await expect(publicPage.getByRole("banner")
-      .getByText("Нет соединения", { exact: true })).toBeVisible();
+      .getByText("Нет соединения", {
+        exact: true
+      })).toBeVisible();
 
-    await adminPage.getByRole("button", { name: "Приостановить", exact: true }).click();
+    await adminPage.getByRole("button", {
+      name: "Приостановить",
+      exact: true
+    }).click();
     await expect(adminPage.getByRole("button", {
       name: "Продолжить",
       exact: true,
@@ -121,13 +156,19 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     const resynchronized = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
-    }, { timeout: 60_000 });
+    }, {
+      timeout: 60_000
+    });
     const resynchronizedRuntime = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === "/api/client/status/" && response.request().method() === "GET";
     });
-    const pausedRound = publicPage.getByRole("region", { name: "Текущий раунд" })
-      .getByText("Пауза", { exact: true });
+    const pausedRound = publicPage.getByRole("region", {
+      name: "Текущий раунд"
+    })
+      .getByText("Пауза", {
+        exact: true
+      });
     // Another API replica can return its pre-pause, 500 ms cached scoreboard.
     // Deliver that snapshot after the authoritative status has reached the UI.
     await publicPage.route("**/api/client/scoreboard/", async (route) => {
@@ -135,18 +176,29 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       const body = await response.json() as ScoreboardResponse;
       await resynchronizedRuntime;
       await expect(pausedRound).toBeVisible();
-      await route.fulfill({ response, json: {
-        ...body,
-        runtime: { ...body.runtime, phase: "running", practice: true },
-      } });
-    }, { times: 1 });
+      await route.fulfill({
+        response,
+        json: {
+          ...body,
+          runtime: {
+            ...body.runtime,
+            phase: "running",
+            practice: true
+          },
+        }
+      });
+    }, {
+      times: 1
+    });
     const phasesBeforeReconnect = observation.phases.length;
     observation.suppressInits(true);
     observation.reconnect();
     await publicContext.setOffline(false);
     const [resyncResponse] = await Promise.all([
       resynchronized,
-      expect.poll(() => observation.connections, {
+      expect.poll(() => {
+        return observation.connections
+      }, {
         message: "Expected a new public WebSocket after connectivity returns",
         timeout: 60_000,
       }).toBeGreaterThan(connectionsBeforeOffline),
@@ -154,7 +206,9 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     expect(resyncResponse.status()).toBe(200);
     const resyncBody = await resyncResponse.json() as ScoreboardResponse;
     expect(resyncBody.teams).toHaveLength(2);
-    expect(resyncBody.teams.map((team) => team.name)).toEqual(
+    expect(resyncBody.teams.map((team) => {
+      return team.name
+    })).toEqual(
       expect.arrayContaining(["first", "second"]),
     );
     expect(resyncBody.runtime.phase).toBe("running");
@@ -162,25 +216,40 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     const runtimeBody = await (await resynchronizedRuntime).json() as ScoreboardResponse["runtime"];
     expect(runtimeBody.phase).toBe("paused");
     expect(runtimeBody.practice).toBe(true);
-    await expect.poll(async () =>
-      (await firstTaskScore.textContent() ?? "").replace(/\D/g, ""),
+    await expect.poll(async () => {
+      return (await firstTaskScore.textContent() ?? "").replace(/\D/g, "")
+    },
     ).not.toBe(String(staleScore));
-    await expect(pausedRound).toBeVisible({ timeout: 1000 });
+    await expect(pausedRound).toBeVisible({
+      timeout: 1000
+    });
     expect(observation.phases).toHaveLength(phasesBeforeReconnect);
     observation.suppressInits(false);
 
-    const runningBeforeResume = observation.phases.filter((phase) => phase === "running").length;
-    await adminPage.getByRole("button", { name: "Продолжить", exact: true }).click();
+    const runningBeforeResume = observation.phases.filter((phase) => {
+      return phase === "running"
+    }).length;
+    await adminPage.getByRole("button", {
+      name: "Продолжить",
+      exact: true
+    }).click();
     await expectNewPhase(observation, "running", runningBeforeResume);
     await expect(adminPage.getByRole("button", {
       name: "Приостановить",
       exact: true,
     })).toBeEnabled();
     await expect(publicPage.getByRole("banner")
-      .getByText("Игра идет", { exact: true })).toBeVisible();
+      .getByText("Игра идет", {
+        exact: true
+      })).toBeVisible();
 
-    const waitingBeforeFinish = observation.phases.filter((phase) => phase === "waiting").length;
-    await adminPage.getByRole("button", { name: "Завершить тестовую игру", exact: true }).click();
+    const waitingBeforeFinish = observation.phases.filter((phase) => {
+      return phase === "waiting"
+    }).length;
+    await adminPage.getByRole("button", {
+      name: "Завершить тестовую игру",
+      exact: true
+    }).click();
     await adminPage.getByRole("dialog").getByRole("button", {
       name: "Завершить тестовую игру",
       exact: true,
@@ -188,8 +257,14 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
     await expectNewPhase(observation, "waiting", waitingBeforeFinish);
     await expect.poll(async () => {
       const status = await currentRuntime(adminPage);
-      return { phase: status.phase, practice: status.practice, reset_pending: status.reset_pending };
-    }, { timeout: 90_000 }).toEqual({
+      return {
+        phase: status.phase,
+        practice: status.practice,
+        reset_pending: status.reset_pending
+      };
+    }, {
+      timeout: 90_000
+    }).toEqual({
       phase: "waiting",
       practice: false,
       reset_pending: false,
@@ -199,13 +274,17 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       exact: true,
     })).toBeEnabled();
     await expect(publicPage.getByRole("banner")
-      .getByText("Ожидание старта", { exact: true })).toBeVisible();
+      .getByText("Ожидание старта", {
+        exact: true
+      })).toBeVisible();
     expect(pageErrors).toEqual([]);
     expect(publicCSPViolations).toEqual([]);
     expect(adminCSPViolations).toEqual([]);
   } finally {
     try {
-      if (adminAuthenticated) await resetPractice(adminPage);
+      if (adminAuthenticated) {
+        await resetPractice(adminPage);
+      }
     } finally {
       try {
         await adminContext.close();

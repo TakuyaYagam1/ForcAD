@@ -84,6 +84,7 @@ linters:
         - name: unused-parameter
         - name: unreachable-code
         - name: redefines-builtin-id
+        - name: use-any
     nolintlint:
       allow-unused: false
       require-explanation: true
@@ -128,12 +129,11 @@ formatters:
   enable:
     - gofmt
     - goimports
-  exclusions:
-    generated: strict
-    paths:
-      - internal/adapter/primary/http/api/
-      - internal/adapter/secondary/postgres/sqlc/
-      - internal/bootstrap/wire_gen\.go$
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: 'interface{}'
+          replacement: 'any'
 
 issues:
   max-issues-per-linter: 0

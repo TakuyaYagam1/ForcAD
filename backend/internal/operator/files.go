@@ -24,7 +24,9 @@ func readRegularFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s - open file %s: %w", location, path, err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		_ = file.Close()
+	}()
 	openedInfo, err := file.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("%s - inspect opened file %s: %w", location, path, err)
@@ -113,14 +115,16 @@ func backupConfig(path string) (string, error) {
 func writePrivateFile(path string, data []byte) error {
 	const location = "operator.writePrivateFile"
 	if err := checkRegularOrMissing(path); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	temporary, err := createPrivateTemp(filepath.Dir(path))
 	if err != nil {
 		return fmt.Errorf("%s - create temporary file: %w", location, err)
 	}
 	temporaryPath := temporary.Name()
-	defer func() { _ = os.Remove(temporaryPath) }()
+	defer func() {
+		_ = os.Remove(temporaryPath)
+	}()
 	if _, err := temporary.Write(data); err != nil {
 		_ = temporary.Close()
 		return fmt.Errorf("%s - write temporary file: %w", location, err)
@@ -133,7 +137,7 @@ func writePrivateFile(path string, data []byte) error {
 		return fmt.Errorf("%s - close temporary file: %w", location, err)
 	}
 	if err := checkRegularOrMissing(path); err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("%s - replace file: %w", location, err)
@@ -142,14 +146,18 @@ func writePrivateFile(path string, data []byte) error {
 }
 
 func createPrivateTemp(directory string) (*os.File, error) {
+	const location = "operator.createPrivateTemp"
 	for range 10 {
 		file, err := createPrivateFile(filepath.Join(directory, ".forcad-setup-"+rand.Text()))
 		if errors.Is(err, os.ErrExist) {
 			continue
 		}
-		return file, err
+		if err != nil {
+			return file, fmt.Errorf("%s - create private temporary file: %w", location, err)
+		}
+		return file, nil
 	}
-	return nil, fmt.Errorf("operator.createPrivateTemp - cannot allocate unique private file: %w", os.ErrExist)
+	return nil, fmt.Errorf("%s - cannot allocate unique private file: %w", location, os.ErrExist)
 }
 
 func checkRegularOrMissing(path string) error {

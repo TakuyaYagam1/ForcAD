@@ -9,20 +9,20 @@ import * as zod from 'zod';
 
 export const UpdateScoreboardEventPayload = zod.object({
   "data": zod.object({
-  "round_start": zod.int(),
-  "round": zod.int(),
-  "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
-})
+    "round_start": zod.int(),
+    "round": zod.int(),
+    "team_tasks": zod.array(zod.object({
+      "team_id": zod.uuid(),
+      "task_id": zod.uuid(),
+      "status": zod.int(),
+      "stolen": zod.int(),
+      "lost": zod.int(),
+      "score": zod.number(),
+      "checks": zod.int(),
+      "checks_passed": zod.int(),
+      "message": zod.string().nullable()
+    }))
+  })
 })
 
 export type UpdateScoreboardEventPayload = zod.input<typeof UpdateScoreboardEventPayload>;

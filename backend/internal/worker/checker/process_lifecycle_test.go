@@ -12,13 +12,27 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
-type processObserver struct{ actions atomic.Int32 }
+type processObserver struct {
+	actions atomic.Int32
+}
 
-func (*processObserver) WorkflowStarted()                                            {}
-func (*processObserver) WorkflowEnded()                                              {}
-func (o *processObserver) ActionStarted()                                            { o.actions.Add(1) }
-func (o *processObserver) ActionEnded()                                              { o.actions.Add(-1) }
-func (*processObserver) ObserveCompleted(string, string, domain.CheckerResult, bool) {}
+func (*processObserver) WorkflowStarted() {
+}
+func (*processObserver) WorkflowEnded() {
+}
+func (o *processObserver) ActionStarted() {
+	o.actions.Add(1)
+}
+func (o *processObserver) ActionEnded() {
+	o.actions.Add(-1)
+}
+func (*processObserver) ObserveCompleted(
+	string,
+	string,
+	domain.CheckerResult,
+	bool,
+) {
+}
 
 func TestUnreapedCheckerRetainsCapacityAndRequiresReplacement(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
@@ -26,14 +40,24 @@ func TestUnreapedCheckerRetainsCapacityAndRequiresReplacement(t *testing.T) {
 		observer := &processObserver{}
 		var drained atomic.Int32
 		repo := newFakeRepository(payloadJSON(t, "", defaultTask()), domain.JobActionCheckOnly)
-		runner := &fakeRunner{fn: func(context.Context, processchecker.Request) (processchecker.Result, error) {
-			// Cleanup can fail after the workflow deadline. It still requires
-			// replacement, never an ordinary completed timeout verdict.
-			time.Sleep(2 * time.Second)
-			return processchecker.Result{Status: processchecker.StatusCheckFailed, PendingReap: reaped}, errors.New("process cleanup incomplete")
-		}}
+		runner := &fakeRunner{
+			fn: func(context.Context, processchecker.Request) (processchecker.Result, error) {
+				// Cleanup can fail after the workflow deadline. It still requires
+				// replacement, never an ordinary completed timeout verdict.
+				time.Sleep(2 * time.Second)
+				return processchecker.Result{
+					Status:      processchecker.StatusCheckFailed,
+					PendingReap: reaped,
+				}, errors.New("process cleanup incomplete")
+			},
+		}
 		worker := makeWorker(t, repo, &fakeFlagStore{}, runner, Options{
-			WorkConcurrency: 1, MaxWorkflowDuration: time.Second, Observer: observer, OnDegraded: func() { drained.Add(1) },
+			WorkConcurrency:     1,
+			MaxWorkflowDuration: time.Second,
+			Observer:            observer,
+			OnDegraded: func() {
+				drained.Add(1)
+			},
 		})
 		if err := worker.Handle(t.Context(), testJobID); !errors.Is(err, ErrWorkerUnreaped) {
 			t.Fatalf("Handle = %v, want restart failure", err)
@@ -72,14 +96,21 @@ func TestUnreapedCheckerRetainsCapacityAndRequiresReplacement(t *testing.T) {
 func TestDegradationWakesWaitersAndTracksAllUnreapedProcesses(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		var drained atomic.Int32
-		worker := New(nil, nil, nil, nil, Options{WorkConcurrency: 2, OnDegraded: func() { drained.Add(1) }}, nil)
+		worker := New(nil, nil, nil, nil, Options{
+			WorkConcurrency: 2,
+			OnDegraded: func() {
+				drained.Add(1)
+			},
+		}, nil)
 		for range 2 {
 			if err := worker.beginAction(t.Context()); err != nil {
 				t.Fatal(err)
 			}
 		}
 		waiting := make(chan error, 1)
-		go func() { waiting <- worker.beginAction(t.Context()) }()
+		go func() {
+			waiting <- worker.beginAction(t.Context())
+		}()
 		synctest.Wait()
 		reaped := []chan struct{}{make(chan struct{}), make(chan struct{})}
 		worker.endAction(reaped[0])
@@ -104,15 +135,27 @@ func TestDegradationWakesWaitersAndTracksAllUnreapedProcesses(t *testing.T) {
 func TestDegradationDuringLeaseWriteDoesNotLaunchAnotherChecker(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		entered, release, reaped := make(chan struct{}), make(chan struct{}), make(chan struct{})
-		repo := &recoveredRepository{fakeRepository: newFakeRepository(payloadJSON(t, "", defaultTask()), domain.JobActionCheckOnly)}
-		repo.deadline = func(context.Context) (bool, error) { close(entered); <-release; return true, nil }
+		repo := &recoveredRepository{
+			fakeRepository: newFakeRepository(payloadJSON(t, "", defaultTask()), domain.JobActionCheckOnly),
+		}
+		repo.deadline = func(context.Context) (bool, error) {
+			close(entered)
+			<-release
+			return true, nil
+		}
 		runner := &fakeRunner{}
-		worker := New(repo, &fakeFlagStore{}, fakeLifecycle{lifetime: 3}, runner, Options{WorkConcurrency: 2}, nil)
+		worker := New(repo, &fakeFlagStore{}, fakeLifecycle{
+			lifetime: 3,
+		}, runner, Options{
+			WorkConcurrency: 2,
+		}, nil)
 		if err := worker.beginAction(t.Context()); err != nil {
 			t.Fatal(err)
 		}
 		done := make(chan error, 1)
-		go func() { done <- worker.Handle(t.Context(), testJobID) }()
+		go func() {
+			done <- worker.Handle(t.Context(), testJobID)
+		}()
 		<-entered
 		worker.endAction(reaped)
 		close(release)

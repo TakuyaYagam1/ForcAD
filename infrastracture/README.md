@@ -9,6 +9,10 @@ network interfaces and VLANs for the configured address plan.
 
 ## Configure and render
 
+For the 28-team final, use [settings.final.example.toml](settings.final.example.toml)
+and the [capacity and rehearsal guide](../deployment/final/README.md). Replace
+the placeholder checkers and network values before rendering.
+
 From the repository root:
 
 ```sh
@@ -21,7 +25,9 @@ python3 render.py
 Use [settings.example.toml](settings.example.toml) for field descriptions. Set
 the addresses, interfaces, game settings, tasks, teams and monitoring options
 for your deployment. Team order assigns consecutive VLANs, one /24 network per
-team and one /29 VPN block per team. Put logos under `public/teams/` or
+team and one /29 VPN block per team with up to five members. Six or seven
+members use /28 blocks; 28 teams then require a /23 VPN pool that does not
+overlap the admin VPN. Put logos under `public/teams/` or
 `public/brand/`, and checkers under `checkers/`. Leave a logo value empty when
 none is needed.
 

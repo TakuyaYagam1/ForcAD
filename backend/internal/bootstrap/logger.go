@@ -33,7 +33,12 @@ func NewLogger(output io.Writer) (*Logger, error) {
 		return nil, fmt.Errorf("%s - output must be set", location)
 	}
 	logger := &Logger{}
-	logger.output = &logWriter{sink: output, queue: make(chan []byte, logBufferCapacity), done: make(chan struct{}), dropped: &logger.dropped}
+	logger.output = &logWriter{
+		sink:    output,
+		queue:   make(chan []byte, logBufferCapacity),
+		done:    make(chan struct{}),
+		dropped: &logger.dropped,
+	}
 	library, err := logkit.New(
 		logkit.WithWriter(logger.output),
 		logkit.WithLevel(logkit.InfoLevel),

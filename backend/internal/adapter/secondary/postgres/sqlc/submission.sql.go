@@ -12,6 +12,70 @@ import (
 	"uuid"
 )
 
+const applySubmissionChanges = `-- name: ApplySubmissionChanges :one
+WITH score_changes AS (
+    SELECT UNNEST($1::UUID[]) AS team_id,
+           UNNEST($2::UUID[]) AS task_id,
+           UNNEST($3::INTEGER[]) AS stolen,
+           UNNEST($4::INTEGER[]) AS lost,
+           UNNEST($5::DOUBLE PRECISION[]) AS score
+), updated_scores AS (
+    UPDATE TeamTasks AS task
+    SET stolen = task.stolen + score_changes.stolen,
+        lost = task.lost + score_changes.lost,
+        score = score_changes.score
+    FROM score_changes
+    WHERE task.team_id = score_changes.team_id AND task.task_id = score_changes.task_id
+    RETURNING task.team_id
+), event_changes AS (
+    SELECT flags.flag_id, deltas.attacker_delta
+    FROM UNNEST($6::UUID[]) WITH ORDINALITY AS flags(flag_id, ordinal)
+    JOIN UNNEST($7::DOUBLE PRECISION[]) WITH ORDINALITY AS deltas(attacker_delta, ordinal)
+        USING (ordinal)
+), updated_events AS (
+    UPDATE StolenFlags AS event
+    SET attacker_delta = event_changes.attacker_delta
+    FROM event_changes
+    WHERE event.flag_id = event_changes.flag_id
+      AND event.attacker_id = $8::UUID
+    RETURNING event.flag_id
+)
+SELECT (SELECT count(*) FROM updated_scores) AS score_rows,
+       (SELECT count(*) FROM updated_events) AS event_rows
+`
+
+type ApplySubmissionChangesParams struct {
+	TeamIds    []uuid.UUID `json:"team_ids"`
+	TaskIds    []uuid.UUID `json:"task_ids"`
+	Stolen     []int32     `json:"stolen"`
+	Lost       []int32     `json:"lost"`
+	Scores     []float64   `json:"scores"`
+	FlagIds    []uuid.UUID `json:"flag_ids"`
+	Deltas     []float64   `json:"deltas"`
+	AttackerID uuid.UUID   `json:"attacker_id"`
+}
+
+type ApplySubmissionChangesRow struct {
+	ScoreRows int64 `json:"score_rows"`
+	EventRows int64 `json:"event_rows"`
+}
+
+func (q *Queries) ApplySubmissionChanges(ctx context.Context, arg ApplySubmissionChangesParams) (ApplySubmissionChangesRow, error) {
+	row := q.db.QueryRow(ctx, applySubmissionChanges,
+		arg.TeamIds,
+		arg.TaskIds,
+		arg.Stolen,
+		arg.Lost,
+		arg.Scores,
+		arg.FlagIds,
+		arg.Deltas,
+		arg.AttackerID,
+	)
+	var i ApplySubmissionChangesRow
+	err := row.Scan(&i.ScoreRows, &i.EventRows)
+	return i, err
+}
+
 const insertStolenFlags = `-- name: InsertStolenFlags :many
 INSERT INTO StolenFlags (attacker_id, flag_id, submit_time)
 SELECT $1, id, $2::TIMESTAMPTZ
@@ -45,6 +109,72 @@ func (q *Queries) InsertStolenFlags(ctx context.Context, arg InsertStolenFlagsPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const insertSubmissionChanges = `-- name: InsertSubmissionChanges :one
+WITH flag_changes AS (
+    SELECT UNNEST($1::UUID[]) AS flag_id,
+           UNNEST($2::DOUBLE PRECISION[]) AS attacker_delta
+), inserted AS (
+    INSERT INTO StolenFlags (attacker_id, flag_id, submit_time, attacker_delta)
+    SELECT $3::UUID, flag_id,
+           $4::TIMESTAMPTZ, attacker_delta
+    FROM flag_changes
+    ORDER BY flag_id
+    ON CONFLICT (flag_id, attacker_id) DO NOTHING
+    RETURNING flag_id
+), score_changes AS (
+    SELECT UNNEST($5::UUID[]) AS team_id,
+           UNNEST($6::UUID[]) AS task_id,
+           UNNEST($7::INTEGER[]) AS stolen,
+           UNNEST($8::INTEGER[]) AS lost,
+           UNNEST($9::DOUBLE PRECISION[]) AS score
+), updated_scores AS (
+    UPDATE TeamTasks AS task
+    SET stolen = task.stolen + score_changes.stolen,
+        lost = task.lost + score_changes.lost,
+        score = score_changes.score
+    FROM score_changes
+    WHERE task.team_id = score_changes.team_id AND task.task_id = score_changes.task_id
+      AND (SELECT count(*) FROM inserted) = cardinality($1::UUID[])
+    RETURNING task.team_id
+)
+SELECT ARRAY(SELECT flag_id FROM inserted)::UUID[] AS flag_ids,
+       (SELECT count(*) FROM updated_scores) AS score_rows
+`
+
+type InsertSubmissionChangesParams struct {
+	FlagIds    []uuid.UUID        `json:"flag_ids"`
+	Deltas     []float64          `json:"deltas"`
+	AttackerID uuid.UUID          `json:"attacker_id"`
+	ReceivedAt pgtype.Timestamptz `json:"received_at"`
+	TeamIds    []uuid.UUID        `json:"team_ids"`
+	TaskIds    []uuid.UUID        `json:"task_ids"`
+	Stolen     []int32            `json:"stolen"`
+	Lost       []int32            `json:"lost"`
+	Scores     []float64          `json:"scores"`
+}
+
+type InsertSubmissionChangesRow struct {
+	FlagIds   []uuid.UUID `json:"flag_ids"`
+	ScoreRows int64       `json:"score_rows"`
+}
+
+func (q *Queries) InsertSubmissionChanges(ctx context.Context, arg InsertSubmissionChangesParams) (InsertSubmissionChangesRow, error) {
+	row := q.db.QueryRow(ctx, insertSubmissionChanges,
+		arg.FlagIds,
+		arg.Deltas,
+		arg.AttackerID,
+		arg.ReceivedAt,
+		arg.TeamIds,
+		arg.TaskIds,
+		arg.Stolen,
+		arg.Lost,
+		arg.Scores,
+	)
+	var i InsertSubmissionChangesRow
+	err := row.Scan(&i.FlagIds, &i.ScoreRows)
+	return i, err
 }
 
 const lockSubmissionTasks = `-- name: LockSubmissionTasks :many
@@ -168,42 +298,4 @@ func (q *Queries) SubmissionRound(ctx context.Context, arg SubmissionRoundParams
 	var round int32
 	err := row.Scan(&round)
 	return round, err
-}
-
-const updateSubmissionScores = `-- name: UpdateSubmissionScores :execrows
-WITH changes AS (
-    SELECT UNNEST($1::UUID[]) AS team_id,
-           UNNEST($2::UUID[]) AS task_id,
-           UNNEST($3::INTEGER[]) AS stolen,
-           UNNEST($4::INTEGER[]) AS lost,
-           UNNEST($5::DOUBLE PRECISION[]) AS score
-)
-UPDATE TeamTasks t
-SET stolen = t.stolen + changes.stolen,
-    lost = t.lost + changes.lost,
-    score = changes.score
-FROM changes
-WHERE t.team_id = changes.team_id AND t.task_id = changes.task_id
-`
-
-type UpdateSubmissionScoresParams struct {
-	TeamIds []uuid.UUID `json:"team_ids"`
-	TaskIds []uuid.UUID `json:"task_ids"`
-	Stolen  []int32     `json:"stolen"`
-	Lost    []int32     `json:"lost"`
-	Scores  []float64   `json:"scores"`
-}
-
-func (q *Queries) UpdateSubmissionScores(ctx context.Context, arg UpdateSubmissionScoresParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateSubmissionScores,
-		arg.TeamIds,
-		arg.TaskIds,
-		arg.Stolen,
-		arg.Lost,
-		arg.Scores,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }

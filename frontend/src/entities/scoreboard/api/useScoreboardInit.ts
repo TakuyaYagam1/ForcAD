@@ -5,7 +5,9 @@ import { fetchScoreboardInit } from "./index";
 export function useScoreboardInit() {
   return useQuery({
     queryKey: ["scoreboardInit"],
-    queryFn: ({ signal }) => fetchScoreboardInit(signal),
+    queryFn: ({ signal }) => {
+      return fetchScoreboardInit(signal)
+    },
     staleTime: Infinity,
   });
 }

@@ -49,16 +49,26 @@ import { axiosMutator } from '../../../axiosMutator';
 
 
 
-const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
-  const result = { queryKey } as T & { queryKey: K };
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & {
+  queryKey: K
+} => {
+  const result = {
+    queryKey
+  } as T & {
+    queryKey: K
+  };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === 'queryKey') continue;
+    if (key === 'queryKey') {
+      continue;
+    }
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
-      get: () => (query as Record<string, unknown>)[key],
+      get: () => {
+        return (query as Record<string, unknown>)[key]
+      },
     });
   }
   return result;
@@ -69,42 +79,55 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
  */
 export const getAdminTeams = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTeam[]>(
-      {url: `/api/admin/teams/`, method: 'GET', signal
+  return axiosMutator<AdminTeam[]>(
+    {
+      url: `/api/admin/teams/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTeamsQueryKey = () => {
-    return [
+  return [
     `/api/admin/teams/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTeamsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>, }
+export const getGetAdminTeamsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTeamsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeams>>> = ({ signal }) => getAdminTeams(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeams>>> = ({ signal }) => {
+    return getAdminTeams(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTeams>>>
@@ -112,41 +135,59 @@ export type GetAdminTeamsQueryError = ApiError
 
 
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeams>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeams>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeams>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeams>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary List all teams, including inactive teams.
  */
 
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTeamsQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -161,110 +202,151 @@ export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams
  * @summary Create a team.
  */
 export const createAdminTeam = (
-    adminTeamCreate: AdminTeamCreate,
- signal?: AbortSignal
+  adminTeamCreate: AdminTeamCreate,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTeam>(
-      {url: `/api/admin/teams/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: adminTeamCreate, signal
+  return axiosMutator<AdminTeam>(
+    {
+      url: `/api/admin/teams/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminTeamCreate,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getCreateAdminTeamMutationKey = () => ['createAdminTeam'] as const;
+export const getCreateAdminTeamMutationKey = () => {
+  return ['createAdminTeam'] as const
+};
 
 export const getCreateAdminTeamMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext> => {
 
-const mutationKey = getCreateAdminTeamMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getCreateAdminTeamMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTeam>>, CreateAdminTeamMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  createAdminTeam(data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTeam>>, CreateAdminTeamMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  createAdminTeam(data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type CreateAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTeam>>>
-    export type CreateAdminTeamMutationBody = AdminTeamCreate
-    export type CreateAdminTeamMutationError = ApiError
-    export type CreateAdminTeamMutationVariables = {data: AdminTeamCreate}
+export type CreateAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTeam>>>
+export type CreateAdminTeamMutationBody = AdminTeamCreate
+export type CreateAdminTeamMutationError = ApiError
+export type CreateAdminTeamMutationVariables = {
+  data: AdminTeamCreate
+}
 
-    /**
+/**
  * @summary Create a team.
  */
 export const useCreateAdminTeam = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeam>>, TError,CreateAdminTeamMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAdminTeam>>,
         TError,
         CreateAdminTeamMutationVariables,
         TContext
       > => {
-      return useMutation(getCreateAdminTeamMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getCreateAdminTeamMutationOptions(options), queryClient);
+}
+/**
  * @summary Get one team, including administration fields.
  */
 export const getAdminTeam = (
-    teamId: string,
- signal?: AbortSignal
+  teamId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTeam>(
-      {url: `/api/admin/teams/${teamId}/`, method: 'GET', signal
+  return axiosMutator<AdminTeam>(
+    {
+      url: `/api/admin/teams/${teamId}/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTeamQueryKey = (teamId: string,) => {
-    return [
+  return [
     `/api/admin/teams/${teamId}/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTeamQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>, }
+export const getGetAdminTeamQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(teamId: string, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTeamQueryKey(teamId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeam>>> = ({ signal }) => getAdminTeam(teamId, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeam>>> = ({ signal }) => {
+    return getAdminTeam(teamId, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: teamId !== null && teamId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    enabled: teamId !== null && teamId !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTeamQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTeam>>>
@@ -272,41 +354,59 @@ export type GetAdminTeamQueryError = ApiError
 
 
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
- teamId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
+ teamId: string, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeam>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeam>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
+ teamId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeam>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeam>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>, }
+ teamId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get one team, including administration fields.
  */
 
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
- teamId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  teamId: string, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTeamQueryOptions(teamId,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -320,176 +420,242 @@ export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>
  * @summary Replace a team's editable fields.
  */
 export const updateAdminTeam = (
-    teamId: string,
-    adminTeamUpdate: AdminTeamUpdate,
- signal?: AbortSignal
+  teamId: string,
+  adminTeamUpdate: AdminTeamUpdate,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTeam>(
-      {url: `/api/admin/teams/${teamId}/`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: adminTeamUpdate, signal
+  return axiosMutator<AdminTeam>(
+    {
+      url: `/api/admin/teams/${teamId}/`,
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminTeamUpdate,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getUpdateAdminTeamMutationKey = () => ['updateAdminTeam'] as const;
+export const getUpdateAdminTeamMutationKey = () => {
+  return ['updateAdminTeam'] as const
+};
 
 export const getUpdateAdminTeamMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext> => {
 
-const mutationKey = getUpdateAdminTeamMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getUpdateAdminTeamMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTeam>>, UpdateAdminTeamMutationVariables> = (props) => {
-          const {teamId,data} = props ?? {};
-
-          return  updateAdminTeam(teamId,data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTeam>>, UpdateAdminTeamMutationVariables> = (props) => {
+    const {teamId,data} = props ?? {};
+
+    return  updateAdminTeam(teamId,data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type UpdateAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTeam>>>
-    export type UpdateAdminTeamMutationBody = AdminTeamUpdate
-    export type UpdateAdminTeamMutationError = ApiError
-    export type UpdateAdminTeamMutationVariables = {teamId: string;data: AdminTeamUpdate}
+export type UpdateAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTeam>>>
+export type UpdateAdminTeamMutationBody = AdminTeamUpdate
+export type UpdateAdminTeamMutationError = ApiError
+export type UpdateAdminTeamMutationVariables = {
+  teamId: string;
+  data: AdminTeamUpdate
+}
 
-    /**
+/**
  * @summary Replace a team's editable fields.
  */
 export const useUpdateAdminTeam = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateAdminTeam>>,
         TError,
         UpdateAdminTeamMutationVariables,
         TContext
       > => {
-      return useMutation(getUpdateAdminTeamMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getUpdateAdminTeamMutationOptions(options), queryClient);
+}
+/**
  * @summary Deactivate a team.
  */
 export const deleteAdminTeam = (
-    teamId: string,
- signal?: AbortSignal
+  teamId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<DeleteAdminTeam200>(
-      {url: `/api/admin/teams/${teamId}/`, method: 'DELETE', signal
+  return axiosMutator<DeleteAdminTeam200>(
+    {
+      url: `/api/admin/teams/${teamId}/`,
+      method: 'DELETE',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getDeleteAdminTeamMutationKey = () => ['deleteAdminTeam'] as const;
+export const getDeleteAdminTeamMutationKey = () => {
+  return ['deleteAdminTeam'] as const
+};
 
 export const getDeleteAdminTeamMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext> => {
 
-const mutationKey = getDeleteAdminTeamMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getDeleteAdminTeamMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTeam>>, DeleteAdminTeamMutationVariables> = (props) => {
-          const {teamId} = props ?? {};
-
-          return  deleteAdminTeam(teamId,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTeam>>, DeleteAdminTeamMutationVariables> = (props) => {
+    const {teamId} = props ?? {};
+
+    return  deleteAdminTeam(teamId,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type DeleteAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTeam>>>
+export type DeleteAdminTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTeam>>>
 
-    export type DeleteAdminTeamMutationError = ApiError
-    export type DeleteAdminTeamMutationVariables = {teamId: string}
+export type DeleteAdminTeamMutationError = ApiError
+export type DeleteAdminTeamMutationVariables = {
+  teamId: string
+}
 
-    /**
+/**
  * @summary Deactivate a team.
  */
 export const useDeleteAdminTeam = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteAdminTeam>>,
         TError,
         DeleteAdminTeamMutationVariables,
         TContext
       > => {
-      return useMutation(getDeleteAdminTeamMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getDeleteAdminTeamMutationOptions(options), queryClient);
+}
+/**
  * @summary List all tasks, including inactive tasks.
  */
 export const getAdminTasks = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTask[]>(
-      {url: `/api/admin/tasks/`, method: 'GET', signal
+  return axiosMutator<AdminTask[]>(
+    {
+      url: `/api/admin/tasks/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTasksQueryKey = () => {
-    return [
+  return [
     `/api/admin/tasks/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTasksQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>, }
+export const getGetAdminTasksQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTasksQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTasks>>> = ({ signal }) => getAdminTasks(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTasks>>> = ({ signal }) => {
+    return getAdminTasks(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTasksQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTasks>>>
@@ -497,41 +663,59 @@ export type GetAdminTasksQueryError = ApiError
 
 
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTasks>>,
           TError,
           Awaited<ReturnType<typeof getAdminTasks>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTasks>>,
           TError,
           Awaited<ReturnType<typeof getAdminTasks>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary List all tasks, including inactive tasks.
  */
 
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTasksQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -545,110 +729,151 @@ export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks
  * @summary Create a task.
  */
 export const createAdminTask = (
-    adminTaskWrite: AdminTaskWrite,
- signal?: AbortSignal
+  adminTaskWrite: AdminTaskWrite,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTask>(
-      {url: `/api/admin/tasks/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: adminTaskWrite, signal
+  return axiosMutator<AdminTask>(
+    {
+      url: `/api/admin/tasks/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminTaskWrite,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getCreateAdminTaskMutationKey = () => ['createAdminTask'] as const;
+export const getCreateAdminTaskMutationKey = () => {
+  return ['createAdminTask'] as const
+};
 
 export const getCreateAdminTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext> => {
 
-const mutationKey = getCreateAdminTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getCreateAdminTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTask>>, CreateAdminTaskMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  createAdminTask(data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTask>>, CreateAdminTaskMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  createAdminTask(data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type CreateAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTask>>>
-    export type CreateAdminTaskMutationBody = AdminTaskWrite
-    export type CreateAdminTaskMutationError = ApiError
-    export type CreateAdminTaskMutationVariables = {data: AdminTaskWrite}
+export type CreateAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTask>>>
+export type CreateAdminTaskMutationBody = AdminTaskWrite
+export type CreateAdminTaskMutationError = ApiError
+export type CreateAdminTaskMutationVariables = {
+  data: AdminTaskWrite
+}
 
-    /**
+/**
  * @summary Create a task.
  */
 export const useCreateAdminTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAdminTask>>,
         TError,
         CreateAdminTaskMutationVariables,
         TContext
       > => {
-      return useMutation(getCreateAdminTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getCreateAdminTaskMutationOptions(options), queryClient);
+}
+/**
  * @summary Get one task, including administration fields.
  */
 export const getAdminTask = (
-    taskId: string,
- signal?: AbortSignal
+  taskId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTask>(
-      {url: `/api/admin/tasks/${taskId}/`, method: 'GET', signal
+  return axiosMutator<AdminTask>(
+    {
+      url: `/api/admin/tasks/${taskId}/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTaskQueryKey = (taskId: string,) => {
-    return [
+  return [
     `/api/admin/tasks/${taskId}/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTaskQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>, }
+export const getGetAdminTaskQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(taskId: string, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTaskQueryKey(taskId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTask>>> = ({ signal }) => getAdminTask(taskId, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTask>>> = ({ signal }) => {
+    return getAdminTask(taskId, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: taskId !== null && taskId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    enabled: taskId !== null && taskId !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTaskQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTask>>>
@@ -656,41 +881,59 @@ export type GetAdminTaskQueryError = ApiError
 
 
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
- taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
+ taskId: string, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTask>>,
           TError,
           Awaited<ReturnType<typeof getAdminTask>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
+ taskId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTask>>,
           TError,
           Awaited<ReturnType<typeof getAdminTask>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>, }
+ taskId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get one task, including administration fields.
  */
 
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
- taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  taskId: string, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTaskQueryOptions(taskId,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -704,177 +947,243 @@ export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>
  * @summary Replace a task's editable fields.
  */
 export const updateAdminTask = (
-    taskId: string,
-    adminTaskWrite: AdminTaskWrite,
- signal?: AbortSignal
+  taskId: string,
+  adminTaskWrite: AdminTaskWrite,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTask>(
-      {url: `/api/admin/tasks/${taskId}/`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: adminTaskWrite, signal
+  return axiosMutator<AdminTask>(
+    {
+      url: `/api/admin/tasks/${taskId}/`,
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminTaskWrite,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getUpdateAdminTaskMutationKey = () => ['updateAdminTask'] as const;
+export const getUpdateAdminTaskMutationKey = () => {
+  return ['updateAdminTask'] as const
+};
 
 export const getUpdateAdminTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext> => {
 
-const mutationKey = getUpdateAdminTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getUpdateAdminTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTask>>, UpdateAdminTaskMutationVariables> = (props) => {
-          const {taskId,data} = props ?? {};
-
-          return  updateAdminTask(taskId,data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTask>>, UpdateAdminTaskMutationVariables> = (props) => {
+    const {taskId,data} = props ?? {};
+
+    return  updateAdminTask(taskId,data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type UpdateAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTask>>>
-    export type UpdateAdminTaskMutationBody = AdminTaskWrite
-    export type UpdateAdminTaskMutationError = ApiError
-    export type UpdateAdminTaskMutationVariables = {taskId: string;data: AdminTaskWrite}
+export type UpdateAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTask>>>
+export type UpdateAdminTaskMutationBody = AdminTaskWrite
+export type UpdateAdminTaskMutationError = ApiError
+export type UpdateAdminTaskMutationVariables = {
+  taskId: string;
+  data: AdminTaskWrite
+}
 
-    /**
+/**
  * @summary Replace a task's editable fields.
  */
 export const useUpdateAdminTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateAdminTask>>,
         TError,
         UpdateAdminTaskMutationVariables,
         TContext
       > => {
-      return useMutation(getUpdateAdminTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getUpdateAdminTaskMutationOptions(options), queryClient);
+}
+/**
  * @summary Deactivate a task.
  */
 export const deleteAdminTask = (
-    taskId: string,
- signal?: AbortSignal
+  taskId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<DeleteAdminTask200>(
-      {url: `/api/admin/tasks/${taskId}/`, method: 'DELETE', signal
+  return axiosMutator<DeleteAdminTask200>(
+    {
+      url: `/api/admin/tasks/${taskId}/`,
+      method: 'DELETE',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getDeleteAdminTaskMutationKey = () => ['deleteAdminTask'] as const;
+export const getDeleteAdminTaskMutationKey = () => {
+  return ['deleteAdminTask'] as const
+};
 
 export const getDeleteAdminTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext> => {
 
-const mutationKey = getDeleteAdminTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getDeleteAdminTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTask>>, DeleteAdminTaskMutationVariables> = (props) => {
-          const {taskId} = props ?? {};
-
-          return  deleteAdminTask(taskId,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTask>>, DeleteAdminTaskMutationVariables> = (props) => {
+    const {taskId} = props ?? {};
+
+    return  deleteAdminTask(taskId,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type DeleteAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTask>>>
+export type DeleteAdminTaskMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTask>>>
 
-    export type DeleteAdminTaskMutationError = ApiError
-    export type DeleteAdminTaskMutationVariables = {taskId: string}
+export type DeleteAdminTaskMutationError = ApiError
+export type DeleteAdminTaskMutationVariables = {
+  taskId: string
+}
 
-    /**
+/**
  * @summary Deactivate a task.
  */
 export const useDeleteAdminTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteAdminTask>>,
         TError,
         DeleteAdminTaskMutationVariables,
         TContext
       > => {
-      return useMutation(getDeleteAdminTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getDeleteAdminTaskMutationOptions(options), queryClient);
+}
+/**
  * @summary Get checker history for a team and task pair.
  */
 export const getAdminTeamTaskHistory = (
-    params: GetAdminTeamTaskHistoryParams,
- signal?: AbortSignal
+  params: GetAdminTeamTaskHistoryParams,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminTeamTaskLogEntry[]>(
-      {url: `/api/admin/teamtasks/`, method: 'GET',
-        params, signal
+  return axiosMutator<AdminTeamTaskLogEntry[]>(
+    {
+      url: `/api/admin/teamtasks/`,
+      method: 'GET',
+      params,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTeamTaskHistoryQueryKey = (params?: GetAdminTeamTaskHistoryParams,) => {
-    return [
+  return [
     `/api/admin/teamtasks/`, ...(params ? [params] : [])
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTeamTaskHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(params: GetAdminTeamTaskHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>, }
+export const getGetAdminTeamTaskHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(params: GetAdminTeamTaskHistoryParams, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTeamTaskHistoryQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>> = ({ signal }) => getAdminTeamTaskHistory(params, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>> = ({ signal }) => {
+    return getAdminTeamTaskHistory(params, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTeamTaskHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>>
@@ -882,41 +1191,59 @@ export type GetAdminTeamTaskHistoryQueryError = ApiError
 
 
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
- params: GetAdminTeamTaskHistoryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
+ params: GetAdminTeamTaskHistoryParams, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeamTaskHistory>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeamTaskHistory>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
- params: GetAdminTeamTaskHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
+ params: GetAdminTeamTaskHistoryParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeamTaskHistory>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeamTaskHistory>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
- params: GetAdminTeamTaskHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>, }
+ params: GetAdminTeamTaskHistoryParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Get checker history for a team and task pair.
  */
 
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
- params: GetAdminTeamTaskHistoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  params: GetAdminTeamTaskHistoryParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTeamTaskHistoryQueryOptions(params,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -932,108 +1259,145 @@ export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof get
  */
 export const createAdminTeamTask = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<unknown>(
-      {url: `/api/admin/teamtasks/`, method: 'POST', signal
+  return axiosMutator<unknown>(
+    {
+      url: `/api/admin/teamtasks/`,
+      method: 'POST',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getCreateAdminTeamTaskMutationKey = () => ['createAdminTeamTask'] as const;
+export const getCreateAdminTeamTaskMutationKey = () => {
+  return ['createAdminTeamTask'] as const
+};
 
 export const getCreateAdminTeamTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext> => {
 
-const mutationKey = getCreateAdminTeamTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getCreateAdminTeamTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTeamTask>>, void> = () => {
-
-
-          return  createAdminTeamTask()
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminTeamTask>>, void> = () => {
+
+
+    return  createAdminTeamTask()
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type CreateAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTeamTask>>>
+export type CreateAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminTeamTask>>>
 
-    export type CreateAdminTeamTaskMutationError = ApiError
+export type CreateAdminTeamTaskMutationError = ApiError
 
 
-    /**
+/**
  * @summary Reserved team task collection method.
  */
 export const useCreateAdminTeamTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTeamTask>>, TError,void, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAdminTeamTask>>,
         TError,
         void,
         TContext
       > => {
-      return useMutation(getCreateAdminTeamTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getCreateAdminTeamTaskMutationOptions(options), queryClient);
+}
+/**
  * The route is registered but has no retrieve handler and returns 404.
  * @summary Reserved team task detail method.
  */
 export const getAdminTeamTask = (
-    teamtaskId: string,
- signal?: AbortSignal
+  teamtaskId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<unknown>(
-      {url: `/api/admin/teamtasks/${teamtaskId}/`, method: 'GET', signal
+  return axiosMutator<unknown>(
+    {
+      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminTeamTaskQueryKey = (teamtaskId: string,) => {
-    return [
+  return [
     `/api/admin/teamtasks/${teamtaskId}/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminTeamTaskQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(teamtaskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>, }
+export const getGetAdminTeamTaskQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(teamtaskId: string, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminTeamTaskQueryKey(teamtaskId);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeamTask>>> = ({ signal }) => getAdminTeamTask(teamtaskId, signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTeamTask>>> = ({ signal }) => {
+    return getAdminTeamTask(teamtaskId, signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: teamtaskId !== null && teamtaskId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    enabled: teamtaskId !== null && teamtaskId !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminTeamTaskQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTeamTask>>>
@@ -1041,41 +1405,59 @@ export type GetAdminTeamTaskQueryError = ApiError
 
 
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
- teamtaskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
+ teamtaskId: string, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeamTask>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeamTask>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
- teamtaskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
+ teamtaskId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminTeamTask>>,
           TError,
           Awaited<ReturnType<typeof getAdminTeamTask>>
         > , 'initialData'
-      >, }
+      >,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
- teamtaskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>, }
+ teamtaskId: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>,
+ }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Reserved team task detail method.
  */
 
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
- teamtaskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  teamtaskId: string, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminTeamTaskQueryOptions(teamtaskId,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -1090,312 +1472,430 @@ export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTe
  * @summary Reserved team task detail method.
  */
 export const updateAdminTeamTask = (
-    teamtaskId: string,
- signal?: AbortSignal
+  teamtaskId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<unknown>(
-      {url: `/api/admin/teamtasks/${teamtaskId}/`, method: 'PUT', signal
+  return axiosMutator<unknown>(
+    {
+      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      method: 'PUT',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getUpdateAdminTeamTaskMutationKey = () => ['updateAdminTeamTask'] as const;
+export const getUpdateAdminTeamTaskMutationKey = () => {
+  return ['updateAdminTeamTask'] as const
+};
 
 export const getUpdateAdminTeamTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext> => {
 
-const mutationKey = getUpdateAdminTeamTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getUpdateAdminTeamTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTeamTask>>, UpdateAdminTeamTaskMutationVariables> = (props) => {
-          const {teamtaskId} = props ?? {};
-
-          return  updateAdminTeamTask(teamtaskId,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminTeamTask>>, UpdateAdminTeamTaskMutationVariables> = (props) => {
+    const {teamtaskId} = props ?? {};
+
+    return  updateAdminTeamTask(teamtaskId,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type UpdateAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTeamTask>>>
+export type UpdateAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminTeamTask>>>
 
-    export type UpdateAdminTeamTaskMutationError = ApiError
-    export type UpdateAdminTeamTaskMutationVariables = {teamtaskId: string}
+export type UpdateAdminTeamTaskMutationError = ApiError
+export type UpdateAdminTeamTaskMutationVariables = {
+  teamtaskId: string
+}
 
-    /**
+/**
  * @summary Reserved team task detail method.
  */
 export const useUpdateAdminTeamTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeamTask>>, TError,UpdateAdminTeamTaskMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateAdminTeamTask>>,
         TError,
         UpdateAdminTeamTaskMutationVariables,
         TContext
       > => {
-      return useMutation(getUpdateAdminTeamTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getUpdateAdminTeamTaskMutationOptions(options), queryClient);
+}
+/**
  * The route is registered but has no delete handler and returns 404.
  * @summary Reserved team task detail method.
  */
 export const deleteAdminTeamTask = (
-    teamtaskId: string,
- signal?: AbortSignal
+  teamtaskId: string,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<unknown>(
-      {url: `/api/admin/teamtasks/${teamtaskId}/`, method: 'DELETE', signal
+  return axiosMutator<unknown>(
+    {
+      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      method: 'DELETE',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getDeleteAdminTeamTaskMutationKey = () => ['deleteAdminTeamTask'] as const;
+export const getDeleteAdminTeamTaskMutationKey = () => {
+  return ['deleteAdminTeamTask'] as const
+};
 
 export const getDeleteAdminTeamTaskMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext> => {
 
-const mutationKey = getDeleteAdminTeamTaskMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getDeleteAdminTeamTaskMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTeamTask>>, DeleteAdminTeamTaskMutationVariables> = (props) => {
-          const {teamtaskId} = props ?? {};
-
-          return  deleteAdminTeamTask(teamtaskId,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminTeamTask>>, DeleteAdminTeamTaskMutationVariables> = (props) => {
+    const {teamtaskId} = props ?? {};
+
+    return  deleteAdminTeamTask(teamtaskId,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type DeleteAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTeamTask>>>
+export type DeleteAdminTeamTaskMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminTeamTask>>>
 
-    export type DeleteAdminTeamTaskMutationError = ApiError
-    export type DeleteAdminTeamTaskMutationVariables = {teamtaskId: string}
+export type DeleteAdminTeamTaskMutationError = ApiError
+export type DeleteAdminTeamTaskMutationVariables = {
+  teamtaskId: string
+}
 
-    /**
+/**
  * @summary Reserved team task detail method.
  */
 export const useDeleteAdminTeamTask = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeamTask>>, TError,DeleteAdminTeamTaskMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof deleteAdminTeamTask>>,
         TError,
         DeleteAdminTeamTaskMutationVariables,
         TContext
       > => {
-      return useMutation(getDeleteAdminTeamTaskMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getDeleteAdminTeamTaskMutationOptions(options), queryClient);
+}
+/**
  * start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
  * @summary Apply a game lifecycle action.
  */
 export const changeAdminGameState = (
-    action: 'start' | 'start_practice' | 'start_final' | 'pause' | 'resume' | 'finish',
-    gameActionRequest?: GameActionRequest,
- signal?: AbortSignal
+  action: 'start' | 'start_practice' | 'start_final' | 'pause' | 'resume' | 'finish',
+  gameActionRequest?: GameActionRequest,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<GameRuntimeStatus>(
-      {url: `/api/admin/game/${action}/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: gameActionRequest, signal
+  return axiosMutator<GameRuntimeStatus>(
+    {
+      url: `/api/admin/game/${action}/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: gameActionRequest,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getChangeAdminGameStateMutationKey = () => ['changeAdminGameState'] as const;
+export const getChangeAdminGameStateMutationKey = () => {
+  return ['changeAdminGameState'] as const
+};
 
 export const getChangeAdminGameStateMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext> => {
 
-const mutationKey = getChangeAdminGameStateMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getChangeAdminGameStateMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeAdminGameState>>, ChangeAdminGameStateMutationVariables> = (props) => {
-          const {action,data} = props ?? {};
-
-          return  changeAdminGameState(action,data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeAdminGameState>>, ChangeAdminGameStateMutationVariables> = (props) => {
+    const {action,data} = props ?? {};
+
+    return  changeAdminGameState(action,data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type ChangeAdminGameStateMutationResult = NonNullable<Awaited<ReturnType<typeof changeAdminGameState>>>
-    export type ChangeAdminGameStateMutationBody = GameActionRequest | undefined
-    export type ChangeAdminGameStateMutationError = ApiError
-    export type ChangeAdminGameStateMutationVariables = {action: 'start' | 'start_practice' | 'start_final' | 'pause' | 'resume' | 'finish';data?: GameActionRequest}
+export type ChangeAdminGameStateMutationResult = NonNullable<Awaited<ReturnType<typeof changeAdminGameState>>>
+export type ChangeAdminGameStateMutationBody = GameActionRequest | undefined
+export type ChangeAdminGameStateMutationError = ApiError
+export type ChangeAdminGameStateMutationVariables = {
+  action: 'start' | 'start_practice' | 'start_final' | 'pause' | 'resume' | 'finish';
+  data?: GameActionRequest
+}
 
-    /**
+/**
  * @summary Apply a game lifecycle action.
  */
 export const useChangeAdminGameState = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminGameState>>, TError,ChangeAdminGameStateMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof changeAdminGameState>>,
         TError,
         ChangeAdminGameStateMutationVariables,
         TContext
       > => {
-      return useMutation(getChangeAdminGameStateMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getChangeAdminGameStateMutationOptions(options), queryClient);
+}
+/**
  * Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.
  * @summary Start an administrator session.
  */
 export const adminLogin = (
-    adminLoginRequest: AdminLoginRequest,
- signal?: AbortSignal
+  adminLoginRequest: AdminLoginRequest,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminSession>(
-      {url: `/api/admin/login/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: adminLoginRequest, signal
+  return axiosMutator<AdminSession>(
+    {
+      url: `/api/admin/login/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminLoginRequest,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getAdminLoginMutationKey = () => ['adminLogin'] as const;
+export const getAdminLoginMutationKey = () => {
+  return ['adminLogin'] as const
+};
 
 export const getAdminLoginMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext> => {
 
-const mutationKey = getAdminLoginMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getAdminLoginMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogin>>, AdminLoginMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  adminLogin(data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogin>>, AdminLoginMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  adminLogin(data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type AdminLoginMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogin>>>
-    export type AdminLoginMutationBody = AdminLoginRequest
-    export type AdminLoginMutationError = ApiError
-    export type AdminLoginMutationVariables = {data: AdminLoginRequest}
+export type AdminLoginMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogin>>>
+export type AdminLoginMutationBody = AdminLoginRequest
+export type AdminLoginMutationError = ApiError
+export type AdminLoginMutationVariables = {
+  data: AdminLoginRequest
+}
 
-    /**
+/**
  * @summary Start an administrator session.
  */
 export const useAdminLogin = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogin>>, TError,AdminLoginMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminLogin>>,
         TError,
         AdminLoginMutationVariables,
         TContext
       > => {
-      return useMutation(getAdminLoginMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getAdminLoginMutationOptions(options), queryClient);
+}
+/**
  * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
  * @summary Check the current administrator session.
  */
 export const getAdminSessionStatus = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<AdminSession>(
-      {url: `/api/admin/status/`, method: 'GET', signal
+  return axiosMutator<AdminSession>(
+    {
+      url: `/api/admin/status/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminSessionStatusQueryKey = () => {
-    return [
+  return [
     `/api/admin/status/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminSessionStatusQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>, }
+export const getGetAdminSessionStatusQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminSessionStatusQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSessionStatus>>> = ({ signal }) => getAdminSessionStatus(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSessionStatus>>> = ({ signal }) => {
+    return getAdminSessionStatus(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminSessionStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminSessionStatus>>>
@@ -1403,41 +1903,59 @@ export type GetAdminSessionStatusQueryError = ApiError
 
 
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminSessionStatus>>,
           TError,
           Awaited<ReturnType<typeof getAdminSessionStatus>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminSessionStatus>>,
           TError,
           Awaited<ReturnType<typeof getAdminSessionStatus>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Check the current administrator session.
  */
 
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminSessionStatusQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -1453,174 +1971,237 @@ export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAd
  */
 export const adminLogout = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<StatusResponse>(
-      {url: `/api/admin/logout/`, method: 'POST', signal
+  return axiosMutator<StatusResponse>(
+    {
+      url: `/api/admin/logout/`,
+      method: 'POST',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getAdminLogoutMutationKey = () => ['adminLogout'] as const;
+export const getAdminLogoutMutationKey = () => {
+  return ['adminLogout'] as const
+};
 
 export const getAdminLogoutMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext> => {
 
-const mutationKey = getAdminLogoutMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getAdminLogoutMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogout>>, void> = () => {
-
-
-          return  adminLogout()
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLogout>>, void> = () => {
+
+
+    return  adminLogout()
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type AdminLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogout>>>
+export type AdminLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof adminLogout>>>
 
-    export type AdminLogoutMutationError = ApiError
+export type AdminLogoutMutationError = ApiError
 
 
-    /**
+/**
  * @summary End the current administrator session.
  */
 export const useAdminLogout = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLogout>>, TError,void, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof adminLogout>>,
         TError,
         void,
         TContext
       > => {
-      return useMutation(getAdminLogoutMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getAdminLogoutMutationOptions(options), queryClient);
+}
+/**
  * @summary Publish an organizer announcement.
  */
 export const createAdminEvent = (
-    announcementCreate: AnnouncementCreate,
- signal?: AbortSignal
+  announcementCreate: AnnouncementCreate,
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<PublicEvent>(
-      {url: `/api/admin/events/`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: announcementCreate, signal
+  return axiosMutator<PublicEvent>(
+    {
+      url: `/api/admin/events/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: announcementCreate,
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
-export const getCreateAdminEventMutationKey = () => ['createAdminEvent'] as const;
+export const getCreateAdminEventMutationKey = () => {
+  return ['createAdminEvent'] as const
+};
 
 export const getCreateAdminEventMutationOptions = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext> => {
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext> => {
 
-const mutationKey = getCreateAdminEventMutationKey();
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+  const mutationKey = getCreateAdminEventMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminEvent>>, CreateAdminEventMutationVariables> = (props) => {
-          const {data} = props ?? {};
-
-          return  createAdminEvent(data,)
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
         }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminEvent>>, CreateAdminEventMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  createAdminEvent(data,)
+  }
 
 
 
 
 
 
-  return  { mutationFn, ...mutationOptions }}
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
 
-    export type CreateAdminEventMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminEvent>>>
-    export type CreateAdminEventMutationBody = AnnouncementCreate
-    export type CreateAdminEventMutationError = ApiError
-    export type CreateAdminEventMutationVariables = {data: AnnouncementCreate}
+export type CreateAdminEventMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminEvent>>>
+export type CreateAdminEventMutationBody = AnnouncementCreate
+export type CreateAdminEventMutationError = ApiError
+export type CreateAdminEventMutationVariables = {
+  data: AnnouncementCreate
+}
 
-    /**
+/**
  * @summary Publish an organizer announcement.
  */
 export const useCreateAdminEvent = <TError = ApiError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAdminEvent>>,
         TError,
         CreateAdminEventMutationVariables,
         TContext
       > => {
-      return useMutation(getCreateAdminEventMutationOptions(options), queryClient);
-    }
-    /**
+  return useMutation(getCreateAdminEventMutationOptions(options), queryClient);
+}
+/**
  * @summary Check the administration API service.
  */
 export const getAdminHealth = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<StatusResponse>(
-      {url: `/api/admin/health/`, method: 'GET', signal
+  return axiosMutator<StatusResponse>(
+    {
+      url: `/api/admin/health/`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminHealthQueryKey = () => {
-    return [
+  return [
     `/api/admin/health/`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminHealthQueryOptions = <TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>, }
+export const getGetAdminHealthQueryOptions = <TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminHealthQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminHealth>>> = ({ signal }) => getAdminHealth(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminHealth>>> = ({ signal }) => {
+    return getAdminHealth(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminHealth>>>
@@ -1628,41 +2209,59 @@ export type GetAdminHealthQueryError = unknown
 
 
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminHealth>>,
           TError,
           Awaited<ReturnType<typeof getAdminHealth>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminHealth>>,
           TError,
           Awaited<ReturnType<typeof getAdminHealth>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Check the administration API service.
  */
 
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminHealthQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }

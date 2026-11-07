@@ -1,0 +1,5 @@
+# Test adapter only. The production image retains the source-IP rate limiter.
+services:
+  nginx:
+    volumes:
+      - ${FORCAD_TEST_PROJECT_ROOT:?required}/deployment/nginx/http.conf:/etc/nginx/http.conf:ro

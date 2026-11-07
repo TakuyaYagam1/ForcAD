@@ -4,25 +4,42 @@ package checker
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"syscall"
 	"time"
 )
 
-func configureProcess(*exec.Cmd) {}
+func configureProcess(*exec.Cmd) {
+}
 
 func killProcess(command *exec.Cmd) error {
+	const location = "checker.killProcess"
 	_, err := observeKillProcess(command, false)
-	return err
+	if err != nil {
+		return fmt.Errorf("%s - kill checker process: %w", location, err)
+	}
+	return nil
 }
 
 func observeTerminateProcess(command *exec.Cmd) (ProcessSignal, error) {
-	return observeKillProcess(command, false)
+	const location = "checker.observeTerminateProcess"
+	result, err := observeKillProcess(command, false)
+	if err != nil {
+		return result, fmt.Errorf("%s - terminate checker process: %w", location, err)
+	}
+	return result, nil
 }
 
 func observeKillProcess(command *exec.Cmd, reaped bool) (ProcessSignal, error) {
-	result := ProcessSignal{Time: time.Now().UTC(), Signal: "Kill", Target: "process", Outcome: "not_started"}
+	const location = "checker.observeKillProcess"
+	result := ProcessSignal{
+		Time:    time.Now().UTC(),
+		Signal:  "Kill",
+		Target:  "process",
+		Outcome: "not_started",
+	}
 	if command == nil || command.Process == nil {
 		return result, nil
 	}
@@ -48,5 +65,5 @@ func observeKillProcess(command *exec.Cmd, reaped bool) (ProcessSignal, error) {
 		return result, nil
 	}
 	result.Outcome = "error"
-	return result, err
+	return result, fmt.Errorf("%s - kill process: %w", location, err)
 }

@@ -3,8 +3,9 @@ package v1
 import (
 	"context"
 	"fmt"
-	"math"
 	"net/http"
+
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
 
 	"github.com/go-faster/jx"
 
@@ -21,14 +22,11 @@ func (h *scoreboardHandler) GetClientCtftimeScoreboard(ctx context.Context) (api
 	if err != nil {
 		return nil, fmt.Errorf("%s - load standings: %w", location, err)
 	}
-	result := make(api.GetClientCtftimeScoreboardOKApplicationJSON, 0, len(rows))
-	for _, row := range rows {
-		if row.Pos < 1 || row.Pos > math.MaxInt32 {
-			return nil, fmt.Errorf("%s - standings position exceeds API range", location)
-		}
-		result = append(result, api.CtftimeStanding{Pos: int32(row.Pos), Team: row.Team, Score: row.Score})
+	result, err := response.CtftimeStandings(rows)
+	if err != nil {
+		return nil, fmt.Errorf("%s - encode standings: %w", location, err)
 	}
-	return &result, nil
+	return result, nil
 }
 
 func (h *scoreboardHandler) GetScoreboard(ctx context.Context, w http.ResponseWriter) error {
@@ -45,7 +43,7 @@ func (h *scoreboardHandler) GetScoreboard(ctx context.Context, w http.ResponseWr
 		}
 		jx.PutEncoder(e)
 	}()
-	scoreboard(board).Encode(e)
+	response.Scoreboard(board).Encode(e)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	if _, err := e.WriteTo(w); err != nil {

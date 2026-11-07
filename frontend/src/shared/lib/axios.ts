@@ -13,7 +13,9 @@ export const api = axios.create({
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response
+  },
   (error) => {
     const path = String(error.config?.url ?? "");
     if (

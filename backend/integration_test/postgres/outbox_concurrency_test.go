@@ -27,14 +27,23 @@ func TestOutboxDispatchWhileLifecycleReadersAreActive(t *testing.T) {
 	if ok, err := repo.StartScheduled(ctx, at); err != nil || !ok {
 		t.Fatalf("start = %v, %v", ok, err)
 	}
-	if run, err := repo.Prepare(ctx, domain.ScheduleRequest{ScheduleID: "outbox_shared_lifecycle", At: at, StartAt: at, Interval: time.Minute, AdvancesRound: true, Workflow: domain.JobActionClassic}); err != nil || run == nil {
+	if run, err := repo.Prepare(ctx, domain.ScheduleRequest{
+		ScheduleID:    "outbox_shared_lifecycle",
+		At:            at,
+		StartAt:       at,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
+	}); err != nil || run == nil {
 		t.Fatalf("prepare = %v, %v", run, err)
 	}
 	reader, err := pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = reader.Rollback(context.Background()) }()
+	defer func() {
+		_ = reader.Rollback(context.Background())
+	}()
 	// This is the ordinary lock held by flag creation and submission transactions.
 	if _, err := reader.Exec(ctx, `SELECT id FROM GameSession WHERE id=1 FOR SHARE`); err != nil {
 		t.Fatal(err)

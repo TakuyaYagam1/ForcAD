@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 )
 
@@ -22,9 +24,5 @@ func (h *flagsHandler) SubmitFlags(ctx context.Context, req []string) (api.Submi
 	if err != nil {
 		return nil, fmt.Errorf("%s - submit flags: %w", location, err)
 	}
-	result := make(api.SubmitFlagsOKApplicationJSON, 0, len(rows))
-	for _, row := range rows {
-		result = append(result, api.FlagSubmissionResult{Msg: row.Message, Flag: row.Flag})
-	}
-	return &result, nil
+	return response.FlagSubmissions(rows), nil
 }

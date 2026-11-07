@@ -11,7 +11,7 @@ func ValidateConfig(path string, full bool) error {
 	}
 	document, tree, err := decodeSetupDocument(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if !full {
 		return nil
@@ -20,5 +20,8 @@ func ValidateConfig(path string, full bool) error {
 		return fmt.Errorf("%s - full configuration requires admin and storages; run setup first", location)
 	}
 	// Both sections are present, so this validates credentials and fills defaults only in memory.
-	return completeCredentials(&document, tree)
+	if err := completeCredentials(&document, tree); err != nil {
+		return fmt.Errorf("%s - validate complete deployment credentials: %w", location, err)
+	}
+	return nil
 }

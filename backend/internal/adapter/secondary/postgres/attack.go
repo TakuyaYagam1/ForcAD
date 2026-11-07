@@ -29,7 +29,8 @@ func (r *Repository) SubmitBatch(ctx context.Context, submission domain.FlagSubm
 	// Game/session locks fence resets. Immutable flag rows need no extra lock:
 	// FOR SHARE would generate WAL even for a batch containing only duplicates.
 	flags, err := queries.ReadSubmissionFlags(ctx, sqlc.ReadSubmissionFlagsParams{
-		AttackerID: submission.TeamID, FlagValues: submission.Values,
+		AttackerID: submission.TeamID,
+		FlagValues: submission.Values,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - read submitted flags: %w", location, err)
@@ -42,7 +43,9 @@ func (r *Repository) SubmitBatch(ctx context.Context, submission domain.FlagSubm
 	if err != nil {
 		return nil, fmt.Errorf("%s - apply submission: %w", location, err)
 	}
-	if !slices.ContainsFunc(results, func(result domain.SubmissionResult) bool { return result.Err == nil }) {
+	if !slices.ContainsFunc(results, func(result domain.SubmissionResult) bool {
+		return result.Err == nil
+	}) {
 		// No points or stolen flags changed. Rollback releases the read locks
 		// without making an unsuccessful submission wait for a durable commit.
 		return results, nil
@@ -84,7 +87,8 @@ func lockSubmissionState(ctx context.Context, queries *sqlc.Queries, submission 
 	// Stamp the decoded batch before waiting for a connection. Recorded round
 	// starts keep pool and row-lock waits from expiring a received flag.
 	round, err := queries.SubmissionRound(ctx, sqlc.SubmissionRoundParams{
-		ReceivedAt: float64(submission.ReceivedAt.UnixNano()) / float64(time.Second), CurrentRound: game.RealRound,
+		ReceivedAt:   float64(submission.ReceivedAt.UnixNano()) / float64(time.Second),
+		CurrentRound: game.RealRound,
 	})
 	if err != nil {
 		return submissionState{}, fmt.Errorf("%s - resolve round at receipt: %w", location, err)
@@ -92,5 +96,9 @@ func lockSubmissionState(ctx context.Context, queries *sqlc.Queries, submission 
 	if round < 1 {
 		return submissionState{}, fmt.Errorf("%s - submission predates the first round: %w", location, domain.ErrGameUnavailable)
 	}
-	return submissionState{game: game, round: min(round, game.RealRound), generation: session.Generation}, nil
+	return submissionState{
+		game:       game,
+		round:      min(round, game.RealRound),
+		generation: session.Generation,
+	}, nil
 }

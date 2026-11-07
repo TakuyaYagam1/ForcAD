@@ -3,10 +3,12 @@ package v1
 import (
 	"context"
 	"fmt"
-	"math"
 	"uuid"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/request"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
@@ -20,11 +22,7 @@ func (h *tasksHandler) GetAdminTasks(ctx context.Context) (api.GetAdminTasksRes,
 	if err != nil {
 		return nil, fmt.Errorf("%s - list tasks: %w", location, err)
 	}
-	result := make(api.GetAdminTasksOKApplicationJSON, 0, len(tasks))
-	for _, task := range tasks {
-		result = append(result, *adminTask(task))
-	}
-	return &result, nil
+	return response.AdminTasks(tasks), nil
 }
 
 func (h *tasksHandler) GetAdminTask(ctx context.Context, params api.GetAdminTaskParams) (api.GetAdminTaskRes, error) {
@@ -35,42 +33,36 @@ func (h *tasksHandler) GetAdminTask(ctx context.Context, params api.GetAdminTask
 	}
 	for _, task := range tasks {
 		if task.ID == params.TaskID {
-			return adminTask(task), nil
+			return response.AdminTask(task), nil
 		}
 	}
 	return nil, fmt.Errorf("%s - find task: %w", location, domain.ErrNotFound)
 }
 
-func validateTaskInput(req *api.AdminTaskWrite) error {
-	const location = "httpv1.validateTaskInput"
-	if req.DefaultScore < 0 || req.DefaultScore > math.MaxInt32 {
-		return fmt.Errorf("%s - invalid default score: %w", location, &domain.ValidationError{Message: "Invalid default score"})
-	}
-	return nil
-}
-
 func (h *tasksHandler) CreateAdminTask(ctx context.Context, req *api.AdminTaskWrite) (api.CreateAdminTaskRes, error) {
 	const location = "httpv1.tasksHandler.CreateAdminTask"
-	if err := validateTaskInput(req); err != nil {
+	input, err := request.Task(req, uuid.Nil())
+	if err != nil {
 		return nil, fmt.Errorf("%s - validate task input: %w", location, err)
 	}
-	task, err := h.game.SaveTask(ctx, taskInput(req, uuid.Nil()), true)
+	task, err := h.game.SaveTask(ctx, input, true)
 	if err != nil {
 		return nil, fmt.Errorf("%s - create task: %w", location, err)
 	}
-	return adminTask(task), nil
+	return response.AdminTask(task), nil
 }
 
 func (h *tasksHandler) UpdateAdminTask(ctx context.Context, req *api.AdminTaskWrite, params api.UpdateAdminTaskParams) (api.UpdateAdminTaskRes, error) {
 	const location = "httpv1.tasksHandler.UpdateAdminTask"
-	if err := validateTaskInput(req); err != nil {
+	input, err := request.Task(req, params.TaskID)
+	if err != nil {
 		return nil, fmt.Errorf("%s - validate task input: %w", location, err)
 	}
-	task, err := h.game.SaveTask(ctx, taskInput(req, params.TaskID), false)
+	task, err := h.game.SaveTask(ctx, input, false)
 	if err != nil {
 		return nil, fmt.Errorf("%s - update task: %w", location, err)
 	}
-	return adminTask(task), nil
+	return response.AdminTask(task), nil
 }
 
 func (h *tasksHandler) DeleteAdminTask(ctx context.Context, params api.DeleteAdminTaskParams) (api.DeleteAdminTaskRes, error) {
@@ -87,9 +79,5 @@ func (h *tasksHandler) GetClientTasks(ctx context.Context) ([]api.ParticipantTas
 	if err != nil {
 		return nil, fmt.Errorf("%s - list public tasks: %w", location, err)
 	}
-	result := make([]api.ParticipantTask, 0, len(tasks))
-	for _, task := range tasks {
-		result = append(result, api.ParticipantTask{ID: api.UUID(task.ID), Name: task.Name})
-	}
-	return result, nil
+	return response.PublicTasks(tasks), nil
 }

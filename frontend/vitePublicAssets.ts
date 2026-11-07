@@ -63,17 +63,24 @@ function resolveFileWithinDirectory(directory: string, filePath: string): string
 
 function emitPublicAssets(
   publicDirectory: string,
-  emitFile: (asset: { fileName: string; source: Buffer }) => void,
+  emitFile: (asset: {
+    fileName: string;
+    source: Buffer
+  }) => void,
 ): void {
   const publicRoot = realpathSync(publicDirectory);
 
   const emitDirectory = (directory: string) => {
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    for (const entry of readdirSync(directory, {
+      withFileTypes: true
+    })) {
       const filePath = resolve(directory, entry.name);
       const relativePath = relative(publicRoot, filePath);
       const pathParts = relativePath.split(sep);
 
-      if (pathParts[0] === "teams") continue;
+      if (pathParts[0] === "teams") {
+        continue;
+      }
 
       if (entry.isDirectory()) {
         emitDirectory(filePath);
@@ -89,11 +96,15 @@ function emitPublicAssets(
   emitDirectory(publicRoot);
 
   const logoDirectory = resolve(publicRoot, "teams");
-  if (!existsSync(logoDirectory)) return;
+  if (!existsSync(logoDirectory)) {
+    return;
+  }
 
   for (const logoFile of readdirSync(logoDirectory)) {
     const filePath = resolveTeamLogoPath(logoDirectory, logoFile);
-    if (!filePath) continue;
+    if (!filePath) {
+      continue;
+    }
 
     emitFile({
       fileName: `team-logos/${basename(logoFile)}`,
@@ -108,14 +119,18 @@ export function createPublicAssetsPlugin(publicDirectory: string): Plugin {
   return {
     name: "forcad-public-assets",
     generateBundle() {
-      emitPublicAssets(publicDirectory, (asset) => this.emitFile({
-        type: "asset",
-        ...asset,
-      }));
+      emitPublicAssets(publicDirectory, (asset) => {
+        return this.emitFile({
+          type: "asset",
+          ...asset,
+        })
+      });
     },
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
-        if (!request.url) return next();
+        if (!request.url) {
+          return next();
+        }
 
         let pathname: string;
         let decodedPathname: string;
@@ -138,7 +153,9 @@ export function createPublicAssetsPlugin(publicDirectory: string): Plugin {
           }
         }
 
-        if (pathname !== "/team-logos" && !pathname.startsWith("/team-logos/")) return next();
+        if (pathname !== "/team-logos" && !pathname.startsWith("/team-logos/")) {
+          return next();
+        }
 
         if (request.method !== "GET" && request.method !== "HEAD") {
           response.statusCode = 405;

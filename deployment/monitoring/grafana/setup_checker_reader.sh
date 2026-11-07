@@ -51,6 +51,10 @@ END;
 $$;
 
 SELECT format('ALTER ROLE forcad_checker_reader PASSWORD %L', :'checker_password') \gexec
+ALTER ROLE forcad_checker_reader CONNECTION LIMIT 2;
+ALTER ROLE forcad_checker_reader SET statement_timeout = '3s';
+ALTER ROLE forcad_checker_reader SET lock_timeout = '500ms';
+ALTER ROLE forcad_checker_reader SET default_transaction_read_only = on;
 GRANT USAGE ON SCHEMA public TO forcad_checker_reader;
 GRANT SELECT ON public.checker_action_events, public.checker_services, public.checker_teams
     TO forcad_checker_reader;

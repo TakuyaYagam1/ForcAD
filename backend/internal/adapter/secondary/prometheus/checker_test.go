@@ -16,7 +16,12 @@ func TestCheckerMetricsRecordCompletedActions(t *testing.T) {
 	metrics.ActionStarted()
 	metrics.ObserveCompleted("sentinel", "team one", domain.CheckerResult{
 		Status: 104,
-		Logs:   []domain.CheckerLog{{Action: "check", Status: 104, TimedOut: true, DurationMS: 1500}},
+		Logs: []domain.CheckerLog{{
+			Action:     "check",
+			Status:     104,
+			TimedOut:   true,
+			DurationMS: 1500,
+		}},
 	}, true)
 	metrics.ActionEnded()
 	metrics.WorkflowEnded()
@@ -30,18 +35,90 @@ func TestCheckerMetricsRecordCompletedActions(t *testing.T) {
 		labels map[string]string
 		want   float64
 	}{
-		{name: "forcad_checker_workflows_active", want: 0},
-		{name: "forcad_checker_actions_active", want: 0},
-		{name: "forcad_checker_workflows_total", labels: map[string]string{"status": "down"}, want: 1},
-		{name: "forcad_checker_service_workflows_total", labels: map[string]string{"service": "sentinel", "status_code": "104"}, want: 1},
-		{name: "forcad_checker_workflow_timeouts_total", want: 1},
-		{name: "forcad_checker_actions_total", labels: map[string]string{"action": "check", "status": "down"}, want: 1},
-		{name: "forcad_checker_service_actions_total", labels: map[string]string{"service": "sentinel", "team": "team one", "action": "check", "status_code": "104"}, want: 1},
-		{name: "forcad_checker_action_timeouts_total", labels: map[string]string{"action": "check"}, want: 1},
-		{name: "forcad_checker_service_action_timeouts_total", labels: map[string]string{"service": "sentinel", "action": "check"}, want: 1},
-		{name: "forcad_checker_action_duration_seconds", labels: map[string]string{"action": "check"}, want: 1},
-		{name: "forcad_checker_service_action_duration_seconds", labels: map[string]string{"service": "sentinel", "action": "check"}, want: 1},
-		{name: "forcad_checker_service_action_last_status_code", labels: map[string]string{"service": "sentinel", "team": "team one", "action": "check"}, want: 104},
+		{
+			name: "forcad_checker_workflows_active",
+			want: 0,
+		},
+		{
+			name: "forcad_checker_actions_active",
+			want: 0,
+		},
+		{
+			name: "forcad_checker_workflows_total",
+			labels: map[string]string{
+				"status": "down",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_service_workflows_total",
+			labels: map[string]string{
+				"service":     "sentinel",
+				"status_code": "104",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_workflow_timeouts_total",
+			want: 1,
+		},
+		{
+			name: "forcad_checker_actions_total",
+			labels: map[string]string{
+				"action": "check",
+				"status": "down",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_service_actions_total",
+			labels: map[string]string{
+				"service":     "sentinel",
+				"team":        "team one",
+				"action":      "check",
+				"status_code": "104",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_action_timeouts_total",
+			labels: map[string]string{
+				"action": "check",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_service_action_timeouts_total",
+			labels: map[string]string{
+				"service": "sentinel",
+				"action":  "check",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_action_duration_seconds",
+			labels: map[string]string{
+				"action": "check",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_service_action_duration_seconds",
+			labels: map[string]string{
+				"service": "sentinel",
+				"action":  "check",
+			},
+			want: 1,
+		},
+		{
+			name: "forcad_checker_service_action_last_status_code",
+			labels: map[string]string{
+				"service": "sentinel",
+				"team":    "team one",
+				"action":  "check",
+			},
+			want: 104,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			metric := findCheckerMetric(families, test.name, test.labels)

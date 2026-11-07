@@ -31,9 +31,13 @@ func (g *attackDataGame) AttackData(_ context.Context, service *string) (map[str
 }
 
 func TestAttackDataResponseSupportsConditionalGet(t *testing.T) {
-	game := &attackDataGame{data: map[string]map[string][]string{
-		"service-one": {"192.0.2.1": {"first-flag", "second-flag"}},
-	}}
+	game := &attackDataGame{
+		data: map[string]map[string][]string{
+			"service-one": {
+				"192.0.2.1": {"first-flag", "second-flag"},
+			},
+		},
+	}
 	first := httptest.NewRecorder()
 	if err := writeAttackData(t.Context(), game, nil, "", first); err != nil {
 		t.Fatal(err)
@@ -62,12 +66,16 @@ func TestAttackDataResponseSupportsConditionalGet(t *testing.T) {
 }
 
 func TestAttackDataResponseChangesETagWithRepresentation(t *testing.T) {
-	game := &attackDataGame{data: map[string]map[string][]string{}}
+	game := &attackDataGame{
+		data: map[string]map[string][]string{},
+	}
 	first := httptest.NewRecorder()
 	if err := writeAttackData(t.Context(), game, nil, "", first); err != nil {
 		t.Fatal(err)
 	}
-	game.data = map[string]map[string][]string{"service-one": {}}
+	game.data = map[string]map[string][]string{
+		"service-one": {},
+	}
 	second := httptest.NewRecorder()
 	if err := writeAttackData(t.Context(), game, nil, first.Header().Get("ETag"), second); err != nil {
 		t.Fatal(err)
@@ -79,17 +87,25 @@ func TestAttackDataResponseChangesETagWithRepresentation(t *testing.T) {
 
 func TestAttackDataResponsePropagatesLoadFailure(t *testing.T) {
 	want := errors.New("attack data unavailable")
-	game := &attackDataGame{err: want}
+	game := &attackDataGame{
+		err: want,
+	}
 	if err := writeAttackData(t.Context(), game, nil, "", httptest.NewRecorder()); !errors.Is(err, want) {
 		t.Fatalf("writeAttackData() error = %v, want %v", err, want)
 	}
 }
 
 func TestAttackDataEndpointReadsParameters(t *testing.T) {
-	game := &attackDataGame{data: map[string]map[string][]string{
-		"service-one": {"192.0.2.1": {"flag"}},
-		"service-two": {"192.0.2.2": {"other-flag"}},
-	}}
+	game := &attackDataGame{
+		data: map[string]map[string][]string{
+			"service-one": {
+				"192.0.2.1": {"flag"},
+			},
+			"service-two": {
+				"192.0.2.2": {"other-flag"},
+			},
+		},
+	}
 	handler := NewHandler(game, nil, nil, nil)
 	server, err := api.NewServer(handler, handler, handler)
 	if err != nil {

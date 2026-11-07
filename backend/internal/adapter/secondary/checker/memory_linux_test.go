@@ -22,7 +22,9 @@ func TestRunnerAppliesLinuxMemoryLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := NewRunner(Options{MemoryLimitMB: 128}).Run(context.Background(), Request{
+	result, err := NewRunner(Options{
+		MemoryLimitMB: 128,
+	}).Run(context.Background(), Request{
 		Executable: checkerPath,
 		Action:     ActionCheck,
 		TeamIP:     "192.0.2.1",

@@ -64,18 +64,28 @@ test("quoted example colors survive Vite dotenv parsing", () => {
   writeFileSync(join(fixtureDirectory, ".env.test"), example);
 
   const keys = ["VITE_BRAND_PRIMARY", "VITE_BRAND_ACCENT"] as const;
-  const previousValues = keys.map((key) => process.env[key]);
+  const previousValues = keys.map((key) => {
+    return process.env[key]
+  });
 
   try {
-    for (const key of keys) delete process.env[key];
+    for (const key of keys) {
+      delete process.env[key];
+    }
     const values = loadEnv("test", fixtureDirectory, "VITE_BRAND_");
     assert.equal(values.VITE_BRAND_PRIMARY, "#5B8DEF");
     assert.equal(values.VITE_BRAND_ACCENT, "#38B7B0");
   } finally {
     keys.forEach((key, index) => {
-      if (previousValues[index] === undefined) delete process.env[key];
-      else process.env[key] = previousValues[index];
+      if (previousValues[index] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previousValues[index];
+      }
     });
-    rmSync(fixtureDirectory, { recursive: true, force: true });
+    rmSync(fixtureDirectory, {
+      recursive: true,
+      force: true
+    });
   }
 });

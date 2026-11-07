@@ -512,7 +512,9 @@ func (s *Server) decodeSubmitFlagsRequest(r *http.Request) (
 				}
 			}
 			if len(failures) > 0 {
-				return &validate.Error{Fields: failures}
+				return &validate.Error{
+					Fields: failures,
+				}
 			}
 			return nil
 		}(); err != nil {

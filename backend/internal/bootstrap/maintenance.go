@@ -13,7 +13,6 @@ import (
 
 	"github.com/TakuyaYagam1/ForcAD/config"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
-	redisadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
 )
 
@@ -23,8 +22,17 @@ const maintenanceStorageTimeout = 2 * time.Minute
 type maintenanceResetter func(context.Context, config.Config) error
 
 // RunMaintenanceCommand runs a host reset/clean or the in-container reset-data command.
-func RunMaintenanceCommand(ctx context.Context, command string, args []string, out io.Writer) error {
-	return runMaintenanceCommand(ctx, command, args, out, execMaintenanceCommand, os.Getwd, resetConfiguredStores)
+func RunMaintenanceCommand(
+	ctx context.Context,
+	command string,
+	args []string,
+	out io.Writer,
+) error {
+	const location = "bootstrap.RunMaintenanceCommand"
+	if err := runMaintenanceCommand(ctx, command, args, out, execMaintenanceCommand, os.Getwd, resetConfiguredStores); err != nil {
+		return fmt.Errorf("%s - execute maintenance command: %w", location, err)
+	}
+	return nil
 }
 
 func runMaintenanceCommand(
@@ -35,8 +43,13 @@ func runMaintenanceCommand(
 	runner localoperator.MaintenanceRunner,
 	workingDirectory func() (string, error),
 	resetter maintenanceResetter,
-) error {
+) (runErr error) {
 	const location = "bootstrap.runMaintenanceCommand"
+	defer func() {
+		if runErr != nil {
+			runErr = fmt.Errorf("%s - execute maintenance command: %w", location, runErr)
+		}
+	}()
 	if ctx == nil {
 		return fmt.Errorf("%s - maintenance command context must not be nil", location)
 	}
@@ -61,11 +74,11 @@ func runMaintenanceCommand(
 
 	projectRoot, options, err := parseMaintenanceOptions(command, args, out)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	root, err := resolveProjectRoot(projectRoot, workingDirectory)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	root, err = filepath.Abs(root)
 	if err != nil {
@@ -73,7 +86,7 @@ func runMaintenanceCommand(
 	}
 	composeArgs, err := localoperator.ComposeArgs(root, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 
 	bounded, cancel := context.WithTimeout(ctx, maintenanceTimeout)
@@ -88,7 +101,12 @@ func runMaintenanceCommand(
 	return localoperator.RunMaintenance(bounded, root, options, out, runner, resetData)
 }
 
-func runResetDataCommand(ctx context.Context, args []string, out io.Writer, resetter maintenanceResetter) error {
+func runResetDataCommand(
+	ctx context.Context,
+	args []string,
+	out io.Writer,
+	resetter maintenanceResetter,
+) error {
 	const location = "bootstrap.runResetDataCommand"
 	if ctx == nil {
 		return fmt.Errorf("%s - maintenance command context must not be nil", location)
@@ -141,13 +159,13 @@ func resetConfiguredStores(ctx context.Context, cfg config.Config) error {
 	bounded, cancel := context.WithTimeout(ctx, maintenanceStorageTimeout)
 	defer cancel()
 
-	pool, closePool, err := postgres.NewPool(bounded, cfg)
+	pool, closePool, err := newPostgresPool(bounded, cfg)
 	if err != nil {
 		return fmt.Errorf("%s - connect to PostgreSQL for reset", location)
 	}
 	defer closePool()
 
-	cache, closeCache, err := redisadapter.New(bounded, cfg)
+	cache, closeCache, err := newRedisStore(bounded, cfg)
 	if err != nil {
 		return fmt.Errorf("%s - connect to Redis for reset", location)
 	}
@@ -162,11 +180,20 @@ func resetConfiguredStores(ctx context.Context, cfg config.Config) error {
 	return nil
 }
 
-func execMaintenanceCommand(ctx context.Context, name string, args []string, stdout, stderr io.Writer) error {
+func execMaintenanceCommand(
+	ctx context.Context,
+	name string,
+	args []string,
+	stdout, stderr io.Writer,
+) error {
+	const location = "bootstrap.execMaintenanceCommand"
 	command := exec.CommandContext(ctx, name, args...)
 	command.Stdout = stdout
 	command.Stderr = stderr
-	return command.Run()
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("%s - execute %s: %w", location, name, err)
+	}
+	return nil
 }
 
 func parseMaintenanceOptions(command string, args []string, out io.Writer) (string, localoperator.MaintenanceOptions, error) {

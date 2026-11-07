@@ -84,7 +84,7 @@ class RenderTests(unittest.TestCase):
                 'wan_interface = "ens19"', 'wan_interface = "ens19; reboot"'
             ),
             example.replace('team_trunk = "ens21"', 'team_trunk = "ens19"'),
-            example.replace("members_per_team = 5", "members_per_team = 6"),
+            example.replace("members_per_team = 5", "members_per_team = 8"),
             example.replace("game_tcp_ports = [8080, 8081]", "game_tcp_ports = [22]"),
             example.replace("game_udp_ports = []", "game_udp_ports = [0]"),
             example.replace("game_udp_ports = []", "game_udp_ports = [53, 53]"),
@@ -118,6 +118,40 @@ class RenderTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         render.load_config(path)
 
+    def test_seven_members_have_unique_routed_addresses(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(
+                example.replace("members_per_team = 5", "members_per_team = 7")
+                .replace(
+                    'participant_vpn = "10.183.200.0/24"',
+                    'participant_vpn = "10.183.200.0/23"',
+                )
+                .replace(
+                    'admin_vpn = "10.183.201.0/24"', 'admin_vpn = "10.183.202.0/24"'
+                )
+            )
+            config = render.load_config(path)
+        config["teams"]["entries"] = [
+            {"name": f"team-{number:02}", "logo": "", "highlighted": False}
+            for number in range(1, 29)
+        ]
+        inventory = render.teams(config)
+        peers = [peer for team in inventory for peer in team["peers"]]
+        self.assertEqual(len(set(peers)), 196)
+        self.assertNotIn("10.183.200.1", peers)
+        for team in inventory:
+            network = ipaddress.ip_network(team["vpn_cidr"])
+            self.assertEqual(network.prefixlen, 28)
+            self.assertEqual(len(team["peers"]), 7)
+            self.assertTrue(
+                all(ipaddress.ip_address(peer) in network for peer in team["peers"])
+            )
+        config["network"]["participant_vpn"] = "10.183.200.0/24"
+        with self.assertRaisesRegex(ValueError, "one /28 per team"):
+            render.network_layout(config)
+
     def test_extra_checks_are_optional_and_rendered(self):
         example = (ROOT / "settings.example.toml").read_text()
         with tempfile.TemporaryDirectory() as directory:
@@ -131,6 +165,30 @@ class RenderTests(unittest.TestCase):
             path.write_text(example.replace("extra_checks = 0", "extra_checks = 2"))
             config = render.load_config(path)
             self.assertIn("  extra_checks: 2\n", render.forcad_config(config))
+
+    def test_final_capacity_is_selected_explicitly(self):
+        source = (ROOT / "settings.final.example.toml").read_text()
+        # The final template deliberately requires the actual event checkers.
+        for number in range(1, 4):
+            source = source.replace(
+                f"service-{number}/checker.py", "examples/note/checker.py"
+            )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(source)
+            config = render.load_config(path)
+        inventory = render.teams(config)
+        self.assertEqual(len(inventory), 28)
+        self.assertEqual(sum(len(team["peers"]) for team in inventory), 196)
+        self.assertEqual(sum(task["puts"] for task in config["tasks"]["entries"]), 40)
+        self.assertIn("FORCAD_WORKER_REPLICAS=20", render.forcad_environment(config))
+        sensor = render.game_metrics(config)["router/game-metrics.service"]
+        self.assertIn("MemoryHigh=4G", sensor)
+        self.assertIn("MemoryMax=infinity", sensor)
+        self.assertIn("CPUWeight=10", sensor)
+        self.assertNotIn("CPUQuota=", sensor)
+        config["env"]["capacity"] = "default"
+        self.assertNotIn("FORCAD_WORKER_REPLICAS", render.forcad_environment(config))
 
     def test_team_networks_do_not_overlap_other_configured_networks(self):
         self.config["teams"]["entries"] = [

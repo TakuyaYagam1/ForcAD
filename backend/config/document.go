@@ -38,9 +38,9 @@ type Credentials struct {
 	Password string `yaml:"password"`
 }
 type Storages struct {
-	DB       Database `yaml:"db"`
-	RabbitMQ Rabbit   `yaml:"rabbitmq"`
-	Redis    Redis    `yaml:"redis"`
+	DB    Database `yaml:"db"`
+	NATS  NATS     `yaml:"nats"`
+	Redis Redis    `yaml:"redis"`
 }
 type Database struct {
 	User     string       `yaml:"user"`
@@ -50,12 +50,11 @@ type Database struct {
 	DBName   string       `yaml:"dbname"`
 	Runtime  *Credentials `yaml:"runtime,omitempty"`
 }
-type Rabbit struct {
+type NATS struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
-	VHost    string `yaml:"vhost"`
 }
 type Redis struct {
 	Password string `yaml:"password"`
@@ -109,13 +108,29 @@ func LoadDocument(filename string) (Document, error) {
 	if err != nil {
 		return Document{}, fmt.Errorf("%s - open configuration file: %w", location, err)
 	}
-	defer func() { _ = f.Close() }()
-	return DecodeDocument(f)
+	defer func() {
+		_ = f.Close()
+	}()
+	document, err := DecodeDocument(f)
+	if err != nil {
+		return Document{}, fmt.Errorf("%s - decode configuration file: %w", location, err)
+	}
+	return document, nil
 }
 
 func DecodeDocument(reader io.Reader) (Document, error) {
 	const location = "config.DecodeDocument"
-	d := Document{Game: Game{Mode: "classic", Timezone: "UTC", DefaultScore: 2500, GameHardness: 10, Inflation: true, CheckersPath: "/checkers/", EnvPath: "/opt/checkers/bin"}}
+	d := Document{
+		Game: Game{
+			Mode:         "classic",
+			Timezone:     "UTC",
+			DefaultScore: 2500,
+			GameHardness: 10,
+			Inflation:    true,
+			CheckersPath: "/checkers/",
+			EnvPath:      "/opt/checkers/bin",
+		},
+	}
 	data, err := io.ReadAll(io.LimitReader(reader, maxDocumentBytes+1))
 	if err != nil {
 		return Document{}, fmt.Errorf("%s - read configuration: %w", location, err)
@@ -128,7 +143,7 @@ func DecodeDocument(reader io.Reader) (Document, error) {
 		return Document{}, fmt.Errorf("%s - invalid YAML configuration", location)
 	}
 	if err := validateScalarTypes(&tree); err != nil {
-		return Document{}, err
+		return Document{}, fmt.Errorf("%s - validate scalar types: %w", location, err)
 	}
 	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
 	decoder.KnownFields(true)
@@ -147,7 +162,7 @@ func DecodeDocument(reader io.Reader) (Document, error) {
 		t.applyDefaults(d.Game)
 	}
 	if err := d.Validate(); err != nil {
-		return Document{}, err
+		return Document{}, fmt.Errorf("%s - validate decoded configuration: %w", location, err)
 	}
 	return d, nil
 }
@@ -207,7 +222,7 @@ func validateScalarTypes(node *yaml.Node) error {
 	}
 	for _, child := range node.Content {
 		if err := validateScalarTypes(child); err != nil {
-			return err
+			return fmt.Errorf("%s - validate nested scalar types: %w", location, err)
 		}
 	}
 	return nil
@@ -233,17 +248,17 @@ var tokenPattern = regexp.MustCompile(`^[0-9a-f]{16}$`)
 func (d Document) Validate() error {
 	const location = "config.Document.Validate"
 	if err := d.Game.validate(); err != nil {
-		return err
+		return fmt.Errorf("%s - validate game: %w", location, err)
 	}
 	if len(d.Teams) == 0 || len(d.Tasks) == 0 {
 		return fmt.Errorf("%s - configure at least one team and one task", location)
 	}
 	if err := validateTeams(d.Teams); err != nil {
-		return err
+		return fmt.Errorf("%s - validate teams: %w", location, err)
 	}
 	for index, task := range d.Tasks {
 		if err := task.validate(index); err != nil {
-			return err
+			return fmt.Errorf("%s - validate task %d: %w", location, index, err)
 		}
 		if d.Game.ExtraChecks > 0 && *task.CheckerTimeout+3 >= d.Game.RoundTime {
 			return fmt.Errorf("%s - extra checks require round_time > checker_timeout + 3 for tasks[%d]", location, index)
@@ -261,13 +276,13 @@ func (g Game) validate() error {
 		return fmt.Errorf("%s - game.extra_checks must be 0..8 and requires classic mode when enabled", location)
 	}
 	if err := g.validateRounds(); err != nil {
-		return err
+		return fmt.Errorf("%s - validate round settings: %w", location, err)
 	}
 	if math.IsNaN(g.GameHardness) || math.IsInf(g.GameHardness, 0) || g.GameHardness <= 1 {
 		return fmt.Errorf("%s - game.game_hardness must be finite and greater than 1", location)
 	}
 	if _, err := g.StartAt(); err != nil {
-		return err
+		return fmt.Errorf("%s - validate start time: %w", location, err)
 	}
 	if g.DefaultScore < 0 || g.DefaultScore > math.MaxInt32 {
 		return fmt.Errorf("%s - game.default_score must be a nonnegative 32-bit integer", location)
@@ -330,7 +345,7 @@ func (t Task) validate(index int) error {
 		return fmt.Errorf("%s - tasks[%d] requires a name and checker path", location, index)
 	}
 	if err := t.validateActionLimits(index); err != nil {
-		return err
+		return fmt.Errorf("%s - validate action limits: %w", location, err)
 	}
 	if t.EnvPath == nil || len(*t.EnvPath) > maxCheckerPath || len(t.CheckerType) > maxCheckerType {
 		return fmt.Errorf("%s - tasks[%d] checker settings are invalid", location, index)
@@ -343,7 +358,14 @@ func (t Task) validate(index int) error {
 
 func (t Task) validateActionLimits(index int) error {
 	const location = "config.Task.validateActionLimits"
-	for key, value := range map[string]*int{"puts": t.Puts, "gets": t.Gets, "places": t.Places, "checker_timeout": t.CheckerTimeout, "default_score": t.DefaultScore, "get_period": t.GetPeriod} {
+	for key, value := range map[string]*int{
+		"puts":            t.Puts,
+		"gets":            t.Gets,
+		"places":          t.Places,
+		"checker_timeout": t.CheckerTimeout,
+		"default_score":   t.DefaultScore,
+		"get_period":      t.GetPeriod,
+	} {
 		minimum := 0
 		if key == "places" || key == "checker_timeout" || key == "get_period" {
 			minimum = 1

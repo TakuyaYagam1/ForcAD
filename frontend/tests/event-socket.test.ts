@@ -17,7 +17,9 @@ class FakeSocket {
   }
 
   fire(type: TestEvent, event: unknown = {}) {
-    for (const listener of this.listeners.get(type) ?? []) listener(event);
+    for (const listener of this.listeners.get(type) ?? []) {
+      listener(event);
+    }
   }
 
   close() {
@@ -47,11 +49,15 @@ test("event facade dispatches validated payloads and supports off", () => {
       sockets.push(created);
       return created as unknown as WebSocket;
     },
-    schedule: (() => 1) as typeof setTimeout,
+    schedule: (() => {
+      return 1
+    }) as typeof setTimeout,
     cancel: (() => {}) as typeof clearTimeout,
   });
   const received: unknown[] = [];
-  const onFlag = (payload: unknown) => received.push(payload);
+  const onFlag = (payload: unknown) => {
+    return received.push(payload)
+  };
   socket.on("flag_stolen", onFlag).connect();
   sockets[0]!.fire("open");
   assert.equal(socket.connected, true);
@@ -71,11 +77,15 @@ test("event facade dispatches validated payloads and supports off", () => {
     },
     timestamp: "2026-10-11T12:00:00Z",
   };
-  sockets[0]!.fire("message", { data: JSON.stringify(event) });
+  sockets[0]!.fire("message", {
+    data: JSON.stringify(event)
+  });
   assert.deepEqual(received, [event.payload]);
 
   socket.off("flag_stolen", onFlag);
-  sockets[0]!.fire("message", { data: JSON.stringify(event) });
+  sockets[0]!.fire("message", {
+    data: JSON.stringify(event)
+  });
   assert.equal(received.length, 1);
   socket.disconnect();
   assert.equal(sockets[0]!.closed, true);
@@ -92,11 +102,15 @@ test("event facade dispatches public announcements", () => {
       sockets.push(created);
       return created as unknown as WebSocket;
     },
-    schedule: (() => 1) as typeof setTimeout,
+    schedule: (() => {
+      return 1
+    }) as typeof setTimeout,
     cancel: (() => {}) as typeof clearTimeout,
   });
   const received: unknown[] = [];
-  socket.on("admin_message", (payload) => received.push(payload));
+  socket.on("admin_message", (payload) => {
+    return received.push(payload)
+  });
   socket.connect();
   sockets[0]!.fire("open");
   const announcement = {
@@ -113,41 +127,59 @@ test("event facade dispatches public announcements", () => {
     },
     timestamp: "2026-10-28T12:00:00Z",
   };
-  sockets[0]!.fire("message", { data: JSON.stringify(announcement) });
+  sockets[0]!.fire("message", {
+    data: JSON.stringify(announcement)
+  });
   assert.deepEqual(received, [announcement.payload]);
   socket.disconnect();
 });
 
 test("reconnect uses jitter and resynchronizes the full scoreboard", async () => {
   const sockets: FakeSocket[] = [];
-  let scheduled: { callback: () => void; delay: number } | undefined;
+  let scheduled: {
+    callback: () => void;
+    delay: number
+  } | undefined;
   let cancelled = false;
   const scoreboard = {
-    teams: [{ id: "0199f7c0-0000-7000-8000-000000000003" }],
-    state: { round: 12 },
+    teams: [{
+      id: "0199f7c0-0000-7000-8000-000000000003"
+    }],
+    state: {
+      round: 12
+    },
   };
   const socket = new EventSocket({
     url: "ws://localhost/api/events/ws",
     parseMessage: parseRealtimeEvent,
-    resync: async () => scoreboard,
+    resync: async () => {
+      return scoreboard
+    },
     createSocket: () => {
       const created = new FakeSocket();
       sockets.push(created);
       return created as unknown as WebSocket;
     },
     schedule: ((callback: TimerHandler, delay = 0) => {
-      scheduled = { callback: callback as () => void, delay };
+      scheduled = {
+        callback: callback as () => void,
+        delay
+      };
       return 1;
     }) as typeof setTimeout,
     cancel: (() => {
       cancelled = true;
     }) as typeof clearTimeout,
-    random: () => 0.4,
+    random: () => {
+      return 0.4
+    },
     initialDelayMs: 500,
     maximumDelayMs: 2000,
   });
   const snapshots: unknown[] = [];
-  socket.on("init_scoreboard", (payload) => snapshots.push(payload));
+  socket.on("init_scoreboard", (payload) => {
+    return snapshots.push(payload)
+  });
   socket.connect();
   sockets[0]!.fire("open");
   sockets[0]!.fire("close");
@@ -158,7 +190,9 @@ test("reconnect uses jitter and resynchronizes the full scoreboard", async () =>
   sockets[1]!.fire("open");
   await Promise.resolve();
 
-  assert.deepEqual(snapshots, [{ data: scoreboard }]);
+  assert.deepEqual(snapshots, [{
+    data: scoreboard
+  }]);
   sockets[1]!.fire("close");
   socket.disconnect();
   assert.equal(cancelled, true);

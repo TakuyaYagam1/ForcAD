@@ -18,7 +18,9 @@ export function EventItem({
   compact?: boolean;
 }) {
   const { t } = useTranslation("common");
-  const teams = useScoreboardStore((state) => state.teams);
+  const teams = useScoreboardStore((state) => {
+    return state.teams
+  });
   const timestamp = new Date(event.ts);
   if (event.kind === "admin_message") {
     return (
@@ -38,10 +40,14 @@ export function EventItem({
       </li>
     );
   }
-  const attacker = teams?.find((team) => team.id === event.attackerId);
-  const victim = teams?.find((team) => team.id === event.victimId);
+  const attacker = teams?.find((team) => {
+    return team.id === event.attackerId
+  });
+  const victim = teams?.find((team) => {
+    return team.id === event.victimId
+  });
   const delta = event.delta;
-  if (compact)
+  if (compact) {
     return (
       <li className="event-item event-item--compact">
         <time dateTime={timestamp.toISOString()}>
@@ -53,7 +59,9 @@ export function EventItem({
         <div className="event-avatars">
           <Link
             to={`/team/${event.attackerId}`}
-            aria-label={t("team.linkLabel", { name: event.attackerName })}
+            aria-label={t("team.linkLabel", {
+              name: event.attackerName
+            })}
           >
             <TeamAvatar
               name={event.attackerName}
@@ -64,7 +72,9 @@ export function EventItem({
           <ArrowRight size={18} aria-label={t("events.capturedFrom")} />
           <Link
             to={`/team/${event.victimId}`}
-            aria-label={t("team.linkLabel", { name: event.victimName })}
+            aria-label={t("team.linkLabel", {
+              name: event.victimName
+            })}
           >
             <TeamAvatar
               name={event.victimName}
@@ -91,6 +101,7 @@ export function EventItem({
         </div>
       </li>
     );
+  }
   return (
     <li className="event-item event-item--full">
       <time dateTime={timestamp.toISOString()}>
@@ -126,18 +137,23 @@ export function EventItem({
   );
 }
 
-export function RecentEvents({ teamId }: { teamId?: string }) {
+export function RecentEvents({ teamId }: {
+  teamId?: string
+}) {
   const { t } = useTranslation("common");
-  const events = useLiveScoreboardStore((state) => state.events);
+  const events = useLiveScoreboardStore((state) => {
+    return state.events
+  });
   const selected = (
     teamId === undefined
       ? events
       : events.filter(
-          (event) =>
-            event.kind === "admin_message" ||
+        (event) => {
+          return event.kind === "admin_message" ||
             event.attackerId === teamId ||
-            event.victimId === teamId,
-        )
+            event.victimId === teamId
+        },
+      )
   ).slice(0, 3);
   return (
     <section
@@ -151,9 +167,11 @@ export function RecentEvents({ teamId }: { teamId?: string }) {
       </div>
       {selected.length ? (
         <ul className="recent-events-grid">
-          {selected.map((event) => (
-            <EventItem key={event.id} event={event} compact />
-          ))}
+          {selected.map((event) => {
+            return (
+              <EventItem key={event.id} event={event} compact />
+            )
+          })}
         </ul>
       ) : (
         <p className="quiet-empty">

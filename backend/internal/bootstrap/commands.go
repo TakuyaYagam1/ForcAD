@@ -22,11 +22,15 @@ const (
 )
 
 func commandConfig(path string) (config.Config, error) {
-	fallback := map[string]string{"FORCAD_ROLE": "ticker"}
+	const location = "bootstrap.commandConfig"
+
+	fallback := map[string]string{
+		"FORCAD_ROLE": "ticker",
+	}
 	if path != "" {
 		document, err := config.LoadDocument(path)
 		if err != nil {
-			return config.Config{}, err
+			return config.Config{}, fmt.Errorf("%s - %w", location, err)
 		}
 		if document.Admin != nil {
 			fallback["ADMIN_USERNAME"] = document.Admin.Username
@@ -39,10 +43,10 @@ func commandConfig(path string) (config.Config, error) {
 			}
 			fallback["POSTGRES_HOST"], fallback["POSTGRES_PORT"], fallback["POSTGRES_USER"], fallback["POSTGRES_PASSWORD"], fallback["POSTGRES_DB"] = s.DB.Host, strconv.Itoa(s.DB.Port), s.DB.User, s.DB.Password, s.DB.DBName
 			fallback["REDIS_HOST"], fallback["REDIS_PORT"], fallback["REDIS_PASSWORD"], fallback["REDIS_DB"] = s.Redis.Host, strconv.Itoa(s.Redis.Port), s.Redis.Password, strconv.Itoa(s.Redis.DB)
-			fallback["RABBITMQ_HOST"], fallback["RABBITMQ_PORT"], fallback["RABBITMQ_USER"], fallback["RABBITMQ_PASSWORD"], fallback["RABBITMQ_VHOST"] = s.RabbitMQ.Host, strconv.Itoa(s.RabbitMQ.Port), s.RabbitMQ.User, s.RabbitMQ.Password, s.RabbitMQ.VHost
+			fallback["NATS_HOST"], fallback["NATS_PORT"], fallback["NATS_USER"], fallback["NATS_PASSWORD"] = s.NATS.Host, strconv.Itoa(s.NATS.Port), s.NATS.User, s.NATS.Password
 		}
 	}
-	return config.Load(func(key string) (string, bool) {
+	cfg, err := config.Load(func(key string) (string, bool) {
 		// Migrations and operator commands use the source PostgreSQL endpoint.
 		// In particular, Goose's session advisory lock must bypass PgBouncer.
 		if key == "DATABASE_POOLER_ADDR" {
@@ -62,6 +66,10 @@ func commandConfig(path string) (config.Config, error) {
 		value, ok := fallback[key]
 		return value, ok
 	})
+	if err != nil {
+		return cfg, fmt.Errorf("%s - load command storage configuration: %w", location, err)
+	}
+	return cfg, nil
 }
 
 func RunDrainCommand(ctx context.Context, args []string, out io.Writer) error {
@@ -73,7 +81,7 @@ func RunDrainCommand(ctx context.Context, args []string, out io.Writer) error {
 	options.SetOutput(out)
 	defaultEndpoint, err := controlEndpoint("/drain")
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	endpoint := options.String("url", defaultEndpoint, "local control endpoint")
 	if err := options.Parse(args); err != nil {
@@ -100,7 +108,9 @@ func RunDrainCommand(ctx context.Context, args []string, out io.Writer) error {
 		}
 		return fmt.Errorf("%s - send drain request", location)
 	}
-	defer func() { _ = response.Body.Close() }()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 	if response.StatusCode != http.StatusAccepted {
 		return fmt.Errorf("%s - drain returned HTTP %d", location, response.StatusCode)
 	}
@@ -123,7 +133,7 @@ func RunHealthCommand(ctx context.Context, args []string) error {
 	}
 	endpoint, err := controlEndpoint("/readyz")
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	req, err := controlHTTPRequest(ctx, http.MethodGet, endpoint)
 	if err != nil {
@@ -138,7 +148,9 @@ func RunHealthCommand(ctx context.Context, args []string) error {
 		}
 		return fmt.Errorf("%s - readiness probe could not connect", location)
 	}
-	defer func() { _ = response.Body.Close() }()
+	defer func() {
+		_ = response.Body.Close()
+	}()
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s - readiness returned HTTP %d", location, response.StatusCode)
 	}
@@ -146,7 +158,11 @@ func RunHealthCommand(ctx context.Context, args []string) error {
 }
 
 func RunRuntimeCapacityCommand(ctx context.Context, args []string) error {
-	return RuntimeCapacity(ctx, args, os.Stdout)
+	const location = "bootstrap.RunRuntimeCapacityCommand"
+	if err := RuntimeCapacity(ctx, args, os.Stdout); err != nil {
+		return fmt.Errorf("%s - inspect runtime capacity: %w", location, err)
+	}
+	return nil
 }
 
 func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
@@ -173,7 +189,7 @@ func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
 	}
 	cfg, err := commandConfig("")
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	report := struct {
 		DatabaseConnectionCeiling int64            `json:"database_connection_ceiling"`
@@ -188,20 +204,26 @@ func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
 		DatabaseConnectionsByRole: make(map[string]int64),
 		CheckerProcessCeiling:     int64(*workerReplicas) * int64(cfg.WorkerConcurrency),
 		CheckerMemoryCeilingMiB:   int64(*workerReplicas) * int64(cfg.WorkerConcurrency) * int64(cfg.CheckerMemoryMB),
-		PerTeamFlagsPerSecond:     cfg.FlagRate, PerTeamFlagBurst: cfg.FlagBurst,
-		Note: "Configured ceilings, not measured throughput or reserved RAM. Include database, runtime and operating system overhead in the host budget.",
+		PerTeamFlagsPerSecond:     cfg.FlagRate,
+		PerTeamFlagBurst:          cfg.FlagBurst,
+		Note:                      "Configured ceilings, not measured throughput or reserved RAM. Include database, runtime and operating system overhead in the host budget.",
 	}
-	for role, replicas := range map[string]int{"api": *apiReplicas, "receiver": *receiverReplicas, "worker": *workerReplicas, "ticker": *tickerReplicas} {
+	for role, replicas := range map[string]int{
+		"api":      *apiReplicas,
+		"receiver": *receiverReplicas,
+		"worker":   *workerReplicas,
+		"ticker":   *tickerReplicas,
+	} {
 		if role == "api" || role == "receiver" {
 			limit, err := config.HTTPInflightLimit(role, os.LookupEnv)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s - %w", location, err)
 			}
 			report.HTTPInflightCeiling += int64(replicas) * int64(limit)
 		}
 		limit, err := config.DatabasePoolSize(role, os.LookupEnv)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - %w", location, err)
 		}
 		report.DatabaseConnectionsByRole[role] = int64(replicas) * int64(limit)
 		report.DatabaseConnectionCeiling += int64(replicas) * int64(limit)

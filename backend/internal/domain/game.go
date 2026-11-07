@@ -41,7 +41,14 @@ type PublicTeam struct {
 }
 
 func (t Team) Public() PublicTeam {
-	return PublicTeam{ID: t.ID, Name: t.Name, IP: t.IP, Highlighted: t.Highlighted, Active: t.Active, LogoPath: t.LogoPath}
+	return PublicTeam{
+		ID:          t.ID,
+		Name:        t.Name,
+		IP:          t.IP,
+		Highlighted: t.Highlighted,
+		Active:      t.Active,
+		LogoPath:    t.LogoPath,
+	}
 }
 
 type Task struct {
@@ -64,7 +71,12 @@ type PublicTask struct {
 	Name string    `json:"name"`
 }
 
-func (t Task) Public() PublicTask { return PublicTask{ID: t.ID, Name: t.Name} }
+func (t Task) Public() PublicTask {
+	return PublicTask{
+		ID:   t.ID,
+		Name: t.Name,
+	}
+}
 
 type Cell struct {
 	ID             uuid.UUID `json:"id"`
@@ -99,7 +111,19 @@ type PublicCell struct {
 }
 
 func (c Cell) Public() PublicCell {
-	return PublicCell{TeamID: c.TeamID, TaskID: c.TaskID, Status: c.Status, Stolen: c.Stolen, Lost: c.Lost, Score: c.Score, Checks: c.Checks, ChecksPassed: c.ChecksPassed, Message: c.PublicMessage, Round: c.Round, Timestamp: c.Timestamp}
+	return PublicCell{
+		TeamID:       c.TeamID,
+		TaskID:       c.TaskID,
+		Status:       c.Status,
+		Stolen:       c.Stolen,
+		Lost:         c.Lost,
+		Score:        c.Score,
+		Checks:       c.Checks,
+		ChecksPassed: c.ChecksPassed,
+		Message:      c.PublicMessage,
+		Round:        c.Round,
+		Timestamp:    c.Timestamp,
+	}
 }
 
 type GameState struct {
@@ -153,9 +177,17 @@ func (l Lifecycle) Finished() bool {
 }
 
 func (l Lifecycle) Runtime(now time.Time) RuntimeStatus {
-	r := RuntimeStatus{Phase: "waiting", Practice: l.Session.PracticeStart != nil, ResetPending: l.Session.ResetPending,
-		Generation: l.Session.Generation, ScheduledStart: l.Config.StartTime, Round: l.Config.RealRound,
-		PausedSeconds: l.Session.PausedSeconds, RoundTime: l.Config.RoundTime, ResultsPending: l.Finished() && l.Pending}
+	r := RuntimeStatus{
+		Phase:          "waiting",
+		Practice:       l.Session.PracticeStart != nil,
+		ResetPending:   l.Session.ResetPending,
+		Generation:     l.Session.Generation,
+		ScheduledStart: l.Config.StartTime,
+		Round:          l.Config.RealRound,
+		PausedSeconds:  l.Session.PausedSeconds,
+		RoundTime:      l.Config.RoundTime,
+		ResultsPending: l.Finished() && l.Pending,
+	}
 	r.CanStart = l.canStart()
 	r.CanStartPractice = r.CanStart && now.Before(l.Config.StartTime)
 	r.Phase = l.runtimePhase()

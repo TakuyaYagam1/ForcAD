@@ -11,7 +11,11 @@ import (
 )
 
 type RateLimiter interface {
-	Allow(ctx context.Context, key string, cost, rate, burst int) (bool, error)
+	Allow(
+		ctx context.Context,
+		key string,
+		cost, rate, burst int,
+	) (bool, error)
 }
 
 func LoginLimit(limiter RateLimiter, trusted []*net.IPNet, onError api.ErrorHandler) func(http.Handler) http.Handler {
@@ -27,7 +31,9 @@ func LoginLimit(limiter RateLimiter, trusted []*net.IPNet, onError api.ErrorHand
 				}
 				if !ok {
 					w.Header().Set("Retry-After", "1")
-					WriteError(w, http.StatusTooManyRequests, api.ApiError{Error: "Login rate exceeded"})
+					WriteError(w, http.StatusTooManyRequests, api.ApiError{
+						Error: "Login rate exceeded",
+					})
 					return
 				}
 			}

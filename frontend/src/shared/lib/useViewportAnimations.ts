@@ -7,7 +7,9 @@ export function useViewportAnimations<T extends HTMLElement>(
 ) {
   useEffect(() => {
     const element = ref.current;
-    if (!element || typeof IntersectionObserver === "undefined") return;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -16,7 +18,9 @@ export function useViewportAnimations<T extends HTMLElement>(
           : "paused";
       },
       // Start animations shortly before the region reaches the viewport.
-      { rootMargin: "160px 0px" },
+      {
+        rootMargin: "160px 0px"
+      },
     );
 
     observer.observe(element);

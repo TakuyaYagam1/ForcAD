@@ -9,21 +9,23 @@ import * as zod from 'zod';
 
 export const AdminMessageEventPayload = zod.object({
   "data": zod.object({
-  "id": zod.string(),
-  "kind": zod.enum(['flag_stolen', 'admin_message']),
-  "created_at": zod.iso.datetime({"offset":true}),
-  "attacker_id": zod.uuid().optional(),
-  "attacker_name": zod.string().optional(),
-  "victim_id": zod.uuid().optional(),
-  "victim_name": zod.string().optional(),
-  "task_id": zod.uuid().optional(),
-  "task_name": zod.string().optional(),
-  "round": zod.int().optional(),
-  "attacker_delta": zod.number().optional(),
-  "title": zod.string().optional(),
-  "markdown": zod.string().optional(),
-  "author": zod.string().optional()
-})
+    "id": zod.string(),
+    "kind": zod.enum(['flag_stolen', 'admin_message']),
+    "created_at": zod.iso.datetime({
+      "offset":true
+    }),
+    "attacker_id": zod.uuid().optional(),
+    "attacker_name": zod.string().optional(),
+    "victim_id": zod.uuid().optional(),
+    "victim_name": zod.string().optional(),
+    "task_id": zod.uuid().optional(),
+    "task_name": zod.string().optional(),
+    "round": zod.int().optional(),
+    "attacker_delta": zod.number().optional(),
+    "title": zod.string().optional(),
+    "markdown": zod.string().optional(),
+    "author": zod.string().optional()
+  })
 })
 
 export type AdminMessageEventPayload = zod.input<typeof AdminMessageEventPayload>;

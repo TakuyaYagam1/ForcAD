@@ -34,7 +34,10 @@ func TestPublicEventsAndShutdown(t *testing.T) {
 	defer cancel()
 	events := New(nil, slog.New(slog.DiscardHandler))
 	done := make(chan struct{})
-	go func() { defer close(done); events.Run(ctx) }()
+	go func() {
+		defer close(done)
+		events.Run(ctx)
+	}()
 	server := httptest.NewServer(events)
 	defer server.Close()
 	bounded, stop := context.WithTimeout(context.Background(), 3*time.Second)
@@ -46,7 +49,11 @@ func TestPublicEventsAndShutdown(t *testing.T) {
 	}
 	defer client.CloseNow()
 	waitSubscriber(t, events)
-	if err := events.Publish(bounded, "flag_stolen", map[string]any{"data": map[string]int{"attacker_id": 1}}); err != nil {
+	if err := events.Publish(bounded, "flag_stolen", map[string]any{
+		"data": map[string]int{
+			"attacker_id": 1,
+		},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	_, data, err := client.Read(bounded)
@@ -85,7 +92,11 @@ func TestCrossOriginWebSocketRejected(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	//nolint:bodyclose // websocket.Dial owns the handshake response body.
-	client, response, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(server.URL, "http"), &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{"https://other.example"}}})
+	client, response, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(server.URL, "http"), &websocket.DialOptions{
+		HTTPHeader: http.Header{
+			"Origin": []string{"https://other.example"},
+		},
+	})
 	if client != nil {
 		_ = client.CloseNow()
 	}
@@ -99,8 +110,14 @@ func TestPublicEventBatch(t *testing.T) {
 	defer cancel()
 	events := New(nil, slog.New(slog.DiscardHandler))
 	done := make(chan struct{})
-	go func() { defer close(done); events.Run(ctx) }()
-	defer func() { cancel(); <-done }()
+	go func() {
+		defer close(done)
+		events.Run(ctx)
+	}()
+	defer func() {
+		cancel()
+		<-done
+	}()
 	server := httptest.NewServer(events)
 	defer server.Close()
 	//nolint:bodyclose // websocket.Dial owns the handshake response body.
@@ -113,7 +130,9 @@ func TestPublicEventBatch(t *testing.T) {
 	const batchSize = 100
 	for batch := range 10 {
 		for index := range batchSize {
-			if err := events.Publish(ctx, "flag_stolen", map[string]int{"sequence": batch*batchSize + index}); err != nil {
+			if err := events.Publish(ctx, "flag_stolen", map[string]int{
+				"sequence": batch*batchSize + index,
+			}); err != nil {
 				t.Fatal(err)
 			}
 		}

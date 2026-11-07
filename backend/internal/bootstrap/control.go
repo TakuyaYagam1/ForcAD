@@ -9,21 +9,26 @@ import (
 )
 
 // RunControlCommand provides host shortcuts for the existing operator commands.
-func RunControlCommand(ctx context.Context, args []string, out io.Writer) error {
+func RunControlCommand(ctx context.Context, args []string, out io.Writer) (runErr error) {
 	const location = "bootstrap.RunControlCommand"
+	defer func() {
+		if runErr != nil {
+			runErr = fmt.Errorf("%s - execute control command: %w", location, runErr)
+		}
+	}()
 	if err := ctx.Err(); err != nil {
 		return fmt.Errorf("%s - control command canceled: %w", location, err)
 	}
 	root, args, err := extractLeadingProjectRoot(args)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if handled, err := handleControlHelp(args, out); handled {
 		return err
 	}
 	root, err = resolveProjectRoot(root, os.Getwd)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	if args[0] == "worker" {
 		return runWorkerCommand(ctx, root, args[1:], out, execOperatorCommand)
@@ -38,7 +43,7 @@ func RunControlCommand(ctx context.Context, args []string, out io.Writer) error 
 	}
 	command, commandArgs, err := controlCommand(root, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - %w", location, err)
 	}
 	switch command {
 	case "reset", "clean":
@@ -78,7 +83,7 @@ func controlCommand(root string, args []string) (string, []string, error) {
 		var err error
 		options, err = controlDeploymentArgs(command, options)
 		if err != nil {
-			return "", nil, err
+			return "", nil, fmt.Errorf("%s - %w", location, err)
 		}
 	case "build":
 		projectArgs = append(projectArgs, command)

@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/request"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
 
@@ -18,11 +21,7 @@ func (h *teamsHandler) GetAdminTeams(ctx context.Context) (api.GetAdminTeamsRes,
 	if err != nil {
 		return nil, fmt.Errorf("%s - list teams: %w", location, err)
 	}
-	result := make(api.GetAdminTeamsOKApplicationJSON, 0, len(teams))
-	for _, team := range teams {
-		result = append(result, *adminTeam(team))
-	}
-	return &result, nil
+	return response.AdminTeams(teams), nil
 }
 
 func (h *teamsHandler) GetAdminTeam(ctx context.Context, params api.GetAdminTeamParams) (api.GetAdminTeamRes, error) {
@@ -33,7 +32,7 @@ func (h *teamsHandler) GetAdminTeam(ctx context.Context, params api.GetAdminTeam
 	}
 	for _, team := range teams {
 		if team.ID == params.TeamID {
-			return adminTeam(team), nil
+			return response.AdminTeam(team), nil
 		}
 	}
 	return nil, fmt.Errorf("%s - find team: %w", location, domain.ErrNotFound)
@@ -41,20 +40,20 @@ func (h *teamsHandler) GetAdminTeam(ctx context.Context, params api.GetAdminTeam
 
 func (h *teamsHandler) CreateAdminTeam(ctx context.Context, req *api.AdminTeamCreate) (api.CreateAdminTeamRes, error) {
 	const location = "httpv1.teamsHandler.CreateAdminTeam"
-	team, err := h.game.SaveTeam(ctx, domain.Team{Name: req.Name, IP: req.IP, Highlighted: req.Highlighted.Or(false), Active: req.Active.Or(true), LogoPath: req.LogoPath.Or("")}, true)
+	team, err := h.game.SaveTeam(ctx, request.CreateTeam(req), true)
 	if err != nil {
 		return nil, fmt.Errorf("%s - create team: %w", location, err)
 	}
-	return adminTeam(team), nil
+	return response.AdminTeam(team), nil
 }
 
 func (h *teamsHandler) UpdateAdminTeam(ctx context.Context, req *api.AdminTeamUpdate, params api.UpdateAdminTeamParams) (api.UpdateAdminTeamRes, error) {
 	const location = "httpv1.teamsHandler.UpdateAdminTeam"
-	team, err := h.game.SaveTeam(ctx, domain.Team{ID: params.TeamID, Name: req.Name, IP: req.IP, Token: req.Token, Highlighted: req.Highlighted.Or(false), Active: req.Active.Or(true), LogoPath: req.LogoPath.Or("")}, false)
+	team, err := h.game.SaveTeam(ctx, request.UpdateTeam(req, params.TeamID), false)
 	if err != nil {
 		return nil, fmt.Errorf("%s - update team: %w", location, err)
 	}
-	return adminTeam(team), nil
+	return response.AdminTeam(team), nil
 }
 
 func (h *teamsHandler) DeleteAdminTeam(ctx context.Context, params api.DeleteAdminTeamParams) (api.DeleteAdminTeamRes, error) {
@@ -71,9 +70,5 @@ func (h *teamsHandler) GetClientTeams(ctx context.Context) ([]api.ParticipantTea
 	if err != nil {
 		return nil, fmt.Errorf("%s - list public teams: %w", location, err)
 	}
-	result := make([]api.ParticipantTeam, 0, len(teams))
-	for _, team := range teams {
-		result = append(result, publicTeam(team.Public()))
-	}
-	return result, nil
+	return response.PublicTeams(teams), nil
 }

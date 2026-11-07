@@ -1,5 +1,5 @@
 # Copy to settings.toml and replace example values with the deployment values.
-# Use 1-32 teams and 1-5 members per team. admins sets the wg-admin peer count.
+# Use 1-32 teams and 1-7 members per team. admins sets the wg-admin peer count.
 admins = 1
 # Public game ports allowed through the router to team networks.
 game_tcp_ports = [8080, 8081]
@@ -15,6 +15,8 @@ dns_servers = ["1.1.1.1", "8.8.8.8"]
 [network]
 router_vpn = "10.183.1.0/30"
 forcad = "10.183.2.0/24"
+# Up to 5 members use /29 per team. For 6-7 use /28 and a /23 pool for 28 teams;
+# move admin_vpn outside that pool, for example to 10.183.202.0/24.
 participant_vpn = "10.183.200.0/24"
 admin_vpn = "10.183.201.0/24"
 # Teams get consecutive /24 subnets starting here, in the listed team order.
@@ -88,6 +90,8 @@ monitoring = true
 # Enable only when the corresponding router exporter or Zeek sensor is set up.
 router_metrics = false
 game_metrics = false
+# chrp-final adds the 64 GiB final host limits to the generated environment.
+capacity = "default"
 
 # Values written to the generated ForcAD config.yml.
 [game]

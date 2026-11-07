@@ -37,7 +37,7 @@ func parseNftSources(data []byte, inventory Inventory) ([]sourceSample, bool, er
 	}
 	fingerprint, err := inventoryFingerprint(inventory)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("%s - fingerprint source inventory: %w", location, err)
 	}
 	knownTeams := make(map[string]struct{}, len(inventory.Teams))
 	for _, team := range inventory.Teams {
@@ -45,7 +45,7 @@ func parseNftSources(data []byte, inventory Inventory) ([]sourceSample, bool, er
 	}
 	samples, complete, err := decodeSourceItems(response.Nftables, inventoryComment(fingerprint), knownTeams)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("%s - decode source items: %w", location, err)
 	}
 	return samples, complete, nil
 }
@@ -69,7 +69,7 @@ func decodeSourceItems(items []json.RawMessage, comment string, knownTeams map[s
 		}
 		name, entries, err := decodeSourceSet(rawSet, comment, knownTeams)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("%s - decode source set: %w", location, err)
 		}
 		if _, duplicate := seenSets[name]; duplicate {
 			return nil, false, fmt.Errorf("%s - duplicate source set", location)
@@ -116,7 +116,7 @@ func decodeSourceSet(raw json.RawMessage, comment string, knownTeams map[string]
 	for _, rawElement := range set.Elem {
 		sample, err := decodeSourceElement(rawElement, addressType == "ipv4_addr", knownTeams)
 		if err != nil {
-			return "", nil, err
+			return "", nil, fmt.Errorf("%s - decode source element: %w", location, err)
 		}
 		samples = append(samples, sample)
 	}
@@ -154,5 +154,12 @@ func decodeSourceElement(raw json.RawMessage, ipv4 bool, knownTeams map[string]s
 	if packetErr != nil || byteErr != nil {
 		return sourceSample{}, fmt.Errorf("%s - invalid source counter", location)
 	}
-	return sourceSample{sourceIP: source.String(), teamIP: target.String(), value: counterValue{packets: packets, bytes: bytes}}, nil
+	return sourceSample{
+		sourceIP: source.String(),
+		teamIP:   target.String(),
+		value: counterValue{
+			packets: packets,
+			bytes:   bytes,
+		},
+	}, nil
 }

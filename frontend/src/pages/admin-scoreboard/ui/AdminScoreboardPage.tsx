@@ -13,8 +13,12 @@ import "./AdminScoreboardPage.css";
 export function AdminScoreboardPage() {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  const round = useScoreboardStore((state) => state.round);
-  const roundStart = useScoreboardStore((state) => state.roundStart);
+  const round = useScoreboardStore((state) => {
+    return state.round
+  });
+  const roundStart = useScoreboardStore((state) => {
+    return state.roundStart
+  });
   return (
     <AdminShell>
       <div className="admin-page admin-page--scoreboard">
@@ -26,14 +30,18 @@ export function AdminScoreboardPage() {
             <div className="admin-actions">
               <Button
                 variant="outline"
-                onClick={() => navigate("/admin/team/create")}
+                onClick={() => {
+                  return navigate("/admin/team/create")
+                }}
               >
                 <Plus />
                 {t("scoreboard.addTeam")}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => navigate("/admin/task/create")}
+                onClick={() => {
+                  return navigate("/admin/task/create")
+                }}
               >
                 <Plus />
                 {t("scoreboard.addService")}
@@ -44,10 +52,15 @@ export function AdminScoreboardPage() {
         </div>
         <ScoreboardWidget
           admin
-          onTeamClick={(teamId) => navigate(`/admin/team/${teamId}`)}
-          onTaskClick={(taskId) => navigate(`/admin/task/${taskId}`)}
-          onCellClick={(teamId, taskId) =>
-            navigate(`/admin/teamtask_log/team/${teamId}/task/${taskId}`)
+          onTeamClick={(teamId) => {
+            return navigate(`/admin/team/${teamId}`)
+          }}
+          onTaskClick={(taskId) => {
+            return navigate(`/admin/task/${taskId}`)
+          }}
+          onCellClick={(teamId, taskId) => {
+            return navigate(`/admin/teamtask_log/team/${teamId}/task/${taskId}`)
+          }
           }
         />
       </div>

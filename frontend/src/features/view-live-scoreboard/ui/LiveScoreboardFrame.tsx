@@ -7,8 +7,12 @@ import { getLocale } from "@/shared/i18n";
 
 export function LiveScoreboardFrame() {
   const { t } = useTranslation("public");
-  const events = useLiveScoreboardStore((state) => state.events);
-  const error = useLiveScoreboardStore((state) => state.error);
+  const events = useLiveScoreboardStore((state) => {
+    return state.events
+  });
+  const error = useLiveScoreboardStore((state) => {
+    return state.error
+  });
   const [filter, setFilter] = useState("");
   const locale = getLocale();
   const query = filter.trim().toLocaleLowerCase(locale);
@@ -34,16 +38,20 @@ export function LiveScoreboardFrame() {
             type="search"
             aria-label={t("liveScoreboard.searchLabel")}
             value={filter}
-            onChange={(event) => setFilter(event.target.value)}
+            onChange={(event) => {
+              return setFilter(event.target.value)
+            }}
             placeholder={t("liveScoreboard.searchPlaceholder")}
           />
         </label>
       </div>
       {filtered.length ? (
         <ul className="events-list">
-          {filtered.map((event) => (
-            <EventItem key={event.id} event={event} />
-          ))}
+          {filtered.map((event) => {
+            return (
+              <EventItem key={event.id} event={event} />
+            )
+          })}
         </ul>
       ) : (
         <div className="empty-state mt-5">

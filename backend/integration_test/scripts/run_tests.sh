@@ -21,16 +21,29 @@ cleanup() {
     exit "$result"
 }
 trap cleanup EXIT
+# Docker assigns a new ephemeral published port on container restart. Reserve
+# an explicit test port so reconnect tests keep the same broker endpoint.
+export FORCAD_TEST_NATS_PORT="$(python3 - <<'PY'
+import socket
+with socket.socket() as listener:
+    listener.bind(('127.0.0.1', 0))
+    print(listener.getsockname()[1])
+PY
+)"
 "${compose[@]}" up -d --build --wait --wait-timeout 90
 
 postgres_port="$("${compose[@]}" port postgres 5432)"
 redis_port="$("${compose[@]}" port redis 6379)"
-rabbit_port="$("${compose[@]}" port rabbitmq 5672)"
+nats_port="$("${compose[@]}" port nats 4222)"
+nats_container="$("${compose[@]}" ps --status running -q nats)"
 pooler_port="$("${compose[@]}" port pgbouncer 6432)"
 export FORCAD_TEST_POOLER_ADDR="127.0.0.1:${pooler_port##*:}"
 export FORCAD_TEST_DATABASE_URL="postgres://forcad_test:local-integration-password@127.0.0.1:${postgres_port##*:}/forcad_test?sslmode=disable"
 export FORCAD_TEST_REDIS_ADDR="127.0.0.1:${redis_port##*:}"
-export FORCAD_TEST_AMQP_URL="amqp://forcad_test:local-integration-password@127.0.0.1:${rabbit_port##*:}/forcad_test"
+export FORCAD_TEST_NATS_URL="nats://forcad_test:local-integration-password@127.0.0.1:${nats_port##*:}"
+export FORCAD_TEST_NATS_PREFIX="forcad_test_${test_project//-/_}"
+export FORCAD_TEST_NATS_CONTAINER="$nats_container"
+export FORCAD_TEST_NATS_PROJECT="$test_project"
 
 cd "$repo_root/backend"
 go test -race -count=1 -p 1 "$@" ./integration_test/...

@@ -4,38 +4,65 @@ package checker
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"syscall"
 	"time"
 )
 
 func configureProcess(command *exec.Cmd) {
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+	}
 }
 
 func killProcess(command *exec.Cmd) error {
-	return signalProcessGroup(command, syscall.SIGKILL)
+	const location = "checker.killProcess"
+	if err := signalProcessGroup(command, syscall.SIGKILL); err != nil {
+		return fmt.Errorf("%s - kill checker process group: %w", location, err)
+	}
+	return nil
 }
 
 func signalProcessGroup(command *exec.Cmd, signal syscall.Signal) error {
+	const location = "checker.signalProcessGroup"
 	_, err := observeProcessGroup(command, signal)
-	return err
+	if err != nil {
+		return fmt.Errorf("%s - signal checker process group: %w", location, err)
+	}
+	return nil
 }
 
 func observeTerminateProcess(command *exec.Cmd) (ProcessSignal, error) {
-	return observeProcessGroup(command, syscall.SIGTERM)
+	const location = "checker.observeTerminateProcess"
+	result, err := observeProcessGroup(command, syscall.SIGTERM)
+	if err != nil {
+		return result, fmt.Errorf("%s - terminate checker process group: %w", location, err)
+	}
+	return result, nil
 }
 
 func observeKillProcess(command *exec.Cmd, _ bool) (ProcessSignal, error) {
-	return observeProcessGroup(command, syscall.SIGKILL)
+	const location = "checker.observeKillProcess"
+	result, err := observeProcessGroup(command, syscall.SIGKILL)
+	if err != nil {
+		return result, fmt.Errorf("%s - kill checker process group: %w", location, err)
+	}
+	return result, nil
 }
 
 func observeProcessGroup(command *exec.Cmd, signal syscall.Signal) (ProcessSignal, error) {
+	const location = "checker.observeProcessGroup"
 	name := "SIGKILL"
 	if signal == syscall.SIGTERM {
 		name = "SIGTERM"
 	}
-	result := ProcessSignal{Time: time.Now().UTC(), Signal: name, Target: "process_group", Outcome: "not_started"}
+	result := ProcessSignal{
+		Time:    time.Now().UTC(),
+		Signal:  name,
+		Target:  "process_group",
+		Outcome: "not_started",
+	}
 	if command == nil || command.Process == nil {
 		return result, nil
 	}
@@ -51,5 +78,5 @@ func observeProcessGroup(command *exec.Cmd, signal syscall.Signal) (ProcessSigna
 		return result, nil
 	}
 	result.Outcome = "error"
-	return result, err
+	return result, fmt.Errorf("%s - signal process group: %w", location, err)
 }

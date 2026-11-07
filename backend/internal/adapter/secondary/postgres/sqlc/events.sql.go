@@ -224,31 +224,3 @@ func (q *Queries) ReadFlagEventCursor(ctx context.Context, arg ReadFlagEventCurs
 	err := row.Scan(&submit_time)
 	return submit_time, err
 }
-
-const updateStolenFlagDeltas = `-- name: UpdateStolenFlagDeltas :execrows
-WITH changes AS (
-    SELECT flags.flag_id, deltas.attacker_delta
-    FROM UNNEST($2::UUID[]) WITH ORDINALITY AS flags(flag_id, ordinal)
-    JOIN UNNEST($3::DOUBLE PRECISION[]) WITH ORDINALITY AS deltas(attacker_delta, ordinal)
-        USING (ordinal)
-)
-UPDATE StolenFlags AS stolen
-SET attacker_delta = changes.attacker_delta
-FROM changes
-WHERE stolen.flag_id = changes.flag_id
-  AND stolen.attacker_id = $1::UUID
-`
-
-type UpdateStolenFlagDeltasParams struct {
-	AttackerID uuid.UUID   `json:"attacker_id"`
-	FlagIds    []uuid.UUID `json:"flag_ids"`
-	Deltas     []float64   `json:"deltas"`
-}
-
-func (q *Queries) UpdateStolenFlagDeltas(ctx context.Context, arg UpdateStolenFlagDeltasParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateStolenFlagDeltas, arg.AttackerID, arg.FlagIds, arg.Deltas)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}

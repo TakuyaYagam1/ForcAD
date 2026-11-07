@@ -95,7 +95,9 @@ func resolveSchedule(
 		if err := tx.Commit(ctx); err != nil {
 			return scheduleResolution{}, fmt.Errorf("%s - commit inactive schedule check: %w", location, err)
 		}
-		return scheduleResolution{done: true}, nil
+		return scheduleResolution{
+			done: true,
+		}, nil
 	}
 	run, found, err := pendingScheduleRun(ctx, queries, request.ScheduleID, session.Generation)
 	if err != nil {
@@ -105,7 +107,10 @@ func resolveSchedule(
 		if err := tx.Commit(ctx); err != nil {
 			return scheduleResolution{}, fmt.Errorf("%s - commit pending dispatch lookup: %w", location, err)
 		}
-		return scheduleResolution{run: run, done: true}, nil
+		return scheduleResolution{
+			run:  run,
+			done: true,
+		}, nil
 	}
 	logicalAt := request.At.Add(-time.Duration(session.SchedulePausedSeconds * float64(time.Second)))
 	due, err := scheduleIsDue(ctx, queries, request, logicalAt)
@@ -116,9 +121,15 @@ func resolveSchedule(
 		if err := tx.Commit(ctx); err != nil {
 			return scheduleResolution{}, fmt.Errorf("%s - commit not-due schedule check: %w", location, err)
 		}
-		return scheduleResolution{done: true}, nil
+		return scheduleResolution{
+			done: true,
+		}, nil
 	}
-	return scheduleResolution{game: game, session: session, logicalAt: logicalAt}, nil
+	return scheduleResolution{
+		game:      game,
+		session:   session,
+		logicalAt: logicalAt,
+	}, nil
 }
 
 func validateScheduleRequest(request domain.ScheduleRequest) error {
@@ -175,8 +186,10 @@ func scheduleIsDue(
 ) (bool, error) {
 	const location = "postgres.scheduleIsDue"
 	due, err := queries.IsSchedulerScheduleDue(ctx, sqlc.IsSchedulerScheduleDueParams{
-		ScheduleAt: timestamp(logicalAt), StartAt: timestamp(request.StartAt),
-		IntervalSeconds: request.Interval.Seconds(), ScheduleID: request.ScheduleID,
+		ScheduleAt:      timestamp(logicalAt),
+		StartAt:         timestamp(request.StartAt),
+		IntervalSeconds: request.Interval.Seconds(),
+		ScheduleID:      request.ScheduleID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("%s - check whether schedule is due: %w", location, err)
@@ -192,7 +205,9 @@ func prepareSchedulerRound(
 	session sqlc.LockSchedulerSessionRow,
 ) (schedulerRoundState, bool, error) {
 	const location = "postgres.prepareSchedulerRound"
-	state := schedulerRoundState{round: game.RealRound}
+	state := schedulerRoundState{
+		round: game.RealRound,
+	}
 	if !request.AdvancesRound {
 		return state, false, nil
 	}
@@ -214,11 +229,7 @@ func prepareSchedulerRound(
 	return state, false, nil
 }
 
-func schedulerCanAdvanceRound(
-	ctx context.Context,
-	queries *sqlc.Queries,
-	game sqlc.LockSchedulerGameRow,
-) (bool, error) {
+func schedulerCanAdvanceRound(ctx context.Context, queries *sqlc.Queries, game sqlc.LockSchedulerGameRow) (bool, error) {
 	const location = "postgres.schedulerCanAdvanceRound"
 	if game.Rounds != nil && game.RealRound >= *game.Rounds {
 		if _, err := queries.StopAtRoundLimit(ctx); err != nil {
@@ -261,8 +272,10 @@ func completedSchedulerRound(
 	}
 	snapshotStart := float64(completedStart)
 	return schedulerRoundState{
-		snapshot: snapshot, cellsSnapshot: cellsSnapshot,
-		snapshotRound: &currentRound, snapshotRoundTime: &snapshotStart,
+		snapshot:          snapshot,
+		cellsSnapshot:     cellsSnapshot,
+		snapshotRound:     &currentRound,
+		snapshotRoundTime: &snapshotStart,
 	}, nil
 }
 
@@ -285,7 +298,9 @@ func advanceSchedulerRound(
 		return fmt.Errorf("%s - encode completed round snapshot: %w", location, err)
 	}
 	if rows, err := queries.SaveSchedulerRoundRuntime(ctx, sqlc.SaveSchedulerRoundRuntimeParams{
-		RoundStartedAt: timestamp(at), SnapshotRound: &currentRound, Snapshot: encodedSnapshot,
+		RoundStartedAt: timestamp(at),
+		SnapshotRound:  &currentRound,
+		Snapshot:       encodedSnapshot,
 	}); err != nil {
 		return fmt.Errorf("%s - save current round runtime: %w", location, err)
 	} else if rows != 1 {
@@ -307,10 +322,15 @@ func createSchedulerRun(
 	runID := uuid.NewV7()
 	roundStart := float64(request.At.UnixNano()) / float64(time.Second)
 	runRow, err := queries.CreateSchedulerRun(ctx, sqlc.CreateSchedulerRunParams{
-		ID: runID, ScheduleID: request.ScheduleID, Round: state.round,
-		IsRound: request.AdvancesRound, RoundStart: roundStart,
-		Snapshot: state.cellsSnapshot, SnapshotRound: state.snapshotRound,
-		SnapshotRoundStart: state.snapshotRoundTime, ScheduledAt: timestamp(logicalAt),
+		ID:                 runID,
+		ScheduleID:         request.ScheduleID,
+		Round:              state.round,
+		IsRound:            request.AdvancesRound,
+		RoundStart:         roundStart,
+		Snapshot:           state.cellsSnapshot,
+		SnapshotRound:      state.snapshotRound,
+		SnapshotRoundStart: state.snapshotRoundTime,
+		ScheduledAt:        timestamp(logicalAt),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - create dispatch run: %w", location, err)
@@ -387,7 +407,8 @@ func (r *Repository) Finish(ctx context.Context, runID uuid.UUID, at time.Time) 
 		return false, fmt.Errorf("%s - dispatch %s is missing scheduled time", location, runID)
 	}
 	if err := queries.SaveScheduleCheckpoint(ctx, sqlc.SaveScheduleCheckpointParams{
-		ScheduleID: completedRun.ScheduleID, LastRun: completedRun.ScheduledAt,
+		ScheduleID: completedRun.ScheduleID,
+		LastRun:    completedRun.ScheduledAt,
 	}); err != nil {
 		return false, fmt.Errorf("%s - save schedule checkpoint: %w", location, err)
 	}
@@ -405,6 +426,15 @@ func (r *Repository) StartScheduled(ctx context.Context, at time.Time) (bool, er
 	if at.IsZero() {
 		return false, fmt.Errorf("%s - validate scheduled start timestamp", location)
 	}
+	eligible, err := r.queries.CanStartScheduledGame(ctx, timestamp(at))
+	if err != nil {
+		return false, fmt.Errorf("%s - check scheduled start eligibility: %w", location, err)
+	}
+	if !eligible {
+		return false, nil
+	}
+	// Idle polls must not queue an exclusive game lock behind submissions. A
+	// positive preflight is only a hint; recheck the state under both locks below.
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return false, fmt.Errorf("%s - begin scheduled start transaction: %w", location, err)
@@ -420,7 +450,7 @@ func (r *Repository) StartScheduled(ctx context.Context, at time.Time) (bool, er
 		return false, fmt.Errorf("%s - lock session for scheduled start: %w", location, err)
 	}
 	if !scheduledStartEligible(game, session, at) {
-		// Release read locks through rollback; an idle poll needs no WAL flush.
+		// A concurrent transition can invalidate the preflight before we lock.
 		return false, nil
 	}
 	running, err := queries.StartScheduledGame(ctx, timestamp(at))
@@ -443,11 +473,7 @@ func (r *Repository) StartScheduled(ctx context.Context, at time.Time) (bool, er
 	return true, nil
 }
 
-func scheduledStartEligible(
-	game sqlc.LockSchedulerGameRow,
-	session sqlc.LockSchedulerSessionRow,
-	at time.Time,
-) bool {
+func scheduledStartEligible(game sqlc.LockSchedulerGameRow, session sqlc.LockSchedulerSessionRow, at time.Time) bool {
 	return !game.GameRunning && game.RealRound == 0 && game.StartTime.Valid && !at.Before(game.StartTime.Time) &&
 		!session.PracticeStart.Valid && !session.FinalStart.Valid && !session.ResetPending && !session.PausedAt.Valid
 }
@@ -457,6 +483,15 @@ func (r *Repository) Maintain(ctx context.Context, at time.Time) (bool, error) {
 	if at.IsZero() {
 		return false, fmt.Errorf("%s - validate maintenance timestamp", location)
 	}
+	needed, err := r.queries.NeedsSchedulerMaintenance(ctx, timestamp(at))
+	if err != nil {
+		return false, fmt.Errorf("%s - check maintenance eligibility: %w", location, err)
+	}
+	if !needed {
+		return false, nil
+	}
+	// Keep receiver and worker transactions concurrent on idle polls. All
+	// maintenance conditions are checked again after acquiring the original locks.
 	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return false, fmt.Errorf("%s - begin maintenance transaction: %w", location, err)
@@ -486,11 +521,7 @@ func (r *Repository) Maintain(ctx context.Context, at time.Time) (bool, error) {
 	return maintained, nil
 }
 
-func practiceCleanupDue(
-	game sqlc.LockSchedulerGameRow,
-	session sqlc.LockSchedulerSessionRow,
-	at time.Time,
-) bool {
+func practiceCleanupDue(game sqlc.LockSchedulerGameRow, session sqlc.LockSchedulerSessionRow, at time.Time) bool {
 	if session.ResetPending {
 		return true
 	}
@@ -589,7 +620,8 @@ func (r *Repository) ExpiredJobIDs(ctx context.Context, at time.Time, limit int3
 		return []uuid.UUID{}, nil
 	}
 	ids, err := r.queries.ExpiredSchedulerJobs(ctx, sqlc.ExpiredSchedulerJobsParams{
-		At: timestamp(at), JobLimit: limit,
+		At:       timestamp(at),
+		JobLimit: limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - list expired scheduler jobs: %w", location, err)
@@ -603,7 +635,8 @@ func (r *Repository) CompletedSnapshots(ctx context.Context, afterRound, limit i
 		return []domain.RoundSnapshot{}, nil
 	}
 	rows, err := r.queries.ListCompletedRoundSnapshots(ctx, sqlc.ListCompletedRoundSnapshotsParams{
-		AfterRound: afterRound, SnapshotLimit: limit,
+		AfterRound:    afterRound,
+		SnapshotLimit: limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - list completed round snapshots: %w", location, err)
@@ -663,8 +696,13 @@ func buildSchedulerJobs(
 	jobs := make([]schedulerJobRecord, 0, len(teams)*len(tasks))
 	for _, teamRow := range teams {
 		team := domain.Team{
-			ID: teamRow.ID, Name: teamRow.Name, IP: teamRow.Ip, Token: teamRow.Token,
-			Highlighted: teamRow.Highlighted, Active: teamRow.Active, LogoPath: teamRow.LogoPath,
+			ID:          teamRow.ID,
+			Name:        teamRow.Name,
+			IP:          teamRow.Ip,
+			Token:       teamRow.Token,
+			Highlighted: teamRow.Highlighted,
+			Active:      teamRow.Active,
+			LogoPath:    teamRow.LogoPath,
 		}
 		for _, taskRow := range tasks {
 			if taskID != nil && taskRow.ID != *taskID {
@@ -674,20 +712,35 @@ func buildSchedulerJobs(
 				continue
 			}
 			task := domain.Task{
-				ID: taskRow.ID, Name: taskRow.Name, Checker: taskRow.Checker, EnvPath: taskRow.EnvPath,
-				Gets: taskRow.Gets, Puts: taskRow.Puts, Places: taskRow.Places,
-				CheckerTimeout: taskRow.CheckerTimeout, CheckerType: taskRow.CheckerType,
-				GetPeriod: taskRow.GetPeriod, DefaultScore: taskRow.DefaultScore, Active: taskRow.Active,
+				ID:             taskRow.ID,
+				Name:           taskRow.Name,
+				Checker:        taskRow.Checker,
+				EnvPath:        taskRow.EnvPath,
+				Gets:           taskRow.Gets,
+				Puts:           taskRow.Puts,
+				Places:         taskRow.Places,
+				CheckerTimeout: taskRow.CheckerTimeout,
+				CheckerType:    taskRow.CheckerType,
+				GetPeriod:      taskRow.GetPeriod,
+				DefaultScore:   taskRow.DefaultScore,
+				Active:         taskRow.Active,
 			}
 			payload, err := json.Marshal(domain.JobPayload{
-				Team: team, Task: task, Workflow: string(workflow), Generation: generation,
+				Team:       team,
+				Task:       task,
+				Workflow:   string(workflow),
+				Generation: generation,
 			})
 			if err != nil {
 				return nil, fmt.Errorf("%s - encode checker job payload: %w", location, err)
 			}
 			jobs = append(jobs, schedulerJobRecord{
-				RunID: runID, Round: round, Payload: payload,
-				Action: string(workflow), TeamID: team.ID, TaskID: task.ID,
+				RunID:   runID,
+				Round:   round,
+				Payload: payload,
+				Action:  string(workflow),
+				TeamID:  team.ID,
+				TaskID:  task.ID,
 			})
 		}
 	}
@@ -715,10 +768,14 @@ func dispatchRunFromRow(row sqlc.Dispatchrun, generation int64) (*domain.Dispatc
 		return nil, fmt.Errorf("%s - dispatch %s is missing scheduled time", location, row.ID)
 	}
 	run := &domain.DispatchRun{
-		ID: row.ID, ScheduleID: row.ScheduleID, Round: row.Round,
-		IsRound: row.IsRound, RoundStart: row.RoundStart,
-		Completed: row.Completed, Generation: generation,
-		Workflow: workflowFromSchedule(row.ScheduleID),
+		ID:         row.ID,
+		ScheduleID: row.ScheduleID,
+		Round:      row.Round,
+		IsRound:    row.IsRound,
+		RoundStart: row.RoundStart,
+		Completed:  row.Completed,
+		Generation: generation,
+		Workflow:   workflowFromSchedule(row.ScheduleID),
 	}
 	run.ScheduledAt = row.ScheduledAt.Time
 	if !row.IsRound {
@@ -762,7 +819,11 @@ func publicRoundSnapshot(round int32, roundStart int64, cells []domain.Cell) *do
 	for _, cell := range cells {
 		publicCells = append(publicCells, cell.Public())
 	}
-	return &domain.RoundSnapshot{Round: round, RoundStart: roundStart, TeamTasks: publicCells}
+	return &domain.RoundSnapshot{
+		Round:      round,
+		RoundStart: roundStart,
+		TeamTasks:  publicCells,
+	}
 }
 
 func insertRoundSnapshot(ctx context.Context, queries *sqlc.Queries, snapshot domain.RoundSnapshot) error {
@@ -772,7 +833,9 @@ func insertRoundSnapshot(ctx context.Context, queries *sqlc.Queries, snapshot do
 		return fmt.Errorf("%s - encode completed round snapshot: %w", location, err)
 	}
 	if _, err := queries.InsertCompletedRoundSnapshot(ctx, sqlc.InsertCompletedRoundSnapshotParams{
-		Round: snapshot.Round, RoundStart: float64(snapshot.RoundStart), Snapshot: encoded,
+		Round:      snapshot.Round,
+		RoundStart: float64(snapshot.RoundStart),
+		Snapshot:   encoded,
 	}); err != nil {
 		return fmt.Errorf("%s - insert completed round snapshot: %w", location, err)
 	}
@@ -807,7 +870,8 @@ func saveLatestCompletedRound(
 		return fmt.Errorf("%s - encode completed round snapshot: %w", location, err)
 	}
 	rows, err := queries.SaveGameSnapshot(ctx, sqlc.SaveGameSnapshotParams{
-		SnapshotRound: &round, Snapshot: encoded,
+		SnapshotRound: &round,
+		Snapshot:      encoded,
 	})
 	if err != nil {
 		return fmt.Errorf("%s - update current game snapshot: %w", location, err)

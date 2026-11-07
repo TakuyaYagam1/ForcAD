@@ -18,8 +18,10 @@ func controlHTTPClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
 		Transport: &http.Transport{
-			Proxy:                  nil,
-			DialContext:            (&net.Dialer{Timeout: timeout}).DialContext,
+			Proxy: nil,
+			DialContext: (&net.Dialer{
+				Timeout: timeout,
+			}).DialContext,
 			TLSHandshakeTimeout:    timeout,
 			ResponseHeaderTimeout:  timeout,
 			MaxResponseHeaderBytes: 64 << 10,

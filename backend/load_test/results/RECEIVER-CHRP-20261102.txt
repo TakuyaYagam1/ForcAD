@@ -1,0 +1,52 @@
+CHRP receiver experiments, 2026-11-02 through 2026-11-05
+
+Scope: synthetic checkers and fixtures, not final competition services.
+Host: i9-13900KF, 32 GB RAM, Windows/WSL2; Docker sees 32 logical CPUs and 27.4 GiB RAM.
+The generator shares the host with the application. Results do not certify the target EPYC host.
+Matched workload: 28 teams, 3 services, 40 PUT/team/60-second round (14/13/13),
+84 checker jobs and 1120 PUT per full round, API4/RX4, 224 WebSocket observers,
+1000 offered REST RPS and 40 batches/s of 100 flag values. Worker count x slots below.
+
+Ten-minute sweep on the same frozen source, 2026-11-04:
+Workers  REST actual RPS  Flag p99 ms  Result
+20 x 2   966.972          513          PASS
+20 x 3   961.996          833          FAIL: overload burst did not reach rate limiter
+10 x 8   971.020          1991         FAIL: 70 flag client timeouts
+15 x 4   973.314          1187         FAIL: flag latency budget
+15 x 3   974.959          671          PASS
+All five runs completed 12 correct rounds with no expired jobs or WebSocket failures.
+The matched 15x4 -> 15x3 change kept replica count and DB client budgets unchanged.
+API pgx acquisition waiting fell from ~1104s to ~114s in aggregate. Available WSL RAM
+remained ~23 GiB and swap was unused. Extra checker concurrency is a contributor;
+CPU scheduling and database demand were not independently isolated by this sweep.
+
+Five-hour 15x3 soak, 2026-11-04:
+Overall FAIL, exit 2, because of the final three-second overload burst.
+Steady: 17,749,808 REST HTTP200, 986.100 RPS, 98.61% generator delivery, p99 137.76ms.
+Flags: 719,692 HTTP200, zero transport errors, p99 200.04ms; accepted=committed=9,422,365.
+315 complete consecutive rounds: each 84 healthy results and 1120 PUT; worst round 47.66s,
+worst publish-to-action wait 33.83s, no expired/overdue jobs or action timeouts.
+A trailing partial round accrued 47 history rows after the checker snapshot during teardown.
+No container restart/OOM; WSL swap 0. Sampled CPU peaks: WSL 96.04%, Windows 95.65%.
+Minimum free memory: WSL 19.45 GiB; Windows physical 8.76 GiB (Windows sampling began at round ~120).
+PgBouncer sampling began at round ~51: API client queue peak 18/maxwait 41ms;
+receiver and worker pools had no sampled client queue.
+Burst: 206 HTTP200, 275 HTTP429, 74 client timeouts; accepted 14,350 vs committed 15,610.
+Nginx recorded client disconnects as 499; receiver logged generic 503 near the client deadline.
+Commit/response ambiguity is not evidence of lost DB writes.
+The steady stage reports 18000 seconds, while serialized wall timestamps span 5h11m54s;
+this unexplained timing discrepancy limits interpretation of wall-clock RPS.
+
+Phase-instrumented ten-minute comparison, 2026-11-05:
+15x3, admission100: steady 585,165 REST HTTP200 and 23,954 flag HTTP200, flag p99 425ms.
+Overall FAIL at burst: 5 flag timeouts, accepted 18,932 vs committed 19,002.
+Burst mean admission wait 1486ms; storage 89ms; rate check 1.5ms.
+10x8, admission100: FAIL at steady, 113 REST capacity503, 41 REST transport errors,
+39 flag timeouts; flag p99 2250ms; accepted 299,585 vs committed 299,725.
+Mean flag admission wait 113ms (1052 waits >1s), storage 25ms, rate check <1ms.
+Aggregate API pgx acquisition wait ~10816s vs ~122s at 15x3; all API pools reached 16/16.
+Worker CPU peak 29.62 vs 22.38 cores; available WSL RAM >22 GiB, swap 0.
+15x3, admission200 (experimental source only): FAIL on steady p99 1490ms,
+all 580,333 REST and 23,889 flag requests HTTP200, accepted=committed=305,816.
+Mean admission wait 40ms and storage 29ms; increasing admission did not establish an improvement.
+Production admission remains 100. These findings do not establish that RabbitMQ is a bottleneck.

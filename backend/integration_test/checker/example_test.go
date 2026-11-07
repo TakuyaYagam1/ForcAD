@@ -25,7 +25,13 @@ type exampleState struct {
 	Place   int    `json:"place"`
 }
 
-func runExample(t *testing.T, mode, host string, action processchecker.Action, private string, place int) processchecker.Result {
+func runExample(
+	t *testing.T,
+	mode, host string,
+	action processchecker.Action,
+	private string,
+	place int,
+) processchecker.Result {
 	t.Helper()
 	t.Setenv("PYTHONDONTWRITEBYTECODE", "1")
 	python, err := exec.LookPath("python3")
@@ -33,10 +39,18 @@ func runExample(t *testing.T, mode, host string, action processchecker.Action, p
 		t.Fatalf("Python 3 is required for checker examples: %v", err)
 	}
 	program := exampleProgram(t, mode)
-	runner := processchecker.NewRunner(processchecker.Options{DisableMemoryLimit: true})
+	runner := processchecker.NewRunner(processchecker.Options{
+		DisableMemoryLimit: true,
+	})
 	result, err := runner.Run(t.Context(), processchecker.Request{
-		Executable: program, Action: action, TeamIP: host, PrivateFlagData: private,
-		Flag: exampleFlag, VulnNumber: place, EnvPath: filepath.Dir(python), Timeout: 10 * time.Second,
+		Executable:      program,
+		Action:          action,
+		TeamIP:          host,
+		PrivateFlagData: private,
+		Flag:            exampleFlag,
+		VulnNumber:      place,
+		EnvPath:         filepath.Dir(python),
+		Timeout:         10 * time.Second,
 	})
 	if err != nil {
 		t.Fatal(err)

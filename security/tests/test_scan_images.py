@@ -161,7 +161,7 @@ class ImageScanTest(TestCase):
             )
         return status, output.getvalue()
 
-    def test_no_targets_selects_all_five(self):
+    def test_no_targets_selects_all_six(self):
         args = scan_images.build_parser().parse_args(
             ["--reports", str(self.reports), "--cache", str(self.cache)]
         )
@@ -179,8 +179,20 @@ class ImageScanTest(TestCase):
                 0,
             )
         self.assertEqual(
-            selected, ["runtime", "worker", "nginx", "postgres", "pgbouncer"]
+            selected, ["runtime", "worker", "nginx", "postgres", "pgbouncer", "nats"]
         )
+
+    def test_nats_build_uses_production_dockerfile_without_a_stage(self):
+        status, table = self.call_target("nats")
+        self.assertEqual(status, 0)
+        self.assertIn("summary for nats", table)
+        build = next(call for call in self.docker.calls if call[0] == "build")
+        self.assertEqual(
+            build[build.index("--file") + 1], "deployment/docker/nats/Dockerfile"
+        )
+        self.assertNotIn("--target", build)
+        self.assertTrue((self.reports / "images/nats/trivy-image.json").is_file())
+        self.assertNotIn("forcad-security:nats", self.docker.tags)
 
     def test_build_scan_and_cleanup_use_image_id_and_pinned_scanner(self):
         status, table = self.call_target()

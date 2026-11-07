@@ -17,6 +17,30 @@ const (
 
 var teamCount = defaultTeamCount
 
+func readPacingSetting() (pacingPolicy, error) {
+	const location = "load.readPacingSetting"
+	switch raw := os.Getenv("LOAD_READ_PACING"); raw {
+	case "", string(pacingDiscardBacklog):
+		return pacingDiscardBacklog, nil
+	case string(pacingRecentWindow):
+		return pacingRecentWindow, nil
+	default:
+		return "", fmt.Errorf("%s - LOAD_READ_PACING must be discard-backlog or recent-window", location)
+	}
+}
+
+func spectatorCount() (int, error) {
+	raw := os.Getenv("LOAD_SPECTATORS")
+	if raw == "" {
+		return teamCount, nil
+	}
+	count, err := strconv.Atoi(raw)
+	if err != nil || count < 1 || count > 4096 {
+		return 0, fmt.Errorf("load.spectatorCount - LOAD_SPECTATORS must be between 1 and 4096")
+	}
+	return count, nil
+}
+
 type stage struct {
 	Name     string
 	Duration time.Duration
@@ -54,9 +78,27 @@ func loadProfile() (string, []stage, error) {
 		warmupFlagRPS, steadyFlagRPS, recoveryFlagRPS = 2, 2, 2
 		warmupReadRPS, recoveryReadRPS = readRPS, readRPS
 	}
-	stages := []stage{{Name: "warmup", Duration: warmup, ReadRPS: warmupReadRPS, FlagRPS: warmupFlagRPS}}
-	appendStage := func(label string, duration time.Duration, rps int, overload bool, path string) {
-		stages = append(stages, stage{Name: label, Duration: duration, ReadRPS: rps, FlagRPS: steadyFlagRPS, Overload: overload, Path: path})
+	stages := []stage{{
+		Name:     "warmup",
+		Duration: warmup,
+		ReadRPS:  warmupReadRPS,
+		FlagRPS:  warmupFlagRPS,
+	}}
+	appendStage := func(
+		label string,
+		duration time.Duration,
+		rps int,
+		overload bool,
+		path string,
+	) {
+		stages = append(stages, stage{
+			Name:     label,
+			Duration: duration,
+			ReadRPS:  rps,
+			FlagRPS:  steadyFlagRPS,
+			Overload: overload,
+			Path:     path,
+		})
 	}
 	switch name {
 	case "checker", "smoke", "load", "soak":
@@ -64,7 +106,12 @@ func loadProfile() (string, []stage, error) {
 		if checkpointErr != nil {
 			return name, nil, checkpointErr
 		}
-		duration := map[string]time.Duration{"checker": 90 * time.Second, "smoke": 30 * time.Second, "load": 15 * time.Minute, "soak": 4 * time.Hour}[name]
+		duration := map[string]time.Duration{
+			"checker": 90 * time.Second,
+			"smoke":   30 * time.Second,
+			"load":    15 * time.Minute,
+			"soak":    4 * time.Hour,
+		}[name]
 		duration, err = durationSetting("LOAD_DURATION", duration)
 		for part := 1; duration > 0 && err == nil; part++ {
 			chunk := min(duration, checkpoint)
@@ -94,7 +141,12 @@ func loadProfile() (string, []stage, error) {
 	if err != nil {
 		return name, nil, err
 	}
-	stages = append(stages, stage{Name: "recovery", Duration: recovery, ReadRPS: recoveryReadRPS, FlagRPS: recoveryFlagRPS})
+	stages = append(stages, stage{
+		Name:     "recovery",
+		Duration: recovery,
+		ReadRPS:  recoveryReadRPS,
+		FlagRPS:  recoveryFlagRPS,
+	})
 	var total time.Duration
 	for _, s := range stages {
 		total += s.Duration

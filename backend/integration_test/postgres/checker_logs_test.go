@@ -94,9 +94,13 @@ func TestCheckerLogsPageUsesTeamTaskCursorAndPublicFields(t *testing.T) {
 
 func TestCheckerLogTypeContainsOnlyPublicValues(t *testing.T) {
 	encoded, err := json.Marshal(domain.CheckerLog{
-		ID: uuid.MustParse("01912345-6789-7000-8000-000000000001"), Round: 3,
-		Action: "put", Stage: "classic", Status: 101,
-		StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC(),
+		ID:            uuid.MustParse("01912345-6789-7000-8000-000000000001"),
+		Round:         3,
+		Action:        "put",
+		Stage:         "classic",
+		Status:        101,
+		StartedAt:     time.Now().UTC(),
+		FinishedAt:    time.Now().UTC(),
 		PublicMessage: "OK",
 	})
 	if err != nil {

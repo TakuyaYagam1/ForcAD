@@ -18,8 +18,12 @@ test("demo roster is synthetic and lets the generic avatar fallback render", () 
   assert.equal(teams.length, 19);
   assert.equal(teams[0].name, "Northstar");
   assert.equal(teams[3].name, "Blue Circuit");
-  assert.equal(teams.every(({ logo_path }) => !logo_path), true);
-  assert.equal(new Set(teams.map(({ name }) => name)).size, teams.length);
+  assert.equal(teams.every(({ logo_path }) => {
+    return !logo_path
+  }), true);
+  assert.equal(new Set(teams.map(({ name }) => {
+    return name
+  })).size, teams.length);
 });
 
 test("team logo path resolver accepts files in its directory only", (context) => {
@@ -34,7 +38,12 @@ test("team logo path resolver accepts files in its directory only", (context) =>
   writeFileSync(insideSvg, "<svg xmlns=\"http://www.w3.org/2000/svg\"/>");
   writeFileSync(outsideFile, "outside");
   symlinkSync(outsideFile, escapeLink);
-  context.after(() => rmSync(root, { recursive: true, force: true }));
+  context.after(() => {
+    return rmSync(root, {
+      recursive: true,
+      force: true
+    })
+  });
 
   assert.equal(resolveTeamLogoPath(logoDirectory, "team-one.png"), insideFile);
   assert.equal(resolveTeamLogoPath(logoDirectory, "team-two.svg"), insideSvg);

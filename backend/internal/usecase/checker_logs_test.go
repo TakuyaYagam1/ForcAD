@@ -17,7 +17,12 @@ type checkerLogRepository struct {
 	queryLimit int32
 }
 
-func (r *checkerLogRepository) CheckerLogs(_ context.Context, _, _ uuid.UUID, beforeID *uuid.UUID, limit int32) ([]domain.CheckerLog, error) {
+func (r *checkerLogRepository) CheckerLogs(
+	_ context.Context,
+	_, _ uuid.UUID,
+	beforeID *uuid.UUID,
+	limit int32,
+) ([]domain.CheckerLog, error) {
 	r.beforeID = beforeID
 	r.queryLimit = limit
 	return r.rows, nil
@@ -31,7 +36,13 @@ func TestCheckerLogsBuildsCursorPage(t *testing.T) {
 	thirdID := uuid.MustParse("01912345-6789-7000-8000-000000000005")
 	beforeID := uuid.MustParse("01912345-6789-7000-8000-000000000006")
 	repo := &checkerLogRepository{
-		rows: []domain.CheckerLog{{ID: firstID}, {ID: secondID}, {ID: thirdID}},
+		rows: []domain.CheckerLog{{
+			ID: firstID,
+		}, {
+			ID: secondID,
+		}, {
+			ID: thirdID,
+		}},
 	}
 	service := NewGame(repo, nil, nil, nil)
 	defer service.Close()
@@ -60,8 +71,16 @@ func TestCheckerLogsUsesDefaultAndMaximumLimits(t *testing.T) {
 		requested int32
 		wantLimit int32
 	}{
-		{name: "default", requested: 0, wantLimit: 100},
-		{name: "maximum", requested: 501, wantLimit: 500},
+		{
+			name:      "default",
+			requested: 0,
+			wantLimit: 100,
+		},
+		{
+			name:      "maximum",
+			requested: 501,
+			wantLimit: 500,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

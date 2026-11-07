@@ -12,7 +12,9 @@ function readDemoMode() {
   }
   try {
     const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored === "on" || stored === "off") return stored === "on";
+    if (stored === "on" || stored === "off") {
+      return stored === "on";
+    }
   } catch {
     // Starting Vite in demo mode needs no browser storage.
   }

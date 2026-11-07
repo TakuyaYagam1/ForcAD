@@ -121,16 +121,3 @@ LIMIT sqlc.arg(page_size)::INTEGER;
 INSERT INTO PublicAnnouncements (title, markdown, author)
 VALUES (sqlc.arg(title), sqlc.arg(markdown), sqlc.arg(author))
 RETURNING id, title, markdown, author, created_at;
-
--- name: UpdateStolenFlagDeltas :execrows
-WITH changes AS (
-    SELECT flags.flag_id, deltas.attacker_delta
-    FROM UNNEST(sqlc.arg(flag_ids)::UUID[]) WITH ORDINALITY AS flags(flag_id, ordinal)
-    JOIN UNNEST(sqlc.arg(deltas)::DOUBLE PRECISION[]) WITH ORDINALITY AS deltas(attacker_delta, ordinal)
-        USING (ordinal)
-)
-UPDATE StolenFlags AS stolen
-SET attacker_delta = changes.attacker_delta
-FROM changes
-WHERE stolen.flag_id = changes.flag_id
-  AND stolen.attacker_id = sqlc.arg(attacker_id)::UUID;

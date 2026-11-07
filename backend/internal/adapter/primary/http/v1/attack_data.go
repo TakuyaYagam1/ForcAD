@@ -3,10 +3,13 @@ package v1
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/go-faster/jx"
+
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
 )
 
 const attackDataCacheControl = "public, no-cache"
@@ -26,10 +29,17 @@ func writeAttackData(
 	if data == nil {
 		data = map[string]map[string][]string{}
 	}
-	body, err := json.Marshal(data)
-	if err != nil {
+	e := jx.GetEncoder()
+	defer func() {
+		if cap(e.Bytes()) > 1<<20 {
+			e.SetBytes(nil)
+		}
+		jx.PutEncoder(e)
+	}()
+	if err := response.AttackData(e, data); err != nil {
 		return fmt.Errorf("%s - encode public attack data: %w", location, err)
 	}
+	body := e.Bytes()
 	checksum := sha256.Sum256(body)
 	etag := fmt.Sprintf("\"%x\"", checksum)
 	w.Header().Set("ETag", etag)

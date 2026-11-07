@@ -25,16 +25,26 @@ import { axiosMutator } from '../../../axiosMutator';
 
 
 
-const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
-  const result = { queryKey } as T & { queryKey: K };
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & {
+  queryKey: K
+} => {
+  const result = {
+    queryKey
+  } as T & {
+    queryKey: K
+  };
   for (const key of Object.keys(query)) {
     // The explicit queryKey always wins, matching the previous
     // `{ ...query, queryKey }` spread where it was set last.
-    if (key === 'queryKey') continue;
+    if (key === 'queryKey') {
+      continue;
+    }
     Object.defineProperty(result, key, {
       enumerable: true,
       configurable: true,
-      get: () => (query as Record<string, unknown>)[key],
+      get: () => {
+        return (query as Record<string, unknown>)[key]
+      },
     });
   }
   return result;
@@ -45,42 +55,55 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
  */
 export const getClientMetrics = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<string>(
-      {url: `/api/client/metrics`, method: 'GET', signal
+  return axiosMutator<string>(
+    {
+      url: `/api/client/metrics`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetClientMetricsQueryKey = () => {
-    return [
+  return [
     `/api/client/metrics`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetClientMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>, }
+export const getGetClientMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetClientMetricsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientMetrics>>> = ({ signal }) => getClientMetrics(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientMetrics>>> = ({ signal }) => {
+    return getClientMetrics(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetClientMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getClientMetrics>>>
@@ -88,41 +111,59 @@ export type GetClientMetricsQueryError = unknown
 
 
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientMetrics>>,
           TError,
           Awaited<ReturnType<typeof getClientMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientMetrics>>,
           TError,
           Awaited<ReturnType<typeof getClientMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Read client API Prometheus metrics.
  */
 
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetClientMetricsQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -137,42 +178,55 @@ export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientM
  */
 export const getAdminMetrics = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<string>(
-      {url: `/api/admin/metrics`, method: 'GET', signal
+  return axiosMutator<string>(
+    {
+      url: `/api/admin/metrics`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetAdminMetricsQueryKey = () => {
-    return [
+  return [
     `/api/admin/metrics`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetAdminMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>, }
+export const getGetAdminMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetAdminMetricsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminMetrics>>> = ({ signal }) => getAdminMetrics(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminMetrics>>> = ({ signal }) => {
+    return getAdminMetrics(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetAdminMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminMetrics>>>
@@ -180,41 +234,59 @@ export type GetAdminMetricsQueryError = unknown
 
 
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminMetrics>>,
           TError,
           Awaited<ReturnType<typeof getAdminMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getAdminMetrics>>,
           TError,
           Awaited<ReturnType<typeof getAdminMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Read administration API Prometheus metrics.
  */
 
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetAdminMetricsQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
@@ -229,42 +301,55 @@ export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMet
  */
 export const getReceiverMetrics = (
 
- signal?: AbortSignal
+  signal?: AbortSignal
 ) => {
 
 
-      return axiosMutator<string>(
-      {url: `/api/http-receiver/metrics`, method: 'GET', signal
+  return axiosMutator<string>(
+    {
+      url: `/api/http-receiver/metrics`,
+      method: 'GET',
+      signal
     },
-      );
-    }
+  );
+}
 
 
 
 
 export const getGetReceiverMetricsQueryKey = () => {
-    return [
+  return [
     `/api/http-receiver/metrics`
-    ] as const;
-    }
+  ] as const;
+}
 
 
-export const getGetReceiverMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>, }
+export const getGetReceiverMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>,
+}
 ) => {
 
-const {query: queryOptions} = options ?? {};
+  const {query: queryOptions} = options ?? {};
 
   const queryKey =  queryOptions?.queryKey ?? getGetReceiverMetricsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReceiverMetrics>>> = ({ signal }) => getReceiverMetrics(signal);
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getReceiverMetrics>>> = ({ signal }) => {
+    return getReceiverMetrics(signal)
+  };
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 }
 
 export type GetReceiverMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getReceiverMetrics>>>
@@ -272,41 +357,59 @@ export type GetReceiverMetricsQueryError = unknown
 
 
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReceiverMetrics>>,
           TError,
           Awaited<ReturnType<typeof getReceiverMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getReceiverMetrics>>,
           TError,
           Awaited<ReturnType<typeof getReceiverMetrics>>
         > , 'initialData'
-      >, }
+      >,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>, }
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>,
+  }
  , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
 /**
  * @summary Read flag receiver Prometheus metrics.
  */
 
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>, }
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
 
   const queryOptions = getGetReceiverMetricsQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
 
   return withQueryKey(query, queryOptions.queryKey);
 }

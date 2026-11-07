@@ -39,7 +39,9 @@ func InventoryFromDocument(document config.Document) (Inventory, error) {
 		return Inventory{}, fmt.Errorf("%s - at most %d teams are allowed", location, maxInventoryTeams)
 	}
 
-	inventory := Inventory{Teams: make([]InventoryTeam, 0, len(document.Teams))}
+	inventory := Inventory{
+		Teams: make([]InventoryTeam, 0, len(document.Teams)),
+	}
 	for index, team := range document.Teams {
 		address, err := netip.ParseAddr(team.IP)
 		if err != nil || !address.IsValid() || address.Zone() != "" {
@@ -51,14 +53,17 @@ func InventoryFromDocument(document config.Document) (Inventory, error) {
 		if err != nil {
 			return Inventory{}, fmt.Errorf("%s - teams[%d] has invalid traffic networks: %w", location, index, err)
 		}
-		item := InventoryTeam{TeamIP: address.String(), Networks: make([]string, 0, len(networks))}
+		item := InventoryTeam{
+			TeamIP:   address.String(),
+			Networks: make([]string, 0, len(networks)),
+		}
 		for _, network := range networks {
 			item.Networks = append(item.Networks, network.String())
 		}
 		inventory.Teams = append(inventory.Teams, item)
 	}
 	if err := validateInventory(inventory); err != nil {
-		return Inventory{}, err
+		return Inventory{}, fmt.Errorf("%s - validate inventory: %w", location, err)
 	}
 	return inventory, nil
 }
@@ -70,7 +75,9 @@ func ReadInventory(path string) (Inventory, error) {
 	if err != nil {
 		return Inventory{}, fmt.Errorf("%s - open inventory: %w", location, err)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		_ = file.Close()
+	}()
 	data, err := io.ReadAll(io.LimitReader(file, maxInventoryJSONBytes+1))
 	if err != nil {
 		return Inventory{}, fmt.Errorf("%s - read inventory", location)
@@ -93,7 +100,7 @@ func ReadInventory(path string) (Inventory, error) {
 		return Inventory{}, fmt.Errorf("%s - inventory must contain exactly one JSON value", location)
 	}
 	if err := validateInventory(inventory); err != nil {
-		return Inventory{}, err
+		return Inventory{}, fmt.Errorf("%s - validate inventory: %w", location, err)
 	}
 	return inventory, nil
 }
@@ -108,7 +115,7 @@ func validateInventory(inventory Inventory) error {
 	for teamIndex, team := range inventory.Teams {
 		address, err := inventoryTeamAddress(team.TeamIP, teamIndex)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - validate team address: %w", location, err)
 		}
 		if _, exists := teamIPs[address]; exists {
 			return fmt.Errorf("%s - duplicate team_ip at teams[%d]", location, teamIndex)
@@ -116,11 +123,14 @@ func validateInventory(inventory Inventory) error {
 		teamIPs[address] = struct{}{}
 		networks, err := inventoryTeamNetworks(team, teamIndex)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - validate team networks: %w", location, err)
 		}
 		prefixes = append(prefixes, networks...)
 	}
-	return validateNetworkOverlap(prefixes)
+	if err := validateNetworkOverlap(prefixes); err != nil {
+		return fmt.Errorf("%s - validate network overlap: %w", location, err)
+	}
+	return nil
 }
 
 func inventoryTeamAddress(value string, teamIndex int) (netip.Addr, error) {
@@ -176,11 +186,14 @@ func prefixesOverlap(left, right netip.Prefix) bool {
 }
 
 func inventoryFingerprint(inventory Inventory) (string, error) {
+	const location = "nftables.inventoryFingerprint"
 	if err := validateInventory(inventory); err != nil {
-		return "", err
+		return "", fmt.Errorf("%s - validate inventory: %w", location, err)
 	}
 	teams := append([]InventoryTeam(nil), inventory.Teams...)
-	sort.Slice(teams, func(left, right int) bool { return teams[left].TeamIP < teams[right].TeamIP })
+	sort.Slice(teams, func(left, right int) bool {
+		return teams[left].TeamIP < teams[right].TeamIP
+	})
 	var canonical bytes.Buffer
 	for _, team := range teams {
 		canonical.WriteString(team.TeamIP)
@@ -202,21 +215,23 @@ func inventoryComment(fingerprint string) string {
 }
 
 func rejectDuplicateJSONKeys(data []byte) error {
+	const location = "nftables.rejectDuplicateJSONKeys"
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 	if err := consumeJSONValue(decoder); err != nil {
-		return err
+		return fmt.Errorf("%s - read JSON value: %w", location, err)
 	}
 	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
-		return errors.New("trailing JSON data")
+		return fmt.Errorf("%s - trailing JSON data", location)
 	}
 	return nil
 }
 
 func consumeJSONValue(decoder *json.Decoder) error {
+	const location = "nftables.consumeJSONValue"
 	token, err := decoder.Token()
 	if err != nil {
-		return err
+		return fmt.Errorf("%s - read JSON token: %w", location, err)
 	}
 	delimiter, ok := token.(json.Delim)
 	if !ok {
@@ -224,49 +239,57 @@ func consumeJSONValue(decoder *json.Decoder) error {
 	}
 	switch delimiter {
 	case '{':
-		return consumeJSONObject(decoder)
+		if err := consumeJSONObject(decoder); err != nil {
+			return fmt.Errorf("%s - read JSON object: %w", location, err)
+		}
+		return nil
 	case '[':
-		return consumeJSONArray(decoder)
+		if err := consumeJSONArray(decoder); err != nil {
+			return fmt.Errorf("%s - read JSON array: %w", location, err)
+		}
+		return nil
 	default:
-		return errors.New("unexpected JSON delimiter")
+		return fmt.Errorf("%s - unexpected JSON delimiter", location)
 	}
 }
 
 func consumeJSONObject(decoder *json.Decoder) error {
+	const location = "nftables.consumeJSONObject"
 	keys := make(map[string]struct{})
 	for decoder.More() {
 		keyToken, err := decoder.Token()
 		if err != nil {
-			return err
+			return fmt.Errorf("%s - read object key: %w", location, err)
 		}
 		key, ok := keyToken.(string)
 		if !ok {
-			return errors.New("invalid JSON object key")
+			return fmt.Errorf("%s - invalid JSON object key", location)
 		}
 		if _, exists := keys[key]; exists {
-			return errors.New("duplicate JSON object key")
+			return fmt.Errorf("%s - duplicate JSON object key", location)
 		}
 		keys[key] = struct{}{}
 		if err := consumeJSONValue(decoder); err != nil {
-			return err
+			return fmt.Errorf("%s - read object value: %w", location, err)
 		}
 	}
 	closing, err := decoder.Token()
 	if err != nil || closing != json.Delim('}') {
-		return errors.New("invalid JSON object")
+		return fmt.Errorf("%s - invalid JSON object", location)
 	}
 	return nil
 }
 
 func consumeJSONArray(decoder *json.Decoder) error {
+	const location = "nftables.consumeJSONArray"
 	for decoder.More() {
 		if err := consumeJSONValue(decoder); err != nil {
-			return err
+			return fmt.Errorf("%s - read array value: %w", location, err)
 		}
 	}
 	closing, err := decoder.Token()
 	if err != nil || closing != json.Delim(']') {
-		return errors.New("invalid JSON array")
+		return fmt.Errorf("%s - invalid JSON array", location)
 	}
 	return nil
 }

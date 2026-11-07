@@ -78,7 +78,10 @@ services:
   redis:
     ports: !reset []
 
-  rabbitmq:
+  nats:
+    image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-nats
+    build:
+      context: ${FORCAD_TEST_BUILD_ROOT:?required}
     ports: !reset []
 
   e2e:

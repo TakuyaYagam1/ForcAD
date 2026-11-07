@@ -4,7 +4,9 @@ import { SERVER_URL } from "@/app/config";
 import { useTranslation } from "react-i18next";
 
 function resolveImageSource(src?: string) {
-  if (!src) return undefined;
+  if (!src) {
+    return undefined;
+  }
   try {
     return new URL(src, `${SERVER_URL}/`).href;
   } catch {
@@ -18,7 +20,9 @@ function getInitials(name: string): string {
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => Array.from(part)[0] ?? "")
+    .map((part) => {
+      return Array.from(part)[0] ?? ""
+    })
     .join("")
     .toLocaleUpperCase();
 }
@@ -43,9 +47,13 @@ export function TeamAvatar({
       {showImage ? (
         <img
           src={imageSrc}
-          alt={t("team.logoAlt", { name })}
+          alt={t("team.logoAlt", {
+            name
+          })}
           loading="lazy"
-          onError={() => setFailedSrc(imageSrc ?? null)}
+          onError={() => {
+            return setFailedSrc(imageSrc ?? null)
+          }}
         />
       ) : (
         <span aria-hidden="true">

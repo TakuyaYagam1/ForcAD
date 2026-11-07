@@ -7,13 +7,15 @@ import (
 )
 
 func TestAttackDataJSONBytesAndETag(t *testing.T) {
-	game := &attackDataGame{data: map[string]map[string][]string{
-		"z-service": {
-			"z-ip": nil,
-			"a-ip": {`<flag>&"`},
+	game := &attackDataGame{
+		data: map[string]map[string][]string{
+			"z-service": {
+				"z-ip": nil,
+				"a-ip": {`<flag>&"`},
+			},
+			"a-service": nil,
 		},
-		"a-service": nil,
-	}}
+	}
 	response := httptest.NewRecorder()
 	if err := writeAttackData(t.Context(), game, nil, "", response); err != nil {
 		t.Fatal(err)

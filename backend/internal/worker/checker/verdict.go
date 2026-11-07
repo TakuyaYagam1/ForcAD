@@ -34,10 +34,17 @@ func statusCode(status processchecker.Status) int32 {
 	}
 }
 
-func actionName(action processchecker.Action) string { return strings.ToUpper(string(action)) }
+func actionName(action processchecker.Action) string {
+	return strings.ToUpper(string(action))
+}
 
 func failedResult(round int32, private string) domain.CheckerResult {
-	return domain.CheckerResult{Round: round, Status: int32(processchecker.StatusCheckFailed), PublicMessage: "Checker failed", PrivateMessage: private}
+	return domain.CheckerResult{
+		Round:          round,
+		Status:         int32(processchecker.StatusCheckFailed),
+		PublicMessage:  "Checker failed",
+		PrivateMessage: private,
+	}
 }
 
 type verdict struct {

@@ -73,7 +73,10 @@ const scoreboard = {
       logo_path: "",
     },
   ],
-  tasks: [{ id: taskId, name: "Vault" }],
+  tasks: [{
+    id: taskId,
+    name: "Vault"
+  }],
   config,
   runtime,
 };
@@ -124,32 +127,73 @@ test("generated entity schemas reject legacy numeric IDs and retain UUID log IDs
   };
 
   assert.equal(AdminTeam.parse(adminTeam).id, teamId);
-  assert.equal(ParticipantTask.parse({ id: taskId, name: "Vault" }).id, taskId);
+  assert.equal(ParticipantTask.parse({
+    id: taskId,
+    name: "Vault"
+  }).id, taskId);
   assert.equal("id" in ParticipantTeamTaskHistory.parse(historyEntry), false);
   assert.equal(AdminTeamTaskLogEntry.parse(adminLogEntry).id, historyId);
   assert.equal(AdminTeamTaskLogEntry.parse(adminLogEntry).ts, 1_700_000_000_000);
 
-  assert.throws(() => AdminTeam.parse({ ...adminTeam, id: 3 }));
-  assert.throws(() => AdminTeam.parse({ ...adminTeam, id: "not-a-uuid" }));
-  assert.throws(() => ParticipantTask.parse({ id: 8, name: "Vault" }));
-  assert.throws(() =>
-    Scoreboard.parse({
+  assert.throws(() => {
+    return AdminTeam.parse({
+      ...adminTeam,
+      id: 3
+    })
+  });
+  assert.throws(() => {
+    return AdminTeam.parse({
+      ...adminTeam,
+      id: "not-a-uuid"
+    })
+  });
+  assert.throws(() => {
+    return ParticipantTask.parse({
+      id: 8,
+      name: "Vault"
+    })
+  });
+  assert.throws(() => {
+    return Scoreboard.parse({
       ...scoreboard,
-      teams: [{ ...scoreboard.teams[0], id: 3 }],
-    }),
+      teams: [{
+        ...scoreboard.teams[0],
+        id: 3
+      }],
+    })
+  },
   );
-  assert.throws(() =>
-    Scoreboard.parse({
+  assert.throws(() => {
+    return Scoreboard.parse({
       ...scoreboard,
       state: {
         ...scoreboard.state,
-        team_tasks: [{ ...scoreboard.state.team_tasks[0], team_id: 3 }],
+        team_tasks: [{
+          ...scoreboard.state.team_tasks[0],
+          team_id: 3
+        }],
       },
-    }),
+    })
+  },
   );
-  assert.throws(() => ParticipantTeamTaskHistory.parse({ ...historyEntry, team_id: 3 }));
-  assert.throws(() => ParticipantTeamTaskHistory.parse({ ...historyEntry, task_id: "8" }));
-  assert.throws(() => AdminTeamTaskLogEntry.parse({ ...adminLogEntry, id: 108 }));
+  assert.throws(() => {
+    return ParticipantTeamTaskHistory.parse({
+      ...historyEntry,
+      team_id: 3
+    })
+  });
+  assert.throws(() => {
+    return ParticipantTeamTaskHistory.parse({
+      ...historyEntry,
+      task_id: "8"
+    })
+  });
+  assert.throws(() => {
+    return AdminTeamTaskLogEntry.parse({
+      ...adminLogEntry,
+      id: 108
+    })
+  });
 });
 
 test("generated event schema accepts all public stream event envelopes", () => {
@@ -157,12 +201,16 @@ test("generated event schema accepts all public stream event envelopes", () => {
   const events = [
     {
       type: "init_scoreboard",
-      payload: { data: scoreboard },
+      payload: {
+        data: scoreboard
+      },
       timestamp,
     },
     {
       type: "update_scoreboard",
-      payload: { data: scoreboard.state },
+      payload: {
+        data: scoreboard.state
+      },
       timestamp,
     },
     {
@@ -259,7 +307,11 @@ test("flag event parsing drops checker-private fields and rejects unknown events
   );
   assert.equal(
     parseRealtimeEvent(
-      JSON.stringify({ type: "admin_secret", payload: {}, timestamp: "now" }),
+      JSON.stringify({
+        type: "admin_secret",
+        payload: {},
+        timestamp: "now"
+      }),
     ),
     null,
   );

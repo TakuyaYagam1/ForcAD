@@ -50,7 +50,9 @@ func (s *AdminSession) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -73,7 +75,9 @@ func (s *AdminSessionHeaders) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -197,7 +201,9 @@ func (s *AdminTask) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -434,7 +440,9 @@ func (s *AdminTaskWrite) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -538,7 +546,9 @@ func (s *AdminTeam) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -626,7 +636,9 @@ func (s *AdminTeamCreate) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -660,7 +672,9 @@ func (s *AdminTeamTaskLogEntry) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -771,7 +785,9 @@ func (s *AdminTeamUpdate) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -829,7 +845,9 @@ func (s *AnnouncementCreate) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -851,7 +869,9 @@ func (s AttackData) Validate() error {
 	}
 
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -873,7 +893,9 @@ func (s AttackDataItem) Validate() error {
 	}
 
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -925,7 +947,9 @@ func (s *CheckerLog) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -955,7 +979,9 @@ func (s *CheckerLogPage) Validate() error {
 			}
 		}
 		if len(failures) > 0 {
-			return &validate.Error{Fields: failures}
+			return &validate.Error{
+				Fields: failures,
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -965,7 +991,9 @@ func (s *CheckerLogPage) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -988,7 +1016,9 @@ func (s *CtftimeStanding) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1029,7 +1059,9 @@ func (s *GameConfig) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1099,7 +1131,9 @@ func (s *GameRuntimeStatus) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1144,7 +1178,9 @@ func (s *GameState) Validate() error {
 			}
 		}
 		if len(failures) > 0 {
-			return &validate.Error{Fields: failures}
+			return &validate.Error{
+				Fields: failures,
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -1154,7 +1190,9 @@ func (s *GameState) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1179,7 +1217,9 @@ func (s GetAdminTasksOKApplicationJSON) Validate() error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1204,7 +1244,9 @@ func (s GetAdminTeamTaskHistoryOKApplicationJSON) Validate() error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1229,7 +1271,9 @@ func (s GetAdminTeamsOKApplicationJSON) Validate() error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1254,7 +1298,9 @@ func (s GetClientCtftimeScoreboardOKApplicationJSON) Validate() error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1279,7 +1325,9 @@ func (s GetClientEventsOKApplicationJSON) Validate() error {
 		}
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1309,7 +1357,9 @@ func (s *NilAttackDataHeaders) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1357,7 +1407,9 @@ func (s *OpenEventStreamSwitchingProtocols) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1398,7 +1450,9 @@ func (s *ParticipantTeamTaskHistory) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1439,7 +1493,9 @@ func (s *PublicEvent) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1517,7 +1573,9 @@ func (s *Scoreboard) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1540,7 +1598,9 @@ func (s *ScoreboardTeamTask) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1563,7 +1623,9 @@ func (s *StatusResponse) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }
@@ -1586,7 +1648,9 @@ func (s *StatusResponseHeaders) Validate() error {
 		})
 	}
 	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
+		return &validate.Error{
+			Fields: failures,
+		}
 	}
 	return nil
 }

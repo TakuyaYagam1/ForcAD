@@ -16,18 +16,24 @@ function initialSnapshotPayload(scoreboard: Scoreboard): InitScoreboardPayload {
     state: scoreboard.state,
     teams: scoreboard.teams,
     tasks: scoreboard.tasks,
-    config: { round_time: scoreboard.config.round_time },
+    config: {
+      round_time: scoreboard.config.round_time
+    },
   };
 }
 
-export function GameEventsProvider({ children }: { children: ReactNode }) {
+export function GameEventsProvider({ children }: {
+  children: ReactNode
+}) {
   const queryClient = useQueryClient();
   const scoreboard = useScoreboardInit();
   const appliedSnapshot = useRef<object | null>(null);
   const latestUpdate = useRef<GameStatePayload | null>(null);
   const runtime = useQuery({
     queryKey: ["game-runtime"],
-    queryFn: ({ signal }) => getClientStatus(signal),
+    queryFn: ({ signal }) => {
+      return getClientStatus(signal)
+    },
     refetchInterval: 5000,
     retry: 2,
   });
@@ -41,8 +47,12 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const snapshot = scoreboard.data;
-    if (!snapshot || snapshot === appliedSnapshot.current) return;
-    if (queryClient.getQueryData(["scoreboardInit"]) !== snapshot) return;
+    if (!snapshot || snapshot === appliedSnapshot.current) {
+      return;
+    }
+    if (queryClient.getQueryData(["scoreboardInit"]) !== snapshot) {
+      return;
+    }
 
     appliedSnapshot.current = snapshot;
     // HTTP scoreboards may come from another replica's short-lived cache.
@@ -63,15 +73,23 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
       latestUpdate.current = null;
       useScoreboardStore.getState().setConnected(true);
       useScoreboardStore.getState().setError(null);
-      void queryClient.refetchQueries({ queryKey: ["scoreboardInit"], exact: true });
-      void queryClient.refetchQueries({ queryKey: ["game-runtime"], exact: true });
+      void queryClient.refetchQueries({
+        queryKey: ["scoreboardInit"],
+        exact: true
+      });
+      void queryClient.refetchQueries({
+        queryKey: ["game-runtime"],
+        exact: true
+      });
       refreshGameQueries(queryClient);
     };
     const onDisconnect = () => {
       useScoreboardStore.getState().setConnected(false);
       useScoreboardStore.getState().setError("connectionLost");
     };
-    const onInit = ({ data }: { data: InitScoreboardPayload }) => {
+    const onInit = ({ data }: {
+      data: InitScoreboardPayload
+    }) => {
       latestUpdate.current = null;
       appliedSnapshot.current = data;
       setQuerySnapshot(queryClient, ["scoreboardInit"], data);
@@ -81,7 +99,9 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
       useScoreboardStore.getState().handleInitScoreboardMessage(data);
       refreshGameQueries(queryClient);
     };
-    const onUpdate = ({ data }: { data: GameStatePayload }) => {
+    const onUpdate = ({ data }: {
+      data: GameStatePayload
+    }) => {
       latestUpdate.current = data;
       useScoreboardStore.getState().handleUpdateScoreboardMessage(data);
       refreshGameQueries(queryClient);
@@ -91,7 +111,9 @@ export function GameEventsProvider({ children }: { children: ReactNode }) {
     socket.on("connect_error", onDisconnect);
     socket.on("init_scoreboard", onInit);
     socket.on("update_scoreboard", onUpdate);
-    if (socket.connected) onConnect();
+    if (socket.connected) {
+      onConnect();
+    }
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);

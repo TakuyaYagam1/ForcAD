@@ -150,7 +150,9 @@ func (s baseServer) notAllowed(w http.ResponseWriter, r *http.Request, params no
 }
 
 func (cfg serverConfig) baseServer() (s baseServer, err error) {
-	s = baseServer{cfg: cfg}
+	s = baseServer{
+		cfg: cfg,
+	}
 	if s.requests, err = otelogen.ServerRequestCountCounter(s.cfg.Meter); err != nil {
 		return s, err
 	}

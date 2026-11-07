@@ -25,7 +25,12 @@ type cleanupDocker struct {
 	failOn    string
 }
 
-func (d *cleanupDocker) Run(ctx context.Context, name string, args []string, stdout, _ io.Writer) error {
+func (d *cleanupDocker) Run(
+	ctx context.Context,
+	name string,
+	args []string,
+	stdout, _ io.Writer,
+) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -166,7 +171,7 @@ func newCleanupProject(t *testing.T) string {
 	if err := os.MkdirAll(runtimeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "nats_environment.env", "redis_environment.env"} {
 		if err := os.WriteFile(filepath.Join(runtimeDir, name), []byte("fixture=value\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -176,8 +181,12 @@ func newCleanupProject(t *testing.T) string {
 
 func cleanupProjectJSON(t *testing.T, root string, storage bool) string {
 	t.Helper()
-	services := map[string]any{"api": map[string]any{}}
-	volumes := map[string]any{"forcad-config": map[string]any{}}
+	services := map[string]any{
+		"api": map[string]any{},
+	}
+	volumes := map[string]any{
+		"forcad-config": map[string]any{},
+	}
 	if storage {
 		services["postgres"] = map[string]any{
 			"image": "forcad_postgres:local",
@@ -188,7 +197,14 @@ func cleanupProjectJSON(t *testing.T, root string, storage bool) string {
 			}},
 		}
 		services["redis"] = map[string]any{}
-		services["rabbitmq"] = map[string]any{}
+		services["nats"] = map[string]any{
+			"volumes": []any{map[string]any{
+				"type":   "volume",
+				"source": "forcad-nats",
+				"target": "/data",
+			}},
+		}
+		volumes["forcad-nats"] = map[string]any{}
 	}
 	encoded, err := json.Marshal(map[string]any{
 		"name":     "forcad-cleanup-test",
@@ -210,8 +226,12 @@ func cleanupRunner(root string, withStorage bool) *cleanupDocker {
 }
 
 func cleanupProjectJSONForRunner(root string, storage bool) string {
-	services := map[string]any{"api": map[string]any{}}
-	volumes := map[string]any{"forcad-config": map[string]any{}}
+	services := map[string]any{
+		"api": map[string]any{},
+	}
+	volumes := map[string]any{
+		"forcad-config": map[string]any{},
+	}
 	if storage {
 		services["postgres"] = map[string]any{
 			"image": "forcad_postgres:local",
@@ -222,13 +242,30 @@ func cleanupProjectJSONForRunner(root string, storage bool) string {
 			}},
 		}
 		services["redis"] = map[string]any{}
-		services["rabbitmq"] = map[string]any{}
+		services["nats"] = map[string]any{
+			"volumes": []any{map[string]any{
+				"type":   "volume",
+				"source": "forcad-nats",
+				"target": "/data",
+			}},
+		}
+		volumes["forcad-nats"] = map[string]any{}
 	}
-	encoded, _ := json.Marshal(map[string]any{"name": "forcad-cleanup-test", "services": services, "volumes": volumes})
+	encoded, _ := json.Marshal(map[string]any{
+		"name":     "forcad-cleanup-test",
+		"services": services,
+		"volumes":  volumes,
+	})
 	return string(encoded)
 }
 
-func runCleanupFixture(t *testing.T, root string, options MaintenanceOptions, docker *cleanupDocker, reset func(context.Context) error) (string, error) {
+func runCleanupFixture(
+	t *testing.T,
+	root string,
+	options MaintenanceOptions,
+	docker *cleanupDocker,
+	reset func(context.Context) error,
+) (string, error) {
 	t.Helper()
 	var output bytes.Buffer
 	err := RunMaintenance(context.Background(), root, options, &output, docker.Run, reset)
@@ -244,7 +281,9 @@ func TestRunMaintenanceResetStopsWritersBeforeResetAndDown(t *testing.T) {
 		events = append(events, "reset-data")
 		return nil
 	}
-	output, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true}, docker, reset)
+	output, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+	}, docker, reset)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -255,10 +294,10 @@ func TestRunMaintenanceResetStopsWritersBeforeResetAndDown(t *testing.T) {
 	if stop < 0 || stop >= up || up >= resetIndex || resetIndex >= down {
 		t.Fatalf("unexpected operation order: %v", events)
 	}
-	if !strings.Contains(events[up], "--wait --no-deps postgres redis rabbitmq") {
+	if !strings.Contains(events[up], "--wait --no-deps postgres redis nats") {
 		t.Fatalf("storage services were not started independently: %s", events[up])
 	}
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "nats_environment.env", "redis_environment.env"} {
 		if _, err := os.Stat(filepath.Join(root, "config", "runtime", name)); err != nil {
 			t.Fatalf("reset removed generated runtime file %s: %v", name, err)
 		}
@@ -268,7 +307,9 @@ func TestRunMaintenanceResetStopsWritersBeforeResetAndDown(t *testing.T) {
 func TestRunMaintenanceRequiresConfirmationBeforeDocker(t *testing.T) {
 	root := newCleanupProject(t)
 	docker := cleanupRunner(root, true)
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{}, docker, func(context.Context) error { return nil })
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{}, docker, func(context.Context) error {
+		return nil
+	})
 	if err == nil || !strings.Contains(err.Error(), "--confirm") {
 		t.Fatalf("unconfirmed maintenance error = %v", err)
 	}
@@ -282,7 +323,9 @@ func TestRunMaintenanceResetFailureLeavesProjectStopped(t *testing.T) {
 	events := []string{}
 	docker := cleanupRunner(root, true)
 	docker.events = &events
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true}, docker, func(context.Context) error {
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+	}, docker, func(context.Context) error {
 		events = append(events, "reset-data")
 		return errors.New("fixture reset failure")
 	})
@@ -300,7 +343,9 @@ func TestRunMaintenanceNormalResetAllowsExternalStorage(t *testing.T) {
 	docker := cleanupRunner(root, false)
 	docker.events = &events
 	called := false
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true}, docker, func(context.Context) error {
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+	}, docker, func(context.Context) error {
 		called = true
 		events = append(events, "reset-data")
 		return nil
@@ -316,6 +361,10 @@ func TestRunMaintenanceNormalResetAllowsExternalStorage(t *testing.T) {
 func TestRunMaintenanceCleanRemovesOnlyGeneratedFilesAndPostgresData(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "unix:///tmp/fixture-docker.sock")
 	root := newCleanupProject(t)
+	// An upgraded checkout can retain credentials from its former transport.
+	if err := os.WriteFile(filepath.Join(root, "config", "runtime", "rabbitmq_environment.env"), []byte("AMQP_URL=old-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	data := filepath.Join(root, "docker_volumes", "postgres", "data")
 	if err := os.MkdirAll(data, 0o700); err != nil {
 		t.Fatal(err)
@@ -335,7 +384,10 @@ func TestRunMaintenanceCleanRemovesOnlyGeneratedFilesAndPostgresData(t *testing.
 	events := []string{}
 	docker := cleanupRunner(root, true)
 	docker.events = &events
-	output, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Clean: true}, docker, nil)
+	output, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Clean:   true,
+	}, docker, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +421,7 @@ func TestRunMaintenanceCleanRemovesOnlyGeneratedFilesAndPostgresData(t *testing.
 	if _, err := os.Lstat(data); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("PostgreSQL data remains: %v", err)
 	}
-	for _, name := range []string{"admin.env", "postgres_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
+	for _, name := range []string{"admin.env", "postgres_environment.env", "nats_environment.env", "rabbitmq_environment.env", "redis_environment.env"} {
 		if _, err := os.Lstat(filepath.Join(root, "config", "runtime", name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("generated runtime file %s remains: %v", name, err)
 		}
@@ -390,7 +442,10 @@ func TestRunMaintenanceFullRejectsExternalStorageBeforeDown(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "unix:///tmp/fixture-docker.sock")
 	root := newCleanupProject(t)
 	docker := cleanupRunner(root, false)
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Full: true}, docker, nil)
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Full:    true,
+	}, docker, nil)
 	if err == nil || !strings.Contains(err.Error(), "built-in") {
 		t.Fatalf("external storage full reset error = %v", err)
 	}
@@ -403,7 +458,10 @@ func TestRunMaintenanceFullRejectsRemoteDockerBeforeDown(t *testing.T) {
 	t.Setenv("DOCKER_HOST", "ssh://remote.example")
 	root := newCleanupProject(t)
 	docker := cleanupRunner(root, true)
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Full: true}, docker, nil)
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Full:    true,
+	}, docker, nil)
 	if err == nil || !strings.Contains(err.Error(), "local Unix-socket") {
 		t.Fatalf("remote Docker full reset error = %v", err)
 	}
@@ -427,7 +485,10 @@ func TestRunMaintenanceFullRejectsSymlinkedPostgresDataBeforeDown(t *testing.T) 
 		t.Fatal(err)
 	}
 	docker := cleanupRunner(root, true)
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Full: true}, docker, nil)
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Full:    true,
+	}, docker, nil)
 	if err == nil || !strings.Contains(err.Error(), "validate the local PostgreSQL data directory") {
 		t.Fatalf("symlinked PostgreSQL data error = %v", err)
 	}
@@ -450,7 +511,10 @@ func TestRunMaintenanceFullSanitizesPostDeleteHelperError(t *testing.T) {
 	docker := cleanupRunner(root, true)
 	docker.events = &events
 	docker.failOn = "rm -rf -- /cleanup/data"
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Full: true}, docker, nil)
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Full:    true,
+	}, docker, nil)
 	if err == nil || strings.Contains(err.Error(), "fixture command failed") || !strings.Contains(err.Error(), "remove the verified local PostgreSQL data directory") {
 		t.Fatalf("post-down cleanup error was not sanitized: %v", err)
 	}
@@ -463,21 +527,28 @@ func TestRunMaintenanceFullSanitizesPostDeleteHelperError(t *testing.T) {
 }
 
 func TestRunMaintenanceCleanRejectsGeneratedSymlinkBeforeDocker(t *testing.T) {
-	root := newCleanupProject(t)
-	path := filepath.Join(root, "config", "runtime", "admin.env")
-	if err := os.Remove(path); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Symlink(filepath.Join(root, "config", "config.yml"), path); err != nil {
-		t.Fatal(err)
-	}
-	docker := cleanupRunner(root, true)
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Clean: true}, docker, nil)
-	if err == nil || !strings.Contains(err.Error(), "non-regular") {
-		t.Fatalf("generated symlink error = %v", err)
-	}
-	if len(docker.commands) != 0 {
-		t.Fatalf("clean ran Docker before rejecting generated symlink: %v", docker.commands)
+	for _, name := range []string{"admin.env", "rabbitmq_environment.env"} {
+		t.Run(name, func(t *testing.T) {
+			root := newCleanupProject(t)
+			path := filepath.Join(root, "config", "runtime", name)
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(filepath.Join(root, "config", "config.yml"), path); err != nil {
+				t.Fatal(err)
+			}
+			docker := cleanupRunner(root, true)
+			_, err := runCleanupFixture(t, root, MaintenanceOptions{
+				Confirm: true,
+				Clean:   true,
+			}, docker, nil)
+			if err == nil || !strings.Contains(err.Error(), "non-regular") {
+				t.Fatalf("generated symlink error = %v", err)
+			}
+			if len(docker.commands) != 0 {
+				t.Fatalf("clean ran Docker before rejecting generated symlink: %v", docker.commands)
+			}
+		})
 	}
 }
 
@@ -486,7 +557,11 @@ func TestRunMaintenanceRejectsForeignComposeProject(t *testing.T) {
 	docker := cleanupRunner(root, true)
 	docker.container = "abc123\n"
 	docker.labels = "{\"com.docker.compose.project.working_dir\":\"/other/project/deployment/docker\"}\n"
-	_, err := runCleanupFixture(t, root, MaintenanceOptions{Confirm: true}, docker, func(context.Context) error { return nil })
+	_, err := runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+	}, docker, func(context.Context) error {
+		return nil
+	})
 	if err == nil || !strings.Contains(err.Error(), "another directory") {
 		t.Fatalf("foreign project error = %v", err)
 	}
@@ -512,7 +587,10 @@ func TestRunMaintenanceRejectsChangedPostgresMount(t *testing.T) {
 		t.Fatal(err)
 	}
 	docker.project = string(encoded)
-	_, err = runCleanupFixture(t, root, MaintenanceOptions{Confirm: true, Full: true}, docker, nil)
+	_, err = runCleanupFixture(t, root, MaintenanceOptions{
+		Confirm: true,
+		Full:    true,
+	}, docker, nil)
 	if err == nil || !strings.Contains(err.Error(), "standard docker_volumes") {
 		t.Fatalf("changed mount error = %v", err)
 	}
@@ -583,7 +661,11 @@ func cleanupHelperCommand(commands [][]string, occurrence int) []string {
 }
 
 func TestPresentStorageServicesUsesStableOrder(t *testing.T) {
-	got := presentStorageServices(map[string]composeService{"redis": {}, "postgres": {}, "api": {}})
+	got := presentStorageServices(map[string]composeService{
+		"redis":    {},
+		"postgres": {},
+		"api":      {},
+	})
 	if want := []string{"postgres", "redis"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("storage services = %v, want %v", got, want)
 	}
@@ -595,10 +677,73 @@ func TestCleanupProjectJSONIncludesSupportedMount(t *testing.T) {
 	if err := json.Unmarshal([]byte(cleanupProjectJSON(t, root, true)), &project); err != nil {
 		t.Fatal(err)
 	}
+	project.Volumes["forcad-nats"] = composeVolume{
+		Name: project.Name + "_forcad-nats",
+	}
 	if err := verifyFullResetSupport(project); err != nil {
 		t.Fatal(err)
 	}
 	if err := verifyPostgresMount(project, filepath.Join(root, "docker_volumes", "postgres", "data")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFullResetRejectsForeignNATSData(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*composeProject)
+	}{
+		{
+			name: "external volume",
+			change: func(project *composeProject) {
+				project.Volumes["forcad-nats"] = composeVolume{
+					External: true,
+				}
+			},
+		},
+		{
+			name: "foreign volume name",
+			change: func(project *composeProject) {
+				project.Volumes["forcad-nats"] = composeVolume{
+					Name: "another-project_nats",
+				}
+			},
+		},
+		{
+			name: "bind mount",
+			change: func(project *composeProject) {
+				service := project.Services["nats"]
+				service.Volumes[0].Type = "bind"
+				project.Services["nats"] = service
+			},
+		},
+		{
+			name: "foreign source",
+			change: func(project *composeProject) {
+				service := project.Services["nats"]
+				service.Volumes[0].Source = "unrelated-data"
+				project.Services["nats"] = service
+			},
+		},
+		{
+			name: "wrong target",
+			change: func(project *composeProject) {
+				service := project.Services["nats"]
+				service.Volumes[0].Target = "/other"
+				project.Services["nats"] = service
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := newCleanupProject(t)
+			var project composeProject
+			if err := json.Unmarshal([]byte(cleanupProjectJSON(t, root, true)), &project); err != nil {
+				t.Fatal(err)
+			}
+			test.change(&project)
+			if err := verifyFullResetSupport(project); err == nil {
+				t.Fatal("full reset accepted foreign or nonstandard NATS storage")
+			}
+		})
 	}
 }

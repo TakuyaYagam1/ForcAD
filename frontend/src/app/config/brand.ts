@@ -36,8 +36,12 @@ function colorOrDefault(value: string | undefined, fallback: string): string {
 
 function logoOrDefault(value: string | undefined): string {
   const trimmed = value?.trim();
-  if (!trimmed || !LOCAL_LOGO_PATH.test(trimmed)) return DEFAULT_BRAND.logo;
-  if (trimmed.split("/").some((part) => part === "." || part === "..")) {
+  if (!trimmed || !LOCAL_LOGO_PATH.test(trimmed)) {
+    return DEFAULT_BRAND.logo;
+  }
+  if (trimmed.split("/").some((part) => {
+    return part === "." || part === ".."
+  })) {
     return DEFAULT_BRAND.logo;
   }
   return trimmed;
@@ -59,7 +63,9 @@ export function createBrandConfig(environment: BrandEnvironment): BrandConfig {
 }
 
 function toRgb(color: string): [number, number, number] {
-  return [1, 3, 5].map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16)) as [
+  return [1, 3, 5].map((offset) => {
+    return Number.parseInt(color.slice(offset, offset + 2), 16)
+  }) as [
     number,
     number,
     number,
@@ -71,7 +77,9 @@ export function rgbTriplet(color: string): string {
 }
 
 function toHsl(color: string): [number, number, number] {
-  const [red, green, blue] = toRgb(color).map((channel) => channel / 255);
+  const [red, green, blue] = toRgb(color).map((channel) => {
+    return channel / 255
+  });
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
   const delta = max - min;
@@ -81,11 +89,17 @@ function toHsl(color: string): [number, number, number] {
 
   if (delta !== 0) {
     saturation = delta / (1 - Math.abs(2 * lightness - 1));
-    if (max === red) hue = ((green - blue) / delta) % 6;
-    else if (max === green) hue = (blue - red) / delta + 2;
-    else hue = (red - green) / delta + 4;
+    if (max === red) {
+      hue = ((green - blue) / delta) % 6;
+    } else if (max === green) {
+      hue = (blue - red) / delta + 2;
+    } else {
+      hue = (red - green) / delta + 4;
+    }
     hue *= 60;
-    if (hue < 0) hue += 360;
+    if (hue < 0) {
+      hue += 360;
+    }
   }
 
   return [Math.round(hue), Math.round(saturation * 100), Math.round(lightness * 100)];
@@ -97,7 +111,9 @@ export function hslTriplet(color: string): string {
 }
 
 export const brand = createBrandConfig(
-  (import.meta as ImportMeta & { env?: BrandEnvironment }).env ?? {},
+  (import.meta as ImportMeta & {
+    env?: BrandEnvironment
+  }).env ?? {},
 );
 
 export function applyBrandConfig(): void {
@@ -130,11 +146,15 @@ export function applyBrandConfig(): void {
 }
 
 export function applyBrandMetadata(): void {
-  document.title = i18n.t("shell:home", { brand: brand.name });
+  document.title = i18n.t("shell:home", {
+    brand: brand.name
+  });
   document
     .querySelector<HTMLMetaElement>('meta[name="description"]')
     ?.setAttribute(
       "content",
-      i18n.t("shell:description", { brand: brand.name }),
+      i18n.t("shell:description", {
+        brand: brand.name
+      }),
     );
 }

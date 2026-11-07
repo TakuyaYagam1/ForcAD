@@ -20,10 +20,16 @@ func withoutFastOption(args []string) []string {
 }
 
 func controlDeploymentArgs(command string, args []string) ([]string, error) {
+	const location = "bootstrap.controlDeploymentArgs"
+	build := startArguments
 	if command == "scale" {
-		return scaleArguments(args)
+		build = scaleArguments
 	}
-	return startArguments(args)
+	arguments, err := build(args)
+	if err != nil {
+		return nil, fmt.Errorf("%s - build %s arguments: %w", location, command, err)
+	}
+	return arguments, nil
 }
 
 func startArguments(args []string) ([]string, error) {
@@ -49,7 +55,7 @@ func startArguments(args []string) ([]string, error) {
 		}
 		count, err := replicaCount(value)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s - %w", location, err)
 		}
 		result = append(result, "--scale", "worker="+strconv.Itoa(count))
 	}
@@ -89,14 +95,14 @@ func scaleArguments(args []string) ([]string, error) {
 		}
 		service, err := scaleService(args[1])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s - %w", location, err)
 		}
 		if seen[service] {
 			return nil, fmt.Errorf("%s - service %q specified more than once", location, service)
 		}
 		count, err := replicaCount(args[2])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s - %w", location, err)
 		}
 		seen[service] = true
 		services = append(services, service)

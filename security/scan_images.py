@@ -49,6 +49,7 @@ TARGETS = {
     "nginx": Target("frontend/Dockerfile", "web"),
     "postgres": Target("deployment/docker/postgres/Dockerfile"),
     "pgbouncer": Target("deployment/docker/pgbouncer/Dockerfile"),
+    "nats": Target("deployment/docker/nats/Dockerfile"),
 }
 
 

@@ -24,10 +24,18 @@ func TestNewV7ID(t *testing.T) {
 
 func TestShuffleSchedulerJobsAssignsIDsAfterShuffling(t *testing.T) {
 	jobs := []schedulerJobRecord{
-		{TeamID: uuid.NewV7()},
-		{TeamID: uuid.NewV7()},
-		{TeamID: uuid.NewV7()},
-		{TeamID: uuid.NewV7()},
+		{
+			TeamID: uuid.NewV7(),
+		},
+		{
+			TeamID: uuid.NewV7(),
+		},
+		{
+			TeamID: uuid.NewV7(),
+		},
+		{
+			TeamID: uuid.NewV7(),
+		},
 	}
 	original := []uuid.UUID{jobs[0].TeamID, jobs[1].TeamID, jobs[2].TeamID, jobs[3].TeamID}
 	if err := shuffleSchedulerJobs(jobs, strings.NewReader(strings.Repeat("\x00", 64))); err != nil {
@@ -64,10 +72,18 @@ func TestDispatchRunUsesStoredSnapshotMetadata(t *testing.T) {
 	scheduledAt := time.Unix(10, 0)
 	runID := uuid.NewV7()
 	run, err := dispatchRunFromRow(sqlc.Dispatchrun{
-		ID: runID, ScheduleID: "classic_rounds", Round: 10, IsRound: true,
-		RoundStart: 99, Snapshot: []byte(`[]`), SnapshotRound: &snapshotRound,
+		ID:                 runID,
+		ScheduleID:         "classic_rounds",
+		Round:              10,
+		IsRound:            true,
+		RoundStart:         99,
+		Snapshot:           []byte(`[]`),
+		SnapshotRound:      &snapshotRound,
 		SnapshotRoundStart: &snapshotRoundStart,
-		ScheduledAt:        pgtype.Timestamptz{Time: scheduledAt, Valid: true},
+		ScheduledAt: pgtype.Timestamptz{
+			Time:  scheduledAt,
+			Valid: true,
+		},
 	}, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -85,20 +101,43 @@ func TestDispatchRunRejectsMissingRoundSnapshotData(t *testing.T) {
 	snapshotRoundStart := float64(1234)
 	runID := uuid.NewV7()
 	base := sqlc.Dispatchrun{
-		ID: runID, ScheduleID: "classic_rounds", Round: 10, IsRound: true,
-		Snapshot: []byte(`[]`), SnapshotRound: &snapshotRound,
+		ID:                 runID,
+		ScheduleID:         "classic_rounds",
+		Round:              10,
+		IsRound:            true,
+		Snapshot:           []byte(`[]`),
+		SnapshotRound:      &snapshotRound,
 		SnapshotRoundStart: &snapshotRoundStart,
-		ScheduledAt:        pgtype.Timestamptz{Time: time.Unix(10, 0), Valid: true},
+		ScheduledAt: pgtype.Timestamptz{
+			Time:  time.Unix(10, 0),
+			Valid: true,
+		},
 	}
 	tests := []struct {
 		name    string
 		row     sqlc.Dispatchrun
 		message string
 	}{
-		{name: "missing snapshot round", row: base, message: "snapshot metadata"},
-		{name: "missing snapshot start", row: base, message: "snapshot metadata"},
-		{name: "missing snapshot", row: base, message: "snapshot data"},
-		{name: "missing scheduled time", row: base, message: "scheduled time"},
+		{
+			name:    "missing snapshot round",
+			row:     base,
+			message: "snapshot metadata",
+		},
+		{
+			name:    "missing snapshot start",
+			row:     base,
+			message: "snapshot metadata",
+		},
+		{
+			name:    "missing snapshot",
+			row:     base,
+			message: "snapshot data",
+		},
+		{
+			name:    "missing scheduled time",
+			row:     base,
+			message: "scheduled time",
+		},
 	}
 	tests[0].row.SnapshotRound = nil
 	tests[1].row.SnapshotRoundStart = nil
@@ -118,7 +157,10 @@ func TestPrepareRequiresExplicitWorkflow(t *testing.T) {
 	at := time.Unix(10, 0)
 	var repository Repository
 	_, err := repository.Prepare(context.Background(), domain.ScheduleRequest{
-		ScheduleID: "classic_rounds", At: at, StartAt: at, Interval: time.Minute,
+		ScheduleID: "classic_rounds",
+		At:         at,
+		StartAt:    at,
+		Interval:   time.Minute,
 	})
 	if err == nil {
 		t.Fatal("Prepare() accepted a request without a workflow")

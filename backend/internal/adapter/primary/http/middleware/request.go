@@ -26,7 +26,9 @@ func ResponseDeadline(timeout time.Duration) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			controller := http.NewResponseController(w)
 			_ = controller.SetWriteDeadline(time.Now().Add(timeout))
-			defer func() { _ = controller.SetWriteDeadline(time.Time{}) }()
+			defer func() {
+				_ = controller.SetWriteDeadline(time.Time{})
+			}()
 			next.ServeHTTP(w, r)
 		})
 	}

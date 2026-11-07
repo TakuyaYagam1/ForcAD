@@ -31,7 +31,9 @@ func TestCompletedCheckerWithRetainedOutputCannotSucceed(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = output.writers[1].Close()
-	capture := &outputCapture{limit: 4096}
+	capture := &outputCapture{
+		limit: 4096,
+	}
 	limit := make(chan struct{}, 1)
 	output.start(capture, limit)
 	waited := reapChecker(cmd, nil)
@@ -50,12 +52,24 @@ func TestCompletedCheckerWithRetainedOutputCannotSucceed(t *testing.T) {
 	// of output EOF. The buffered result has the same synchronization semantics.
 	exited := make(chan checkerExit, 1)
 	exited <- exit
-	process := startedChecker{command: cmd, output: output, capture: capture, outputLimit: limit, waited: exited}
+	process := startedChecker{
+		command:     cmd,
+		output:      output,
+		capture:     capture,
+		outputLimit: limit,
+		waited:      exited,
+	}
 	started := time.Now()
 	actionTimeout := 2 * checkerKillDrainTimeout
-	result := Result{Action: ActionPut, Status: StatusCheckFailed, ExitCode: -1}
+	result := Result{
+		Action:   ActionPut,
+		Status:   StatusCheckFailed,
+		ExitCode: -1,
+	}
 	wait := waitForChecker(context.Background(), actionTimeout, time.Second, process, &result)
-	result, err = finishCheckerResult(Request{Action: ActionPut}, result, wait)
+	result, err = finishCheckerResult(Request{
+		Action: ActionPut,
+	}, result, wait)
 	if !errors.Is(err, errCheckerOutputDrain) || errors.Is(err, errCheckerProcessReap) {
 		t.Fatalf("wrong completion failure: result=%+v err=%v", result, err)
 	}
@@ -74,11 +88,21 @@ func TestCompletedCheckerWithRetainedOutputCannotSucceed(t *testing.T) {
 
 func TestShutdownPreservesFirstCause(t *testing.T) {
 	for _, later := range []shutdownReason{shutdownTimeout, shutdownCanceled} {
-		t.Run(map[shutdownReason]string{shutdownTimeout: "deadline", shutdownCanceled: "cancellation"}[later], func(t *testing.T) {
+		t.Run(map[shutdownReason]string{
+			shutdownTimeout:  "deadline",
+			shutdownCanceled: "cancellation",
+		}[later], func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			result := Result{Status: StatusCheckFailed, ExitCode: -1}
-			state := checkerWait{ctx: ctx, result: &result, contextDone: ctx.Done()}
+			result := Result{
+				Status:   StatusCheckFailed,
+				ExitCode: -1,
+			}
+			state := checkerWait{
+				ctx:         ctx,
+				result:      &result,
+				contextDone: ctx.Done(),
+			}
 			defer state.stopTimers()
 			state.beginShutdown(shutdownOutputLimit, time.Hour)
 			state.beginShutdown(later, time.Hour)
@@ -86,7 +110,9 @@ func TestShutdownPreservesFirstCause(t *testing.T) {
 				cancel()
 				state.waitForEvent(time.Hour)
 			}
-			finished, err := finishCheckerResult(Request{Action: ActionPut}, result, state.outcome)
+			finished, err := finishCheckerResult(Request{
+				Action: ActionPut,
+			}, result, state.outcome)
 			if finished.Status != StatusCheckFailed || !finished.OutputLimited || finished.TimedOut || finished.Canceled || finished.PrivateMessage != checkerOutputLimitMessage {
 				t.Fatalf("first shutdown cause overwritten: result=%+v err=%v", finished, err)
 			}
@@ -107,28 +133,49 @@ func TestOutputLimitIsCheckedAfterProcessAndCopiesFinish(t *testing.T) {
 	}
 	defer output.closeReaders()
 	defer output.closeWriters()
-	capture := &outputCapture{limit: 1}
+	capture := &outputCapture{
+		limit: 1,
+	}
 	capture.append(outputStdout, []byte("too much"))
 	output.done <- nil
 	output.done <- nil
 	exited := make(chan checkerExit, 1)
-	exited <- checkerExit{exitCode: 101, reaped: true}
+	exited <- checkerExit{
+		exitCode: 101,
+		reaped:   true,
+	}
 	// No notification is delivered: the final capture check must still reject
 	// truncated successful output, regardless of event-selection order.
-	process := startedChecker{capture: capture, output: output, waited: exited}
-	result := Result{Status: StatusCheckFailed, ExitCode: -1}
+	process := startedChecker{
+		capture: capture,
+		output:  output,
+		waited:  exited,
+	}
+	result := Result{
+		Status:   StatusCheckFailed,
+		ExitCode: -1,
+	}
 	wait := waitForChecker(context.Background(), time.Second, time.Second, process, &result)
-	result, err = finishCheckerResult(Request{Action: ActionPut}, result, wait)
+	result, err = finishCheckerResult(Request{
+		Action: ActionPut,
+	}, result, wait)
 	if err != nil || result.Status != StatusCheckFailed || !result.OutputLimited || result.PrivateMessage != checkerOutputLimitMessage {
 		t.Fatalf("late output limit ignored: result=%+v err=%v", result, err)
 	}
 }
 
 func TestCleanupDistinguishesProcessReapingFromOutputDrain(t *testing.T) {
-	result := Result{Status: StatusCheckFailed, ExitCode: -1}
+	result := Result{
+		Status:   StatusCheckFailed,
+		ExitCode: -1,
+	}
 	deadline := make(chan time.Time, 1)
 	deadline <- time.Now()
-	state := checkerWait{result: &result, copiesDone: 2, reap: deadline}
+	state := checkerWait{
+		result:     &result,
+		copiesDone: 2,
+		reap:       deadline,
+	}
 	if !state.waitForEvent(time.Second) || !errors.Is(state.outcome.cleanupErr, errCheckerProcessReap) || errors.Is(state.outcome.cleanupErr, errCheckerOutputDrain) {
 		t.Fatalf("wrong cleanup phase: %+v", state.outcome)
 	}

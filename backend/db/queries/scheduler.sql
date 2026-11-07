@@ -1,3 +1,41 @@
+-- name: CanStartScheduledGame :one
+SELECT (
+    NOT COALESCE(game.game_running, FALSE)
+    AND COALESCE(game.real_round, 0) = 0
+    AND game.start_time IS NOT NULL
+    AND game.start_time <= sqlc.arg(at)
+    AND session.practice_start IS NULL
+    AND session.final_start IS NULL
+    AND NOT session.reset_pending
+    AND session.paused_at IS NULL
+)::BOOLEAN AS eligible
+FROM GameConfig AS game
+JOIN GameSession AS session ON session.id = game.id
+WHERE game.id = 1;
+
+-- name: NeedsSchedulerMaintenance :one
+SELECT (
+    session.reset_pending
+    OR (
+        session.practice_start IS NOT NULL
+        AND (
+            NOT COALESCE(game.game_running, FALSE)
+            OR (game.start_time IS NOT NULL AND game.start_time <= sqlc.arg(at))
+        )
+    )
+    OR (
+        NOT COALESCE(game.game_running, FALSE)
+        AND COALESCE(game.real_round, 0) >= 1
+        AND NOT session.reset_pending
+        AND session.practice_start IS NULL
+        AND (session.snapshot_round IS DISTINCT FROM game.real_round OR session.snapshot IS NULL)
+        AND NOT EXISTS (SELECT 1 FROM CheckerJobs WHERE finished_at IS NULL)
+    )
+)::BOOLEAN AS needed
+FROM GameConfig AS game
+JOIN GameSession AS session ON session.id = game.id
+WHERE game.id = 1;
+
 -- name: LockSchedulerGame :one
 SELECT COALESCE(real_round, 0)::INTEGER AS real_round,
        COALESCE(game_running, FALSE)::BOOLEAN AS game_running,

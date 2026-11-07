@@ -12,12 +12,26 @@ import (
 )
 
 func TestExtraChecksHaveDurableTimesAndLeaveMainWorkflowUnchanged(t *testing.T) {
-	payload := domain.JobPayload{Workflow: "classic", Task: domain.Task{CheckerTimeout: 10, Puts: 2, Gets: 2}}
+	payload := domain.JobPayload{
+		Workflow: "classic",
+		Task: domain.Task{
+			CheckerTimeout: 10,
+			Puts:           2,
+			Gets:           2,
+		},
+	}
 	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	original := schedulerJobRecord{RunID: uuid.NewV7(), TeamID: uuid.NewV7(), TaskID: uuid.NewV7(), Round: 1, Action: "classic", Payload: body}
+	original := schedulerJobRecord{
+		RunID:   uuid.NewV7(),
+		TeamID:  uuid.NewV7(),
+		TaskID:  uuid.NewV7(),
+		Round:   1,
+		Action:  "classic",
+		Payload: body,
+	}
 	start := time.Unix(1000, 0)
 	jobs, err := addExtraChecks([]schedulerJobRecord{original}, start, 60, 2, strings.NewReader(strings.Repeat("\x00", 64)))
 	if err != nil {
@@ -62,11 +76,16 @@ func TestAggregateResultsRequiresAllChecksAndKeepsFailures(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			rows := make([]sqlc.GroupedCheckerResultsRow, 0, len(test.statuses))
 			for _, status := range test.statuses {
-				body, err := json.Marshal(domain.CheckerResult{Status: status})
+				body, err := json.Marshal(domain.CheckerResult{
+					Status: status,
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
-				rows = append(rows, sqlc.GroupedCheckerResultsRow{FinishedAt: timestamp(time.Now()), Result: body})
+				rows = append(rows, sqlc.GroupedCheckerResultsRow{
+					FinishedAt: timestamp(time.Now()),
+					Result:     body,
+				})
 			}
 			got, ready, counted, err := aggregateResults(rows)
 			if err != nil || !ready || got.Status != test.want || counted != test.counted {

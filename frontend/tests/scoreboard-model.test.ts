@@ -60,7 +60,11 @@ function teamTask(teamId: string, score: number, sla: number): TeamTask {
 
 test("scoreboard mapping clamps checks and filters inactive entities", () => {
   const mapped = mapRawTeamTask(
-    rawTeamTask({ checks: 4, checks_passed: 7, message: null }),
+    rawTeamTask({
+      checks: 4,
+      checks_passed: 7,
+      message: null
+    }),
   );
   assert.equal(mapped.teamId, teamOneId);
   assert.equal(mapped.taskId, taskId);
@@ -71,13 +75,22 @@ test("scoreboard mapping clamps checks and filters inactive entities", () => {
   const active = getActiveTeamTasks(
     [
       rawTeamTask(),
-      rawTeamTask({ team_id: "0199f7c0-0000-7000-8000-000000000009" }),
-      rawTeamTask({ task_id: "0199f7c0-0000-7000-8000-000000000099" }),
+      rawTeamTask({
+        team_id: "0199f7c0-0000-7000-8000-000000000009"
+      }),
+      rawTeamTask({
+        task_id: "0199f7c0-0000-7000-8000-000000000099"
+      }),
     ],
     [team(teamOneId)],
-    [{ id: taskId, name: "Service" }],
+    [{
+      id: taskId,
+      name: "Service"
+    }],
   );
-  assert.deepEqual(active.map(({ teamId, taskId: activeTaskId }) => [teamId, activeTaskId]), [
+  assert.deepEqual(active.map(({ teamId, taskId: activeTaskId }) => {
+    return [teamId, activeTaskId]
+  }), [
     [teamOneId, taskId],
   ]);
 });
@@ -93,11 +106,25 @@ test("team scores use SLA weighting and break ties by team ID", () => {
   );
 
   assert.deepEqual(
-    ranked.map(({ id, score }) => ({ id, score })),
+    ranked.map(({ id, score }) => {
+      return {
+        id,
+        score
+      }
+    }),
     [
-      { id: teamThreeId, score: 150 },
-      { id: teamOneId, score: 100 },
-      { id: teamTwoId, score: 100 },
+      {
+        id: teamThreeId,
+        score: 150
+      },
+      {
+        id: teamOneId,
+        score: 100
+      },
+      {
+        id: teamTwoId,
+        score: 100
+      },
     ],
   );
 });

@@ -11,16 +11,16 @@ export const GameState = zod.object({
   "round_start": zod.int(),
   "round": zod.int(),
   "team_tasks": zod.array(zod.object({
-  "team_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "status": zod.int(),
-  "stolen": zod.int(),
-  "lost": zod.int(),
-  "score": zod.number(),
-  "checks": zod.int(),
-  "checks_passed": zod.int(),
-  "message": zod.string().nullable()
-}))
+    "team_id": zod.uuid(),
+    "task_id": zod.uuid(),
+    "status": zod.int(),
+    "stolen": zod.int(),
+    "lost": zod.int(),
+    "score": zod.number(),
+    "checks": zod.int(),
+    "checks_passed": zod.int(),
+    "message": zod.string().nullable()
+  }))
 })
 
 export type GameState = zod.input<typeof GameState>;

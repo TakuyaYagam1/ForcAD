@@ -35,7 +35,9 @@ func TestSubmissionDoesNotLockImmutableFlagRecords(t *testing.T) {
 	}
 }
 
-type commitTrace struct{ commits atomic.Int64 }
+type commitTrace struct {
+	commits atomic.Int64
+}
 
 func (trace *commitTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	if data.SQL == "commit" {
@@ -43,7 +45,8 @@ func (trace *commitTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data
 	}
 	return ctx
 }
-func (*commitTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
+func (*commitTrace) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {
+}
 
 func TestRejectedOnlyBatchNeedsNoDurableCommit(t *testing.T) {
 	f := newSubmissionFixture(t)

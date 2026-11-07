@@ -40,14 +40,19 @@ export function getActiveTeamTasks(
   teams: ScoreboardTeam[],
   tasks: InitScoreboardPayload["tasks"],
 ): TeamTask[] {
-  const teamIds = new Set(teams.map((team) => team.id));
-  const taskIds = new Set(tasks.map((task) => task.id));
+  const teamIds = new Set(teams.map((team) => {
+    return team.id
+  }));
+  const taskIds = new Set(tasks.map((task) => {
+    return task.id
+  }));
 
   return rawTeamTasks
     .map(mapRawTeamTask)
     .filter(
-      (teamTask) =>
-        teamIds.has(teamTask.teamId) && taskIds.has(teamTask.taskId),
+      (teamTask) => {
+        return teamIds.has(teamTask.teamId) && taskIds.has(teamTask.taskId)
+      },
     );
 }
 
@@ -66,13 +71,16 @@ export function recalculateTeamScores(
   }
 
   return teams
-    .map((team) => ({
-      ...team,
-      score: scoresByTeamId.get(team.id) ?? 0,
-    }))
+    .map((team) => {
+      return {
+        ...team,
+        score: scoresByTeamId.get(team.id) ?? 0,
+      }
+    })
     .sort(
-      (first, second) =>
-        (second.score ?? 0) - (first.score ?? 0) ||
-        compareUuid(first.id, second.id),
+      (first, second) => {
+        return (second.score ?? 0) - (first.score ?? 0) ||
+        compareUuid(first.id, second.id)
+      },
     );
 }

@@ -6,7 +6,10 @@ export function setQuerySnapshot<TData>(
   queryKey: QueryKey,
   data: TData,
 ) {
-  void client.cancelQueries({ queryKey, exact: true });
+  void client.cancelQueries({
+    queryKey,
+    exact: true
+  });
   client.setQueryData(queryKey, data);
 }
 
@@ -19,6 +22,8 @@ export function refreshGameQueries(client: QueryClient = queryClient) {
     "admin-teams",
     "admin-tasks",
   ]) {
-    void client.invalidateQueries({ queryKey: [key] });
+    void client.invalidateQueries({
+      queryKey: [key]
+    });
   }
 }

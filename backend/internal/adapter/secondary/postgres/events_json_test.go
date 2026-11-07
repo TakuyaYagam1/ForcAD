@@ -40,9 +40,18 @@ func TestDecodeEventRejectsAmbiguousOrUnknownJSON(t *testing.T) {
 		name    string
 		payload string
 	}{
-		{name: "unknown field", payload: `{"id":"event-1","kind":"admin_message","created_at":"2025-03-04T05:06:07Z","extra":true}`},
-		{name: "duplicate field", payload: `{"id":"event-1","id":"event-2","kind":"admin_message","created_at":"2025-03-04T05:06:07Z"}`},
-		{name: "wrong field case", payload: `{"id":"event-1","kind":"admin_message","created_at":"2025-03-04T05:06:07Z","Created_At":"2025-03-04T05:06:08Z"}`},
+		{
+			name:    "unknown field",
+			payload: `{"id":"event-1","kind":"admin_message","created_at":"2025-03-04T05:06:07Z","extra":true}`,
+		},
+		{
+			name:    "duplicate field",
+			payload: `{"id":"event-1","id":"event-2","kind":"admin_message","created_at":"2025-03-04T05:06:07Z"}`,
+		},
+		{
+			name:    "wrong field case",
+			payload: `{"id":"event-1","kind":"admin_message","created_at":"2025-03-04T05:06:07Z","Created_At":"2025-03-04T05:06:08Z"}`,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			if _, err := decodeEvent(test.payload); err == nil {

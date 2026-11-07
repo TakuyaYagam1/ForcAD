@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TakuyaYagam1/ForcAD/config"
 	redisadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
 )
 
@@ -19,12 +18,16 @@ func TestSharedBucketChargesFlagsAcrossReceivers(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	first, closeFirst, err := redisadapter.New(ctx, config.Config{RedisAddr: addr})
+	first, closeFirst, err := redisadapter.New(ctx, redisadapter.ConnectionOptions{
+		Addr: addr,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer closeFirst()
-	second, closeSecond, err := redisadapter.New(ctx, config.Config{RedisAddr: addr})
+	second, closeSecond, err := redisadapter.New(ctx, redisadapter.ConnectionOptions{
+		Addr: addr,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

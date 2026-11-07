@@ -9,14 +9,16 @@ import * as zod from 'zod';
 
 export const FlagStolenEventPayload = zod.object({
   "data": zod.object({
-  "attacker_id": zod.uuid(),
-  "victim_id": zod.uuid(),
-  "task_id": zod.uuid(),
-  "attacker_delta": zod.number(),
-  "generation": zod.int(),
-  "event_id": zod.string(),
-  "created_at": zod.iso.datetime({"offset":true})
-})
+    "attacker_id": zod.uuid(),
+    "victim_id": zod.uuid(),
+    "task_id": zod.uuid(),
+    "attacker_delta": zod.number(),
+    "generation": zod.int(),
+    "event_id": zod.string(),
+    "created_at": zod.iso.datetime({
+      "offset":true
+    })
+  })
 })
 
 export type FlagStolenEventPayload = zod.input<typeof FlagStolenEventPayload>;

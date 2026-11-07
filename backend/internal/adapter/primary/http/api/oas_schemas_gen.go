@@ -14,11 +14,13 @@ import (
 
 type AdminLoginBadRequest ApiError
 
-func (*AdminLoginBadRequest) adminLoginRes() {}
+func (*AdminLoginBadRequest) adminLoginRes() {
+}
 
 type AdminLoginForbidden ApiError
 
-func (*AdminLoginForbidden) adminLoginRes() {}
+func (*AdminLoginForbidden) adminLoginRes() {
+}
 
 // Ref: #/components/schemas/AdminLoginRequest
 type AdminLoginRequest struct {
@@ -48,7 +50,8 @@ func (s *AdminLoginRequest) SetPassword(val string) {
 
 type AdminLoginUnsupportedMediaType ApiError
 
-func (*AdminLoginUnsupportedMediaType) adminLoginRes() {}
+func (*AdminLoginUnsupportedMediaType) adminLoginRes() {
+}
 
 // Ref: #/components/schemas/AdminSession
 type AdminSession struct {
@@ -88,7 +91,8 @@ func (s *AdminSession) SetCsrfToken(val string) {
 	s.CsrfToken = val
 }
 
-func (*AdminSession) getAdminSessionStatusRes() {}
+func (*AdminSession) getAdminSessionStatusRes() {
+}
 
 // AdminSessionHeaders wraps AdminSession with response headers.
 type AdminSessionHeaders struct {
@@ -116,7 +120,8 @@ func (s *AdminSessionHeaders) SetResponse(val AdminSession) {
 	s.Response = val
 }
 
-func (*AdminSessionHeaders) adminLoginRes() {}
+func (*AdminSessionHeaders) adminLoginRes() {
+}
 
 type AdminSessionStatus string
 
@@ -288,9 +293,12 @@ func (s *AdminTask) SetActive(val bool) {
 	s.Active = val
 }
 
-func (*AdminTask) createAdminTaskRes() {}
-func (*AdminTask) getAdminTaskRes()    {}
-func (*AdminTask) updateAdminTaskRes() {}
+func (*AdminTask) createAdminTaskRes() {
+}
+func (*AdminTask) getAdminTaskRes() {
+}
+func (*AdminTask) updateAdminTaskRes() {
+}
 
 // Ref: #/components/schemas/AdminTaskWrite
 type AdminTaskWrite struct {
@@ -520,9 +528,12 @@ func (s *AdminTeam) SetLogoPath(val string) {
 	s.LogoPath = val
 }
 
-func (*AdminTeam) createAdminTeamRes() {}
-func (*AdminTeam) getAdminTeamRes()    {}
-func (*AdminTeam) updateAdminTeamRes() {}
+func (*AdminTeam) createAdminTeamRes() {
+}
+func (*AdminTeam) getAdminTeamRes() {
+}
+func (*AdminTeam) updateAdminTeamRes() {
+}
 
 // Ref: #/components/schemas/AdminTeamCreate
 type AdminTeamCreate struct {
@@ -930,12 +941,18 @@ func (s *ApiError) SetError(val string) {
 	s.Error = val
 }
 
-func (*ApiError) adminLogoutRes()                {}
-func (*ApiError) getAdminSessionStatusRes()      {}
-func (*ApiError) getAdminTasksRes()              {}
-func (*ApiError) getAdminTeamsRes()              {}
-func (*ApiError) getClientCtftimeScoreboardRes() {}
-func (*ApiError) getClientEventsRes()            {}
+func (*ApiError) adminLogoutRes() {
+}
+func (*ApiError) getAdminSessionStatusRes() {
+}
+func (*ApiError) getAdminTasksRes() {
+}
+func (*ApiError) getAdminTeamsRes() {
+}
+func (*ApiError) getClientCtftimeScoreboardRes() {
+}
+func (*ApiError) getClientEventsRes() {
+}
 
 // Task name to team IP to public flag values.
 // Ref: #/components/schemas/AttackData
@@ -1032,19 +1049,23 @@ func (s *ChangeAdminGameStateAction) UnmarshalText(data []byte) error {
 
 type ChangeAdminGameStateBadRequest ApiError
 
-func (*ChangeAdminGameStateBadRequest) changeAdminGameStateRes() {}
+func (*ChangeAdminGameStateBadRequest) changeAdminGameStateRes() {
+}
 
 type ChangeAdminGameStateConflict ApiError
 
-func (*ChangeAdminGameStateConflict) changeAdminGameStateRes() {}
+func (*ChangeAdminGameStateConflict) changeAdminGameStateRes() {
+}
 
 type ChangeAdminGameStateForbidden ApiError
 
-func (*ChangeAdminGameStateForbidden) changeAdminGameStateRes() {}
+func (*ChangeAdminGameStateForbidden) changeAdminGameStateRes() {
+}
 
 type ChangeAdminGameStateNotFound ApiError
 
-func (*ChangeAdminGameStateNotFound) changeAdminGameStateRes() {}
+func (*ChangeAdminGameStateNotFound) changeAdminGameStateRes() {
+}
 
 // Ref: #/components/schemas/CheckerLog
 type CheckerLog struct {
@@ -1230,47 +1251,58 @@ func (s *CheckerLogPage) SetLogs(val []CheckerLog) {
 	s.Logs = val
 }
 
-func (*CheckerLogPage) getClientCheckerLogsRes() {}
+func (*CheckerLogPage) getClientCheckerLogsRes() {
+}
 
 type CreateAdminEventBadRequest ApiError
 
-func (*CreateAdminEventBadRequest) createAdminEventRes() {}
+func (*CreateAdminEventBadRequest) createAdminEventRes() {
+}
 
 type CreateAdminEventForbidden ApiError
 
-func (*CreateAdminEventForbidden) createAdminEventRes() {}
+func (*CreateAdminEventForbidden) createAdminEventRes() {
+}
 
 type CreateAdminTaskBadRequest ApiError
 
-func (*CreateAdminTaskBadRequest) createAdminTaskRes() {}
+func (*CreateAdminTaskBadRequest) createAdminTaskRes() {
+}
 
 type CreateAdminTaskConflict ApiError
 
-func (*CreateAdminTaskConflict) createAdminTaskRes() {}
+func (*CreateAdminTaskConflict) createAdminTaskRes() {
+}
 
 type CreateAdminTaskForbidden ApiError
 
-func (*CreateAdminTaskForbidden) createAdminTaskRes() {}
+func (*CreateAdminTaskForbidden) createAdminTaskRes() {
+}
 
 type CreateAdminTeamBadRequest ApiError
 
-func (*CreateAdminTeamBadRequest) createAdminTeamRes() {}
+func (*CreateAdminTeamBadRequest) createAdminTeamRes() {
+}
 
 type CreateAdminTeamConflict ApiError
 
-func (*CreateAdminTeamConflict) createAdminTeamRes() {}
+func (*CreateAdminTeamConflict) createAdminTeamRes() {
+}
 
 type CreateAdminTeamForbidden ApiError
 
-func (*CreateAdminTeamForbidden) createAdminTeamRes() {}
+func (*CreateAdminTeamForbidden) createAdminTeamRes() {
+}
 
 type CreateAdminTeamTaskForbidden ApiError
 
-func (*CreateAdminTeamTaskForbidden) createAdminTeamTaskRes() {}
+func (*CreateAdminTeamTaskForbidden) createAdminTeamTaskRes() {
+}
 
 type CreateAdminTeamTaskNotFound ApiError
 
-func (*CreateAdminTeamTaskNotFound) createAdminTeamTaskRes() {}
+func (*CreateAdminTeamTaskNotFound) createAdminTeamTaskRes() {
+}
 
 // Ref: #/components/schemas/CtftimeStanding
 type CtftimeStanding struct {
@@ -1311,11 +1343,13 @@ func (s *CtftimeStanding) SetScore(val float64) {
 
 type DeleteAdminTaskForbidden ApiError
 
-func (*DeleteAdminTaskForbidden) deleteAdminTaskRes() {}
+func (*DeleteAdminTaskForbidden) deleteAdminTaskRes() {
+}
 
 type DeleteAdminTaskNotFound ApiError
 
-func (*DeleteAdminTaskNotFound) deleteAdminTaskRes() {}
+func (*DeleteAdminTaskNotFound) deleteAdminTaskRes() {
+}
 
 type DeleteAdminTaskOK string
 
@@ -1351,15 +1385,18 @@ func (s *DeleteAdminTaskOK) UnmarshalText(data []byte) error {
 	}
 }
 
-func (*DeleteAdminTaskOK) deleteAdminTaskRes() {}
+func (*DeleteAdminTaskOK) deleteAdminTaskRes() {
+}
 
 type DeleteAdminTeamForbidden ApiError
 
-func (*DeleteAdminTeamForbidden) deleteAdminTeamRes() {}
+func (*DeleteAdminTeamForbidden) deleteAdminTeamRes() {
+}
 
 type DeleteAdminTeamNotFound ApiError
 
-func (*DeleteAdminTeamNotFound) deleteAdminTeamRes() {}
+func (*DeleteAdminTeamNotFound) deleteAdminTeamRes() {
+}
 
 type DeleteAdminTeamOK string
 
@@ -1395,15 +1432,18 @@ func (s *DeleteAdminTeamOK) UnmarshalText(data []byte) error {
 	}
 }
 
-func (*DeleteAdminTeamOK) deleteAdminTeamRes() {}
+func (*DeleteAdminTeamOK) deleteAdminTeamRes() {
+}
 
 type DeleteAdminTeamTaskForbidden ApiError
 
-func (*DeleteAdminTeamTaskForbidden) deleteAdminTeamTaskRes() {}
+func (*DeleteAdminTeamTaskForbidden) deleteAdminTeamTaskRes() {
+}
 
 type DeleteAdminTeamTaskNotFound ApiError
 
-func (*DeleteAdminTeamTaskNotFound) deleteAdminTeamTaskRes() {}
+func (*DeleteAdminTeamTaskNotFound) deleteAdminTeamTaskRes() {
+}
 
 // Ref: #/components/schemas/FlagSubmissionResult
 type FlagSubmissionResult struct {
@@ -1773,7 +1813,8 @@ func (s *GameRuntimeStatus) SetResultsPending(val bool) {
 	s.ResultsPending = val
 }
 
-func (*GameRuntimeStatus) changeAdminGameStateRes() {}
+func (*GameRuntimeStatus) changeAdminGameStateRes() {
+}
 
 type GameRuntimeStatusPhase string
 
@@ -1869,47 +1910,58 @@ func (s *GameState) SetTeamTasks(val []ScoreboardTeamTask) {
 
 type GetAdminTaskForbidden ApiError
 
-func (*GetAdminTaskForbidden) getAdminTaskRes() {}
+func (*GetAdminTaskForbidden) getAdminTaskRes() {
+}
 
 type GetAdminTaskNotFound ApiError
 
-func (*GetAdminTaskNotFound) getAdminTaskRes() {}
+func (*GetAdminTaskNotFound) getAdminTaskRes() {
+}
 
 type GetAdminTasksOKApplicationJSON []AdminTask
 
-func (*GetAdminTasksOKApplicationJSON) getAdminTasksRes() {}
+func (*GetAdminTasksOKApplicationJSON) getAdminTasksRes() {
+}
 
 type GetAdminTeamForbidden ApiError
 
-func (*GetAdminTeamForbidden) getAdminTeamRes() {}
+func (*GetAdminTeamForbidden) getAdminTeamRes() {
+}
 
 type GetAdminTeamNotFound ApiError
 
-func (*GetAdminTeamNotFound) getAdminTeamRes() {}
+func (*GetAdminTeamNotFound) getAdminTeamRes() {
+}
 
 type GetAdminTeamTaskForbidden ApiError
 
-func (*GetAdminTeamTaskForbidden) getAdminTeamTaskRes() {}
+func (*GetAdminTeamTaskForbidden) getAdminTeamTaskRes() {
+}
 
 type GetAdminTeamTaskHistoryBadRequest ApiError
 
-func (*GetAdminTeamTaskHistoryBadRequest) getAdminTeamTaskHistoryRes() {}
+func (*GetAdminTeamTaskHistoryBadRequest) getAdminTeamTaskHistoryRes() {
+}
 
 type GetAdminTeamTaskHistoryForbidden ApiError
 
-func (*GetAdminTeamTaskHistoryForbidden) getAdminTeamTaskHistoryRes() {}
+func (*GetAdminTeamTaskHistoryForbidden) getAdminTeamTaskHistoryRes() {
+}
 
 type GetAdminTeamTaskHistoryOKApplicationJSON []AdminTeamTaskLogEntry
 
-func (*GetAdminTeamTaskHistoryOKApplicationJSON) getAdminTeamTaskHistoryRes() {}
+func (*GetAdminTeamTaskHistoryOKApplicationJSON) getAdminTeamTaskHistoryRes() {
+}
 
 type GetAdminTeamTaskNotFound ApiError
 
-func (*GetAdminTeamTaskNotFound) getAdminTeamTaskRes() {}
+func (*GetAdminTeamTaskNotFound) getAdminTeamTaskRes() {
+}
 
 type GetAdminTeamsOKApplicationJSON []AdminTeam
 
-func (*GetAdminTeamsOKApplicationJSON) getAdminTeamsRes() {}
+func (*GetAdminTeamsOKApplicationJSON) getAdminTeamsRes() {
+}
 
 // GetClientAttackDataNotModified is response for GetClientAttackData operation.
 type GetClientAttackDataNotModified struct {
@@ -1937,7 +1989,8 @@ func (s *GetClientAttackDataNotModified) SetETag(val OptString) {
 	s.ETag = val
 }
 
-func (*GetClientAttackDataNotModified) getClientAttackDataRes() {}
+func (*GetClientAttackDataNotModified) getClientAttackDataRes() {
+}
 
 // GetClientAttackDataOKRawApplicationJSON represents raw HTTP response for GetClientAttackData application/json.
 type GetClientAttackDataOKRawApplicationJSON struct {
@@ -1954,23 +2007,28 @@ func (s *GetClientAttackDataOKRawApplicationJSON) SetResponse(val *http.Response
 	s.Response = val
 }
 
-func (*GetClientAttackDataOKRawApplicationJSON) getClientAttackDataRes() {}
+func (*GetClientAttackDataOKRawApplicationJSON) getClientAttackDataRes() {
+}
 
 type GetClientCheckerLogsBadRequest ApiError
 
-func (*GetClientCheckerLogsBadRequest) getClientCheckerLogsRes() {}
+func (*GetClientCheckerLogsBadRequest) getClientCheckerLogsRes() {
+}
 
 type GetClientCheckerLogsNotFound ApiError
 
-func (*GetClientCheckerLogsNotFound) getClientCheckerLogsRes() {}
+func (*GetClientCheckerLogsNotFound) getClientCheckerLogsRes() {
+}
 
 type GetClientCtftimeScoreboardOKApplicationJSON []CtftimeStanding
 
-func (*GetClientCtftimeScoreboardOKApplicationJSON) getClientCtftimeScoreboardRes() {}
+func (*GetClientCtftimeScoreboardOKApplicationJSON) getClientCtftimeScoreboardRes() {
+}
 
 type GetClientEventsOKApplicationJSON []PublicEvent
 
-func (*GetClientEventsOKApplicationJSON) getClientEventsRes() {}
+func (*GetClientEventsOKApplicationJSON) getClientEventsRes() {
+}
 
 // GetScoreboardOKRawApplicationJSON represents raw HTTP response for GetScoreboard application/json.
 type GetScoreboardOKRawApplicationJSON struct {
@@ -1987,7 +2045,8 @@ func (s *GetScoreboardOKRawApplicationJSON) SetResponse(val *http.Response) {
 	s.Response = val
 }
 
-func (*GetScoreboardOKRawApplicationJSON) getScoreboardRes() {}
+func (*GetScoreboardOKRawApplicationJSON) getScoreboardRes() {
+}
 
 type Metrics struct {
 	Data io.Reader
@@ -2023,7 +2082,9 @@ func (o *NilAttackData) SetTo(v AttackData) {
 }
 
 // IsNull returns true if value is Null.
-func (o NilAttackData) IsNull() bool { return o.Null }
+func (o NilAttackData) IsNull() bool {
+	return o.Null
+}
 
 // SetToNull sets value to null.
 func (o *NilAttackData) SetToNull() {
@@ -2105,7 +2166,9 @@ func (o *NilBool) SetTo(v bool) {
 }
 
 // IsNull returns true if value is Null.
-func (o NilBool) IsNull() bool { return o.Null }
+func (o NilBool) IsNull() bool {
+	return o.Null
+}
 
 // SetToNull sets value to null.
 func (o *NilBool) SetToNull() {
@@ -2150,7 +2213,9 @@ func (o *NilFloat64) SetTo(v float64) {
 }
 
 // IsNull returns true if value is Null.
-func (o NilFloat64) IsNull() bool { return o.Null }
+func (o NilFloat64) IsNull() bool {
+	return o.Null
+}
 
 // SetToNull sets value to null.
 func (o *NilFloat64) SetToNull() {
@@ -2195,7 +2260,9 @@ func (o *NilInt32) SetTo(v int32) {
 }
 
 // IsNull returns true if value is Null.
-func (o NilInt32) IsNull() bool { return o.Null }
+func (o NilInt32) IsNull() bool {
+	return o.Null
+}
 
 // SetToNull sets value to null.
 func (o *NilInt32) SetToNull() {
@@ -2240,7 +2307,9 @@ func (o *NilString) SetTo(v string) {
 }
 
 // IsNull returns true if value is Null.
-func (o NilString) IsNull() bool { return o.Null }
+func (o NilString) IsNull() bool {
+	return o.Null
+}
 
 // SetToNull sets value to null.
 func (o *NilString) SetToNull() {
@@ -2374,7 +2443,9 @@ type OptBool struct {
 }
 
 // IsSet returns true if OptBool was set.
-func (o OptBool) IsSet() bool { return o.Set }
+func (o OptBool) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptBool) Reset() {
@@ -2420,7 +2491,9 @@ type OptFloat64 struct {
 }
 
 // IsSet returns true if OptFloat64 was set.
-func (o OptFloat64) IsSet() bool { return o.Set }
+func (o OptFloat64) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptFloat64) Reset() {
@@ -2466,7 +2539,9 @@ type OptGameActionRequest struct {
 }
 
 // IsSet returns true if OptGameActionRequest was set.
-func (o OptGameActionRequest) IsSet() bool { return o.Set }
+func (o OptGameActionRequest) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptGameActionRequest) Reset() {
@@ -2512,7 +2587,9 @@ type OptInt32 struct {
 }
 
 // IsSet returns true if OptInt32 was set.
-func (o OptInt32) IsSet() bool { return o.Set }
+func (o OptInt32) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptInt32) Reset() {
@@ -2558,7 +2635,9 @@ type OptInt64 struct {
 }
 
 // IsSet returns true if OptInt64 was set.
-func (o OptInt64) IsSet() bool { return o.Set }
+func (o OptInt64) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptInt64) Reset() {
@@ -2604,7 +2683,9 @@ type OptOpenEventStreamSwitchingProtocolsConnection struct {
 }
 
 // IsSet returns true if OptOpenEventStreamSwitchingProtocolsConnection was set.
-func (o OptOpenEventStreamSwitchingProtocolsConnection) IsSet() bool { return o.Set }
+func (o OptOpenEventStreamSwitchingProtocolsConnection) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptOpenEventStreamSwitchingProtocolsConnection) Reset() {
@@ -2650,7 +2731,9 @@ type OptOpenEventStreamSwitchingProtocolsUpgrade struct {
 }
 
 // IsSet returns true if OptOpenEventStreamSwitchingProtocolsUpgrade was set.
-func (o OptOpenEventStreamSwitchingProtocolsUpgrade) IsSet() bool { return o.Set }
+func (o OptOpenEventStreamSwitchingProtocolsUpgrade) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptOpenEventStreamSwitchingProtocolsUpgrade) Reset() {
@@ -2696,7 +2779,9 @@ type OptString struct {
 }
 
 // IsSet returns true if OptString was set.
-func (o OptString) IsSet() bool { return o.Set }
+func (o OptString) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptString) Reset() {
@@ -2742,7 +2827,9 @@ type OptUUID struct {
 }
 
 // IsSet returns true if OptUUID was set.
-func (o OptUUID) IsSet() bool { return o.Set }
+func (o OptUUID) IsSet() bool {
+	return o.Set
+}
 
 // Reset unsets value.
 func (o *OptUUID) Reset() {
@@ -3174,7 +3261,8 @@ func (s *PublicEvent) SetAuthor(val OptString) {
 	s.Author = val
 }
 
-func (*PublicEvent) createAdminEventRes() {}
+func (*PublicEvent) createAdminEventRes() {
+}
 
 type PublicEventKind string
 
@@ -3467,7 +3555,8 @@ func (s *StatusResponseHeaders) SetResponse(val StatusResponse) {
 	s.Response = val
 }
 
-func (*StatusResponseHeaders) adminLogoutRes() {}
+func (*StatusResponseHeaders) adminLogoutRes() {
+}
 
 type StatusResponseStatus string
 
@@ -3505,31 +3594,38 @@ func (s *StatusResponseStatus) UnmarshalText(data []byte) error {
 
 type SubmitFlagsBadRequest ApiError
 
-func (*SubmitFlagsBadRequest) submitFlagsRes() {}
+func (*SubmitFlagsBadRequest) submitFlagsRes() {
+}
 
 type SubmitFlagsGone ApiError
 
-func (*SubmitFlagsGone) submitFlagsRes() {}
+func (*SubmitFlagsGone) submitFlagsRes() {
+}
 
 type SubmitFlagsOKApplicationJSON []FlagSubmissionResult
 
-func (*SubmitFlagsOKApplicationJSON) submitFlagsRes() {}
+func (*SubmitFlagsOKApplicationJSON) submitFlagsRes() {
+}
 
 type SubmitFlagsRequestEntityTooLarge ApiError
 
-func (*SubmitFlagsRequestEntityTooLarge) submitFlagsRes() {}
+func (*SubmitFlagsRequestEntityTooLarge) submitFlagsRes() {
+}
 
 type SubmitFlagsServiceUnavailable ApiError
 
-func (*SubmitFlagsServiceUnavailable) submitFlagsRes() {}
+func (*SubmitFlagsServiceUnavailable) submitFlagsRes() {
+}
 
 type SubmitFlagsTooManyRequests ApiError
 
-func (*SubmitFlagsTooManyRequests) submitFlagsRes() {}
+func (*SubmitFlagsTooManyRequests) submitFlagsRes() {
+}
 
 type SubmitFlagsUnsupportedMediaType ApiError
 
-func (*SubmitFlagsUnsupportedMediaType) submitFlagsRes() {}
+func (*SubmitFlagsUnsupportedMediaType) submitFlagsRes() {
+}
 
 type TeamToken struct {
 	APIKey string
@@ -3560,40 +3656,50 @@ type UUID uuid.UUID
 
 type UpdateAdminTaskBadRequest ApiError
 
-func (*UpdateAdminTaskBadRequest) updateAdminTaskRes() {}
+func (*UpdateAdminTaskBadRequest) updateAdminTaskRes() {
+}
 
 type UpdateAdminTaskConflict ApiError
 
-func (*UpdateAdminTaskConflict) updateAdminTaskRes() {}
+func (*UpdateAdminTaskConflict) updateAdminTaskRes() {
+}
 
 type UpdateAdminTaskForbidden ApiError
 
-func (*UpdateAdminTaskForbidden) updateAdminTaskRes() {}
+func (*UpdateAdminTaskForbidden) updateAdminTaskRes() {
+}
 
 type UpdateAdminTaskNotFound ApiError
 
-func (*UpdateAdminTaskNotFound) updateAdminTaskRes() {}
+func (*UpdateAdminTaskNotFound) updateAdminTaskRes() {
+}
 
 type UpdateAdminTeamBadRequest ApiError
 
-func (*UpdateAdminTeamBadRequest) updateAdminTeamRes() {}
+func (*UpdateAdminTeamBadRequest) updateAdminTeamRes() {
+}
 
 type UpdateAdminTeamConflict ApiError
 
-func (*UpdateAdminTeamConflict) updateAdminTeamRes() {}
+func (*UpdateAdminTeamConflict) updateAdminTeamRes() {
+}
 
 type UpdateAdminTeamForbidden ApiError
 
-func (*UpdateAdminTeamForbidden) updateAdminTeamRes() {}
+func (*UpdateAdminTeamForbidden) updateAdminTeamRes() {
+}
 
 type UpdateAdminTeamNotFound ApiError
 
-func (*UpdateAdminTeamNotFound) updateAdminTeamRes() {}
+func (*UpdateAdminTeamNotFound) updateAdminTeamRes() {
+}
 
 type UpdateAdminTeamTaskForbidden ApiError
 
-func (*UpdateAdminTeamTaskForbidden) updateAdminTeamTaskRes() {}
+func (*UpdateAdminTeamTaskForbidden) updateAdminTeamTaskRes() {
+}
 
 type UpdateAdminTeamTaskNotFound ApiError
 
-func (*UpdateAdminTeamTaskNotFound) updateAdminTeamTaskRes() {}
+func (*UpdateAdminTeamTaskNotFound) updateAdminTeamTaskRes() {
+}

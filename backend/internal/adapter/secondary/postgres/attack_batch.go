@@ -14,7 +14,9 @@ type attackFlag struct {
 	err error
 }
 
-type teamTaskKey struct{ team, task uuid.UUID }
+type teamTaskKey struct {
+	team, task uuid.UUID
+}
 
 type attackScore struct {
 	status int32
@@ -31,10 +33,16 @@ type attackBatch struct {
 }
 
 func newAttackBatch(submission domain.FlagSubmission, state submissionState, rows []sqlc.ReadSubmissionFlagsRow) *attackBatch {
-	batch := &attackBatch{submission: submission, state: state,
-		flags: make(map[string]*attackFlag, len(rows)), scores: make(map[teamTaskKey]*attackScore)}
+	batch := &attackBatch{
+		submission: submission,
+		state:      state,
+		flags:      make(map[string]*attackFlag, len(rows)),
+		scores:     make(map[teamTaskKey]*attackScore),
+	}
 	for _, row := range rows {
-		flag := &attackFlag{row: row}
+		flag := &attackFlag{
+			row: row,
+		}
 		switch {
 		case row.Stolen:
 			flag.err = domain.ErrFlagAlreadyStolen
@@ -42,7 +50,9 @@ func newAttackBatch(submission domain.FlagSubmission, state submissionState, row
 			flag.err = domain.ErrOwnFlag
 		case row.Round > state.round:
 			flag.err = domain.ErrFlagNotFound
-		case !(domain.Flag{Round: row.Round}).IsLive(state.round, state.game.FlagLifetime):
+		case !(domain.Flag{
+			Round: row.Round,
+		}).IsLive(state.round, state.game.FlagLifetime):
 			flag.err = domain.ErrFlagTooOld
 		}
 		batch.flags[row.Flag] = flag
@@ -73,7 +83,10 @@ func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) erro
 		return fmt.Errorf("%s - lock team tasks: %w", location, err)
 	}
 	for _, row := range rows {
-		b.scores[teamTaskKey{row.TeamID, row.TaskID}] = &attackScore{status: row.Status, score: row.Score}
+		b.scores[teamTaskKey{row.TeamID, row.TaskID}] = &attackScore{
+			status: row.Status,
+			score:  row.Score,
+		}
 	}
 	for _, flag := range b.flags {
 		if flag.err != nil {
@@ -92,6 +105,9 @@ func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) erro
 
 func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domain.SubmissionResult, error) {
 	const location = "postgres.attackBatch.apply"
+	if prediction, ok := b.predictChanges(); ok {
+		return b.applyPredicted(ctx, queries, prediction)
+	}
 	ids := make([]uuid.UUID, 0, len(b.flags))
 	for _, flag := range b.flags {
 		if flag.err == nil {
@@ -101,7 +117,9 @@ func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domai
 	inserted := make(map[uuid.UUID]bool, len(ids))
 	if len(ids) > 0 {
 		rows, err := queries.InsertStolenFlags(ctx, sqlc.InsertStolenFlagsParams{
-			AttackerID: b.submission.TeamID, FlagIds: ids, ReceivedAt: timestamp(b.submission.ReceivedAt),
+			AttackerID: b.submission.TeamID,
+			FlagIds:    ids,
+			ReceivedAt: timestamp(b.submission.ReceivedAt),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("%s - record stolen flags: %w", location, err)
@@ -110,6 +128,11 @@ func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domai
 			inserted[id] = true
 		}
 	}
+	return b.applyInserted(ctx, queries, inserted)
+}
+
+func (b *attackBatch) scoreResults(inserted map[uuid.UUID]bool) ([]domain.SubmissionResult, error) {
+	const location = "postgres.attackBatch.scoreResults"
 	results := make([]domain.SubmissionResult, len(b.submission.Values))
 	for i, value := range b.submission.Values {
 		result, err := b.scoreFlag(value, inserted)
@@ -118,11 +141,17 @@ func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domai
 		}
 		results[i] = result
 	}
-	if err := b.saveScores(ctx, queries); err != nil {
-		return nil, fmt.Errorf("%s - save scores: %w", location, err)
+	return results, nil
+}
+
+func (b *attackBatch) applyInserted(ctx context.Context, queries *sqlc.Queries, inserted map[uuid.UUID]bool) ([]domain.SubmissionResult, error) {
+	const location = "postgres.attackBatch.applyInserted"
+	results, err := b.scoreResults(inserted)
+	if err != nil {
+		return nil, fmt.Errorf("%s - score inserted flags: %w", location, err)
 	}
-	if err := b.saveEventDeltas(ctx, queries, results); err != nil {
-		return nil, fmt.Errorf("%s - save event deltas: %w", location, err)
+	if err := b.saveChanges(ctx, queries, results); err != nil {
+		return nil, fmt.Errorf("%s - save scores and event deltas: %w", location, err)
 	}
 	return results, nil
 }
@@ -131,13 +160,20 @@ func (b *attackBatch) scoreFlag(value string, inserted map[uuid.UUID]bool) (doma
 	const location = "postgres.attackBatch.scoreFlag"
 	flag := b.flags[value]
 	if flag == nil {
-		return domain.SubmissionResult{Err: domain.ErrFlagNotFound}, nil
+		return domain.SubmissionResult{
+			Err: domain.ErrFlagNotFound,
+		}, nil
 	}
 	if flag.err != nil {
-		return domain.SubmissionResult{Err: flag.err}, nil //nolint:nilerr // Expected flag verdicts are data; transaction errors use the error return.
+		//nolint:nilerr // Expected flag verdicts are data; transaction errors use the error return.
+		return domain.SubmissionResult{
+			Err: flag.err,
+		}, nil
 	}
 	if !inserted[flag.row.ID] {
-		return domain.SubmissionResult{Err: domain.ErrFlagAlreadyStolen}, nil
+		return domain.SubmissionResult{
+			Err: domain.ErrFlagAlreadyStolen,
+		}, nil
 	}
 	delete(inserted, flag.row.ID)
 	attacker := b.scores[teamTaskKey{b.submission.TeamID, flag.row.TaskID}]
@@ -152,46 +188,25 @@ func (b *attackBatch) scoreFlag(value string, inserted map[uuid.UUID]bool) (doma
 	attacker.stolen++
 	victim.score += change.Victim
 	victim.lost++
-	return domain.SubmissionResult{Attack: domain.AttackResult{
-		AttackerID: b.submission.TeamID, VictimID: flag.row.TeamID, TaskID: flag.row.TaskID,
-		AttackerDelta: change.Attacker, VictimDelta: change.Victim, Generation: b.state.generation,
-		EventID: domain.FlagEventID(flag.row.ID, b.submission.TeamID), CreatedAt: b.submission.ReceivedAt,
-	}}, nil
+	return domain.SubmissionResult{
+		Attack: domain.AttackResult{
+			AttackerID:    b.submission.TeamID,
+			VictimID:      flag.row.TeamID,
+			TaskID:        flag.row.TaskID,
+			AttackerDelta: change.Attacker,
+			VictimDelta:   change.Victim,
+			Generation:    b.state.generation,
+			EventID:       domain.FlagEventID(flag.row.ID, b.submission.TeamID),
+			CreatedAt:     b.submission.ReceivedAt,
+		},
+	}, nil
 }
 
-func (b *attackBatch) saveEventDeltas(ctx context.Context, queries *sqlc.Queries, results []domain.SubmissionResult) error {
-	const location = "postgres.attackBatch.saveEventDeltas"
-	params := sqlc.UpdateStolenFlagDeltasParams{AttackerID: b.submission.TeamID}
-	for i, result := range results {
-		if result.Err != nil {
-			continue
-		}
-		flag := b.flags[b.submission.Values[i]]
-		if flag == nil {
-			return fmt.Errorf("%s - find accepted flag: %w", location, domain.ErrFlagNotFound)
-		}
-		params.FlagIds = append(params.FlagIds, flag.row.ID)
-		params.Deltas = append(params.Deltas, result.Attack.AttackerDelta)
+func (b *attackBatch) changeParams(results []domain.SubmissionResult) (sqlc.ApplySubmissionChangesParams, error) {
+	const location = "postgres.attackBatch.changeParams"
+	params := sqlc.ApplySubmissionChangesParams{
+		AttackerID: b.submission.TeamID,
 	}
-	if len(params.FlagIds) == 0 {
-		return nil
-	}
-	if len(params.FlagIds) != len(params.Deltas) {
-		return fmt.Errorf("%s - pair accepted flags with deltas: lengths differ", location)
-	}
-	rows, err := queries.UpdateStolenFlagDeltas(ctx, params)
-	if err != nil {
-		return fmt.Errorf("%s - update accepted flag events: %w", location, err)
-	}
-	if rows != int64(len(params.FlagIds)) {
-		return fmt.Errorf("%s - update all accepted flag events: %w", location, domain.ErrNotFound)
-	}
-	return nil
-}
-
-func (b *attackBatch) saveScores(ctx context.Context, queries *sqlc.Queries) error {
-	const location = "postgres.attackBatch.saveScores"
-	params := sqlc.UpdateSubmissionScoresParams{}
 	for key, score := range b.scores {
 		if score.stolen == 0 && score.lost == 0 {
 			continue
@@ -202,15 +217,43 @@ func (b *attackBatch) saveScores(ctx context.Context, queries *sqlc.Queries) err
 		params.Lost = append(params.Lost, score.lost)
 		params.Scores = append(params.Scores, score.score)
 	}
-	if len(params.TeamIds) == 0 {
+	for i, result := range results {
+		if result.Err != nil {
+			continue
+		}
+		flag := b.flags[b.submission.Values[i]]
+		if flag == nil {
+			return sqlc.ApplySubmissionChangesParams{}, fmt.Errorf("%s - find accepted flag: %w", location, domain.ErrFlagNotFound)
+		}
+		params.FlagIds = append(params.FlagIds, flag.row.ID)
+		params.Deltas = append(params.Deltas, result.Attack.AttackerDelta)
+	}
+	if len(params.FlagIds) != len(params.Deltas) {
+		return sqlc.ApplySubmissionChangesParams{}, fmt.Errorf("%s - pair accepted flags with deltas: lengths differ", location)
+	}
+	return params, nil
+}
+
+func (b *attackBatch) saveChanges(ctx context.Context, queries *sqlc.Queries, results []domain.SubmissionResult) error {
+	const location = "postgres.attackBatch.saveChanges"
+	params, err := b.changeParams(results)
+	if err != nil {
+		return fmt.Errorf("%s - prepare score and event changes: %w", location, err)
+	}
+	if len(params.FlagIds) == 0 && len(params.TeamIds) == 0 {
 		return nil
 	}
-	rows, err := queries.UpdateSubmissionScores(ctx, params)
+	// Both writes use the already locked rows and are independent. One query
+	// saves a network round trip while keeping both affected-row checks before COMMIT.
+	rows, err := queries.ApplySubmissionChanges(ctx, params)
 	if err != nil {
-		return fmt.Errorf("%s - update team scores: %w", location, err)
+		return fmt.Errorf("%s - update scores and accepted flag events: %w", location, err)
 	}
-	if rows != int64(len(params.TeamIds)) {
+	if rows.ScoreRows != int64(len(params.TeamIds)) {
 		return fmt.Errorf("%s - update all affected scores: %w", location, domain.ErrTeamTaskMissing)
+	}
+	if rows.EventRows != int64(len(params.FlagIds)) {
+		return fmt.Errorf("%s - update all accepted flag events: %w", location, domain.ErrNotFound)
 	}
 	return nil
 }

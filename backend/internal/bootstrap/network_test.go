@@ -53,7 +53,9 @@ func TestNetworkMetricsServerShutsDownOnCancellation(t *testing.T) {
 	status := make(chan string, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- serveNetworkMetricsWithListener(ctx, newTestListener(), http.NotFoundHandler(), statusWriter{status: status})
+		done <- serveNetworkMetricsWithListener(ctx, newTestListener(), http.NotFoundHandler(), statusWriter{
+			status: status,
+		})
 	}()
 	select {
 	case message := <-status:
@@ -91,7 +93,9 @@ type testListener struct {
 }
 
 func newTestListener() *testListener {
-	return &testListener{closed: make(chan struct{})}
+	return &testListener{
+		closed: make(chan struct{}),
+	}
 }
 
 func (listener *testListener) Accept() (net.Conn, error) {
@@ -100,10 +104,15 @@ func (listener *testListener) Accept() (net.Conn, error) {
 }
 
 func (listener *testListener) Close() error {
-	listener.once.Do(func() { close(listener.closed) })
+	listener.once.Do(func() {
+		close(listener.closed)
+	})
 	return nil
 }
 
 func (listener *testListener) Addr() net.Addr {
-	return &net.TCPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 9109}
+	return &net.TCPAddr{
+		IP:   net.IPv4(127, 0, 0, 1),
+		Port: 9109,
+	}
 }

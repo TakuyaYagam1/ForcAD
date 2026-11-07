@@ -15,11 +15,15 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
             : null;
 
     const main = mainRef.current;
-    if (!kind || !main) return;
+    if (!kind || !main) {
+      return;
+    }
 
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    if (!isMotionAllowed(preference)) return;
+    if (!isMotionAllowed(preference)) {
+      return;
+    }
 
     const played = new Set<string>();
     const animations = new Set<Animation>();
@@ -32,18 +36,30 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
       delay: number,
       stagger = 0,
       duration = 460,
-      from: Keyframe = { opacity: 0, transform: "translateY(18px)" },
-      to: Keyframe = { opacity: 1, transform: "none" },
+      from: Keyframe = {
+        opacity: 0,
+        transform: "translateY(18px)"
+      },
+      to: Keyframe = {
+        opacity: 1,
+        transform: "none"
+      },
     ) => {
-      if (played.has(name)) return;
+      if (played.has(name)) {
+        return;
+      }
 
       const elements = Array.from(main.querySelectorAll<HTMLElement>(selector));
-      if (!elements.length) return;
+      if (!elements.length) {
+        return;
+      }
 
       played.add(name);
 
       elements.slice(0, 18).forEach((element, index) => {
-        if (typeof element.animate !== "function") return;
+        if (typeof element.animate !== "function") {
+          return;
+        }
 
         const animation = element.animate([from, to], {
           duration,
@@ -64,7 +80,9 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
 
     const run = () => {
       frame = 0;
-      if (stopped) return;
+      if (stopped) {
+        return;
+      }
 
       if (!isMotionAllowed(preference)) {
         stop();
@@ -77,8 +95,14 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
         110,
         0,
         720,
-        { opacity: 0, clipPath: "inset(0 100% 0 0)" },
-        { opacity: 1, clipPath: "inset(0 0 0 0)" },
+        {
+          opacity: 0,
+          clipPath: "inset(0 100% 0 0)"
+        },
+        {
+          opacity: 1,
+          clipPath: "inset(0 0 0 0)"
+        },
       );
 
       reveal(
@@ -129,27 +153,38 @@ export function usePageEntrance(pathname: string, navigationKey: string) {
     };
 
     const schedule = () => {
-      if (!stopped && !frame) frame = window.requestAnimationFrame(run);
+      if (!stopped && !frame) {
+        frame = window.requestAnimationFrame(run);
+      }
     };
 
     const observer = new MutationObserver(schedule);
     let stopWatchingMotion = () => {};
 
     const stop = () => {
-      if (stopped) return;
+      if (stopped) {
+        return;
+      }
 
       stopped = true;
 
-      if (frame) window.cancelAnimationFrame(frame);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
 
       observer.disconnect();
       stopWatchingMotion();
 
-      animations.forEach((animation) => animation.cancel());
+      animations.forEach((animation) => {
+        return animation.cancel()
+      });
       animations.clear();
     };
 
-    observer.observe(main, { childList: true, subtree: true });
+    observer.observe(main, {
+      childList: true,
+      subtree: true
+    });
     stopWatchingMotion = watchMotionDisable(preference, stop);
 
     run();

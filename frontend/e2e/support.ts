@@ -10,7 +10,9 @@ interface ScoreboardEvent {
   type?: unknown;
   payload?: {
     data?: {
-      runtime?: { phase?: unknown };
+      runtime?: {
+        phase?: unknown
+      };
     };
   };
 }
@@ -79,12 +81,19 @@ export async function observeCSP(page: Page): Promise<CSPViolation[]> {
       if (event.sourceFile) {
         try {
           const basename = new URL(event.sourceFile, location.href).pathname.split("/").pop() ?? "";
-          if (/^[\w.-]{1,100}\.(?:[cm]?js|html)$/.test(basename)) source = basename;
+          if (/^[\w.-]{1,100}\.(?:[cm]?js|html)$/.test(basename)) {
+            source = basename;
+          }
         } catch { /* Never emit unparsed URLs or script contents. */ }
       }
       // No URLs, query strings, script samples or response contents leave the page.
-      void report({ directive: event.effectiveDirective, blocked, source,
-        line: event.lineNumber, column: event.columnNumber });
+      void report({
+        directive: event.effectiveDirective,
+        blocked,
+        source,
+        line: event.lineNumber,
+        column: event.columnNumber
+      });
     });
   });
   return violations;
@@ -123,9 +132,13 @@ export async function readAdminCredentials(): Promise<AdminCredentials> {
 
   const values = new Map<string, string>();
   for (const line of contents.split(/\r?\n/)) {
-    if (!line || line.startsWith("#")) continue;
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
     const separator = line.indexOf("=");
-    if (separator < 0) continue;
+    if (separator < 0) {
+      continue;
+    }
     values.set(line.slice(0, separator), line.slice(separator + 1));
   }
 
@@ -134,7 +147,10 @@ export async function readAdminCredentials(): Promise<AdminCredentials> {
   if (!username || !password) {
     throw new Error("The generated admin env file must define both admin credentials.");
   }
-  return { username, password };
+  return {
+    username,
+    password
+  };
 }
 
 export async function loginAsAdmin(
@@ -143,12 +159,21 @@ export async function loginAsAdmin(
 ): Promise<void> {
   await page.goto("/admin/scoreboard");
   await expect(page).toHaveURL(/\/admin\/login$/);
-  await page.getByLabel("Логин", { exact: true }).fill(credentials.username);
-  await page.getByLabel("Пароль", { exact: true }).fill(credentials.password);
-  await page.getByRole("button", { name: "Войти", exact: true }).click();
+  await page.getByLabel("Логин", {
+    exact: true
+  }).fill(credentials.username);
+  await page.getByLabel("Пароль", {
+    exact: true
+  }).fill(credentials.password);
+  await page.getByRole("button", {
+    name: "Войти",
+    exact: true
+  }).click();
   await expect(page).toHaveURL(/\/admin\/scoreboard$/);
   await expect(
-    page.getByRole("heading", { name: "Управление соревнованием" }),
+    page.getByRole("heading", {
+      name: "Управление соревнованием"
+    }),
   ).toBeVisible();
 }
 
@@ -164,16 +189,25 @@ export async function observePublicStream(page: Page): Promise<PublicStreamObser
       suppressInit = suppress;
     },
     sendUpdate(data) {
-      if (!clientSocket) throw new Error("The public WebSocket is not connected.");
+      if (!clientSocket) {
+        throw new Error("The public WebSocket is not connected.");
+      }
       clientSocket.send(JSON.stringify({
         type: "update_scoreboard",
-        payload: { data },
+        payload: {
+          data
+        },
         timestamp: new Date().toISOString(),
       }));
     },
     async disconnect() {
       disconnected = true;
-      await Promise.all(active.map((socket) => socket.close({ code: 4001, reason: "Connection interrupted" })));
+      await Promise.all(active.map((socket) => {
+        return socket.close({
+          code: 4001,
+          reason: "Connection interrupted"
+        })
+      }));
       active = [];
       clientSocket = null;
     },
@@ -183,7 +217,10 @@ export async function observePublicStream(page: Page): Promise<PublicStreamObser
   };
   await page.routeWebSocket("**/api/events/ws", async (socket) => {
     if (disconnected) {
-      await socket.close({ code: 4001, reason: "Connection interrupted" });
+      await socket.close({
+        code: 4001,
+        reason: "Connection interrupted"
+      });
       return;
     }
     // Forward the actual server's messages unchanged. Only the transport is
@@ -210,7 +247,9 @@ export async function observePublicStream(page: Page): Promise<PublicStreamObser
       }
       socket.send(payload);
       const phase = event.payload?.data?.runtime?.phase;
-      if (typeof phase === "string") observation.phases.push(phase);
+      if (typeof phase === "string") {
+        observation.phases.push(phase);
+      }
     });
   });
   return observation;
@@ -222,7 +261,11 @@ export async function expectNewPhase(
   previousCount: number,
 ): Promise<void> {
   await expect.poll(
-    () => observation.phases.filter((observed) => observed === phase).length,
+    () => {
+      return observation.phases.filter((observed) => {
+        return observed === phase
+      }).length
+    },
     {
       message: `Expected a new public WebSocket event for phase ${phase}`,
       timeout: 60_000,
@@ -232,8 +275,12 @@ export async function expectNewPhase(
 
 export async function currentRuntime(page: Page): Promise<RuntimeStatus> {
   return page.evaluate(async () => {
-    const response = await fetch("/api/client/status/", { cache: "no-store" });
-    if (!response.ok) throw new Error("Could not read game runtime status.");
+    const response = await fetch("/api/client/status/", {
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      throw new Error("Could not read game runtime status.");
+    }
     return (await response.json()) as RuntimeStatus;
   });
 }
@@ -242,7 +289,9 @@ export async function resetPractice(page: Page): Promise<void> {
   await page.context().setOffline(false);
   await page.goto("/admin/scoreboard");
   await expect(
-    page.getByRole("heading", { name: "Управление соревнованием" }),
+    page.getByRole("heading", {
+      name: "Управление соревнованием"
+    }),
   ).toBeVisible();
 
   const runtime = await currentRuntime(page);
@@ -267,5 +316,9 @@ export async function resetPractice(page: Page): Promise<void> {
   }, {
     message: "Expected practice cleanup to return the game to waiting",
     timeout: 90_000,
-  }).toEqual({ phase: "waiting", practice: false, reset_pending: false });
+  }).toEqual({
+    phase: "waiting",
+    practice: false,
+    reset_pending: false
+  });
 }

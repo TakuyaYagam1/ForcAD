@@ -15,8 +15,8 @@ type CheckerActionEvent struct {
 	TeamID        uuid.UUID          `json:"team_id"`
 	Time          pgtype.Timestamptz `json:"time"`
 	Round         int32              `json:"round"`
-	Service       interface{}        `json:"service"`
-	Team          interface{}        `json:"team"`
+	Service       any                `json:"service"`
+	Team          any                `json:"team"`
 	Action        string             `json:"action"`
 	Stage         string             `json:"stage"`
 	Status        int32              `json:"status"`
@@ -26,13 +26,13 @@ type CheckerActionEvent struct {
 }
 
 type CheckerService struct {
-	ID   uuid.UUID   `json:"id"`
-	Name interface{} `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Name any       `json:"name"`
 }
 
 type CheckerTeam struct {
-	ID   uuid.UUID   `json:"id"`
-	Name interface{} `json:"name"`
+	ID   uuid.UUID `json:"id"`
+	Name any       `json:"name"`
 }
 
 type Checkeractionlog struct {

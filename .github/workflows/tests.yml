@@ -40,6 +40,11 @@ jobs:
         run: |
           make sync-codegen
           pnpm --dir ../api test
+      - name: Check Python multiline style
+        working-directory: .
+        run: |
+          python3 scripts/check_python_style.py
+          python3 -m unittest discover -s scripts/tests -p 'test_python_style.py'
       - name: Verify dependency checksums
         run: go mod download && go mod verify
       - name: Check generated Go code
@@ -54,7 +59,7 @@ jobs:
       - name: Lint Go and SQL
         run: make -k lint
       - name: Run tests with race detection
-        run: go test -race -count=1 ./cmd/... ./config/... ./db/... ./internal/... ./load_test
+        run: go test -race -count=1 ./cmd/... ./config/... ./db/... ./internal/... ./load_test ./tools/...
       - name: Check load fixture isolation
         run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s load_test/test-data/services -v
       - name: Test reference Python checkers through the Go runner
@@ -81,7 +86,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.14.8"
-      - name: Test PostgreSQL, Redis, RabbitMQ and checker workflows
+      - name: Test PostgreSQL, Redis, NATS JetStream and checker workflows
         run: backend/integration_test/scripts/run_tests.sh
 
   frontend:

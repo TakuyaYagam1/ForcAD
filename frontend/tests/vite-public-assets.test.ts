@@ -25,8 +25,12 @@ test("public assets keep their URLs and team logos use the protected route", asy
   const plugin = createPublicAssetsPlugin(publicDirectory);
 
   try {
-    mkdirSync(brandDirectory, { recursive: true });
-    mkdirSync(teamDirectory, { recursive: true });
+    mkdirSync(brandDirectory, {
+      recursive: true
+    });
+    mkdirSync(teamDirectory, {
+      recursive: true
+    });
     writeFileSync(brandFile, teamLogo);
     writeFileSync(teamFile, teamLogo);
     writeFileSync(join(projectDirectory, "index.html"), "<html><body>SPA shell</body></html>");
@@ -99,6 +103,9 @@ test("public assets keep their URLs and team logos use the protected route", asy
     );
     assert.equal(existsSync(join(outputDirectory, "teams")), false);
   } finally {
-    rmSync(projectDirectory, { recursive: true, force: true });
+    rmSync(projectDirectory, {
+      recursive: true,
+      force: true
+    });
   }
 });

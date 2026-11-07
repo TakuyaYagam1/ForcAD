@@ -15,7 +15,11 @@ import (
 
 func TestCommittedJobUpdateRequiresRequestedState(t *testing.T) {
 	at := time.Now().UTC().Truncate(time.Microsecond)
-	state := sqlc.ConfirmCheckerJobOwnershipRow{DeadlineAt: timestamp(at.Add(time.Minute)), ClaimDeadlineAt: timestamp(at.Add(20 * time.Second)), ExpiresAt: timestamp(at.Add(2 * time.Minute))}
+	state := sqlc.ConfirmCheckerJobOwnershipRow{
+		DeadlineAt:      timestamp(at.Add(time.Minute)),
+		ClaimDeadlineAt: timestamp(at.Add(20 * time.Second)),
+		ExpiresAt:       timestamp(at.Add(2 * time.Minute)),
+	}
 	if committedJobUpdate(state, at.Add(30*time.Second), "renew") {
 		t.Fatal("accepted old same-owner lease as committed renewal")
 	}
@@ -74,8 +78,16 @@ func (r *recoveryReader) Scan(dest ...any) error {
 
 func TestCommitRecoveryUsesBoundedReadOnlyFreshContext(t *testing.T) {
 	at := time.Now().UTC().Truncate(time.Microsecond)
-	reader := &recoveryReader{t: t, state: sqlc.ConfirmCheckerJobOwnershipRow{DeadlineAt: timestamp(at.Add(time.Minute)), ClaimDeadlineAt: timestamp(at.Add(30 * time.Second))}}
-	repo := &Repository{queries: sqlc.New(reader)}
+	reader := &recoveryReader{
+		t: t,
+		state: sqlc.ConfirmCheckerJobOwnershipRow{
+			DeadlineAt:      timestamp(at.Add(time.Minute)),
+			ClaimDeadlineAt: timestamp(at.Add(30 * time.Second)),
+		},
+	}
+	repo := &Repository{
+		queries: sqlc.New(reader),
+	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	if !repo.confirmJobCommit(ctx, errors.New("connection lost during commit"), uuid.NewV7(), "same-owner", at.Add(30*time.Second), "renew") {

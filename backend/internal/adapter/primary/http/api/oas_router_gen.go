@@ -1178,7 +1178,9 @@ func (r Route) Args() []string {
 //
 // Note: this method does not unescape path or handle reserved characters in path properly. Use FindPath instead.
 func (s *Server) FindRoute(method, path string) (Route, bool) {
-	return s.FindPath(method, &url.URL{Path: path})
+	return s.FindPath(method, &url.URL{
+		Path: path,
+	})
 }
 
 // FindPath finds Route for given method and URL.

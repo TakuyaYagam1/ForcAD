@@ -111,20 +111,29 @@ fields are required and the password must be at least 16 characters.
 
 Setup generates storage sections and passwords only when the whole `storages`
 section is absent. In that case it uses database `postgres:5432/forcad`,
-RabbitMQ `rabbitmq:5672` with virtual host `forcad`, and Redis `redis:6379` with
-database `0`. The generated database and RabbitMQ users match the admin username.
+NATS `nats:4222`, and Redis `redis:6379` with database `0`. The generated database
+and NATS users match the admin username.
 
 If `storages` is present, it must include `db.user`, `db.password`,
-`rabbitmq.user`, `rabbitmq.password`, and `redis.password`. Setup does not fill
+`nats.user`, `nats.password`, and `redis.password`. Setup does not fill
 in missing storage credentials. It defaults only omitted endpoint fields:
-database host, port and name to `postgres`, `5432` and `forcad`; RabbitMQ host,
-port and virtual host to `rabbitmq`, `5672` and `forcad`; Redis host, port and
+database host, port and name to `postgres`, `5432` and `forcad`; NATS host and
+port to `nats` and `4222`; Redis host, port and
 database index to `redis`, `6379` and `0`.
 
 The storage sections are `db` (`host`, `port`, `user`, `password`, `dbname`),
-`rabbitmq` (`host`, `port`, `user`, `password`, `vhost`) and `redis` (`host`,
+`nats` (`host`, `port`, `user`, `password`) and `redis` (`host`,
 `port`, `password`, `db`). Treat `config/config.yml` and `config/runtime/` as
 private because they contain credentials.
+
+Checker delivery uses NATS JetStream with persistent file storage. Setup writes
+`NATS_USER`, `NATS_PASSWORD` and a URL-escaped `NATS_URL` to the private
+`config/runtime/nats_environment.env`. All ticker and worker replicas must use
+the same `NATS_STREAM` (default `FORCAD_CHECKERS`), `NATS_SUBJECT` (default
+`forcad.checker.jobs`) and `NATS_CONSUMER` (default `forcad-workers`).
+`NATS_MAX_ACK_PENDING` defaults to 1024 and caps unacknowledged deliveries across
+the shared consumer; `WORKER_CONCURRENCY` still caps execution per worker.
+The Compose `forcad-nats` volume retains messages across broker restarts.
 
 ## Compose environment
 
