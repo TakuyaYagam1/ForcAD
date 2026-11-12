@@ -15,7 +15,19 @@ func (s *AdminTaskWrite) setDefaults() {
 }
 
 // setDefaults set default value of fields.
+func (s *AdminTeam) setDefaults() {
+	{
+		val := TeamKind("player")
+		s.Kind = val
+	}
+}
+
+// setDefaults set default value of fields.
 func (s *AdminTeamCreate) setDefaults() {
+	{
+		val := TeamKind("player")
+		s.Kind.SetTo(val)
+	}
 	{
 		val := bool(false)
 		s.Highlighted.SetTo(val)
@@ -33,6 +45,10 @@ func (s *AdminTeamCreate) setDefaults() {
 // setDefaults set default value of fields.
 func (s *AdminTeamUpdate) setDefaults() {
 	{
+		val := TeamKind("player")
+		s.Kind.SetTo(val)
+	}
+	{
 		val := bool(false)
 		s.Highlighted.SetTo(val)
 	}
@@ -43,5 +59,13 @@ func (s *AdminTeamUpdate) setDefaults() {
 	{
 		val := string("")
 		s.LogoPath.SetTo(val)
+	}
+}
+
+// setDefaults set default value of fields.
+func (s *ParticipantTeam) setDefaults() {
+	{
+		val := TeamKind("player")
+		s.Kind = val
 	}
 }

@@ -11,6 +11,7 @@ export const createAdminTeamBodyNameMax = 255;
 
 export const createAdminTeamBodyIpMax = 45;
 
+export const createAdminTeamBodyKindDefault = `player`;
 export const createAdminTeamBodyHighlightedDefault = false;
 export const createAdminTeamBodyActiveDefault = true;
 export const createAdminTeamBodyLogoPathDefault = ``;
@@ -21,6 +22,7 @@ export const CreateAdminTeamBody = zod.object({
   "name": zod.string().min(1).max(createAdminTeamBodyNameMax),
   "ip": zod.string().min(1).max(createAdminTeamBodyIpMax),
   "token": zod.string().optional().describe('Ignored by the server, which generates a fresh token.'),
+  "kind": zod.enum(['player', 'npc']).default(createAdminTeamBodyKindDefault),
   "highlighted": zod.boolean().default(createAdminTeamBodyHighlightedDefault),
   "active": zod.boolean().default(createAdminTeamBodyActiveDefault),
   "logo_path": zod.string().max(createAdminTeamBodyLogoPathMax).default(createAdminTeamBodyLogoPathDefault)

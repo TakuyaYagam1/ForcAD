@@ -176,6 +176,7 @@ type Team struct {
 	Highlighted *bool     `json:"highlighted"`
 	Active      *bool     `json:"active"`
 	LogoPath    *string   `json:"logo_path"`
+	Kind        string    `json:"kind"`
 }
 
 type Teamtask struct {

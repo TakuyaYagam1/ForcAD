@@ -293,6 +293,73 @@ func TestStandingsBreakScoreTiesByUUID(t *testing.T) {
 	}
 }
 
+func TestStandingsExcludeNPCButScoreboardExposesIt(t *testing.T) {
+	playerID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
+	npcID := uuid.MustParse("01912345-6789-7000-8000-000000000002")
+	repo := &boardRepository{
+		board: domain.BoardData{
+			Teams: []domain.Team{
+				{
+					ID:   playerID,
+					Name: "player",
+					IP:   "192.0.2.1",
+					Kind: domain.TeamKindPlayer,
+				},
+				{
+					ID:   npcID,
+					Name: "npc",
+					IP:   "192.0.2.2",
+					Kind: domain.TeamKindNPC,
+				},
+			},
+			Cells: []domain.Cell{
+				{
+					TeamID:       playerID,
+					Score:        50,
+					Checks:       1,
+					ChecksPassed: 1,
+				},
+				{
+					TeamID:       npcID,
+					Score:        100,
+					Checks:       1,
+					ChecksPassed: 1,
+				},
+			},
+		},
+	}
+	service := NewGame(repo, nil, nil, slog.New(slog.DiscardHandler))
+	board, err := service.Scoreboard(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(board.Teams) != 2 || board.Teams[1].Kind != domain.TeamKindNPC || board.Teams[1].IP != "192.0.2.2" {
+		t.Fatalf("NPC target missing from public scoreboard: %+v", board.Teams)
+	}
+
+	standings, err := service.Standings(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(standings) != 1 || standings[0].Team != "player" || standings[0].Pos != 1 {
+		t.Fatalf("NPC included in standings: %+v", standings)
+	}
+}
+
+func TestSaveTeamRejectsInvalidKind(t *testing.T) {
+	service := NewGame(nil, nil, nil, slog.New(slog.DiscardHandler))
+	_, err := service.SaveTeam(t.Context(), domain.Team{
+		Name:  "team",
+		IP:    "192.0.2.1",
+		Token: "0000000000000001",
+		Kind:  "observer",
+	}, false)
+	var validation *domain.ValidationError
+	if !errors.As(err, &validation) || validation.Message != "Team kind must be player or npc" {
+		t.Fatalf("SaveTeam() error = %v, want team kind validation error", err)
+	}
+}
+
 func TestAttackDataFiltersByExactService(t *testing.T) {
 	firstID := uuid.MustParse("01912345-6789-7000-8000-00000000000a")
 	secondID := uuid.MustParse("01912345-6789-7000-8000-00000000000b")

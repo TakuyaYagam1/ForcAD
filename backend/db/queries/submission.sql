@@ -8,10 +8,11 @@ SELECT COALESCE(
 )::INTEGER AS round;
 
 -- name: ReadSubmissionFlags :many
-SELECT f.id, f.flag, f.team_id, f.task_id, f.round,
+SELECT f.id, f.flag, f.team_id, f.task_id, f.round, owner.kind,
        EXISTS (SELECT 1 FROM StolenFlags s
                WHERE s.flag_id = f.id AND s.attacker_id = sqlc.arg(attacker_id)) AS stolen
 FROM Flags f
+JOIN Teams AS owner ON owner.id = f.team_id
 WHERE f.flag = ANY(sqlc.arg(flag_values)::VARCHAR[])
 ORDER BY f.id;
 

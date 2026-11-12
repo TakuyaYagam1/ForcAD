@@ -18,6 +18,7 @@ export * from './initScoreboardEventPayload.zod';
 export * from './publicEvent.zod';
 export * from './realtimeEvent.zod';
 export * from './statusResponse.zod';
+export * from './teamKind.zod';
 export * from './updateScoreboardEvent.zod';
 export * from './updateScoreboardEventPayload.zod';
 export * from './uuid.zod';

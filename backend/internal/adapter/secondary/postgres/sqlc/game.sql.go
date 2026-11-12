@@ -85,7 +85,10 @@ func (q *Queries) InsertGameTask(ctx context.Context, arg InsertGameTaskParams) 
 }
 
 const insertGameTeam = `-- name: InsertGameTeam :one
-INSERT INTO Teams(name,ip,token,highlighted,active,logo_path) VALUES($1,$2,$3,$4,$5,$6) RETURNING id
+INSERT INTO Teams(name,ip,token,highlighted,active,logo_path,kind)
+VALUES($1,$2,$3,$4,
+       $5,$6,$7)
+RETURNING id
 `
 
 type InsertGameTeamParams struct {
@@ -95,6 +98,7 @@ type InsertGameTeamParams struct {
 	Highlighted *bool   `json:"highlighted"`
 	Active      *bool   `json:"active"`
 	LogoPath    *string `json:"logo_path"`
+	Kind        string  `json:"kind"`
 }
 
 func (q *Queries) InsertGameTeam(ctx context.Context, arg InsertGameTeamParams) (uuid.UUID, error) {
@@ -105,6 +109,7 @@ func (q *Queries) InsertGameTeam(ctx context.Context, arg InsertGameTeamParams) 
 		arg.Highlighted,
 		arg.Active,
 		arg.LogoPath,
+		arg.Kind,
 	)
 	var id uuid.UUID
 	err := row.Scan(&id)
@@ -292,7 +297,8 @@ func (q *Queries) ListGameTasks(ctx context.Context, activeOnly bool) ([]ListGam
 }
 
 const listGameTeams = `-- name: ListGameTeams :many
-SELECT id, name, ip, token, COALESCE(highlighted,FALSE)::BOOLEAN AS highlighted,
+SELECT id, name, ip, token, COALESCE(kind,'player')::TEXT AS kind,
+       COALESCE(highlighted,FALSE)::BOOLEAN AS highlighted,
        COALESCE(active,FALSE)::BOOLEAN AS active, COALESCE(logo_path,'')::TEXT AS logo_path
 FROM Teams WHERE NOT $1::BOOLEAN OR active ORDER BY id
 `
@@ -302,6 +308,7 @@ type ListGameTeamsRow struct {
 	Name        string    `json:"name"`
 	Ip          string    `json:"ip"`
 	Token       string    `json:"token"`
+	Kind        string    `json:"kind"`
 	Highlighted bool      `json:"highlighted"`
 	Active      bool      `json:"active"`
 	LogoPath    string    `json:"logo_path"`
@@ -321,6 +328,7 @@ func (q *Queries) ListGameTeams(ctx context.Context, activeOnly bool) ([]ListGam
 			&i.Name,
 			&i.Ip,
 			&i.Token,
+			&i.Kind,
 			&i.Highlighted,
 			&i.Active,
 			&i.LogoPath,
@@ -629,34 +637,41 @@ func (q *Queries) ReplaceGameTask(ctx context.Context, arg ReplaceGameTaskParams
 	return result.RowsAffected(), nil
 }
 
-const replaceGameTeam = `-- name: ReplaceGameTeam :execrows
-UPDATE Teams SET name=$2,ip=$3,token=$4,highlighted=$5,active=$6,logo_path=$7 WHERE id=$1
+const replaceGameTeam = `-- name: ReplaceGameTeam :one
+UPDATE Teams
+SET name=$1,ip=$2,token=$3,
+    highlighted=$4,active=$5,
+    logo_path=$6,
+    kind=COALESCE(NULLIF($7::TEXT,''),kind)
+WHERE id=$8
+RETURNING kind
 `
 
 type ReplaceGameTeamParams struct {
-	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	Ip          string    `json:"ip"`
 	Token       string    `json:"token"`
 	Highlighted *bool     `json:"highlighted"`
 	Active      *bool     `json:"active"`
 	LogoPath    *string   `json:"logo_path"`
+	Kind        string    `json:"kind"`
+	ID          uuid.UUID `json:"id"`
 }
 
-func (q *Queries) ReplaceGameTeam(ctx context.Context, arg ReplaceGameTeamParams) (int64, error) {
-	result, err := q.db.Exec(ctx, replaceGameTeam,
-		arg.ID,
+func (q *Queries) ReplaceGameTeam(ctx context.Context, arg ReplaceGameTeamParams) (string, error) {
+	row := q.db.QueryRow(ctx, replaceGameTeam,
 		arg.Name,
 		arg.Ip,
 		arg.Token,
 		arg.Highlighted,
 		arg.Active,
 		arg.LogoPath,
+		arg.Kind,
+		arg.ID,
 	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+	var kind string
+	err := row.Scan(&kind)
+	return kind, err
 }
 
 const setGameRoundLimit = `-- name: SetGameRoundLimit :execrows

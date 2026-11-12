@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 	"time"
+	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
@@ -66,6 +67,52 @@ func TestPublicEventsSurviveReconnectAndSupportCursorPaging(t *testing.T) {
 	}
 	if _, err := reconnected.ListEvents(t.Context(), "missing-event", 100); !errors.Is(err, domain.ErrEventCursorInvalid) {
 		t.Fatalf("unknown cursor error = %v, want ErrEventCursorInvalid", err)
+	}
+}
+
+func TestNPCFlagEventsAreExcludedBeforePagingAndCannotBeCursors(t *testing.T) {
+	f := newSubmissionFixture(t)
+	if _, err := f.pool.Exec(t.Context(), `UPDATE Teams SET kind=$1 WHERE id=$2`, domain.TeamKindNPC, f.teams[1]); err != nil {
+		t.Fatal(err)
+	}
+	player := f.addTeam(t, "third", domain.TeamKindPlayer)
+	playerFlag := f.flags(t, player, 3001, 1)[0]
+	npcFlag := f.flags(t, 1, 3002, 1)[0]
+
+	playerRequest := f.request(0, []string{playerFlag})
+	playerRequest.ReceivedAt = time.Now().Add(-time.Second)
+	if results, err := f.repo.SubmitBatch(t.Context(), playerRequest); err != nil || len(results) != 1 || results[0].Err != nil || results[0].NPC {
+		t.Fatalf("submit player flag: results=%+v err=%v", results, err)
+	}
+	npcRequest := f.request(0, []string{npcFlag})
+	npcRequest.ReceivedAt = time.Now()
+	if results, err := f.repo.SubmitBatch(t.Context(), npcRequest); err != nil || len(results) != 1 || results[0].Err != nil || !results[0].NPC {
+		t.Fatalf("submit NPC flag: results=%+v err=%v", results, err)
+	}
+
+	page, err := f.repo.ListEvents(t.Context(), "", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 1 || page[0].Kind != domain.EventFlagStolen || page[0].VictimID == nil || *page[0].VictimID != f.teams[player] {
+		t.Fatalf("page after newer NPC event = %+v, want older player event", page)
+	}
+
+	afterPlayer, err := f.repo.ListEvents(t.Context(), page[0].ID, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(afterPlayer) != 0 {
+		t.Fatalf("events after player cursor = %+v, want newer NPC event hidden", afterPlayer)
+	}
+
+	var npcFlagID uuid.UUID
+	if err := f.pool.QueryRow(t.Context(), `SELECT id FROM Flags WHERE flag=$1`, npcFlag).Scan(&npcFlagID); err != nil {
+		t.Fatal(err)
+	}
+	npcEventID := domain.FlagEventID(npcFlagID, f.teams[0])
+	if _, err := f.repo.ListEvents(t.Context(), npcEventID, 10); !errors.Is(err, domain.ErrEventCursorInvalid) {
+		t.Fatalf("NPC cursor error = %v, want ErrEventCursorInvalid", err)
 	}
 }
 

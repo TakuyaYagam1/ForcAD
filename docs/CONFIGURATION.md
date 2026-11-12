@@ -42,17 +42,41 @@ Set this field before initial installation. Editing YAML does not overwrite an
 existing game's database settings. It stays disabled by default pending
 event-scale validation; the demo explicitly enables two extra CHECKs.
 
-The single initial migration includes all extra-CHECK columns and indexes.
-It creates a fresh schema; it does not upgrade an older applied initial schema.
-The initializer rejects databases missing required columns without changing data.
+The single initial migration includes all extra-CHECK columns and the NPC team
+kind and index. It creates a fresh schema; it does not upgrade an older applied
+initial schema. The initializer rejects databases missing required columns or
+indexes without changing data.
+
 Back up an existing game before changing versions. The initial migration's
 `Down` removes all application tables and data; it does not just disable CHECKs.
+
 See [operations](OPERATIONS.md#reset) for explicit reset commands.
 
 ## Teams
 
-Configure at least one team. `name` and an IPv4 or IPv6 `ip` are required;
+Configure at least one player team. `name` and an IPv4 or IPv6 `ip` are required;
 `highlighted` defaults to `false`.
+
+An optional `kind` is `player` (default) or `npc`. Configure at most one NPC:
+
+```yaml
+teams:
+  - name: Team 1
+    ip: 10.183.101.2
+  - name: NPC test
+    ip: 10.183.119.2
+    kind: npc
+```
+
+Give the NPC its own reachable vulnbox and run the same services on it. The
+checker puts fresh NPC flags on every round just as it does for player teams;
+players submit them through the usual endpoint. The first accepted submission
+per attacker returns the per-flag message `[FLAG] Flag accepted (NPC test). No
+points awarded.` (where `FLAG` is the submitted value); repeated submissions
+return the ordinary duplicate verdict. NPC captures do not affect
+scores, stolen/lost counters, rankings or the public event stream. The public
+teams page lists the NPC separately as a test target with its service IP.
+Do not distribute the NPC's flag-submission token to participants.
 
 `traffic_cidrs` optionally lists the team's service, VPN and farm networks for
 monitoring attribution. It defaults to the exact `ip` address. Explicit CIDRs

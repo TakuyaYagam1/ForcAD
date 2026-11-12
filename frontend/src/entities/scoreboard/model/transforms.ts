@@ -71,6 +71,9 @@ export function recalculateTeamScores(
   }
 
   return teams
+    .filter((team) => {
+      return team.kind !== "npc"
+    })
     .map((team) => {
       return {
         ...team,

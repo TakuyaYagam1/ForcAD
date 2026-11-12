@@ -14,6 +14,10 @@ type attackFlag struct {
 	err error
 }
 
+func (f *attackFlag) npc() bool {
+	return f.row.Kind == domain.TeamKindNPC
+}
+
 type teamTaskKey struct {
 	team, task uuid.UUID
 }
@@ -64,10 +68,17 @@ func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) erro
 	const location = "postgres.attackBatch.lockTasks"
 	wanted := make(map[teamTaskKey]bool)
 	for _, flag := range b.flags {
-		if flag.err == nil {
-			wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
-			wanted[teamTaskKey{flag.row.TeamID, flag.row.TaskID}] = true
+		if flag.err != nil {
+			continue
 		}
+		if flag.npc() {
+			if b.state.game.VolgaAttacksMode {
+				wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
+			}
+			continue
+		}
+		wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
+		wanted[teamTaskKey{flag.row.TeamID, flag.row.TaskID}] = true
 	}
 	if len(wanted) == 0 {
 		return nil
@@ -93,6 +104,12 @@ func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) erro
 			continue
 		}
 		attacker := b.scores[teamTaskKey{b.submission.TeamID, flag.row.TaskID}]
+		if flag.npc() {
+			if b.state.game.VolgaAttacksMode && (attacker == nil || attacker.status != domain.TaskStatusUp) {
+				flag.err = domain.ErrServiceDown
+			}
+			continue
+		}
 		victim := b.scores[teamTaskKey{flag.row.TeamID, flag.row.TaskID}]
 		if b.state.game.VolgaAttacksMode && (attacker == nil || attacker.status != domain.TaskStatusUp) {
 			flag.err = domain.ErrServiceDown
@@ -176,6 +193,11 @@ func (b *attackBatch) scoreFlag(value string, inserted map[uuid.UUID]bool) (doma
 		}, nil
 	}
 	delete(inserted, flag.row.ID)
+	if flag.npc() {
+		return domain.SubmissionResult{
+			NPC: true,
+		}, nil
+	}
 	attacker := b.scores[teamTaskKey{b.submission.TeamID, flag.row.TaskID}]
 	victim := b.scores[teamTaskKey{flag.row.TeamID, flag.row.TaskID}]
 	// Rating depends on the preceding flag's score. Preserve input order while
@@ -218,7 +240,7 @@ func (b *attackBatch) changeParams(results []domain.SubmissionResult) (sqlc.Appl
 		params.Scores = append(params.Scores, score.score)
 	}
 	for i, result := range results {
-		if result.Err != nil {
+		if result.Err != nil || result.NPC {
 			continue
 		}
 		flag := b.flags[b.submission.Values[i]]

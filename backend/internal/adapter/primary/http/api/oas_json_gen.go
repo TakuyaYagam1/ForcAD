@@ -1067,6 +1067,10 @@ func (s *AdminTeam) encodeFields(e *jx.Encoder) {
 		e.Str(s.Token)
 	}
 	{
+		e.FieldStart("kind")
+		s.Kind.Encode(e)
+	}
+	{
 		e.FieldStart("highlighted")
 		e.Bool(s.Highlighted)
 	}
@@ -1080,14 +1084,15 @@ func (s *AdminTeam) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfAdminTeam = [7]string{
+var jsonFieldsNameOfAdminTeam = [8]string{
 	0: "id",
 	1: "name",
 	2: "ip",
 	3: "token",
-	4: "highlighted",
-	5: "active",
-	6: "logo_path",
+	4: "kind",
+	5: "highlighted",
+	6: "active",
+	7: "logo_path",
 }
 
 // Decode decodes AdminTeam from json.
@@ -1096,6 +1101,7 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode AdminTeam to nil")
 	}
 	var requiredBitSet [1]uint8
+	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -1145,8 +1151,18 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"token\"")
 			}
-		case "highlighted":
+		case "kind":
 			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "highlighted":
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Bool()
 				s.Highlighted = bool(v)
@@ -1158,7 +1174,7 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"highlighted\"")
 			}
 		case "active":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Bool()
 				s.Active = bool(v)
@@ -1170,7 +1186,7 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"active\"")
 			}
 		case "logo_path":
-			requiredBitSet[0] |= 1 << 6
+			requiredBitSet[0] |= 1 << 7
 			if err := func() error {
 				v, err := d.Str()
 				s.LogoPath = string(v)
@@ -1191,7 +1207,7 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b01111111,
+		0b11111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -1263,6 +1279,12 @@ func (s *AdminTeamCreate) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
+		}
+	}
+	{
 		if s.Highlighted.Set {
 			e.FieldStart("highlighted")
 			s.Highlighted.Encode(e)
@@ -1289,13 +1311,14 @@ func (s *AdminTeamCreate) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfAdminTeamCreate = [6]string{
+var jsonFieldsNameOfAdminTeamCreate = [7]string{
 	0: "name",
 	1: "ip",
 	2: "token",
-	3: "highlighted",
-	4: "active",
-	5: "logo_path",
+	3: "kind",
+	4: "highlighted",
+	5: "active",
+	6: "logo_path",
 }
 
 // Decode decodes AdminTeamCreate from json.
@@ -1342,6 +1365,16 @@ func (s *AdminTeamCreate) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"token\"")
+			}
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
 			}
 		case "highlighted":
 			if err := func() error {
@@ -1907,6 +1940,12 @@ func (s *AdminTeamUpdate) encodeFields(e *jx.Encoder) {
 		e.Str(s.Token)
 	}
 	{
+		if s.Kind.Set {
+			e.FieldStart("kind")
+			s.Kind.Encode(e)
+		}
+	}
+	{
 		if s.Highlighted.Set {
 			e.FieldStart("highlighted")
 			s.Highlighted.Encode(e)
@@ -1933,13 +1972,14 @@ func (s *AdminTeamUpdate) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfAdminTeamUpdate = [6]string{
+var jsonFieldsNameOfAdminTeamUpdate = [7]string{
 	0: "name",
 	1: "ip",
 	2: "token",
-	3: "highlighted",
-	4: "active",
-	5: "logo_path",
+	3: "kind",
+	4: "highlighted",
+	5: "active",
+	6: "logo_path",
 }
 
 // Decode decodes AdminTeamUpdate from json.
@@ -1988,6 +2028,16 @@ func (s *AdminTeamUpdate) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"token\"")
+			}
+		case "kind":
+			if err := func() error {
+				s.Kind.Reset()
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
 			}
 		case "highlighted":
 			if err := func() error {
@@ -6007,6 +6057,39 @@ func (s *OptString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes TeamKind as json.
+func (o OptTeamKind) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Str(string(o.Value))
+}
+
+// Decode decodes TeamKind from json.
+func (o *OptTeamKind) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptTeamKind to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptTeamKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptTeamKind) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes UUID as json.
 func (o OptUUID) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -6175,6 +6258,10 @@ func (s *ParticipantTeam) encodeFields(e *jx.Encoder) {
 		e.Str(s.IP)
 	}
 	{
+		e.FieldStart("kind")
+		s.Kind.Encode(e)
+	}
+	{
 		e.FieldStart("highlighted")
 		e.Bool(s.Highlighted)
 	}
@@ -6188,13 +6275,14 @@ func (s *ParticipantTeam) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfParticipantTeam = [6]string{
+var jsonFieldsNameOfParticipantTeam = [7]string{
 	0: "id",
 	1: "name",
 	2: "ip",
-	3: "highlighted",
-	4: "active",
-	5: "logo_path",
+	3: "kind",
+	4: "highlighted",
+	5: "active",
+	6: "logo_path",
 }
 
 // Decode decodes ParticipantTeam from json.
@@ -6203,6 +6291,7 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode ParticipantTeam to nil")
 	}
 	var requiredBitSet [1]uint8
+	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -6240,8 +6329,18 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"ip\"")
 			}
-		case "highlighted":
+		case "kind":
 			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.Kind.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"kind\"")
+			}
+		case "highlighted":
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				v, err := d.Bool()
 				s.Highlighted = bool(v)
@@ -6253,7 +6352,7 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"highlighted\"")
 			}
 		case "active":
-			requiredBitSet[0] |= 1 << 4
+			requiredBitSet[0] |= 1 << 5
 			if err := func() error {
 				v, err := d.Bool()
 				s.Active = bool(v)
@@ -6265,7 +6364,7 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"active\"")
 			}
 		case "logo_path":
-			requiredBitSet[0] |= 1 << 5
+			requiredBitSet[0] |= 1 << 6
 			if err := func() error {
 				v, err := d.Str()
 				s.LogoPath = string(v)
@@ -6286,7 +6385,7 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00111111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.
@@ -7926,6 +8025,46 @@ func (s *SubmitFlagsUnsupportedMediaType) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SubmitFlagsUnsupportedMediaType) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes TeamKind as json.
+func (s TeamKind) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes TeamKind from json.
+func (s *TeamKind) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode TeamKind to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch TeamKind(v) {
+	case TeamKindPlayer:
+		*s = TeamKindPlayer
+	case TeamKindNpc:
+		*s = TeamKindNpc
+	default:
+		*s = TeamKind(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s TeamKind) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *TeamKind) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

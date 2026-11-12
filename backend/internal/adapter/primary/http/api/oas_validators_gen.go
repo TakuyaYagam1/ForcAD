@@ -523,6 +523,17 @@ func (s *AdminTeam) Validate() error {
 		})
 	}
 	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if err := func() error {
 		if err := (validate.String{
 			MinLength:     0,
 			MinLengthSet:  false,
@@ -602,6 +613,24 @@ func (s *AdminTeamCreate) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "ip",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
 			Error: err,
 		})
 	}
@@ -751,6 +780,24 @@ func (s *AdminTeamUpdate) Validate() error {
 	}(); err != nil {
 		failures = append(failures, validate.FieldError{
 			Name:  "token",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Kind.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
 			Error: err,
 		})
 	}
@@ -1432,6 +1479,31 @@ func (s OpenEventStreamSwitchingProtocolsUpgrade) Validate() error {
 	}
 }
 
+func (s *ParticipantTeam) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if err := s.Kind.Validate(); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "kind",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+	return nil
+}
+
 func (s *ParticipantTeamTaskHistory) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -1531,6 +1603,25 @@ func (s *Scoreboard) Validate() error {
 	if err := func() error {
 		if s.Teams == nil {
 			return errors.New("nil is invalid value")
+		}
+		var failures []validate.FieldError
+		for i, elem := range s.Teams {
+			if err := func() error {
+				if err := elem.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				failures = append(failures, validate.FieldError{
+					Name:  fmt.Sprintf("[%d]", i),
+					Error: err,
+				})
+			}
+		}
+		if len(failures) > 0 {
+			return &validate.Error{
+				Fields: failures,
+			}
 		}
 		return nil
 	}(); err != nil {
@@ -1670,4 +1761,15 @@ func (s SubmitFlagsOKApplicationJSON) Validate() error {
 		return errors.New("nil is invalid value")
 	}
 	return nil
+}
+
+func (s TeamKind) Validate() error {
+	switch s {
+	case "player":
+		return nil
+	case "npc":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }

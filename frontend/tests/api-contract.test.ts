@@ -68,6 +68,7 @@ const scoreboard = {
       id: teamId,
       name: "Northstar",
       ip: "10.10.14.8",
+      kind: "player",
       highlighted: false,
       active: true,
       logo_path: "",
@@ -86,11 +87,29 @@ test("generated scoreboard schema accepts the complete public snapshot", () => {
   assert.equal(GameConfig.parse(config).id, 1);
 });
 
+test("public scoreboard identifies the NPC test target by kind and IP", () => {
+  const parsed = Scoreboard.parse({
+    ...scoreboard,
+    teams: [
+      scoreboard.teams[0],
+      {
+        ...scoreboard.teams[0],
+        id: "0199f7c0-0000-7000-8000-000000000019",
+        ip: "10.183.119.2",
+        kind: "npc",
+      },
+    ],
+  });
+  assert.equal(parsed.teams[1].kind, "npc");
+  assert.equal(parsed.teams[1].ip, "10.183.119.2");
+});
+
 test("generated entity schemas reject legacy numeric IDs and retain UUID log IDs", () => {
   const adminTeam = {
     id: teamId,
     name: "Northstar",
     ip: "10.10.14.8",
+    kind: "player",
     token: "0123456789abcdef",
     highlighted: false,
     active: true,

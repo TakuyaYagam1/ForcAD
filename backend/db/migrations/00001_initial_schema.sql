@@ -76,8 +76,10 @@ CREATE TABLE Teams
     highlighted BOOLEAN DEFAULT FALSE,
     active      BOOLEAN DEFAULT TRUE,
     logo_path   VARCHAR(255) DEFAULT '',
+    kind        TEXT NOT NULL DEFAULT 'player',
     CONSTRAINT teams_token_format_check CHECK (token ~ '^[0-9a-f]{16}$'),
-    CONSTRAINT teams_token_unique UNIQUE (token)
+    CONSTRAINT teams_token_unique UNIQUE (token),
+    CONSTRAINT teams_kind_check CHECK (kind IN ('player', 'npc'))
 );
 
 CREATE TABLE Tasks
@@ -271,6 +273,8 @@ CREATE TABLE PublicAnnouncements
 
 INSERT INTO GameSession (id) VALUES (1);
 
+CREATE UNIQUE INDEX teams_single_npc
+    ON Teams (kind) WHERE kind = 'npc';
 CREATE INDEX idx_flags_round_team ON Flags (round, team_id);
 CREATE INDEX idx_flags_round_task ON Flags (round, task_id);
 CREATE INDEX dispatch_round_start ON DispatchRuns (round_start DESC) INCLUDE (round) WHERE is_round;

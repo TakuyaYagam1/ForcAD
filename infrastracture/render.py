@@ -50,12 +50,13 @@ def network_layout(config):
 
     team_networks = []
     base_address = int(team_base.network_address)
-    for number in range(len(config["teams"]["entries"])):
+    entries = config["teams"]["entries"]
+    player_count = sum(entry.get("kind", "player") == "player" for entry in entries)
+    for number in range(len(entries)):
         address = base_address + number * 256
         if address > 0xFFFFFFFF:
             raise ValueError("Team network allocation exceeds the IPv4 address space")
         team_networks.append(ipaddress.IPv4Network((address, 24)))
-
     all_networks = [*parsed.values(), *team_networks]
     for index, network in enumerate(all_networks):
         if any(network.overlaps(other) for other in all_networks[index + 1 :]):
@@ -75,7 +76,7 @@ def network_layout(config):
     }:
         raise ValueError("env.public_host must be a usable host in network.forcad")
     group_size = 1 << (32 - participant_prefix)
-    if parsed["participant_vpn"].num_addresses // group_size < len(team_networks):
+    if parsed["participant_vpn"].num_addresses // group_size < player_count:
         raise ValueError(
             f"network.participant_vpn must provide one /{participant_prefix} per team"
         )
@@ -83,7 +84,7 @@ def network_layout(config):
         parsed["participant_vpn"].subnets(new_prefix=participant_prefix)
     )
     participant_server = first_host(parsed["participant_vpn"])
-    for group in participant_groups[: len(team_networks)]:
+    for group in participant_groups[:player_count]:
         available = sum(address != participant_server for address in group.hosts())
         if available < config["teams"]["members_per_team"]:
             raise ValueError("network.participant_vpn has too few addresses for a team")
@@ -273,18 +274,33 @@ def load_config(path):
     if not isinstance(entries, list) or not 1 <= len(entries) <= 32:
         raise ValueError("teams.entries must contain 1 to 32 teams")
     names = set()
+    npc_count = 0
     for index, team in enumerate(entries, 1):
-        exact_keys(team, ("name", "logo", "highlighted"), f"teams.entries[{index}]")
+        if isinstance(team, dict):
+            team.setdefault("kind", "player")
+        exact_keys(
+            team, ("name", "logo", "highlighted", "kind"), f"teams.entries[{index}]"
+        )
         validate_team_name(team["name"], f"teams.entries[{index}].name")
         if team["name"] in names:
             raise ValueError(f"Duplicate team name: {team['name']}")
         names.add(team["name"])
+        if not isinstance(team["kind"], str) or team["kind"] not in {
+            "player",
+            "npc",
+        }:
+            raise ValueError(f"teams.entries[{index}].kind must be player or npc")
+        npc_count += team["kind"] == "npc"
         if type(team["highlighted"]) is not bool:
             raise ValueError(f"teams.entries[{index}].highlighted must be a boolean")
         if team["logo"] == "":
             team["logo"] = None
         elif team["logo"] is not None:
             safe_asset(team["logo"], "public/teams", f"teams.entries[{index}].logo")
+    if npc_count > 1:
+        raise ValueError("teams.entries may contain at most one NPC")
+    if npc_count == len(entries):
+        raise ValueError("teams.entries must contain at least one player team")
     env = config["env"]
     for field in (
         "public_host",
@@ -508,22 +524,30 @@ def load_config(path):
 def teams(config):
     result = []
     layout = network_layout(config)
-    subnets = list(
+    subnets = iter(
         layout["participant_vpn"].subnets(new_prefix=layout["participant_prefix"])
     )
     team_config = config["teams"]
     for number, entry in enumerate(team_config["entries"], 1):
         name = validate_team_name(entry["name"])
+        kind = entry.get("kind", "player")
         vlan = layout["team_vlan_start"] + number - 1
-        group = subnets[number - 1]
-        peers = [str(ip) for ip in group.hosts() if ip != layout["participant_server"]][
-            : team_config["members_per_team"]
-        ]
+        group = next(subnets) if kind == "player" else None
+        peers = (
+            [
+                str(ip)
+                for ip in group.hosts()
+                if ip != layout["participant_server"]
+            ][: team_config["members_per_team"]]
+            if group is not None
+            else []
+        )
         team_network = layout["team_networks"][number - 1]
         result.append(
             {
                 "id": number,
                 "name": name,
+                "kind": kind,
                 "logo": entry["logo"],
                 "highlighted": entry["highlighted"],
                 "vlan": vlan,
@@ -531,7 +555,7 @@ def teams(config):
                 "network": str(team_network),
                 "gateway": str(team_network.network_address + 1),
                 "vulnbox": str(team_network.network_address + 2),
-                "vpn_cidr": str(group),
+                "vpn_cidr": str(group) if group is not None else None,
                 "peers": peers,
             }
         )
@@ -561,6 +585,7 @@ def ownership_rules(config, action):
         f"        ct original ip saddr {team['vpn_cidr']} ct original ip daddr {team['vulnbox']} "
         f"meta l4proto tcp ct original proto-dst {ports} {action}"
         for team in teams(config)
+        if team["kind"] == "player"
     )
 
 
@@ -626,6 +651,7 @@ define wg_ports = {nft_set([config["vpn"]["participant_port"], config["vpn"]["ad
         GROUPS="\n".join(
             f"        ip saddr {team['vpn_cidr']} ip daddr {team['vpn_cidr']} counter accept"
             for team in teams(config)
+            if team["kind"] == "player"
         ),
     )
 
@@ -761,13 +787,16 @@ def forcad_config(config):
     for team in teams(config):
         lines.append("  - name: " + yaml_value(team["name"]))
         lines.append(f"    ip: {team['vulnbox']}")
+        if team["kind"] == "npc":
+            lines.append("    kind: npc")
         lines.append(f"    highlighted: {str(team['highlighted']).lower()}")
         if team["logo"]:
             lines.append("    logo_path: " + yaml_value("/team-logos/" + team["logo"]))
         lines.append("    token: null")
         lines.append("    traffic_cidrs:")
         lines.append(f"      - {team['vulnbox']}/32")
-        lines.append(f"      - {team['vpn_cidr']}")
+        if team["vpn_cidr"] is not None:
+            lines.append(f"      - {team['vpn_cidr']}")
     return "\n".join(lines) + "\n"
 
 
@@ -1058,7 +1087,14 @@ net.ipv6.conf.default.disable_ipv6=1
                 "teams": [
                     {
                         "team_ip": team["vulnbox"],
-                        "networks": [f"{team['vulnbox']}/32", team["vpn_cidr"]],
+                        "networks": [
+                            f"{team['vulnbox']}/32",
+                            *(
+                                [team["vpn_cidr"]]
+                                if team["vpn_cidr"] is not None
+                                else []
+                            ),
+                        ],
                     }
                     for team in teams(config)
                 ]
@@ -1081,7 +1117,20 @@ net.ipv6.conf.default.disable_ipv6=1
     files.update(game_metrics(config))
     files.update(host_bundle(config))
     files.update(fresh_forcad_files(config))
-    files["teams.json"] = json.dumps(teams(config), indent=2) + "\n"
+    files["teams.json"] = (
+        json.dumps(
+            [
+                {
+                    key: value
+                    for key, value in team.items()
+                    if key != "kind" or value == "npc"
+                }
+                for team in teams(config)
+            ],
+            indent=2,
+        )
+        + "\n"
+    )
     return files
 
 

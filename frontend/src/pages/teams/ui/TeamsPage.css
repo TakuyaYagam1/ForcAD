@@ -13,6 +13,18 @@
   position: static;
 }
 
+.teams-page .teams-test-target {
+  margin: 16px 0 28px;
+}
+
+.teams-page .teams-test-target .teams-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.teams-page .teams-test-target .team-card {
+  max-width: 420px;
+}
+
 .teams-page .teams-leaders {
   margin-top: 16px;
 }

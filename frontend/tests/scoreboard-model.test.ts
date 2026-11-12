@@ -128,3 +128,17 @@ test("team scores use SLA weighting and break ties by team ID", () => {
     ],
   );
 });
+
+test("NPC stays outside the ranked teams even when its service has a score", () => {
+  const npc = { ...team(teamThreeId), kind: "npc" };
+  const ranked = recalculateTeamScores(
+    [team(teamOneId), npc, team(teamTwoId)],
+    [
+      teamTask(teamOneId, 100, 100),
+      teamTask(teamThreeId, 1000, 100),
+      teamTask(teamTwoId, 200, 100),
+    ],
+  );
+
+  assert.deepEqual(ranked.map(({ id }) => id), [teamTwoId, teamOneId]);
+});

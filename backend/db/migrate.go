@@ -81,7 +81,7 @@ func validateAppliedSchema(ctx context.Context, database *sql.DB) error {
 	err := database.QueryRowContext(ctx, `
 		WITH expected(table_name, column_name, data_type) AS (
 			VALUES
-				('teams', 'id', 'uuid'),
+				('teams', 'id', 'uuid'), ('teams', 'kind', 'text'),
 				('tasks', 'id', 'uuid'),
 				('flags', 'id', 'uuid'), ('flags', 'team_id', 'uuid'), ('flags', 'task_id', 'uuid'),
 				('stolenflags', 'flag_id', 'uuid'), ('stolenflags', 'attacker_id', 'uuid'),
@@ -118,6 +118,13 @@ func validateAppliedSchema(ctx context.Context, database *sql.DB) error {
 		}
 		if !feedIndexExists {
 			return fmt.Errorf("%s - applied migration version 1 has incompatible schema: missing idx_stolenflags_public_feed; initialize a fresh database", location)
+		}
+		var npcIndexExists bool
+		if err := database.QueryRowContext(ctx, `SELECT to_regclass('teams_single_npc') IS NOT NULL`).Scan(&npcIndexExists); err != nil {
+			return fmt.Errorf("%s - inspect single NPC index: %w", location, err)
+		}
+		if !npcIndexExists {
+			return fmt.Errorf("%s - applied migration version 1 has incompatible schema: missing teams_single_npc; initialize a fresh database", location)
 		}
 		return nil
 	}

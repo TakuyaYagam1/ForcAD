@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -164,5 +165,36 @@ func TestPrepareRequiresExplicitWorkflow(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("Prepare() accepted a request without a workflow")
+	}
+}
+
+func TestBuildSchedulerJobsIncludesNPC(t *testing.T) {
+	playerID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
+	npcID := uuid.MustParse("01912345-6789-7000-8000-000000000002")
+	taskID := uuid.MustParse("01912345-6789-7000-8000-000000000003")
+	jobs, err := buildSchedulerJobs(
+		uuid.MustParse("01912345-6789-7000-8000-000000000004"),
+		7,
+		3,
+		domain.JobActionClassic,
+		nil,
+		[]sqlc.ListGameTeamsRow{
+			{ID: playerID, Kind: domain.TeamKindPlayer, Active: true},
+			{ID: npcID, Kind: domain.TeamKindNPC, Active: true},
+		},
+		[]sqlc.ListGameTasksRow{{ID: taskID, Active: true}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs) != 2 {
+		t.Fatalf("checker jobs = %d, want 2", len(jobs))
+	}
+	var npcPayload domain.JobPayload
+	if err := json.Unmarshal(jobs[1].Payload, &npcPayload); err != nil {
+		t.Fatal(err)
+	}
+	if npcPayload.Team.ID != npcID || npcPayload.Team.Kind != domain.TeamKindNPC {
+		t.Fatalf("NPC checker payload = %+v", npcPayload.Team)
 	}
 }

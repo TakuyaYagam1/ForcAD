@@ -22,6 +22,7 @@ export const AdminTeamUpdate = zod.object({
   "name": zod.string().min(1).max(adminTeamUpdateNameMax),
   "ip": zod.string().min(1).max(adminTeamUpdateIpMax),
   "token": zod.string().regex(adminTeamUpdateTokenRegExp),
+  "kind": zod.enum(['player', 'npc']).optional(),
   "highlighted": zod.boolean().default(adminTeamUpdateHighlightedDefault),
   "active": zod.boolean().default(adminTeamUpdateActiveDefault),
   "logo_path": zod.string().max(adminTeamUpdateLogoPathMax).default(adminTeamUpdateLogoPathDefault)

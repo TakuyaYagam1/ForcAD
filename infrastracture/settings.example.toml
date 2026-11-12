@@ -56,6 +56,8 @@ install_path = "/opt/forcad"
 
 # These entries are the teams created in ForcAD. Their order determines team
 # numbers and their address/VLAN allocation from the network section.
+# Optional kind is "player" by default; use "npc" for at most one test target.
+# NPC targets do not receive participant VPN identities.
 # Set logo = "" when a team has no logo.
 [teams]
 members_per_team = 5
@@ -70,6 +72,12 @@ highlighted = false
 name = "pod egidoy"
 # Logo path relative to public/teams/.
 logo = "egida.png"
+highlighted = true
+
+[[teams.entries]]
+name = "NPC"
+logo = ""
+kind = "npc"
 highlighted = true
 
 # Branding assets are relative to public/brand/. public_host is the address

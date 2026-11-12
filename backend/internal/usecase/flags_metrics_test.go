@@ -55,3 +55,21 @@ func TestFlagMetricsCountFlagsInsteadOfBatches(t *testing.T) {
 		t.Fatalf("submission phase observations: %+v", observer.phases)
 	}
 }
+
+func TestFlagMetricsDistinguishNPCAcceptance(t *testing.T) {
+	service, state := newTestFlags()
+	observer := &flagObserver{
+		counts: make(map[string]int),
+		phases: make(map[string]int),
+	}
+	service.SetObserver(observer)
+	npc := strings.Repeat("N", 31) + "="
+	state.npc[npc] = true
+
+	if _, err := service.Submit(t.Context(), "0123456789abcdef", []string{npc}); err != nil {
+		t.Fatal(err)
+	}
+	if observer.counts["npc"] != 1 || observer.counts["accepted"] != 0 {
+		t.Fatalf("NPC metrics = %+v", observer.counts)
+	}
+}

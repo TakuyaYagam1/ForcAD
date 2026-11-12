@@ -253,7 +253,12 @@ func (g *Game) Standings(ctx context.Context) ([]Standing, error) {
 			scores[cell.TeamID] += cell.Score * float64(cell.ChecksPassed) / float64(cell.Checks)
 		}
 	}
-	teams := append([]domain.PublicTeam(nil), board.Teams...)
+	teams := make([]domain.PublicTeam, 0, len(board.Teams))
+	for _, team := range board.Teams {
+		if team.Kind != domain.TeamKindNPC {
+			teams = append(teams, team)
+		}
+	}
 	sort.Slice(teams, func(i, j int) bool {
 		if scores[teams[i].ID] == scores[teams[j].ID] {
 			return teams[i].ID.Compare(teams[j].ID) < 0
@@ -344,6 +349,14 @@ func (g *Game) SaveTeam(ctx context.Context, team domain.Team, create bool) (dom
 			return domain.Team{}, fmt.Errorf("%s - generate team token: %w", location, err)
 		}
 		team.Token = hex.EncodeToString(token[:])
+	}
+	if create && team.Kind == "" {
+		team.Kind = domain.TeamKindPlayer
+	}
+	if team.Kind != "" && team.Kind != domain.TeamKindPlayer && team.Kind != domain.TeamKindNPC {
+		return domain.Team{}, fmt.Errorf("%s - invalid team kind: %w", location, &domain.ValidationError{
+			Message: "Team kind must be player or npc",
+		})
 	}
 	if team.Name == "" || len([]rune(team.Name)) > maxNameLength {
 		return domain.Team{}, fmt.Errorf("%s - invalid team name: %w", location, &domain.ValidationError{

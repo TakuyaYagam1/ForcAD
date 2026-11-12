@@ -25,6 +25,11 @@ const (
 	maxLogoLength     = 255
 )
 
+const (
+	TeamKindPlayer = "player"
+	TeamKindNPC    = "npc"
+)
+
 type Document struct {
 	Admin    *Credentials `yaml:"admin,omitempty"`
 	Game     Game         `yaml:"game"`
@@ -96,6 +101,7 @@ type Task struct {
 type Team struct {
 	IP           string   `yaml:"ip"`
 	Name         string   `yaml:"name"`
+	Kind         string   `yaml:"kind,omitempty"`
 	Highlighted  bool     `yaml:"highlighted"`
 	LogoPath     string   `yaml:"logo_path,omitempty"`
 	Token        string   `yaml:"token,omitempty"`
@@ -153,6 +159,11 @@ func DecodeDocument(reader io.Reader) (Document, error) {
 	var extra any
 	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
 		return Document{}, fmt.Errorf("%s - configuration must contain exactly one YAML document", location)
+	}
+	for i := range d.Teams {
+		if d.Teams[i].Kind == "" {
+			d.Teams[i].Kind = TeamKindPlayer
+		}
 	}
 	for i := range d.Tasks {
 		t := &d.Tasks[i]
@@ -303,6 +314,7 @@ func (g Game) validateRounds() error {
 
 func validateTeams(teams []Team) error {
 	const location = "config.validateTeams"
+	npcCount := 0
 	tokens := make(map[string]bool, len(teams))
 	var networks []netip.Prefix
 	var owners []int
@@ -332,9 +344,21 @@ func validateTeams(teams []Team) error {
 			}
 			tokens[t.Token] = true
 		}
+		if t.Kind != "" && t.Kind != TeamKindPlayer && t.Kind != TeamKindNPC {
+			return fmt.Errorf("%s - teams[%d].kind must be player or npc", location, i)
+		}
+		if t.Kind == TeamKindNPC {
+			npcCount++
+			if npcCount > 1 {
+				return fmt.Errorf("%s - configure at most one npc team", location)
+			}
+		}
 		if !ValidLogoPath(t.LogoPath) {
 			return fmt.Errorf("%s - teams[%d].logo_path must be a safe path or HTTP(S) URL", location, i)
 		}
+	}
+	if npcCount == len(teams) && npcCount > 0 {
+		return fmt.Errorf("%s - configure at least one player team", location)
 	}
 	return nil
 }
