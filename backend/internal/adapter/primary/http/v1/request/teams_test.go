@@ -14,7 +14,9 @@ func TestCreateTeamKindDefaultsToPlayer(t *testing.T) {
 		t.Fatalf("default team kind = %q, want %q", team.Kind, domain.TeamKindPlayer)
 	}
 
-	team = CreateTeam(&api.AdminTeamCreate{Kind: api.NewOptTeamKind(api.TeamKindNpc)})
+	team = CreateTeam(&api.AdminTeamCreate{
+		Kind: api.NewOptTeamKind(api.TeamKindNpc),
+	})
 	if team.Kind != domain.TeamKindNPC {
 		t.Fatalf("explicit team kind = %q, want %q", team.Kind, domain.TeamKindNPC)
 	}
@@ -27,7 +29,9 @@ func TestUpdateTeamKindOmissionIsPreserved(t *testing.T) {
 		t.Fatalf("omitted update kind = %q, want preservation sentinel", team.Kind)
 	}
 
-	team = UpdateTeam(&api.AdminTeamUpdate{Kind: api.NewOptTeamKind(api.TeamKindNpc)}, id)
+	team = UpdateTeam(&api.AdminTeamUpdate{
+		Kind: api.NewOptTeamKind(api.TeamKindNpc),
+	}, id)
 	if team.Kind != domain.TeamKindNPC {
 		t.Fatalf("explicit update kind = %q, want %q", team.Kind, domain.TeamKindNPC)
 	}

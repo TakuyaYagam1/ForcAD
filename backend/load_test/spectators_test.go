@@ -40,6 +40,7 @@ func TestReadTargetCyclesClientBuckets(t *testing.T) {
 }
 
 func assertReadTargetCyclesClientBuckets(t *testing.T) {
+	t.Helper()
 	targeter := readTarget("http://127.0.0.1:8080", "/api/client/status/")
 	for _, expected := range []string{"client-0", "client-1", "client-0"} {
 		var target vegeta.Target

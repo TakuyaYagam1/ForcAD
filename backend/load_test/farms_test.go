@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -274,7 +273,9 @@ func (f *farm) validate(result *vegeta.Result) error {
 }
 
 func (f *farm) record(team int, id, message string) error {
-	return f.recordFlag(team, storedFlag{ID: id}, message)
+	return f.recordFlag(team, storedFlag{
+		ID: id,
+	}, message)
 }
 
 func (f *farm) recordFlag(team int, flag storedFlag, message string) error {
@@ -363,7 +364,10 @@ func readTarget(origin, path string) vegeta.Targeter {
 
 func TestFarmRecordsNPCWithoutScore(t *testing.T) {
 	f := newFarm("http://127.0.0.1", &catalog{})
-	flag := storedFlag{ID: "npc-flag", NPC: true}
+	flag := storedFlag{
+		ID:  "npc-flag",
+		NPC: true,
+	}
 	if err := f.recordFlag(1, flag, "[npc] Flag accepted (NPC test). No points awarded."); err != nil {
 		t.Fatal(err)
 	}

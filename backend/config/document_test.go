@@ -70,7 +70,6 @@ func TestDocumentTeamKindDefaultsAndValidation(t *testing.T) {
 		t.Fatal("accepted a game with no player team")
 	}
 
-
 	invalid := strings.Replace(example, "name: Example", "name: Example\n    kind: observer", 1)
 	if _, err := DecodeDocument(strings.NewReader(invalid)); err == nil {
 		t.Fatal("accepted an invalid team kind")
