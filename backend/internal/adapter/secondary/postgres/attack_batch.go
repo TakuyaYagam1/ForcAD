@@ -66,20 +66,7 @@ func newAttackBatch(submission domain.FlagSubmission, state submissionState, row
 
 func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) error {
 	const location = "postgres.attackBatch.lockTasks"
-	wanted := make(map[teamTaskKey]bool)
-	for _, flag := range b.flags {
-		if flag.err != nil {
-			continue
-		}
-		if flag.npc() {
-			if b.state.game.VolgaAttacksMode {
-				wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
-			}
-			continue
-		}
-		wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
-		wanted[teamTaskKey{flag.row.TeamID, flag.row.TaskID}] = true
-	}
+	wanted := b.taskLocks()
 	if len(wanted) == 0 {
 		return nil
 	}
@@ -104,20 +91,37 @@ func (b *attackBatch) lockTasks(ctx context.Context, queries *sqlc.Queries) erro
 			continue
 		}
 		attacker := b.scores[teamTaskKey{b.submission.TeamID, flag.row.TaskID}]
+		if b.state.game.VolgaAttacksMode && (attacker == nil || attacker.status != domain.TaskStatusUp) {
+			flag.err = domain.ErrServiceDown
+			continue
+		}
 		if flag.npc() {
-			if b.state.game.VolgaAttacksMode && (attacker == nil || attacker.status != domain.TaskStatusUp) {
-				flag.err = domain.ErrServiceDown
-			}
 			continue
 		}
 		victim := b.scores[teamTaskKey{flag.row.TeamID, flag.row.TaskID}]
-		if b.state.game.VolgaAttacksMode && (attacker == nil || attacker.status != domain.TaskStatusUp) {
-			flag.err = domain.ErrServiceDown
-		} else if attacker == nil || victim == nil {
+		if attacker == nil || victim == nil {
 			return fmt.Errorf("%s - find team task: %w", location, domain.ErrTeamTaskMissing)
 		}
 	}
 	return nil
+}
+
+func (b *attackBatch) taskLocks() map[teamTaskKey]bool {
+	wanted := make(map[teamTaskKey]bool)
+	for _, flag := range b.flags {
+		if flag.err != nil {
+			continue
+		}
+		if flag.npc() {
+			if b.state.game.VolgaAttacksMode {
+				wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
+			}
+			continue
+		}
+		wanted[teamTaskKey{b.submission.TeamID, flag.row.TaskID}] = true
+		wanted[teamTaskKey{flag.row.TeamID, flag.row.TaskID}] = true
+	}
+	return wanted
 }
 
 func (b *attackBatch) apply(ctx context.Context, queries *sqlc.Queries) ([]domain.SubmissionResult, error) {

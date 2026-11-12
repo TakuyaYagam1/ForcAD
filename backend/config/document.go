@@ -338,29 +338,38 @@ func validateTeams(teams []Team) error {
 			networks = append(networks, prefix)
 			owners = append(owners, i)
 		}
-		if t.Token != "" {
-			if !tokenPattern.MatchString(t.Token) || tokens[t.Token] {
-				return fmt.Errorf("%s - teams[%d].token must be unique and contain 16 lowercase hex characters", location, i)
-			}
-			tokens[t.Token] = true
+		npc, err := validateTeamDetails(t, i, tokens)
+		if err != nil {
+			return err
 		}
-		if t.Kind != "" && t.Kind != TeamKindPlayer && t.Kind != TeamKindNPC {
-			return fmt.Errorf("%s - teams[%d].kind must be player or npc", location, i)
-		}
-		if t.Kind == TeamKindNPC {
+		if npc {
 			npcCount++
 			if npcCount > 1 {
 				return fmt.Errorf("%s - configure at most one npc team", location)
 			}
-		}
-		if !ValidLogoPath(t.LogoPath) {
-			return fmt.Errorf("%s - teams[%d].logo_path must be a safe path or HTTP(S) URL", location, i)
 		}
 	}
 	if npcCount == len(teams) && npcCount > 0 {
 		return fmt.Errorf("%s - configure at least one player team", location)
 	}
 	return nil
+}
+
+func validateTeamDetails(t Team, index int, tokens map[string]bool) (bool, error) {
+	const location = "config.validateTeamDetails"
+	if t.Token != "" {
+		if !tokenPattern.MatchString(t.Token) || tokens[t.Token] {
+			return false, fmt.Errorf("%s - teams[%d].token must be unique and contain 16 lowercase hex characters", location, index)
+		}
+		tokens[t.Token] = true
+	}
+	if t.Kind != "" && t.Kind != TeamKindPlayer && t.Kind != TeamKindNPC {
+		return false, fmt.Errorf("%s - teams[%d].kind must be player or npc", location, index)
+	}
+	if !ValidLogoPath(t.LogoPath) {
+		return false, fmt.Errorf("%s - teams[%d].logo_path must be a safe path or HTTP(S) URL", location, index)
+	}
+	return t.Kind == TeamKindNPC, nil
 }
 
 func (t Task) validate(index int) error {

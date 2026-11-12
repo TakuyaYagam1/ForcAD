@@ -179,10 +179,21 @@ func TestBuildSchedulerJobsIncludesNPC(t *testing.T) {
 		domain.JobActionClassic,
 		nil,
 		[]sqlc.ListGameTeamsRow{
-			{ID: playerID, Kind: domain.TeamKindPlayer, Active: true},
-			{ID: npcID, Kind: domain.TeamKindNPC, Active: true},
+			{
+				ID:     playerID,
+				Kind:   domain.TeamKindPlayer,
+				Active: true,
+			},
+			{
+				ID:     npcID,
+				Kind:   domain.TeamKindNPC,
+				Active: true,
+			},
 		},
-		[]sqlc.ListGameTasksRow{{ID: taskID, Active: true}},
+		[]sqlc.ListGameTasksRow{{
+			ID:     taskID,
+			Active: true,
+		}},
 	)
 	if err != nil {
 		t.Fatal(err)

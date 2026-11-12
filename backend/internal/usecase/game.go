@@ -350,13 +350,8 @@ func (g *Game) SaveTeam(ctx context.Context, team domain.Team, create bool) (dom
 		}
 		team.Token = hex.EncodeToString(token[:])
 	}
-	if create && team.Kind == "" {
-		team.Kind = domain.TeamKindPlayer
-	}
-	if team.Kind != "" && team.Kind != domain.TeamKindPlayer && team.Kind != domain.TeamKindNPC {
-		return domain.Team{}, fmt.Errorf("%s - invalid team kind: %w", location, &domain.ValidationError{
-			Message: "Team kind must be player or npc",
-		})
+	if err := normalizeTeamKind(&team, create); err != nil {
+		return domain.Team{}, fmt.Errorf("%s - invalid team kind: %w", location, err)
 	}
 	if team.Name == "" || len([]rune(team.Name)) > maxNameLength {
 		return domain.Team{}, fmt.Errorf("%s - invalid team name: %w", location, &domain.ValidationError{
@@ -389,6 +384,18 @@ func (g *Game) SaveTeam(ctx context.Context, team domain.Team, create bool) (dom
 	}
 	g.Changed()
 	return team, nil
+}
+
+func normalizeTeamKind(team *domain.Team, create bool) error {
+	if create && team.Kind == "" {
+		team.Kind = domain.TeamKindPlayer
+	}
+	if team.Kind != "" && team.Kind != domain.TeamKindPlayer && team.Kind != domain.TeamKindNPC {
+		return &domain.ValidationError{
+			Message: "Team kind must be player or npc",
+		}
+	}
+	return nil
 }
 
 func (g *Game) SaveTask(ctx context.Context, task domain.Task, create bool) (domain.Task, error) {

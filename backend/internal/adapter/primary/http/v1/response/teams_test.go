@@ -8,7 +8,9 @@ import (
 )
 
 func TestTeamResponsesExposeKind(t *testing.T) {
-	team := domain.Team{Kind: domain.TeamKindNPC}
+	team := domain.Team{
+		Kind: domain.TeamKindNPC,
+	}
 	if got := PublicTeam(team.Public()).Kind; got != api.TeamKindNpc {
 		t.Fatalf("public team kind = %q, want %q", got, api.TeamKindNpc)
 	}
