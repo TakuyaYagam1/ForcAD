@@ -47,6 +47,14 @@ if (( run_load )); then
         ''|chrp-final) ;;
         *) echo 'LOAD_CAPACITY must be chrp-final or empty.' >&2; exit 2 ;;
     esac
+    case "${LOAD_CLIENT_BUCKETS:-0}" in
+        0|1) ;;
+        *) echo 'LOAD_CLIENT_BUCKETS must be 0 or 1.' >&2; exit 2 ;;
+    esac
+    case "${LOAD_CHECKER_AUDIT:-0}" in
+        0|1) ;;
+        *) echo 'LOAD_CHECKER_AUDIT must be 0 or 1.' >&2; exit 2 ;;
+    esac
     receiver_replicas="${LOAD_RECEIVER_REPLICAS:-2}"
     if [[ ! "$receiver_replicas" =~ ^([1-9]|1[0-6])$ ]]; then
         echo 'LOAD_RECEIVER_REPLICAS must be an integer between 1 and 16.' >&2
@@ -172,6 +180,9 @@ if (( run_load )); then
     if [[ "${LOAD_CAPACITY:-}" == chrp-final ]]; then
         compose+=(-f "$repo_root/backend/load_test/compose.final.yml")
     fi
+    if [[ "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
+        compose+=(-f "$repo_root/backend/load_test/compose.clients.yml")
+    fi
     image_tags+=("$image_prefix-fixture")
     if [[ "${LOAD_DATABASE_STORAGE:-disk}" == memory ]]; then
         compose+=(-f "$repo_root/backend/load_test/compose.memory.yml")
@@ -247,6 +258,18 @@ unset COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_FILE COMPOSE_PROJECT_NAME COMPO
     FORCAD_SERVICE_MEMORY_RESERVATION FORCAD_SERVICE_PIDS \
     FORCAD_RECEIVER_MEMORY FORCAD_RECEIVER_MEMORY_RESERVATION \
     FORCAD_WORKER_MEMORY FORCAD_WORKER_MEMORY_RESERVATION FORCAD_WORKER_PIDS PUBLIC_SCHEME \
+    FORCAD_API_MEMORY FORCAD_API_MEMORY_RESERVATION FORCAD_API_DATABASE_MIN_CONNS \
+    FORCAD_API_GOGC FORCAD_API_GOMEMLIMIT FORCAD_RECEIVER_GOMEMLIMIT FORCAD_WORKER_GOMEMLIMIT \
+    FORCAD_TICKER_MEMORY FORCAD_TICKER_MEMORY_RESERVATION \
+    FORCAD_REDIS_MEMORY FORCAD_REDIS_MEMORY_RESERVATION \
+    FORCAD_NATS_MEMORY FORCAD_NATS_MEMORY_RESERVATION \
+    FORCAD_PGBOUNCER_MEMORY FORCAD_PGBOUNCER_MEMORY_RESERVATION \
+    FORCAD_POSTGRES_MEMORY FORCAD_POSTGRES_MEMORY_RESERVATION \
+    FORCAD_POSTGRES_SHM_SIZE FORCAD_POSTGRES_SHARED_BUFFERS \
+    FORCAD_PROMETHEUS_MEMORY FORCAD_PROMETHEUS_MEMORY_RESERVATION \
+    FORCAD_PROMETHEUS_RETENTION_TIME FORCAD_PROMETHEUS_RETENTION_SIZE \
+    FORCAD_PROMETHEUS_QUERY_CONCURRENCY FORCAD_PROMETHEUS_QUERY_SAMPLES \
+    FORCAD_GRAFANA_MEMORY FORCAD_GRAFANA_MEMORY_RESERVATION \
     FORCAD_API_REPLICAS FORCAD_RECEIVER_REPLICAS FORCAD_WORKER_REPLICAS FORCAD_TICKER_REPLICAS \
     VITE_BRAND_NAME VITE_BRAND_LOGO VITE_BRAND_PRIMARY VITE_BRAND_ACCENT \
     FORCAD_POSTGRES_IMAGE NATS_URL NATS_USER NATS_PASSWORD NATS_STREAM NATS_SUBJECT \
@@ -260,6 +283,8 @@ if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == chrp-final ]]; then
         [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
         unset "$key"
     done < "$compose_env"
+fi
+if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == chrp-final || "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
     install -d -m 0755 "$test_root/deployment/nginx"
     python3 - "$repo_root" "$test_root" <<'PY'
 from pathlib import Path
@@ -269,7 +294,7 @@ repo, target = map(Path, sys.argv[1:])
 config = (repo / 'deployment/nginx/http.conf.template').read_text()
 original = 'limit_req_zone $binary_remote_addr zone=api_per_ip:10m rate=150r/s;'
 if config.count(original) != 1:
-    raise SystemExit('Expected one production REST limiter; inspect the final test adapter')
+    raise SystemExit('Expected one production REST limiter; inspect the load test adapter')
 # The isolated, loopback-only generator represents individual clients. Keep
 # the same per-client rate, burst and rejection code as production.
 replacement = '''map $http_x_forcad_load_client $load_client_key {
@@ -294,11 +319,18 @@ install -d -m 0700 "$test_root/deployment/docker" "$test_root/config" \
 install -m 0600 "$repo_root/deployment/docker/compose.yml" "$test_root/deployment/docker/compose.yml"
 if (( run_load && windows_host )) && [[ "${LOAD_BROKER_PREFLIGHT:-0}" == 1 ]]; then
     # Docker Desktop's bridge addresses are not reachable from native Windows.
-    # Only this isolated stack gets temporary, loopback-only broker ports.
-    cat > "$test_root/deployment/docker/compose.broker-preflight.yml" <<'YAML'
+    # Keep the published endpoint stable when the reconnect test restarts NATS.
+    nats_preflight_port="$(python3 - <<'PY'
+import socket
+with socket.socket() as listener:
+    listener.bind(('127.0.0.1', 0))
+    print(listener.getsockname()[1])
+PY
+)"
+    cat > "$test_root/deployment/docker/compose.broker-preflight.yml" <<YAML
 services:
   nats:
-    ports: !override ["127.0.0.1::4222", "127.0.0.1::8222"]
+    ports: !override ["127.0.0.1:${nats_preflight_port}:4222"]
 YAML
     compose+=(-f "$test_root/deployment/docker/compose.broker-preflight.yml")
 fi

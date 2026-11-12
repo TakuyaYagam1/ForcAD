@@ -42,6 +42,7 @@ export function createDemoTeams(): Team[] {
       name,
       ip: `10.10.${14 + index}.8`,
       token: `demo-team-${index + 1}`,
+      kind: "player",
       logo_path: "",
       highlighted: index === 3,
       active: true,

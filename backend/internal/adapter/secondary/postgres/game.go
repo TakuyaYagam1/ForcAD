@@ -120,6 +120,7 @@ func readTeams(ctx context.Context, q *sqlc.Queries, active bool) ([]domain.Team
 			Name:        r.Name,
 			IP:          r.Ip,
 			Token:       r.Token,
+			Kind:        r.Kind,
 			Highlighted: r.Highlighted,
 			Active:      r.Active,
 			LogoPath:    r.LogoPath,
@@ -336,6 +337,7 @@ func (g *GameStore) CreateTeam(ctx context.Context, team domain.Team) (domain.Te
 			Highlighted: new(team.Highlighted),
 			Active:      new(team.Active),
 			LogoPath:    new(team.LogoPath),
+			Kind:        teamKindOrPlayer(team.Kind),
 		})
 		if err != nil {
 			return fmt.Errorf("%s - insert game team: %w", location, err)
@@ -355,7 +357,7 @@ func (g *GameStore) CreateTeam(ctx context.Context, team domain.Team) (domain.Te
 func (g *GameStore) UpdateTeam(ctx context.Context, team domain.Team) (domain.Team, error) {
 	const location = "postgres.GameStore.UpdateTeam"
 	err := g.transaction(ctx, func(q *sqlc.Queries) error {
-		n, err := q.ReplaceGameTeam(ctx, sqlc.ReplaceGameTeamParams{
+		kind, err := q.ReplaceGameTeam(ctx, sqlc.ReplaceGameTeamParams{
 			ID:          team.ID,
 			Name:        team.Name,
 			Ip:          team.IP,
@@ -363,19 +365,28 @@ func (g *GameStore) UpdateTeam(ctx context.Context, team domain.Team) (domain.Te
 			Highlighted: new(team.Highlighted),
 			Active:      new(team.Active),
 			LogoPath:    new(team.LogoPath),
+			Kind:        team.Kind,
 		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("%s - replace game team: %w", location, domain.ErrNotFound)
+		}
 		if err != nil {
 			return fmt.Errorf("%s - replace game team: %w", location, err)
 		}
-		if n == 0 {
-			return fmt.Errorf("%s - replace game team: %w", location, domain.ErrNotFound)
-		}
+		team.Kind = kind
 		return nil
 	})
 	if err != nil {
 		return team, fmt.Errorf("%s - commit team update: %w", location, err)
 	}
 	return team, nil
+}
+
+func teamKindOrPlayer(kind string) string {
+	if kind == "" {
+		return domain.TeamKindPlayer
+	}
+	return kind
 }
 
 func (g *GameStore) DeactivateTeam(ctx context.Context, id uuid.UUID) error {

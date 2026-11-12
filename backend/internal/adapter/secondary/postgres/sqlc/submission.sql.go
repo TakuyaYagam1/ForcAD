@@ -229,10 +229,11 @@ func (q *Queries) LockSubmissionTasks(ctx context.Context, arg LockSubmissionTas
 }
 
 const readSubmissionFlags = `-- name: ReadSubmissionFlags :many
-SELECT f.id, f.flag, f.team_id, f.task_id, f.round,
+SELECT f.id, f.flag, f.team_id, f.task_id, f.round, owner.kind,
        EXISTS (SELECT 1 FROM StolenFlags s
                WHERE s.flag_id = f.id AND s.attacker_id = $1) AS stolen
 FROM Flags f
+JOIN Teams AS owner ON owner.id = f.team_id
 WHERE f.flag = ANY($2::VARCHAR[])
 ORDER BY f.id
 `
@@ -248,6 +249,7 @@ type ReadSubmissionFlagsRow struct {
 	TeamID uuid.UUID `json:"team_id"`
 	TaskID uuid.UUID `json:"task_id"`
 	Round  int32     `json:"round"`
+	Kind   string    `json:"kind"`
 	Stolen bool      `json:"stolen"`
 }
 
@@ -266,6 +268,7 @@ func (q *Queries) ReadSubmissionFlags(ctx context.Context, arg ReadSubmissionFla
 			&i.TeamID,
 			&i.TaskID,
 			&i.Round,
+			&i.Kind,
 			&i.Stolen,
 		); err != nil {
 			return nil, err

@@ -43,6 +43,40 @@ func TestDocumentDefaultsAndTimezone(t *testing.T) {
 	}
 }
 
+func TestDocumentTeamKindDefaultsAndValidation(t *testing.T) {
+	document, err := DecodeDocument(strings.NewReader(example))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Teams[0].Kind != TeamKindPlayer {
+		t.Fatalf("default team kind = %q, want %q", document.Teams[0].Kind, TeamKindPlayer)
+	}
+
+	npcOnly := strings.Replace(example, "name: Example", "name: Example\n    kind: npc", 1)
+	npc := strings.Replace(npcOnly, "tasks:", "  - ip: 192.0.2.2\n    name: Second\ntasks:", 1)
+	document, err = DecodeDocument(strings.NewReader(npc))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Teams[0].Kind != TeamKindNPC {
+		t.Fatalf("explicit team kind = %q, want %q", document.Teams[0].Kind, TeamKindNPC)
+	}
+
+	twoNPCs := strings.Replace(npc, "name: Second", "name: Second\n    kind: npc", 1)
+	if _, err := DecodeDocument(strings.NewReader(twoNPCs)); err == nil {
+		t.Fatal("accepted more than one NPC team")
+	}
+	if _, err := DecodeDocument(strings.NewReader(npcOnly)); err == nil {
+		t.Fatal("accepted a game with no player team")
+	}
+
+
+	invalid := strings.Replace(example, "name: Example", "name: Example\n    kind: observer", 1)
+	if _, err := DecodeDocument(strings.NewReader(invalid)); err == nil {
+		t.Fatal("accepted an invalid team kind")
+	}
+}
+
 func TestDocumentExtraChecks(t *testing.T) {
 	for _, value := range []string{"0", "2", "8"} {
 		source := strings.Replace(example, "round_time: 60", "round_time: 60\n  extra_checks: "+value, 1)

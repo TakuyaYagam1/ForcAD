@@ -122,6 +122,7 @@ func initializeTeams(ctx context.Context, q *sqlc.Queries, teams []config.Team) 
 			Highlighted: new(team.Highlighted),
 			Active:      new(true),
 			LogoPath:    new(team.LogoPath),
+			Kind:        teamKindOrPlayer(team.Kind),
 		})
 		if err != nil {
 			return fmt.Errorf("%s - insert game team: %w", location, err)

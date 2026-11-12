@@ -9,6 +9,8 @@ The workload uses 20 teams, three fixture services, six REST routes, active
 Python checkers, and 20 WebSocket observers. Flag traffic sends 40 batches per
 second with 100 values per batch, including duplicates. The stack runs two
 receivers and two workers with eight checker slots each.
+When an NPC target is configured, its accepted flags are still persisted and
+reconciled, but they do not count toward player readiness or score/counter checks.
 
 Checker jobs use persistent NATS JetStream. `LOAD_BROKER_PREFLIGHT=1` verifies
 worker drain and recovery after restarting only the isolated stack's NATS
@@ -91,6 +93,17 @@ within 0.1%, including round-trip uncertainty, covering every attack (1 s tolera
 Linux clocks can drift together, so internal agreement alone is insufficient.
 The audit reports clock bounds, coverage and tick range; legacy or incomplete
 measurements remain explicit limitations. These checks do not change workload or SLOs.
+
+Set `LOAD_SPECTATORS` to choose the number of WebSocket observers independently
+of the team count. `LOAD_CHECKER_AUDIT=1` enables round and workflow auditing for
+any load profile; the `checker` profile and `LOAD_CAPACITY=chrp-final` always
+enable it.
+
+`LOAD_CLIENT_BUCKETS=1` enables a loopback-only test adapter that models separate
+client rate buckets using `X-Forcad-Load-Client`. The final capacity profile also
+enables this adapter. Production keeps the source-IP limiter; results with client
+buckets describe a different workload from requests sharing one source IP. Each
+bucket uses the production per-client rate, burst and rejection code.
 
 From the repository root:
 

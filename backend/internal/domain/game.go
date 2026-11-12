@@ -21,11 +21,17 @@ type GameConfig struct {
 	GameRunning      bool      `json:"game_running"`
 }
 
+const (
+	TeamKindPlayer = "player"
+	TeamKindNPC    = "npc"
+)
+
 type Team struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	IP          string    `json:"ip"`
 	Token       string    `json:"token"`
+	Kind        string    `json:"kind"`
 	Highlighted bool      `json:"highlighted"`
 	Active      bool      `json:"active"`
 	LogoPath    string    `json:"logo_path"`
@@ -35,16 +41,22 @@ type PublicTeam struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
 	IP          string    `json:"ip"`
+	Kind        string    `json:"kind"`
 	Highlighted bool      `json:"highlighted"`
 	Active      bool      `json:"active"`
 	LogoPath    string    `json:"logo_path"`
 }
 
 func (t Team) Public() PublicTeam {
+	kind := t.Kind
+	if kind == "" {
+		kind = TeamKindPlayer
+	}
 	return PublicTeam{
 		ID:          t.ID,
 		Name:        t.Name,
 		IP:          t.IP,
+		Kind:        kind,
 		Highlighted: t.Highlighted,
 		Active:      t.Active,
 		LogoPath:    t.LogoPath,

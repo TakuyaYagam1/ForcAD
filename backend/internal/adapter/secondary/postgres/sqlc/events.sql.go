@@ -39,10 +39,15 @@ func (q *Queries) InsertPublicAnnouncement(ctx context.Context, arg InsertPublic
 
 const listLatestPublicEvents = `-- name: ListLatestPublicEvents :many
 WITH recent_flags AS (
-    SELECT flag_id, attacker_id, submit_time, attacker_delta
-    FROM StolenFlags
-    WHERE submit_time IS NOT NULL
-    ORDER BY submit_time DESC, flag_id DESC, attacker_id DESC
+    SELECT stolen.flag_id, stolen.attacker_id, stolen.submit_time, stolen.attacker_delta
+    FROM StolenFlags AS stolen
+    JOIN Flags AS flag ON flag.id = stolen.flag_id
+    JOIN Teams AS attacker ON attacker.id = stolen.attacker_id
+    JOIN Teams AS victim ON victim.id = flag.team_id
+    WHERE stolen.submit_time IS NOT NULL
+      AND attacker.kind <> 'npc'
+      AND victim.kind <> 'npc'
+    ORDER BY stolen.submit_time DESC, stolen.flag_id DESC, stolen.attacker_id DESC
     LIMIT $1::INTEGER
 ), recent_announcements AS (
     SELECT id, title, markdown, author, created_at
@@ -111,13 +116,18 @@ func (q *Queries) ListLatestPublicEvents(ctx context.Context, pageSize int32) ([
 
 const listPublicEventsAfter = `-- name: ListPublicEventsAfter :many
 WITH recent_flags AS (
-    SELECT flag_id, attacker_id, submit_time, attacker_delta
-    FROM StolenFlags
-    WHERE submit_time IS NOT NULL
-      AND submit_time >= $2::TIMESTAMPTZ
-      AND (submit_time, ('flag_stolen:' || flag_id::TEXT || ':' || attacker_id::TEXT)) >
+    SELECT stolen.flag_id, stolen.attacker_id, stolen.submit_time, stolen.attacker_delta
+    FROM StolenFlags AS stolen
+    JOIN Flags AS flag ON flag.id = stolen.flag_id
+    JOIN Teams AS attacker ON attacker.id = stolen.attacker_id
+    JOIN Teams AS victim ON victim.id = flag.team_id
+    WHERE stolen.submit_time IS NOT NULL
+      AND attacker.kind <> 'npc'
+      AND victim.kind <> 'npc'
+      AND stolen.submit_time >= $2::TIMESTAMPTZ
+      AND (stolen.submit_time, ('flag_stolen:' || stolen.flag_id::TEXT || ':' || stolen.attacker_id::TEXT)) >
           ($2::TIMESTAMPTZ, $3::TEXT)
-    ORDER BY submit_time, flag_id, attacker_id
+    ORDER BY stolen.submit_time, stolen.flag_id, stolen.attacker_id
     LIMIT $1::INTEGER
 ), recent_announcements AS (
     SELECT id, title, markdown, author, created_at
@@ -207,10 +217,15 @@ func (q *Queries) ReadAnnouncementEventCursor(ctx context.Context, announcementI
 }
 
 const readFlagEventCursor = `-- name: ReadFlagEventCursor :one
-SELECT submit_time
-FROM StolenFlags
-WHERE flag_id = $1::UUID
-  AND attacker_id = $2::UUID
+SELECT stolen.submit_time
+FROM StolenFlags AS stolen
+JOIN Flags AS flag ON flag.id = stolen.flag_id
+JOIN Teams AS attacker ON attacker.id = stolen.attacker_id
+JOIN Teams AS victim ON victim.id = flag.team_id
+WHERE stolen.flag_id = $1::UUID
+  AND stolen.attacker_id = $2::UUID
+  AND attacker.kind <> 'npc'
+  AND victim.kind <> 'npc'
 `
 
 type ReadFlagEventCursorParams struct {

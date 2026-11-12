@@ -22,6 +22,7 @@ schemas:
     - name
     - ip
     - token
+    - kind
     - highlighted
     - active
     - logo_path
@@ -37,6 +38,8 @@ schemas:
       token:
         type: string
         pattern: "^[0-9a-f]{16}$"
+      kind:
+        "$ref": "#/schemas/TeamKind"
       highlighted:
         type: boolean
       active:
@@ -62,6 +65,9 @@ schemas:
       token:
         type: string
         description: Ignored by the server, which generates a fresh token.
+      kind:
+        "$ref": "#/schemas/TeamKind"
+        default: player
       highlighted:
         type: boolean
         default: false
@@ -91,6 +97,8 @@ schemas:
       token:
         type: string
         pattern: "^[0-9a-f]{16}$"
+      kind:
+        "$ref": "#/schemas/TeamKind"
       highlighted:
         type: boolean
         default: false

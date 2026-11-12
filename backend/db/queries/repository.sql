@@ -1,7 +1,7 @@
 -- name: ActiveTeamIDByToken :one
 SELECT id
 FROM Teams
-WHERE token = $1 AND active = TRUE;
+WHERE token = $1 AND active = TRUE AND kind = 'player';
 
 -- name: IsActiveTeamByID :one
 SELECT COALESCE(active, FALSE)::BOOLEAN AS active

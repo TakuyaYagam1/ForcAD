@@ -19,6 +19,7 @@ type flagsState struct {
 	scope       string
 	rateAllowed bool
 	submitted   map[string]bool
+	npc         map[string]bool
 	storageErr  error
 }
 
@@ -55,6 +56,7 @@ func (s *flagsState) SubmitBatch(_ context.Context, submission domain.FlagSubmis
 			continue
 		}
 		s.submitted[value] = true
+		results[i].NPC = s.npc[value]
 		results[i].Attack = domain.AttackResult{
 			AttackerID:    submission.TeamID,
 			AttackerDelta: 2.5,
@@ -76,6 +78,7 @@ func newTestFlags() (*Flags, *flagsState) {
 		},
 		rateAllowed: true,
 		submitted:   map[string]bool{},
+		npc:         map[string]bool{},
 	}
 	service := NewFlags(state, state, state, state, state, slog.New(slog.DiscardHandler), 200, 400)
 	return service, state
@@ -103,6 +106,30 @@ func TestBatchChargesEveryFlagAndLooksUpOnce(t *testing.T) {
 	}
 	if results[99].Message != "["+flag+"] Flag already stolen" {
 		t.Fatal(results[99].Message)
+	}
+}
+
+func TestNPCFlagReturnsTestMessageWithoutPublishingEvent(t *testing.T) {
+	service, state := newTestFlags()
+	npc := strings.Repeat("N", 31) + "="
+	player := strings.Repeat("P", 31) + "="
+	state.npc[npc] = true
+
+	results, err := service.Submit(t.Context(), "0123456789abcdef", []string{npc, player, npc})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if results[0].Message != "["+npc+"] Flag accepted (NPC test). No points awarded." || results[0].Verdict != "npc" {
+		t.Fatalf("NPC response = %+v", results[0])
+	}
+	if results[1].Message != "["+player+"] Flag accepted! Earned 2.5 flag points!" || results[1].Verdict != "accepted" {
+		t.Fatalf("player response = %+v", results[1])
+	}
+	if results[2].Message != "["+npc+"] Flag already stolen" || results[2].Verdict != "duplicate" {
+		t.Fatalf("duplicate NPC response = %+v", results[2])
+	}
+	if len(service.events) != 1 {
+		t.Fatalf("queued events = %d, want only the player attack", len(service.events))
 	}
 }
 

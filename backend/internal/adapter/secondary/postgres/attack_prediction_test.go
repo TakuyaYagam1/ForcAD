@@ -92,6 +92,52 @@ func TestPredictChangesPreservesInputOrderAndOriginalScores(t *testing.T) {
 	}
 }
 
+func TestPredictionRejectsNPCAndFallbackSkipsNPCScoring(t *testing.T) {
+	b := predictionFixture()
+	npc := b.flags["first"]
+	npc.row.TeamID = uuid.NewV7()
+	npc.row.Kind = domain.TeamKindNPC
+
+	if _, ok := b.predictChanges(); ok {
+		t.Fatal("prediction fast path accepted a batch containing an NPC flag")
+	}
+	for _, score := range b.scores {
+		if score.stolen != 0 || score.lost != 0 {
+			t.Fatal("rejected prediction mutated counters")
+		}
+	}
+
+	inserted := map[uuid.UUID]bool{
+		npc.row.ID:               true,
+		b.flags["second"].row.ID: true,
+	}
+	results, err := b.scoreResults(inserted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !results[0].NPC || results[0].Err != nil {
+		t.Fatalf("NPC result = %+v, want successful NPC acceptance", results[0])
+	}
+	if results[1].NPC || results[1].Err != nil {
+		t.Fatalf("player result = %+v, want ordinary acceptance", results[1])
+	}
+	if !errors.Is(results[2].Err, domain.ErrFlagAlreadyStolen) {
+		t.Fatalf("repeated NPC result = %+v, want duplicate", results[2])
+	}
+	changes, err := b.changeParams(results)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(changes.TeamIds) != 2 ||
+		!reflect.DeepEqual(changes.FlagIds, []uuid.UUID{b.flags["second"].row.ID}) ||
+		len(changes.Deltas) != 1 {
+		t.Fatalf("score changes = %+v, want only the player attack", changes)
+	}
+	if _, exists := b.scores[teamTaskKey{npc.row.TeamID, npc.row.TaskID}]; exists {
+		t.Fatal("fallback created a score row for the NPC")
+	}
+}
+
 func TestPartialPredictionRecomputesOnlyActualInsert(t *testing.T) {
 	b := predictionFixture()
 	prediction, ok := b.predictChanges()

@@ -45,8 +45,9 @@ type checkerReport struct {
 }
 
 // This fixture uses classic mode with no extra checks: one durable job per
-// team/task/round. TeamTasksLog contains the prior cell state, not that job's
-// result; DispatchRuns.completed only means publication has finished.
+// active team/task/round, including NPC test targets. TeamTasksLog contains the
+// prior cell state, not that job's result; DispatchRuns.completed only means
+// publication has finished.
 const checkerAuditSQL = `WITH
 runs AS (SELECT * FROM DispatchRuns WHERE is_round),
 j AS (SELECT job.*, run.round_start FROM CheckerJobs job JOIN runs run ON run.id=job.run_id),
@@ -140,7 +141,9 @@ func (r *checkerReport) completedRounds() int {
 }
 
 func (r *checkerReport) validate() error {
-	if r.RoundSeconds <= 0 || r.ExpectedCells != teamCount*3 || r.ExpectedPuts < r.ExpectedCells || len(r.Rounds) == 0 {
+	// ExpectedCells comes from the active team and task counts in checkerAuditSQL.
+	// Keep the configured player workload as the floor while auditing every NPC cell.
+	if r.RoundSeconds <= 0 || r.ExpectedCells < teamCount*3 || r.ExpectedPuts < r.ExpectedCells || len(r.Rounds) == 0 {
 		return fmt.Errorf("load.checkerAudit - missing or unexpected fixture dimensions")
 	}
 	if r.BadJobs+r.BadActions+r.ActionTimeouts+r.ExpiredJobs+r.OverdueJobs+r.PastRoundOpen != 0 {

@@ -15,8 +15,9 @@ dns_servers = ["1.1.1.1", "8.8.8.8"]
 [network]
 router_vpn = "10.183.1.0/30"
 forcad = "10.183.2.0/24"
-# Up to 5 members use /29 per team. For 6-7 use /28 and a /23 pool for 28 teams;
-# move admin_vpn outside that pool, for example to 10.183.202.0/24.
+# Up to 5 members use /29 per player team; 6-7 use /28. For 28 player teams,
+# use a /23 pool and move admin_vpn outside it, for example to 10.183.202.0/24.
+# NPC entries do not consume participant VPN blocks.
 participant_vpn = "10.183.200.0/24"
 admin_vpn = "10.183.201.0/24"
 # Teams get consecutive /24 subnets starting here, in the listed team order.
@@ -56,6 +57,8 @@ install_path = "/opt/forcad"
 
 # These entries are the teams created in ForcAD. Their order determines team
 # numbers and their address/VLAN allocation from the network section.
+# Optional kind is "player" by default; use "npc" for at most one test target.
+# NPC targets do not receive participant VPN identities.
 # Set logo = "" when a team has no logo.
 [teams]
 members_per_team = 5
@@ -70,6 +73,12 @@ highlighted = false
 name = "pod egidoy"
 # Logo path relative to public/teams/.
 logo = "egida.png"
+highlighted = true
+
+[[teams.entries]]
+name = "NPC"
+logo = ""
+kind = "npc"
 highlighted = true
 
 # Branding assets are relative to public/brand/. public_host is the address

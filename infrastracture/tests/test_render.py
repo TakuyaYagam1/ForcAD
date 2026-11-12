@@ -67,6 +67,105 @@ class RenderTests(unittest.TestCase):
                 all(ipaddress.ip_address(ip) in subnet for ip in team["peers"])
             )
 
+    def test_npc_gets_target_network_without_participant_identity(self):
+        entries = [
+            {"name": f"team-{number:02}", "logo": None, "highlighted": False}
+            for number in range(1, 19)
+        ]
+        entries.append(
+            {
+                "name": "npc-test",
+                "logo": None,
+                "highlighted": False,
+                "kind": "npc",
+            }
+        )
+        self.config["teams"]["entries"] = entries
+
+        inventory = render.teams(self.config)
+        npc = inventory[-1]
+        self.assertEqual(npc["id"], 19)
+        self.assertEqual(npc["kind"], "npc")
+        self.assertEqual(npc["vlan"], 119)
+        self.assertEqual(npc["network"], "10.183.119.0/24")
+        self.assertEqual(npc["vulnbox"], "10.183.119.2")
+        self.assertIsNone(npc["vpn_cidr"])
+        self.assertEqual(npc["peers"], [])
+        self.assertEqual(
+            [team["vpn_cidr"] for team in inventory[:-1]],
+            [f"10.183.200.{offset}/29" for offset in range(0, 18 * 8, 8)],
+        )
+
+        files = render.render(self.config)
+        self.assertIn("    kind: npc\n", files["forcad/config.yml"])
+        self.assertIn("    ip: 10.183.119.2\n", files["forcad/config.yml"])
+        self.assertNotIn("10.183.119.0/24", files["forcad/config.yml"])
+        self.assertIn("10.183.119.2", files["router/network.json"])
+        rendered_inventory = json.loads(files["teams.json"])
+        self.assertNotIn("kind", rendered_inventory[0])
+        self.assertEqual(rendered_inventory[-1]["kind"], "npc")
+        self.assertIn("10.183.119.2", files["router/common.nft"])
+        self.assertIn(
+            "oifname \"ens21.119\" ip daddr 10.183.119.2 "
+            "ip saddr { $forcad_ip, $attack_net, $admin_net } snat to 10.183.119.1",
+            files["router/common.nft"],
+        )
+        self.assertNotIn("ip saddr None", files["router/common.nft"])
+        self.assertNotIn(
+            "ct original ip daddr 10.183.119.2 meta l4proto tcp",
+            files["router/common.nft"],
+        )
+        self.assertNotIn("ip daddr None", files["vpn/firewall.nft"])
+
+    def test_team_kind_defaults_to_player_and_rejects_invalid_or_multiple_npcs(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        player_only = example.replace(
+            '[[teams.entries]]\nname = "NPC"\nlogo = ""\n'
+            'kind = "npc"\nhighlighted = true\n\n',
+            "",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(player_only)
+            config = render.load_config(path)
+            self.assertEqual(
+                [entry["kind"] for entry in config["teams"]["entries"]],
+                ["player", "player"],
+            )
+            self.assertNotIn("kind:", render.forcad_config(config))
+
+            first_npc = player_only.replace(
+                'name = "danosito\'s ai farm"',
+                'name = "danosito\'s ai farm"\nkind = "npc"',
+            )
+            path.write_text(
+                first_npc.replace(
+                    'name = "pod egidoy"',
+                    'name = "pod egidoy"\nkind = "npc"',
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "at most one NPC"):
+                render.load_config(path)
+
+            path.write_text(
+                first_npc.replace(
+                    '[[teams.entries]]\nname = "pod egidoy"\n'
+                    "# Logo path relative to public/teams/.\n"
+                    'logo = "egida.png"\nhighlighted = true\n\n',
+                    "",
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "at least one player team"):
+                render.load_config(path)
+
+            path.write_text(
+                player_only.replace(
+                    "highlighted = false", 'highlighted = false\nkind = "bot"', 1
+                )
+            )
+            with self.assertRaisesRegex(ValueError, "kind must be player or npc"):
+                render.load_config(path)
+
     def test_rejects_invalid_and_injectable_config(self):
         example = (ROOT / "settings.example.toml").read_text()
         bad_inputs = [
@@ -126,20 +225,17 @@ class RenderTests(unittest.TestCase):
                 example.replace("members_per_team = 5", "members_per_team = 7")
                 .replace(
                     'participant_vpn = "10.183.200.0/24"',
-                    'participant_vpn = "10.183.200.0/23"',
-                )
-                .replace(
-                    'admin_vpn = "10.183.201.0/24"', 'admin_vpn = "10.183.202.0/24"'
+                    'participant_vpn = "10.183.200.0/27"',
                 )
             )
             config = render.load_config(path)
-        config["teams"]["entries"] = [
-            {"name": f"team-{number:02}", "logo": "", "highlighted": False}
-            for number in range(1, 29)
+        player_entries = [
+            entry for entry in config["teams"]["entries"] if entry["kind"] == "player"
         ]
-        inventory = render.teams(config)
+        inventory = [team for team in render.teams(config) if team["kind"] == "player"]
         peers = [peer for team in inventory for peer in team["peers"]]
-        self.assertEqual(len(set(peers)), 196)
+        self.assertEqual(len(inventory), len(player_entries))
+        self.assertEqual(len(set(peers)), len(player_entries) * 7)
         self.assertNotIn("10.183.200.1", peers)
         for team in inventory:
             network = ipaddress.ip_network(team["vpn_cidr"])
@@ -148,8 +244,8 @@ class RenderTests(unittest.TestCase):
             self.assertTrue(
                 all(ipaddress.ip_address(peer) in network for peer in team["peers"])
             )
-        config["network"]["participant_vpn"] = "10.183.200.0/24"
-        with self.assertRaisesRegex(ValueError, "one /28 per team"):
+        config["network"]["participant_vpn"] = "10.183.200.0/29"
+        with self.assertRaisesRegex(ValueError, "one /28 per player team"):
             render.network_layout(config)
 
     def test_extra_checks_are_optional_and_rendered(self):
@@ -592,7 +688,8 @@ class RenderTests(unittest.TestCase):
             config = render.load_config(ROOT / "settings.example.toml")
             self.assertEqual(
                 len(participants),
-                len(config["teams"]["entries"]) * config["teams"]["members_per_team"],
+                sum(entry["kind"] == "player" for entry in config["teams"]["entries"])
+                * config["teams"]["members_per_team"],
             )
             self.assertEqual(len(admins), config["admins"])
             with tarfile.open(output / "vpn.tar.gz", "r:gz") as bundle_archive:

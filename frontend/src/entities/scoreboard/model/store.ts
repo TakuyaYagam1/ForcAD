@@ -41,6 +41,7 @@ interface ScoreboardState {
   roundTime: number | null;
   roundProgress: number | null;
   teams: ScoreboardTeam[] | null;
+  npcTeams: ScoreboardTeam[];
   tasks: ParticipantTask[] | null;
   teamTasks: TeamTask[] | null;
   error: ScoreboardError;
@@ -74,6 +75,7 @@ export const useScoreboardStore = create<ScoreboardState>()(
       roundTime: null,
       roundProgress: null,
       teams: null,
+      npcTeams: [],
       tasks: null,
       teamTasks: null,
       error: null,
@@ -145,19 +147,25 @@ export const useScoreboardStore = create<ScoreboardState>()(
         })
       },
       handleInitScoreboardMessage: ({ state, teams, tasks, config, runtime }) => {
-        const activeTeams = teams.filter((t) => {
-          return t.active !== false
+        const activeTeams = teams.filter((team) => {
+          return team.active !== false
+        });
+        const playerTeams = activeTeams.filter((team) => {
+          return team.kind !== "npc"
         });
         const activeTasks = [...tasks].sort((a, b) => {
           return compareUuid(a.id, b.id)
         });
         const teamTasks = getActiveTeamTasks(
           state?.team_tasks ?? [],
-          activeTeams,
+          playerTeams,
           activeTasks,
         );
         set({
-          teams: recalculateTeamScores(activeTeams, teamTasks),
+          teams: recalculateTeamScores(playerTeams, teamTasks),
+          npcTeams: activeTeams.filter((team) => {
+            return team.kind === "npc"
+          }),
           tasks: activeTasks,
           teamTasks,
           round: finiteNumber(state?.round),

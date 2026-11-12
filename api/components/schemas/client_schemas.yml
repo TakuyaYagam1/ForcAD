@@ -1,4 +1,9 @@
 schemas:
+  TeamKind:
+    type: string
+    enum:
+    - player
+    - npc
   ParticipantTeam:
     type: object
     additionalProperties: false
@@ -6,6 +11,7 @@ schemas:
     - id
     - name
     - ip
+    - kind
     - highlighted
     - active
     - logo_path
@@ -16,6 +22,8 @@ schemas:
         type: string
       ip:
         type: string
+      kind:
+        "$ref": "#/schemas/TeamKind"
       highlighted:
         type: boolean
       active:

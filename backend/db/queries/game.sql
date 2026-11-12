@@ -19,7 +19,8 @@ JOIN GameSession AS session ON session.id = game.id
 WHERE game.id = 1;
 
 -- name: ListGameTeams :many
-SELECT id, name, ip, token, COALESCE(highlighted,FALSE)::BOOLEAN AS highlighted,
+SELECT id, name, ip, token, COALESCE(kind,'player')::TEXT AS kind,
+       COALESCE(highlighted,FALSE)::BOOLEAN AS highlighted,
        COALESCE(active,FALSE)::BOOLEAN AS active, COALESCE(logo_path,'')::TEXT AS logo_path
 FROM Teams WHERE NOT sqlc.arg(active_only)::BOOLEAN OR active ORDER BY id;
 
@@ -85,10 +86,19 @@ WHERE (cell->>'team_id')::UUID = sqlc.arg(team_id)::UUID
 ORDER BY snapshots.round DESC, (cell->>'task_id')::UUID;
 
 -- name: InsertGameTeam :one
-INSERT INTO Teams(name,ip,token,highlighted,active,logo_path) VALUES($1,$2,$3,$4,$5,$6) RETURNING id;
+INSERT INTO Teams(name,ip,token,highlighted,active,logo_path,kind)
+VALUES(sqlc.arg(name),sqlc.arg(ip),sqlc.arg(token),sqlc.arg(highlighted),
+       sqlc.arg(active),sqlc.arg(logo_path),sqlc.arg(kind))
+RETURNING id;
 
--- name: ReplaceGameTeam :execrows
-UPDATE Teams SET name=$2,ip=$3,token=$4,highlighted=$5,active=$6,logo_path=$7 WHERE id=$1;
+-- name: ReplaceGameTeam :one
+UPDATE Teams
+SET name=sqlc.arg(name),ip=sqlc.arg(ip),token=sqlc.arg(token),
+    highlighted=sqlc.arg(highlighted),active=sqlc.arg(active),
+    logo_path=sqlc.arg(logo_path),
+    kind=COALESCE(NULLIF(sqlc.arg(kind)::TEXT,''),kind)
+WHERE id=sqlc.arg(id)
+RETURNING kind;
 
 -- name: DisableGameTeam :execrows
 UPDATE Teams SET active=FALSE WHERE id=$1;

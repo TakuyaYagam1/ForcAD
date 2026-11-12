@@ -48,6 +48,8 @@ func openDeployment() (*deployment, error) {
 	}
 	if os.Getenv("LOAD_CAPACITY") == "chrp-final" {
 		d.compose = append(d.compose, "-f", filepath.Join(repo, "backend/load_test/compose.final.yml"))
+	} else if clientBucketsEnabled() {
+		d.compose = append(d.compose, "-f", filepath.Join(repo, "backend/load_test/compose.clients.yml"))
 	}
 	if os.Getenv("LOAD_MONITORING") == "1" {
 		d.compose = append(d.compose, "-f", filepath.Join(root, "deployment/docker/compose.monitoring.yml"), "--profile", "monitoring")

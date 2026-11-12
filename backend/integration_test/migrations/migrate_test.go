@@ -26,6 +26,7 @@ func TestMigrateFreshSchema(t *testing.T) {
 	var uuidColumns, uuidDefaults int
 	var actionNullable, snapshotIndex, historyIndex, checkerIndex, feedIndex bool
 	var deltaColumn, configSingleton, integerSession, scheduleHistoryText bool
+	var teamKindColumn, teamKindConstraint, singleNPCIndex bool
 	err := fixture.conn.QueryRow(fixture.ctx, `
 		SELECT (SELECT max(version_id)::INTEGER FROM goose_db_version WHERE is_applied),
 		       (SELECT count(*) FROM pg_class
@@ -78,11 +79,21 @@ func TestMigrateFreshSchema(t *testing.T) {
 	                        AND pg_get_constraintdef(oid) LIKE '%id = 1%')),
 	       (SELECT data_type = 'integer' FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND table_name = 'gamesession' AND column_name = 'id'),
+	       (SELECT data_type = 'text' AND is_nullable = 'NO' AND column_default = '''player''::text'
+	        FROM information_schema.columns
+	        WHERE table_schema = current_schema() AND table_name = 'teams' AND column_name = 'kind'),
+	       EXISTS (SELECT 1 FROM pg_constraint
+	               WHERE conrelid = 'teams'::regclass AND conname = 'teams_kind_check'
+	                 AND pg_get_constraintdef(oid) LIKE '%kind = ANY%player%npc%'),
+	       EXISTS (SELECT 1 FROM pg_index
+	               WHERE indexrelid = to_regclass('teams_single_npc') AND indisunique
+	                 AND pg_get_expr(indpred, indrelid) LIKE '%kind = ''npc''%'),
 	       (SELECT data_type = 'text' FROM information_schema.columns
 	        WHERE table_schema = current_schema() AND table_name = 'schedulehistory' AND column_name = 'id')`).Scan(
 		&version, &tables, &sessions, &snapshots, &dispatchColumns, &uuidColumns, &uuidDefaults,
 		&actionNullable, &snapshotIndex, &historyIndex, &checkerIndex, &feedIndex, &deltaColumn,
-		&configSingleton, &integerSession, &scheduleHistoryText,
+		&configSingleton, &integerSession, &teamKindColumn, &teamKindConstraint, &singleNPCIndex,
+		&scheduleHistoryText,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -90,11 +101,12 @@ func TestMigrateFreshSchema(t *testing.T) {
 	if version != 1 || tables != 14 || sessions != 1 || snapshots != 0 || dispatchColumns != 3 ||
 		uuidColumns != 21 || uuidDefaults != 8 || !actionNullable || !snapshotIndex || !historyIndex ||
 		!checkerIndex || !feedIndex || !deltaColumn ||
-		!configSingleton || !integerSession || !scheduleHistoryText {
-		t.Fatalf("fresh schema: version=%d tables=%d sessions=%d snapshots=%d dispatch_columns=%d uuid_columns=%d uuid_defaults=%d action_nullable=%t snapshot_index=%t history_index=%t checker_index=%t feed_index=%t delta_column=%t config_singleton=%t integer_session=%t schedule_history_text=%t",
+		!configSingleton || !integerSession || !teamKindColumn || !teamKindConstraint ||
+		!singleNPCIndex || !scheduleHistoryText {
+		t.Fatalf("fresh schema: version=%d tables=%d sessions=%d snapshots=%d dispatch_columns=%d uuid_columns=%d uuid_defaults=%d action_nullable=%t snapshot_index=%t history_index=%t checker_index=%t feed_index=%t delta_column=%t config_singleton=%t integer_session=%t team_kind_column=%t team_kind_constraint=%t single_npc_index=%t schedule_history_text=%t",
 			version, tables, sessions, snapshots, dispatchColumns, uuidColumns, uuidDefaults, actionNullable,
 			snapshotIndex, historyIndex, checkerIndex, feedIndex, deltaColumn,
-			configSingleton, integerSession, scheduleHistoryText)
+			configSingleton, integerSession, teamKindColumn, teamKindConstraint, singleNPCIndex, scheduleHistoryText)
 	}
 }
 
@@ -306,6 +318,16 @@ func migrationSchemaState(t *testing.T, fixture *migrationFixture) string {
 		        WHERE table_schema = current_schema()
 		          AND table_name = 'stolenflags' AND column_name = 'attacker_delta'
 		    ),
+		    'team_kind', EXISTS (
+		        SELECT 1 FROM information_schema.columns
+		        WHERE table_schema = current_schema()
+		          AND table_name = 'teams' AND column_name = 'kind'
+		    ),
+		    'team_kind_constraint', EXISTS (
+		        SELECT 1 FROM pg_constraint
+		        WHERE conrelid = 'teams'::regclass AND conname = 'teams_kind_check'
+		    ),
+		    'single_npc_index', to_regclass('teams_single_npc') IS NOT NULL,
 		    'feed_index', to_regclass('idx_stolenflags_public_feed') IS NOT NULL
 		)::TEXT`).Scan(&result); err != nil {
 		t.Fatal(err)

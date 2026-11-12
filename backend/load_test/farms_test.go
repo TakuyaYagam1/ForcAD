@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	vegeta "github.com/tsenart/vegeta/v12/lib"
@@ -19,6 +20,7 @@ type storedFlag struct {
 	ID    string `json:"id"`
 	Value string `json:"value"`
 	Owner int    `json:"owner"`
+	NPC   bool   `json:"npc"`
 }
 
 type catalog struct {
@@ -91,7 +93,7 @@ func (c *catalog) snapshot() *catalogIndex {
 
 func (c *catalog) refresh(ctx context.Context, d *deployment) error {
 	data, err := d.query(ctx, `SELECT COALESCE(json_agg(f), '[]') FROM (
-SELECT f.id, f.flag AS value, split_part(t.ip,'.',4)::integer AS owner
+SELECT f.id, f.flag AS value, split_part(t.ip,'.',4)::integer AS owner, t.kind='npc' AS npc
 FROM Flags f JOIN Teams t ON t.id=f.team_id
 WHERE f.round >= (SELECT greatest(1,real_round-2) FROM GameConfig)
 ORDER BY f.round DESC,f.id) f`)
@@ -115,11 +117,17 @@ func (c *catalog) wait(ctx context.Context, d *deployment) error {
 		if err := c.refresh(ctx, d); err != nil {
 			return err
 		}
-		count, err := d.number(ctx, `SELECT count(*) FROM TeamTasks WHERE status=101`)
+		count, err := d.number(ctx, `SELECT count(*) FROM TeamTasks tt JOIN Teams t ON t.id=tt.team_id WHERE tt.status=101 AND t.kind<>'npc'`)
 		if err != nil {
 			return err
 		}
-		if count == int64(teamCount*3) && len(c.snapshot().flags) >= teamCount*3 {
+		playerFlags := 0
+		for _, flag := range c.snapshot().flags {
+			if !flag.NPC {
+				playerFlags++
+			}
+		}
+		if count == int64(teamCount*3) && playerFlags >= teamCount*3 {
 			return nil
 		}
 		select {
@@ -257,7 +265,7 @@ func (f *farm) validate(result *vegeta.Result) error {
 				return fmt.Errorf("%s - own flag verdict changed", location)
 			}
 		default:
-			if err := f.record(request.team, flag.ID, row.Message); err != nil {
+			if err := f.recordFlag(request.team, flag, row.Message); err != nil {
 				return err
 			}
 		}
@@ -266,7 +274,14 @@ func (f *farm) validate(result *vegeta.Result) error {
 }
 
 func (f *farm) record(team int, id, message string) error {
+	return f.recordFlag(team, storedFlag{ID: id}, message)
+}
+
+func (f *farm) recordFlag(team int, flag storedFlag, message string) error {
 	accepted := strings.Contains(message, "Flag accepted!")
+	if flag.NPC {
+		accepted = strings.Contains(message, "Flag accepted (NPC test). No points awarded.")
+	}
 	if !accepted && !strings.Contains(message, "Flag already stolen") {
 		_, verdict, found := strings.Cut(message, "] ")
 		if !found {
@@ -277,7 +292,7 @@ func (f *farm) record(team int, id, message string) error {
 	if f.expected[team] == nil {
 		f.expected[team] = make(map[string]bool)
 	}
-	f.expected[team][id] = true
+	f.expected[team][flag.ID] = true
 	if accepted {
 		f.accepted++
 	}
@@ -308,7 +323,7 @@ func (f *farm) reconcile(ctx context.Context, d *deployment, before int64) error
 			discrepancies = append(discrepancies, fmt.Errorf("%s - team %d missing %d valid submissions", location, team, int64(len(ids))-count))
 		}
 	}
-	bad, err := d.number(ctx, `SELECT count(*) FROM TeamTasks t WHERE t.stolen<>(SELECT count(*) FROM StolenFlags s JOIN Flags f ON f.id=s.flag_id WHERE s.attacker_id=t.team_id AND f.task_id=t.task_id) OR t.lost<>(SELECT count(*) FROM StolenFlags s JOIN Flags f ON f.id=s.flag_id WHERE f.team_id=t.team_id AND f.task_id=t.task_id) OR t.score<0 OR t.score='NaN'::float8`)
+	bad, err := d.number(ctx, `SELECT count(*) FROM TeamTasks t WHERE t.stolen<>(SELECT count(*) FROM StolenFlags s JOIN Flags f ON f.id=s.flag_id JOIN Teams victim ON victim.id=f.team_id WHERE s.attacker_id=t.team_id AND f.task_id=t.task_id AND victim.kind<>'npc') OR t.lost<>(SELECT count(*) FROM StolenFlags s JOIN Flags f ON f.id=s.flag_id JOIN Teams victim ON victim.id=f.team_id WHERE f.team_id=t.team_id AND f.task_id=t.task_id AND victim.kind<>'npc') OR t.score<0 OR t.score='NaN'::float8`)
 	if err != nil {
 		return errors.Join(append(discrepancies, err)...)
 	}
@@ -332,7 +347,7 @@ func readTarget(origin, path string) vegeta.Targeter {
 			Method: http.MethodGet,
 			URL:    origin + selected,
 		}
-		if os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+		if clientBucketsEnabled() {
 			clients, err := spectatorCount()
 			if err != nil {
 				return err
@@ -343,5 +358,19 @@ func readTarget(origin, path string) vegeta.Targeter {
 		}
 		index++
 		return nil
+	}
+}
+
+func TestFarmRecordsNPCWithoutScore(t *testing.T) {
+	f := newFarm("http://127.0.0.1", &catalog{})
+	flag := storedFlag{ID: "npc-flag", NPC: true}
+	if err := f.recordFlag(1, flag, "[npc] Flag accepted (NPC test). No points awarded."); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.recordFlag(1, flag, "[npc] Flag accepted! Earned 2.5 flag points!"); err == nil {
+		t.Fatal("NPC flag accepted a scoring verdict")
+	}
+	if f.accepted != 1 || len(f.expected[1]) != 1 {
+		t.Fatalf("NPC persistence accounting changed: accepted=%d expected=%d", f.accepted, len(f.expected[1]))
 	}
 }

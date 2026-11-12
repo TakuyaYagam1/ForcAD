@@ -27,7 +27,19 @@ func TestSpectatorCount(t *testing.T) {
 
 func TestFinalReadTargetCyclesClientBuckets(t *testing.T) {
 	t.Setenv("LOAD_CAPACITY", "chrp-final")
+	t.Setenv("LOAD_CLIENT_BUCKETS", "0")
 	t.Setenv("LOAD_SPECTATORS", "2")
+	assertReadTargetCyclesClientBuckets(t)
+}
+
+func TestReadTargetCyclesClientBuckets(t *testing.T) {
+	t.Setenv("LOAD_CAPACITY", "")
+	t.Setenv("LOAD_CLIENT_BUCKETS", "1")
+	t.Setenv("LOAD_SPECTATORS", "2")
+	assertReadTargetCyclesClientBuckets(t)
+}
+
+func assertReadTargetCyclesClientBuckets(t *testing.T) {
 	targeter := readTarget("http://127.0.0.1:8080", "/api/client/status/")
 	for _, expected := range []string{"client-0", "client-1", "client-0"} {
 		var target vegeta.Target
@@ -42,11 +54,38 @@ func TestFinalReadTargetCyclesClientBuckets(t *testing.T) {
 
 func TestOrdinaryReadTargetDoesNotSetTestClient(t *testing.T) {
 	t.Setenv("LOAD_CAPACITY", "")
+	t.Setenv("LOAD_CLIENT_BUCKETS", "0")
 	var target vegeta.Target
 	if err := readTarget("http://127.0.0.1:8080", "")(&target); err != nil {
 		t.Fatal(err)
 	}
 	if target.Header.Get("X-Forcad-Load-Client") != "" {
-		t.Fatal("test client header leaked outside the final fixture")
+		t.Fatal("test client header leaked outside the client bucket fixture")
+	}
+}
+
+func TestCheckerAuditEnabled(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		profile  string
+		audit    string
+		capacity string
+		want     bool
+	}{
+		{"checker", "checker", "", "", true},
+		{"checker explicit off", "checker", "0", "", true},
+		{"ordinary", "load", "", "", false},
+		{"ordinary explicit off", "load", "0", "", false},
+		{"explicit audit", "load", "1", "", true},
+		{"soak audit", "soak", "1", "", true},
+		{"final capacity", "load", "0", "chrp-final", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("LOAD_CHECKER_AUDIT", tc.audit)
+			t.Setenv("LOAD_CAPACITY", tc.capacity)
+			if got := checkerAuditEnabled(tc.profile); got != tc.want {
+				t.Fatalf("checkerAuditEnabled(%q) = %v, want %v", tc.profile, got, tc.want)
+			}
+		})
 	}
 }

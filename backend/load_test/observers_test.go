@@ -80,7 +80,7 @@ func observe(
 	o.wait.Go(func() {
 		o.sample(ctx, d, directory)
 	})
-	if os.Getenv("LOAD_PROFILE") == "checker" || os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+	if checkerAuditEnabled(os.Getenv("LOAD_PROFILE")) {
 		o.wait.Go(func() {
 			o.sampleCheckerLifecycle(ctx, d, directory)
 		})

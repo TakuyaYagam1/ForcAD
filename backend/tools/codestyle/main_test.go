@@ -75,6 +75,26 @@ func TestDiscoveryIsSortedDeduplicatedAndSkipsCaches(t *testing.T) {
 	}
 }
 
+func TestDiscoverySkipsDockerVolumes(t *testing.T) {
+	directory := t.TempDir()
+	for _, name := range []string{"main.go", "docker_volumes/postgres/data/ignored.go"} {
+		path := filepath.Join(directory, name)
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("package p"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	files, err := goFiles([]string{directory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{filepath.Join(directory, "main.go")}
+	if len(files) != len(want) || files[0] != want[0] {
+		t.Fatalf("unexpected discovered files: got %v, want %v", files, want)
+	}
+}
 func TestDiscoveryDoesNotFollowSymlinks(t *testing.T) {
 	directory := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "outside.go")

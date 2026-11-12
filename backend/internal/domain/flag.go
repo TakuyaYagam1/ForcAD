@@ -70,9 +70,11 @@ type FlagSubmission struct {
 }
 
 // SubmissionResult is returned in input order, only after the batch commits.
+// NPC marks accepted test flags that persist without scoring or public events.
 // Err contains a flag verdict; infrastructure errors fail the whole batch.
 type SubmissionResult struct {
 	Attack AttackResult
+	NPC    bool
 	Err    error
 }
 

@@ -18,9 +18,15 @@ type attackPrediction struct {
 func (b *attackBatch) predictChanges() (*attackPrediction, bool) {
 	inserted := make(map[uuid.UUID]bool, len(b.flags))
 	for _, flag := range b.flags {
-		if flag.err == nil {
-			inserted[flag.row.ID] = true
+		if flag.err != nil {
+			continue
 		}
+		if flag.npc() {
+			// The fast statement couples inserted flags to score/event changes.
+			// NPC flags are insert-only, so use the transactional fallback.
+			return nil, false
+		}
+		inserted[flag.row.ID] = true
 	}
 	if len(inserted) == 0 {
 		return nil, false

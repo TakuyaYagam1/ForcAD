@@ -138,11 +138,12 @@ function getParticipantTeams() {
     .filter((team) => {
       return team.active
     })
-    .map(({ id, name, ip, highlighted, active, logo_path }) => {
+    .map(({ id, name, ip, kind, highlighted, active, logo_path }) => {
       return {
         id: id!,
         name,
         ip,
+        kind,
         highlighted,
         active,
         logo_path,

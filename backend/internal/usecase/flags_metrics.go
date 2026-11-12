@@ -29,17 +29,19 @@ func (f *Flags) observeSubmission(
 	}
 }
 
-func flagVerdict(err error) string {
+func flagVerdict(result domain.SubmissionResult) string {
 	switch {
-	case err == nil:
+	case result.Err == nil && result.NPC:
+		return "npc"
+	case result.Err == nil:
 		return "accepted"
-	case errors.Is(err, domain.ErrFlagAlreadyStolen):
+	case errors.Is(result.Err, domain.ErrFlagAlreadyStolen):
 		return "duplicate"
-	case errors.Is(err, domain.ErrOwnFlag):
+	case errors.Is(result.Err, domain.ErrOwnFlag):
 		return "own"
-	case errors.Is(err, domain.ErrFlagTooOld):
+	case errors.Is(result.Err, domain.ErrFlagTooOld):
 		return "expired"
-	case errors.Is(err, domain.ErrServiceDown):
+	case errors.Is(result.Err, domain.ErrServiceDown):
 		return "service_down"
 	default:
 		return "invalid"

@@ -27,6 +27,7 @@ export const Scoreboard = zod.object({
     "id": zod.uuid(),
     "name": zod.string(),
     "ip": zod.string(),
+    "kind": zod.enum(['player', 'npc']),
     "highlighted": zod.boolean(),
     "active": zod.boolean(),
     "logo_path": zod.string()

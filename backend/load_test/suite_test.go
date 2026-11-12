@@ -103,7 +103,7 @@ func runSuite(
 	}
 	report.CheckerResultsBefore = &before
 	defer func() {
-		if report.Profile == "checker" || os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+		if checkerAuditEnabled(report.Profile) {
 			checker, auditErr := collectCheckerReport(ctx, d)
 			if auditErr == nil {
 				report.Checker = checker
@@ -206,7 +206,7 @@ func measure(
 		return err
 	}
 	completedBefore := 0
-	if report.Profile == "checker" || os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+	if checkerAuditEnabled(report.Profile) {
 		count, err := d.number(ctx, completedCheckerRoundsSQL)
 		if err != nil {
 			return err
@@ -257,7 +257,7 @@ func measure(
 	integrityErr := f.reconcile(ctx, d, before)
 	result.Committed = f.committed
 	checksAfter, progressErr := d.number(ctx, `SELECT count(*) FROM TeamTasksLog`)
-	if report.Profile == "checker" || os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+	if checkerAuditEnabled(report.Profile) {
 		checker, auditErr := collectCheckerReport(ctx, d)
 		if auditErr == nil {
 			report.Checker = checker

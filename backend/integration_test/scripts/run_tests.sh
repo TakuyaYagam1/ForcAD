@@ -23,13 +23,14 @@ cleanup() {
 trap cleanup EXIT
 # Docker assigns a new ephemeral published port on container restart. Reserve
 # an explicit test port so reconnect tests keep the same broker endpoint.
-export FORCAD_TEST_NATS_PORT="$(python3 - <<'PY'
+FORCAD_TEST_NATS_PORT="$(python3 - <<'PY'
 import socket
 with socket.socket() as listener:
     listener.bind(('127.0.0.1', 0))
     print(listener.getsockname()[1])
 PY
 )"
+export FORCAD_TEST_NATS_PORT
 "${compose[@]}" up -d --build --wait --wait-timeout 90
 
 postgres_port="$("${compose[@]}" port postgres 5432)"

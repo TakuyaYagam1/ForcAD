@@ -63,6 +63,12 @@ and return 503, never an invalid-flag verdict. Expiry uses the round at receipt
 of the decoded batch, before database waits. Redis charges a shared budget
 in flags per team across receiver replicas.
 
+An NPC target is a checker-scheduled team with a dedicated vulnbox and fresh
+flags on ordinary rounds. Its flags still enter the same per-attacker
+`StolenFlags` uniqueness path, but accepted NPC submissions skip team/task
+score and stolen/lost updates and do not emit public REST/WebSocket capture
+events. Public rankings omit the NPC; the teams page shows its IP separately.
+
 The ticker stores jobs and their publication state in PostgreSQL, then publishes
 job IDs to NATS JetStream with broker confirmation. Workers claim jobs with expiring
 ownership, execute [checker workflows](CHECKERS.md), and persist results before

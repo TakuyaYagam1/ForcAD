@@ -351,11 +351,16 @@ and start the services:
 Use a fresh PostgreSQL database for the first Go installation. The initial schema
 uses UUIDs for entity IDs. Databases from the Python platform or earlier integer-ID
 development builds are not upgraded. The single initial migration includes
-extra-CHECK scheduling, public checker logs and announcements. Older development
-schemas missing those tables, columns or the event index require a fresh schema;
-the initializer rejects them without resetting their data. Compatible databases
-retain their existing Goose ledger, including development versions 2-4; the initializer does not
-renumber or replay them. Those version numbers remain reserved for future
+extra-CHECK scheduling, public checker logs, announcements and the NPC team
+kind/index. Older development schemas missing those tables, columns or indexes
+require a fresh schema; the initializer rejects them without resetting their
+data. Folding NPC into the initial migration does not upgrade databases that
+already applied version 1; back up and migrate those separately before running
+the NPC-capable services.
+
+Compatible databases retain their existing Goose ledger, including development
+versions 2-4; the initializer does not renumber or replay them. Those version
+numbers remain reserved for future
 migrations, which must start above 4. The historical PUT-log cleanup is included
 in the consolidated initial migration and is a no-op on a fresh empty table;
 it is not rerun for databases that already applied version 1. Current workers

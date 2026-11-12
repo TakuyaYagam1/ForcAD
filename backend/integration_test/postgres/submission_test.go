@@ -63,6 +63,28 @@ func (f submissionFixture) flags(
 	return values
 }
 
+func (f *submissionFixture) addTeam(t *testing.T, name, kind string) int {
+	t.Helper()
+	id := uuid.NewV7()
+	index := len(f.teams)
+	if _, err := f.pool.Exec(t.Context(), `
+		INSERT INTO Teams (id, name, ip, token, kind)
+		VALUES ($1, $2, $3, $4, $5)`,
+		id, name, fmt.Sprintf("127.0.0.%d", index+1), fmt.Sprintf("%016x", index+1), kind,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(t.Context(), `
+		INSERT INTO TeamTasks (team_id, task_id, status, score)
+		VALUES ($1, $2, $3, 2500)`,
+		id, f.task, domain.TaskStatusUp,
+	); err != nil {
+		t.Fatal(err)
+	}
+	f.teams = append(f.teams, id)
+	return index
+}
+
 func (f submissionFixture) request(team int, values []string) domain.FlagSubmission {
 	return domain.FlagSubmission{
 		TeamID:     f.teams[team],
@@ -103,6 +125,82 @@ func TestBatchPreservesSequentialScoringAndVerdictOrder(t *testing.T) {
 	if score != attacker || stolen != 98 || lost != 98 || count != 98 {
 		t.Fatalf("score=%v expected=%v stolen=%d lost=%d records=%d", score, attacker, stolen, lost, count)
 	}
+}
+
+func TestNPCFlagsPersistOnceWithoutScoresOrCounters(t *testing.T) {
+	f := newSubmissionFixture(t)
+	if _, err := f.pool.Exec(t.Context(), `UPDATE Teams SET kind=$1 WHERE id=$2`, domain.TeamKindNPC, f.teams[1]); err != nil {
+		t.Fatal(err)
+	}
+	player := f.addTeam(t, "third", domain.TeamKindPlayer)
+	npcFlags := f.flags(t, 1, 1001, 2)
+	playerFlag := f.flags(t, player, 2001, 1)[0]
+
+	before := teamTaskSnapshot(t, f)
+	first, err := f.repo.SubmitBatch(t.Context(), f.request(0, npcFlags[:1]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first) != 1 || !first[0].NPC || first[0].Err != nil || first[0].Attack != (domain.AttackResult{}) {
+		t.Fatalf("first NPC result = %+v", first)
+	}
+	if after := teamTaskSnapshot(t, f); after != before {
+		t.Fatalf("NPC submission changed team scores or counters: before=%s after=%s", before, after)
+	}
+
+	duplicate, err := f.repo.SubmitBatch(t.Context(), f.request(0, npcFlags[:1]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(duplicate) != 1 || !errors.Is(duplicate[0].Err, domain.ErrFlagAlreadyStolen) || duplicate[0].NPC {
+		t.Fatalf("duplicate NPC result = %+v", duplicate)
+	}
+
+	mixed, err := f.repo.SubmitBatch(t.Context(), f.request(0, []string{npcFlags[1], playerFlag, npcFlags[1]}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mixed) != 3 || !mixed[0].NPC || mixed[0].Err != nil || mixed[1].NPC || mixed[1].Err != nil ||
+		!errors.Is(mixed[2].Err, domain.ErrFlagAlreadyStolen) {
+		t.Fatalf("mixed results = %+v", mixed)
+	}
+	var npcScore float64
+	var npcStolen, npcLost, attackerStolen, records int
+	if err := f.pool.QueryRow(t.Context(), `
+		SELECT npc.score, npc.stolen, npc.lost, attacker.stolen,
+		       (SELECT count(*) FROM StolenFlags)
+		FROM TeamTasks AS npc
+		JOIN TeamTasks AS attacker ON attacker.team_id=$1 AND attacker.task_id=npc.task_id
+		WHERE npc.team_id=$2 AND npc.task_id=$3`,
+		f.teams[0], f.teams[1], f.task,
+	).Scan(&npcScore, &npcStolen, &npcLost, &attackerStolen, &records); err != nil {
+		t.Fatal(err)
+	}
+	if npcScore != 2500 || npcStolen != 0 || npcLost != 0 || attackerStolen != 1 || records != 3 {
+		t.Fatalf("NPC/player accounting: npc=%v/%d/%d attacker_stolen=%d records=%d", npcScore, npcStolen, npcLost, attackerStolen, records)
+	}
+	beforeOther := teamTaskSnapshot(t, f)
+	other, err := f.repo.SubmitBatch(t.Context(), f.request(player, npcFlags[:1]))
+	if err != nil || len(other) != 1 || !other[0].NPC || other[0].Err != nil {
+		t.Fatalf("another attacker submitting same NPC flag: result=%+v err=%v", other, err)
+	}
+	if afterOther := teamTaskSnapshot(t, f); afterOther != beforeOther {
+		t.Fatalf("another attacker's NPC capture changed scores: before=%s after=%s", beforeOther, afterOther)
+	}
+}
+
+func teamTaskSnapshot(t *testing.T, f submissionFixture) string {
+	t.Helper()
+	var snapshot string
+	if err := f.pool.QueryRow(t.Context(), `
+		SELECT COALESCE(jsonb_agg(
+			jsonb_build_array(team_id, task_id, score, stolen, lost)
+			ORDER BY team_id, task_id
+		), '[]'::JSONB)::TEXT
+		FROM TeamTasks`).Scan(&snapshot); err != nil {
+		t.Fatal(err)
+	}
+	return snapshot
 }
 
 func TestReceivedBatchSurvivesRoundAdvanceAndExpiredRetry(t *testing.T) {

@@ -77,6 +77,9 @@ export function TeamsPage() {
   const teams = useScoreboardStore((state) => {
     return state.teams
   }) ?? [];
+  const npcTeams = useScoreboardStore((state) => {
+    return state.npcTeams
+  });
   const ranked = teams.map((team, index) => {
     return {
       team,
@@ -91,6 +94,29 @@ export function TeamsPage() {
     <AppShell>
       <div className="teams-page">
         <h1 className="sr-only">{t("teams.leaders")}</h1>
+        {npcTeams.length > 0 && (
+          <section className="teams-test-target" aria-label={t("teams.testTarget")}>
+            <div className="section-heading">
+              <h2>{t("teams.testTarget")}</h2>
+              <p>{t("teams.testTargetDescription")}</p>
+            </div>
+            <div className="teams-grid">
+              {npcTeams.map((team) => {
+                return (
+                  <article className="team-card" key={team.id}>
+                    <div className="team-card-top">
+                      <TeamAvatar name={team.name} src={team.logo_path} />
+                      <div>
+                        <h2>{team.name}</h2>
+                        <span className="team-ip">{team.ip}</span>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        )}
         {ranked.length ? (
           <>
             {leaders.length > 0 && (

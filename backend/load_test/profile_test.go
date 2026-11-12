@@ -17,6 +17,17 @@ const (
 
 var teamCount = defaultTeamCount
 
+func checkerAuditEnabled(profile string) bool {
+	return profile == "checker" ||
+		os.Getenv("LOAD_CAPACITY") == "chrp-final" ||
+		os.Getenv("LOAD_CHECKER_AUDIT") == "1"
+}
+
+func clientBucketsEnabled() bool {
+	return os.Getenv("LOAD_CAPACITY") == "chrp-final" ||
+		os.Getenv("LOAD_CLIENT_BUCKETS") == "1"
+}
+
 func readPacingSetting() (pacingPolicy, error) {
 	const location = "load.readPacingSetting"
 	switch raw := os.Getenv("LOAD_READ_PACING"); raw {

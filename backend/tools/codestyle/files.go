@@ -39,7 +39,7 @@ func collectGoFiles(path string, files map[string]bool) error {
 		}
 		if entry.IsDir() {
 			switch entry.Name() {
-			case ".git", ".cache", ".codex", ".agents", "node_modules", "vendor", "reports":
+			case ".git", ".cache", ".codex", ".agents", "docker_volumes", "node_modules", "vendor", "reports":
 				return filepath.SkipDir
 			default:
 				return nil

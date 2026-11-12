@@ -172,10 +172,10 @@ func (f *Flags) submitBatch(ctx context.Context, submission domain.FlagSubmissio
 			return nil, fmt.Errorf("%s - format verdict: %w", location, err)
 		}
 		results[indexes[i]].Message = "[" + valid[i] + "] " + message
-		results[indexes[i]].Verdict = flagVerdict(outcome.Err)
+		results[indexes[i]].Verdict = flagVerdict(outcome)
 	}
 	for _, outcome := range outcomes {
-		if outcome.Err == nil {
+		if outcome.Err == nil && !outcome.NPC {
 			select {
 			case f.events <- outcome.Attack:
 			default:
@@ -234,6 +234,9 @@ func submissionMessage(outcome domain.SubmissionResult) (string, error) {
 			return message, nil
 		}
 		return "", fmt.Errorf("%s - unexpected submission failure: %w", location, outcome.Err)
+	}
+	if outcome.NPC {
+		return "Flag accepted (NPC test). No points awarded.", nil
 	}
 	return fmt.Sprintf("Flag accepted! Earned %s flag points!", strconv.FormatFloat(outcome.Attack.AttackerDelta, 'f', -1, 64)), nil
 }

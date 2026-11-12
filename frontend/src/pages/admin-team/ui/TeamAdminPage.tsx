@@ -78,6 +78,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             name: "",
             ip: "",
             token: "",
+            kind: "player",
             logo_path: "",
             highlighted: false,
             active: true,

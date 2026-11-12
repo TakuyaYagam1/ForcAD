@@ -700,6 +700,7 @@ func buildSchedulerJobs(
 			Name:        teamRow.Name,
 			IP:          teamRow.Ip,
 			Token:       teamRow.Token,
+			Kind:        teamRow.Kind,
 			Highlighted: teamRow.Highlighted,
 			Active:      teamRow.Active,
 			LogoPath:    teamRow.LogoPath,

@@ -449,13 +449,14 @@ func (s *AdminTaskWriteAdditional) init() AdminTaskWriteAdditional {
 
 // Ref: #/components/schemas/AdminTeam
 type AdminTeam struct {
-	ID          UUID   `json:"id"`
-	Name        string `json:"name"`
-	IP          string `json:"ip"`
-	Token       string `json:"token"`
-	Highlighted bool   `json:"highlighted"`
-	Active      bool   `json:"active"`
-	LogoPath    string `json:"logo_path"`
+	ID          UUID     `json:"id"`
+	Name        string   `json:"name"`
+	IP          string   `json:"ip"`
+	Token       string   `json:"token"`
+	Kind        TeamKind `json:"kind"`
+	Highlighted bool     `json:"highlighted"`
+	Active      bool     `json:"active"`
+	LogoPath    string   `json:"logo_path"`
 }
 
 // GetID returns the value of ID.
@@ -476,6 +477,11 @@ func (s *AdminTeam) GetIP() string {
 // GetToken returns the value of Token.
 func (s *AdminTeam) GetToken() string {
 	return s.Token
+}
+
+// GetKind returns the value of Kind.
+func (s *AdminTeam) GetKind() TeamKind {
+	return s.Kind
 }
 
 // GetHighlighted returns the value of Highlighted.
@@ -513,6 +519,11 @@ func (s *AdminTeam) SetToken(val string) {
 	s.Token = val
 }
 
+// SetKind sets the value of Kind.
+func (s *AdminTeam) SetKind(val TeamKind) {
+	s.Kind = val
+}
+
 // SetHighlighted sets the value of Highlighted.
 func (s *AdminTeam) SetHighlighted(val bool) {
 	s.Highlighted = val
@@ -540,10 +551,11 @@ type AdminTeamCreate struct {
 	Name string `json:"name"`
 	IP   string `json:"ip"`
 	// Ignored by the server, which generates a fresh token.
-	Token           OptString `json:"token"`
-	Highlighted     OptBool   `json:"highlighted"`
-	Active          OptBool   `json:"active"`
-	LogoPath        OptString `json:"logo_path"`
+	Token           OptString   `json:"token"`
+	Kind            OptTeamKind `json:"kind"`
+	Highlighted     OptBool     `json:"highlighted"`
+	Active          OptBool     `json:"active"`
+	LogoPath        OptString   `json:"logo_path"`
 	AdditionalProps AdminTeamCreateAdditional
 }
 
@@ -560,6 +572,11 @@ func (s *AdminTeamCreate) GetIP() string {
 // GetToken returns the value of Token.
 func (s *AdminTeamCreate) GetToken() OptString {
 	return s.Token
+}
+
+// GetKind returns the value of Kind.
+func (s *AdminTeamCreate) GetKind() OptTeamKind {
+	return s.Kind
 }
 
 // GetHighlighted returns the value of Highlighted.
@@ -595,6 +612,11 @@ func (s *AdminTeamCreate) SetIP(val string) {
 // SetToken sets the value of Token.
 func (s *AdminTeamCreate) SetToken(val OptString) {
 	s.Token = val
+}
+
+// SetKind sets the value of Kind.
+func (s *AdminTeamCreate) SetKind(val OptTeamKind) {
+	s.Kind = val
 }
 
 // SetHighlighted sets the value of Highlighted.
@@ -810,12 +832,13 @@ func (s *AdminTeamTaskLogEntryAdditional) init() AdminTeamTaskLogEntryAdditional
 
 // Ref: #/components/schemas/AdminTeamUpdate
 type AdminTeamUpdate struct {
-	Name            string    `json:"name"`
-	IP              string    `json:"ip"`
-	Token           string    `json:"token"`
-	Highlighted     OptBool   `json:"highlighted"`
-	Active          OptBool   `json:"active"`
-	LogoPath        OptString `json:"logo_path"`
+	Name            string      `json:"name"`
+	IP              string      `json:"ip"`
+	Token           string      `json:"token"`
+	Kind            OptTeamKind `json:"kind"`
+	Highlighted     OptBool     `json:"highlighted"`
+	Active          OptBool     `json:"active"`
+	LogoPath        OptString   `json:"logo_path"`
 	AdditionalProps AdminTeamUpdateAdditional
 }
 
@@ -832,6 +855,11 @@ func (s *AdminTeamUpdate) GetIP() string {
 // GetToken returns the value of Token.
 func (s *AdminTeamUpdate) GetToken() string {
 	return s.Token
+}
+
+// GetKind returns the value of Kind.
+func (s *AdminTeamUpdate) GetKind() OptTeamKind {
+	return s.Kind
 }
 
 // GetHighlighted returns the value of Highlighted.
@@ -867,6 +895,11 @@ func (s *AdminTeamUpdate) SetIP(val string) {
 // SetToken sets the value of Token.
 func (s *AdminTeamUpdate) SetToken(val string) {
 	s.Token = val
+}
+
+// SetKind sets the value of Kind.
+func (s *AdminTeamUpdate) SetKind(val OptTeamKind) {
+	s.Kind = val
 }
 
 // SetHighlighted sets the value of Highlighted.
@@ -2812,6 +2845,54 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
+// NewOptTeamKind returns new OptTeamKind with value set to v.
+func NewOptTeamKind(v TeamKind) OptTeamKind {
+	return OptTeamKind{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTeamKind is optional TeamKind.
+type OptTeamKind struct {
+	Value TeamKind
+	Set   bool
+}
+
+// IsSet returns true if OptTeamKind was set.
+func (o OptTeamKind) IsSet() bool {
+	return o.Set
+}
+
+// Reset unsets value.
+func (o *OptTeamKind) Reset() {
+	var v TeamKind
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTeamKind) SetTo(v TeamKind) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTeamKind) Get() (v TeamKind, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTeamKind) Or(d TeamKind) TeamKind {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptUUID returns new OptUUID with value set to v.
 func NewOptUUID(v UUID) OptUUID {
 	return OptUUID{
@@ -2888,12 +2969,13 @@ func (s *ParticipantTask) SetName(val string) {
 
 // Ref: #/components/schemas/ParticipantTeam
 type ParticipantTeam struct {
-	ID          UUID   `json:"id"`
-	Name        string `json:"name"`
-	IP          string `json:"ip"`
-	Highlighted bool   `json:"highlighted"`
-	Active      bool   `json:"active"`
-	LogoPath    string `json:"logo_path"`
+	ID          UUID     `json:"id"`
+	Name        string   `json:"name"`
+	IP          string   `json:"ip"`
+	Kind        TeamKind `json:"kind"`
+	Highlighted bool     `json:"highlighted"`
+	Active      bool     `json:"active"`
+	LogoPath    string   `json:"logo_path"`
 }
 
 // GetID returns the value of ID.
@@ -2909,6 +2991,11 @@ func (s *ParticipantTeam) GetName() string {
 // GetIP returns the value of IP.
 func (s *ParticipantTeam) GetIP() string {
 	return s.IP
+}
+
+// GetKind returns the value of Kind.
+func (s *ParticipantTeam) GetKind() TeamKind {
+	return s.Kind
 }
 
 // GetHighlighted returns the value of Highlighted.
@@ -2939,6 +3026,11 @@ func (s *ParticipantTeam) SetName(val string) {
 // SetIP sets the value of IP.
 func (s *ParticipantTeam) SetIP(val string) {
 	s.IP = val
+}
+
+// SetKind sets the value of Kind.
+func (s *ParticipantTeam) SetKind(val TeamKind) {
+	s.Kind = val
 }
 
 // SetHighlighted sets the value of Highlighted.
@@ -3625,6 +3717,48 @@ func (*SubmitFlagsTooManyRequests) submitFlagsRes() {
 type SubmitFlagsUnsupportedMediaType ApiError
 
 func (*SubmitFlagsUnsupportedMediaType) submitFlagsRes() {
+}
+
+// Ref: #/components/schemas/TeamKind
+type TeamKind string
+
+const (
+	TeamKindPlayer TeamKind = "player"
+	TeamKindNpc    TeamKind = "npc"
+)
+
+// AllValues returns all TeamKind values.
+func (TeamKind) AllValues() []TeamKind {
+	return []TeamKind{
+		TeamKindPlayer,
+		TeamKindNpc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TeamKind) MarshalText() ([]byte, error) {
+	switch s {
+	case TeamKindPlayer:
+		return []byte(s), nil
+	case TeamKindNpc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TeamKind) UnmarshalText(data []byte) error {
+	switch TeamKind(data) {
+	case TeamKindPlayer:
+		*s = TeamKindPlayer
+		return nil
+	case TeamKindNpc:
+		*s = TeamKindNpc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
 }
 
 type TeamToken struct {
