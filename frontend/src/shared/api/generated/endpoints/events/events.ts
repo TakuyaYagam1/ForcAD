@@ -114,6 +114,7 @@ export type GetEventsHealthQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetEventsHealthQueryError = unknown
 
 
+/** @summary Check the event service. */
 export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHealth>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventsHealth>>, TError, TData>> & Pick<
@@ -128,6 +129,7 @@ export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHe
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the event service. */
 export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventsHealth>>, TError, TData>> & Pick<
@@ -142,6 +144,7 @@ export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHe
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the event service. */
 export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventsHealth>>, TError, TData>>,
@@ -150,10 +153,7 @@ export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHe
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Check the event service.
- */
-
+/** @summary Check the event service. */
 export function useGetEventsHealth<TData = Awaited<ReturnType<typeof getEventsHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEventsHealth>>, TError, TData>>,

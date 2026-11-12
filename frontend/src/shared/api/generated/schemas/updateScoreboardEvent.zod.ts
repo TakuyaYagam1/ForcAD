@@ -13,7 +13,7 @@ export const UpdateScoreboardEvent = zod.object({
     "data": zod.object({
       "round_start": zod.int(),
       "round": zod.int(),
-      "team_tasks": zod.array(zod.object({
+      "team_tasks": zod.array(zod.looseObject({
         "team_id": zod.uuid(),
         "task_id": zod.uuid(),
         "status": zod.int(),

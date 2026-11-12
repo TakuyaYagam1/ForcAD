@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod';
 
-export const ChangeAdminGameStateBody = zod.object({
+export const ChangeAdminGameStateBody = zod.looseObject({
   "generation": zod.int().optional(),
   "confirm": zod.boolean().optional()
 })

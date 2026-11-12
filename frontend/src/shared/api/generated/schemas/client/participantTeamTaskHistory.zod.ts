@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod';
 
-export const ParticipantTeamTaskHistory = zod.object({
+export const ParticipantTeamTaskHistory = zod.looseObject({
   "team_id": zod.uuid(),
   "task_id": zod.uuid(),
   "round": zod.int(),

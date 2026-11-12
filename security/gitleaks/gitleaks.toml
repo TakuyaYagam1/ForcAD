@@ -30,6 +30,7 @@ regexTarget = "secret"
 paths = [
     '''^backend/internal/(adapter/primary/http(/v1)?/router_test|worker/checker/worker(_integration)?_test|operator/setup_test|bootstrap/(maintenance|network)_test)\.go$''',
     '''^backend/integration_test/checker/worker_test\.go$''',
+    '''^backend/integration_test/migrations/rollback_test\.go$''',
 ]
 regexes = ['''^0123456789abcdef$''']
 

@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod';
 
-export const AdminTeamTaskLogEntry = zod.object({
+export const AdminTeamTaskLogEntry = zod.looseObject({
   "id": zod.uuid(),
   "round": zod.int(),
   "team_id": zod.uuid(),

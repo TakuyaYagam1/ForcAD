@@ -134,6 +134,7 @@ export type GetAdminTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof get
 export type GetAdminTeamsQueryError = ApiError
 
 
+/** @summary List all teams, including inactive teams. */
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
@@ -148,6 +149,7 @@ export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List all teams, including inactive teams. */
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>> & Pick<
@@ -162,6 +164,7 @@ export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List all teams, including inactive teams. */
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>,
@@ -170,10 +173,7 @@ export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary List all teams, including inactive teams.
- */
-
+/** @summary List all teams, including inactive teams. */
 export function useGetAdminTeams<TData = Awaited<ReturnType<typeof getAdminTeams>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeams>>, TError, TData>>,
@@ -278,6 +278,7 @@ export type CreateAdminTeamMutationVariables = {
 }
 
 /**
+ * The server generates the team token and ignores any supplied token value.
  * @summary Create a team.
  */
 export const useCreateAdminTeam = <TError = ApiError,
@@ -353,6 +354,7 @@ export type GetAdminTeamQueryResult = NonNullable<Awaited<ReturnType<typeof getA
 export type GetAdminTeamQueryError = ApiError
 
 
+/** @summary Get one team, including administration fields. */
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
  teamId: string, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
@@ -367,6 +369,7 @@ export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get one team, including administration fields. */
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
  teamId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>> & Pick<
@@ -381,6 +384,7 @@ export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get one team, including administration fields. */
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
  teamId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>,
@@ -389,10 +393,7 @@ export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get one team, including administration fields.
- */
-
+/** @summary Get one team, including administration fields. */
 export function useGetAdminTeam<TData = Awaited<ReturnType<typeof getAdminTeam>>, TError = ApiError>(
   teamId: string, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeam>>, TError, TData>>,
@@ -497,9 +498,7 @@ export type UpdateAdminTeamMutationVariables = {
   data: AdminTeamUpdate
 }
 
-/**
- * @summary Replace a team's editable fields.
- */
+/** @summary Replace a team's editable fields. */
 export const useUpdateAdminTeam = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTeam>>, TError,UpdateAdminTeamMutationVariables, TContext>,
@@ -587,9 +586,7 @@ export type DeleteAdminTeamMutationVariables = {
   teamId: string
 }
 
-/**
- * @summary Deactivate a team.
- */
+/** @summary Deactivate a team. */
 export const useDeleteAdminTeam = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTeam>>, TError,DeleteAdminTeamMutationVariables, TContext>,
@@ -662,6 +659,7 @@ export type GetAdminTasksQueryResult = NonNullable<Awaited<ReturnType<typeof get
 export type GetAdminTasksQueryError = ApiError
 
 
+/** @summary List all tasks, including inactive tasks. */
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
@@ -676,6 +674,7 @@ export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List all tasks, including inactive tasks. */
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>> & Pick<
@@ -690,6 +689,7 @@ export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List all tasks, including inactive tasks. */
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>,
@@ -698,10 +698,7 @@ export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary List all tasks, including inactive tasks.
- */
-
+/** @summary List all tasks, including inactive tasks. */
 export function useGetAdminTasks<TData = Awaited<ReturnType<typeof getAdminTasks>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTasks>>, TError, TData>>,
@@ -804,9 +801,7 @@ export type CreateAdminTaskMutationVariables = {
   data: AdminTaskWrite
 }
 
-/**
- * @summary Create a task.
- */
+/** @summary Create a task. */
 export const useCreateAdminTask = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminTask>>, TError,CreateAdminTaskMutationVariables, TContext>,
@@ -880,6 +875,7 @@ export type GetAdminTaskQueryResult = NonNullable<Awaited<ReturnType<typeof getA
 export type GetAdminTaskQueryError = ApiError
 
 
+/** @summary Get one task, including administration fields. */
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
  taskId: string, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
@@ -894,6 +890,7 @@ export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get one task, including administration fields. */
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
  taskId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>> & Pick<
@@ -908,6 +905,7 @@ export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get one task, including administration fields. */
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
  taskId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>,
@@ -916,10 +914,7 @@ export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get one task, including administration fields.
- */
-
+/** @summary Get one task, including administration fields. */
 export function useGetAdminTask<TData = Awaited<ReturnType<typeof getAdminTask>>, TError = ApiError>(
   taskId: string, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTask>>, TError, TData>>,
@@ -1024,9 +1019,7 @@ export type UpdateAdminTaskMutationVariables = {
   data: AdminTaskWrite
 }
 
-/**
- * @summary Replace a task's editable fields.
- */
+/** @summary Replace a task's editable fields. */
 export const useUpdateAdminTask = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminTask>>, TError,UpdateAdminTaskMutationVariables, TContext>,
@@ -1114,9 +1107,7 @@ export type DeleteAdminTaskMutationVariables = {
   taskId: string
 }
 
-/**
- * @summary Deactivate a task.
- */
+/** @summary Deactivate a task. */
 export const useDeleteAdminTask = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminTask>>, TError,DeleteAdminTaskMutationVariables, TContext>,
@@ -1190,6 +1181,7 @@ export type GetAdminTeamTaskHistoryQueryResult = NonNullable<Awaited<ReturnType<
 export type GetAdminTeamTaskHistoryQueryError = ApiError
 
 
+/** @summary Get checker history for a team and task pair. */
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
  params: GetAdminTeamTaskHistoryParams, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
@@ -1204,6 +1196,7 @@ export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof get
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get checker history for a team and task pair. */
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
  params: GetAdminTeamTaskHistoryParams, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>> & Pick<
@@ -1218,6 +1211,7 @@ export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof get
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get checker history for a team and task pair. */
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
  params: GetAdminTeamTaskHistoryParams, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>,
@@ -1226,10 +1220,7 @@ export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof get
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get checker history for a team and task pair.
- */
-
+/** @summary Get checker history for a team and task pair. */
 export function useGetAdminTeamTaskHistory<TData = Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError = ApiError>(
   params: GetAdminTeamTaskHistoryParams, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTaskHistory>>, TError, TData>>,
@@ -1328,6 +1319,7 @@ export type CreateAdminTeamTaskMutationError = ApiError
 
 
 /**
+ * The route is registered but has no create handler and returns 404.
  * @summary Reserved team task collection method.
  */
 export const useCreateAdminTeamTask = <TError = ApiError,
@@ -1404,6 +1396,10 @@ export type GetAdminTeamTaskQueryResult = NonNullable<Awaited<ReturnType<typeof 
 export type GetAdminTeamTaskQueryError = ApiError
 
 
+/**
+ * The route is registered but has no retrieve handler and returns 404.
+ * @summary Reserved team task detail method.
+ */
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
  teamtaskId: string, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
@@ -1418,6 +1414,10 @@ export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTe
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * The route is registered but has no retrieve handler and returns 404.
+ * @summary Reserved team task detail method.
+ */
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
  teamtaskId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>> & Pick<
@@ -1432,6 +1432,10 @@ export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTe
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * The route is registered but has no retrieve handler and returns 404.
+ * @summary Reserved team task detail method.
+ */
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
  teamtaskId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>,
@@ -1441,9 +1445,9 @@ export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTe
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
+ * The route is registered but has no retrieve handler and returns 404.
  * @summary Reserved team task detail method.
  */
-
 export function useGetAdminTeamTask<TData = Awaited<ReturnType<typeof getAdminTeamTask>>, TError = ApiError>(
   teamtaskId: string, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminTeamTask>>, TError, TData>>,
@@ -1544,6 +1548,7 @@ export type UpdateAdminTeamTaskMutationVariables = {
 }
 
 /**
+ * The route is registered but has no update handler and returns 404.
  * @summary Reserved team task detail method.
  */
 export const useUpdateAdminTeamTask = <TError = ApiError,
@@ -1635,6 +1640,7 @@ export type DeleteAdminTeamTaskMutationVariables = {
 }
 
 /**
+ * The route is registered but has no delete handler and returns 404.
  * @summary Reserved team task detail method.
  */
 export const useDeleteAdminTeamTask = <TError = ApiError,
@@ -1732,6 +1738,7 @@ export type ChangeAdminGameStateMutationVariables = {
 }
 
 /**
+ * start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
  * @summary Apply a game lifecycle action.
  */
 export const useChangeAdminGameState = <TError = ApiError,
@@ -1827,6 +1834,7 @@ export type AdminLoginMutationVariables = {
 }
 
 /**
+ * Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.
  * @summary Start an administrator session.
  */
 export const useAdminLogin = <TError = ApiError,
@@ -1902,6 +1910,10 @@ export type GetAdminSessionStatusQueryResult = NonNullable<Awaited<ReturnType<ty
 export type GetAdminSessionStatusQueryError = ApiError
 
 
+/**
+ * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
+ * @summary Check the current administrator session.
+ */
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
@@ -1916,6 +1928,10 @@ export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAd
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
+ * @summary Check the current administrator session.
+ */
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>> & Pick<
@@ -1930,6 +1946,10 @@ export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAd
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
+ * @summary Check the current administrator session.
+ */
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>,
@@ -1939,9 +1959,9 @@ export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAd
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
+ * Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control no-store.
  * @summary Check the current administrator session.
  */
-
 export function useGetAdminSessionStatus<TData = Awaited<ReturnType<typeof getAdminSessionStatus>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminSessionStatus>>, TError, TData>>,
@@ -2040,6 +2060,7 @@ export type AdminLogoutMutationError = ApiError
 
 
 /**
+ * Ends the authenticated session. Requires its X-CSRF-Token header.
  * @summary End the current administrator session.
  */
 export const useAdminLogout = <TError = ApiError,
@@ -2133,9 +2154,7 @@ export type CreateAdminEventMutationVariables = {
   data: AnnouncementCreate
 }
 
-/**
- * @summary Publish an organizer announcement.
- */
+/** @summary Publish an organizer announcement. */
 export const useCreateAdminEvent = <TError = ApiError,
     TContext = unknown>(options?: {
       mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminEvent>>, TError,CreateAdminEventMutationVariables, TContext>,
@@ -2208,6 +2227,7 @@ export type GetAdminHealthQueryResult = NonNullable<Awaited<ReturnType<typeof ge
 export type GetAdminHealthQueryError = unknown
 
 
+/** @summary Check the administration API service. */
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
@@ -2222,6 +2242,7 @@ export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHeal
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the administration API service. */
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>> & Pick<
@@ -2236,6 +2257,7 @@ export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHeal
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the administration API service. */
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>,
@@ -2244,10 +2266,7 @@ export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHeal
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Check the administration API service.
- */
-
+/** @summary Check the administration API service. */
 export function useGetAdminHealth<TData = Awaited<ReturnType<typeof getAdminHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminHealth>>, TError, TData>>,

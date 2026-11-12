@@ -7,7 +7,7 @@
  */
 import * as zod from 'zod';
 
-export const GameActionRequest = zod.object({
+export const GameActionRequest = zod.looseObject({
   "generation": zod.int().optional(),
   "confirm": zod.boolean().optional()
 })

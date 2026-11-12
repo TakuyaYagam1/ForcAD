@@ -9,7 +9,8 @@ RUN wget -O source.tar.gz https://www.pgbouncer.org/downloads/files/1.26.0/pgbou
     && make -j2 pgbouncer
 
 FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
-RUN apk add --no-cache libevent openssl c-ares postgresql18-client \
+RUN apk upgrade --no-cache \
+    && apk add --no-cache libevent openssl c-ares postgresql18-client \
     && addgroup -g 10001 pgbouncer \
     && adduser -D -H -u 10001 -G pgbouncer pgbouncer
 COPY --from=build /src/pgbouncer /usr/local/bin/pgbouncer

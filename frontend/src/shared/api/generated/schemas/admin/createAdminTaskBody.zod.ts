@@ -32,7 +32,7 @@ export const createAdminTaskBodyDefaultScoreMax = 2147483647;
 export const createAdminTaskBodyGetPeriodMax = 2147483647;
 
 export const createAdminTaskBodyActiveDefault = true;
-export const CreateAdminTaskBody = zod.object({
+export const CreateAdminTaskBody = zod.looseObject({
   "name": zod.string().min(1).max(createAdminTaskBodyNameMax),
   "checker": zod.string().min(1).max(createAdminTaskBodyCheckerMax),
   "gets": zod.int().min(createAdminTaskBodyGetsMin).max(createAdminTaskBodyGetsMax),

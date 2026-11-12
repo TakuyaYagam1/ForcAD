@@ -129,6 +129,7 @@ export type GetClientTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof ge
 export type GetClientTeamsQueryError = unknown
 
 
+/** @summary List teams visible to participants. */
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
@@ -143,6 +144,7 @@ export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTea
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List teams visible to participants. */
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>> & Pick<
@@ -157,6 +159,7 @@ export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTea
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List teams visible to participants. */
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>,
@@ -165,10 +168,7 @@ export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTea
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary List teams visible to participants.
- */
-
+/** @summary List teams visible to participants. */
 export function useGetClientTeams<TData = Awaited<ReturnType<typeof getClientTeams>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeams>>, TError, TData>>,
@@ -252,6 +252,7 @@ export type GetClientTasksQueryResult = NonNullable<Awaited<ReturnType<typeof ge
 export type GetClientTasksQueryError = unknown
 
 
+/** @summary List tasks visible to participants. */
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
@@ -266,6 +267,7 @@ export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTas
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List tasks visible to participants. */
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>> & Pick<
@@ -280,6 +282,7 @@ export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTas
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary List tasks visible to participants. */
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>,
@@ -288,10 +291,7 @@ export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTas
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary List tasks visible to participants.
- */
-
+/** @summary List tasks visible to participants. */
 export function useGetClientTasks<TData = Awaited<ReturnType<typeof getClientTasks>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTasks>>, TError, TData>>,
@@ -375,6 +375,7 @@ export type GetClientConfigQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetClientConfigQueryError = unknown
 
 
+/** @summary Get the current game configuration. */
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
@@ -389,6 +390,7 @@ export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientCo
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the current game configuration. */
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>> & Pick<
@@ -403,6 +405,7 @@ export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientCo
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the current game configuration. */
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>,
@@ -411,10 +414,7 @@ export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientCo
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get the current game configuration.
- */
-
+/** @summary Get the current game configuration. */
 export function useGetClientConfig<TData = Awaited<ReturnType<typeof getClientConfig>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientConfig>>, TError, TData>>,
@@ -502,6 +502,7 @@ export type GetClientAttackDataQueryResult = NonNullable<Awaited<ReturnType<type
 export type GetClientAttackDataQueryError = void
 
 
+/** @summary Get public flag data grouped by task and team address. */
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params: undefined |  GetClientAttackDataParams,
     headers: undefined |  GetClientAttackDataHeaders, options: {
@@ -517,6 +518,7 @@ export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClie
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get public flag data grouped by task and team address. */
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params?: GetClientAttackDataParams,
     headers?: GetClientAttackDataHeaders, options?: {
@@ -532,6 +534,7 @@ export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClie
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get public flag data grouped by task and team address. */
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
  params?: GetClientAttackDataParams,
     headers?: GetClientAttackDataHeaders, options?: {
@@ -541,10 +544,7 @@ export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClie
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get public flag data grouped by task and team address.
- */
-
+/** @summary Get public flag data grouped by task and team address. */
 export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClientAttackData>>, TError = void>(
   params?: GetClientAttackDataParams,
   headers?: GetClientAttackDataHeaders, options?: {
@@ -630,6 +630,7 @@ export type GetClientTeamHistoryQueryResult = NonNullable<Awaited<ReturnType<typ
 export type GetClientTeamHistoryQueryError = unknown
 
 
+/** @summary Get participant-visible task history for a team. */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
  teamId: string, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
@@ -644,6 +645,7 @@ export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getCli
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get participant-visible task history for a team. */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
  teamId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
@@ -658,6 +660,7 @@ export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getCli
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get participant-visible task history for a team. */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
  teamId: string, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
@@ -666,10 +669,7 @@ export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getCli
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get participant-visible task history for a team.
- */
-
+/** @summary Get participant-visible task history for a team. */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
   teamId: string, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
@@ -761,6 +761,7 @@ export type GetClientCheckerLogsQueryResult = NonNullable<Awaited<ReturnType<typ
 export type GetClientCheckerLogsQueryError = ApiError
 
 
+/** @summary Get public checker results for one team and service. */
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
@@ -777,6 +778,7 @@ export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getCli
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get public checker results for one team and service. */
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
@@ -793,6 +795,7 @@ export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getCli
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get public checker results for one team and service. */
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
  teamId: string,
     taskId: string,
@@ -803,10 +806,7 @@ export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getCli
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get public checker results for one team and service.
- */
-
+/** @summary Get public checker results for one team and service. */
 export function useGetClientCheckerLogs<TData = Awaited<ReturnType<typeof getClientCheckerLogs>>, TError = ApiError>(
   teamId: string,
   taskId: string,
@@ -893,6 +893,7 @@ export type GetClientEventsQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetClientEventsQueryError = ApiError
 
 
+/** @summary Read recent public events or events after a cursor. */
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
  params: undefined |  GetClientEventsParams, options: {
    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
@@ -907,6 +908,7 @@ export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEv
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read recent public events or events after a cursor. */
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
  params?: GetClientEventsParams, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>> & Pick<
@@ -921,6 +923,7 @@ export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEv
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read recent public events or events after a cursor. */
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
  params?: GetClientEventsParams, options?: {
    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>,
@@ -929,10 +932,7 @@ export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEv
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Read recent public events or events after a cursor.
- */
-
+/** @summary Read recent public events or events after a cursor. */
 export function useGetClientEvents<TData = Awaited<ReturnType<typeof getClientEvents>>, TError = ApiError>(
   params?: GetClientEventsParams, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientEvents>>, TError, TData>>,
@@ -1016,6 +1016,7 @@ export type GetClientCtftimeScoreboardQueryResult = NonNullable<Awaited<ReturnTy
 export type GetClientCtftimeScoreboardQueryError = ApiError
 
 
+/** @summary Get the CTFtime standings. */
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
@@ -1030,6 +1031,7 @@ export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof 
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the CTFtime standings. */
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>> & Pick<
@@ -1044,6 +1046,7 @@ export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof 
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the CTFtime standings. */
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>,
@@ -1052,10 +1055,7 @@ export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof 
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get the CTFtime standings.
- */
-
+/** @summary Get the CTFtime standings. */
 export function useGetClientCtftimeScoreboard<TData = Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError = ApiError>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientCtftimeScoreboard>>, TError, TData>>,
@@ -1139,6 +1139,7 @@ export type GetClientHealthQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetClientHealthQueryError = unknown
 
 
+/** @summary Check the client API service. */
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
@@ -1153,6 +1154,7 @@ export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHe
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the client API service. */
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>> & Pick<
@@ -1167,6 +1169,7 @@ export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHe
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the client API service. */
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>,
@@ -1175,10 +1178,7 @@ export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHe
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Check the client API service.
- */
-
+/** @summary Check the client API service. */
 export function useGetClientHealth<TData = Awaited<ReturnType<typeof getClientHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientHealth>>, TError, TData>>,
@@ -1262,6 +1262,7 @@ export type GetClientStatusQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetClientStatusQueryError = unknown
 
 
+/** @summary Get the current runtime status. */
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
@@ -1276,6 +1277,7 @@ export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientSt
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the current runtime status. */
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>> & Pick<
@@ -1290,6 +1292,7 @@ export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientSt
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Get the current runtime status. */
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>,
@@ -1298,10 +1301,7 @@ export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientSt
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Get the current runtime status.
- */
-
+/** @summary Get the current runtime status. */
 export function useGetClientStatus<TData = Awaited<ReturnType<typeof getClientStatus>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientStatus>>, TError, TData>>,
@@ -1386,6 +1386,10 @@ export type GetScoreboardQueryResult = NonNullable<Awaited<ReturnType<typeof get
 export type GetScoreboardQueryError = unknown
 
 
+/**
+ * Used to initialize and resynchronize clients after event-stream reconnects.
+ * @summary Get the complete participant scoreboard.
+ */
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
@@ -1400,6 +1404,10 @@ export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * Used to initialize and resynchronize clients after event-stream reconnects.
+ * @summary Get the complete participant scoreboard.
+ */
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>> & Pick<
@@ -1414,6 +1422,10 @@ export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/**
+ * Used to initialize and resynchronize clients after event-stream reconnects.
+ * @summary Get the complete participant scoreboard.
+ */
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>,
@@ -1423,9 +1435,9 @@ export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
+ * Used to initialize and resynchronize clients after event-stream reconnects.
  * @summary Get the complete participant scoreboard.
  */
-
 export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getScoreboard>>, TError, TData>>,

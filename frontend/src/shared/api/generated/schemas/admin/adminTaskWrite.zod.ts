@@ -32,7 +32,7 @@ export const adminTaskWriteDefaultScoreMax = 2147483647;
 export const adminTaskWriteGetPeriodMax = 2147483647;
 
 export const adminTaskWriteActiveDefault = true;
-export const AdminTaskWrite = zod.object({
+export const AdminTaskWrite = zod.looseObject({
   "name": zod.string().min(1).max(adminTaskWriteNameMax),
   "checker": zod.string().min(1).max(adminTaskWriteCheckerMax),
   "gets": zod.int().min(adminTaskWriteGetsMin).max(adminTaskWriteGetsMax),

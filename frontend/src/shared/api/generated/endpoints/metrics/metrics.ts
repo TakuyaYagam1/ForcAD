@@ -110,6 +110,7 @@ export type GetClientMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof 
 export type GetClientMetricsQueryError = unknown
 
 
+/** @summary Read client API Prometheus metrics. */
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
@@ -124,6 +125,7 @@ export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientM
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read client API Prometheus metrics. */
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>> & Pick<
@@ -138,6 +140,7 @@ export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientM
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read client API Prometheus metrics. */
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>,
@@ -146,10 +149,7 @@ export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientM
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Read client API Prometheus metrics.
- */
-
+/** @summary Read client API Prometheus metrics. */
 export function useGetClientMetrics<TData = Awaited<ReturnType<typeof getClientMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientMetrics>>, TError, TData>>,
@@ -233,6 +233,7 @@ export type GetAdminMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof g
 export type GetAdminMetricsQueryError = unknown
 
 
+/** @summary Read administration API Prometheus metrics. */
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
@@ -247,6 +248,7 @@ export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMet
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read administration API Prometheus metrics. */
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>> & Pick<
@@ -261,6 +263,7 @@ export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMet
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read administration API Prometheus metrics. */
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>,
@@ -269,10 +272,7 @@ export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMet
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Read administration API Prometheus metrics.
- */
-
+/** @summary Read administration API Prometheus metrics. */
 export function useGetAdminMetrics<TData = Awaited<ReturnType<typeof getAdminMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminMetrics>>, TError, TData>>,
@@ -356,6 +356,7 @@ export type GetReceiverMetricsQueryResult = NonNullable<Awaited<ReturnType<typeo
 export type GetReceiverMetricsQueryError = unknown
 
 
+/** @summary Read flag receiver Prometheus metrics. */
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
@@ -370,6 +371,7 @@ export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getRecei
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read flag receiver Prometheus metrics. */
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>> & Pick<
@@ -384,6 +386,7 @@ export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getRecei
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Read flag receiver Prometheus metrics. */
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>,
@@ -392,10 +395,7 @@ export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getRecei
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Read flag receiver Prometheus metrics.
- */
-
+/** @summary Read flag receiver Prometheus metrics. */
 export function useGetReceiverMetrics<TData = Awaited<ReturnType<typeof getReceiverMetrics>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiverMetrics>>, TError, TData>>,
