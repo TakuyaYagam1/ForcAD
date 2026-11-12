@@ -239,7 +239,7 @@ run_control_down() {
     export GOCACHE="$root/build"
     export GOMODCACHE="$root/modules"
     export GOPATH="$root/path"
-    for go_version in 1.27.3 1.27.2; do
+    for go_version in 1.27.4 1.27.3 1.27.2; do
         candidate="$target/.toolchain/go$go_version/bin"
         if [[ ! -L "$target/.toolchain" && ! -L "$target/.toolchain/go$go_version" \
             && ! -L "$candidate" && ! -L "$candidate/go" && -x "$candidate/go" ]]; then

@@ -40,7 +40,7 @@ class ForcadCacheTests(unittest.TestCase):
         path.write_text(content)
         path.chmod(0o755)
 
-    def write_fake_commands(self, *, go_version="go1.27.3", download=False):
+    def write_fake_commands(self, *, go_version="go1.27.4", download=False):
         scripts = {
             "apt-get": '#!/usr/bin/env bash\nprintf "apt-get %s\\n" "$*" >> "$CALL_LOG"\n',
             "docker": (
@@ -296,10 +296,10 @@ class ForcadCacheTests(unittest.TestCase):
 
     def test_current_toolchain_is_preferred_over_older_toolchain(self):
         self.uninstall_fixture()
-        older_go = self.target / ".toolchain/go1.27.2/bin"
+        older_go = self.target / ".toolchain/go1.27.3/bin"
         older_go.mkdir(parents=True)
         self.write_executable(older_go / "go", "#!/usr/bin/env bash\nexit 0\n")
-        go_bin = self.target / ".toolchain/go1.27.3/bin"
+        go_bin = self.target / ".toolchain/go1.27.4/bin"
         go_bin.mkdir(parents=True)
         self.write_executable(go_bin / "go", "#!/usr/bin/env bash\nexit 0\n")
         result = self.run_script("--confirm")

@@ -141,6 +141,7 @@ export type SubmitFlagsMutationVariables = {
 }
 
 /**
+ * Both /flags and /flags/ are accepted by the backend.
  * @summary Submit flags for checking.
  */
 export const useSubmitFlags = <TError = ApiError,
@@ -215,6 +216,7 @@ export type GetFlagReceiverHealthQueryResult = NonNullable<Awaited<ReturnType<ty
 export type GetFlagReceiverHealthQueryError = unknown
 
 
+/** @summary Check the flag receiver service. */
 export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError = unknown>(
   options: {
     query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError, TData>> & Pick<
@@ -229,6 +231,7 @@ export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFl
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the flag receiver service. */
 export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError, TData>> & Pick<
@@ -243,6 +246,7 @@ export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFl
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
+/** @summary Check the flag receiver service. */
 export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError, TData>>,
@@ -251,10 +255,7 @@ export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFl
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/**
- * @summary Check the flag receiver service.
- */
-
+/** @summary Check the flag receiver service. */
 export function useGetFlagReceiverHealth<TData = Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError = unknown>(
   options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFlagReceiverHealth>>, TError, TData>>,

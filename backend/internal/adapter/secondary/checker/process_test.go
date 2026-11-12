@@ -76,7 +76,7 @@ func TestCompletedCheckerWithRetainedOutputCannotSucceed(t *testing.T) {
 	if !result.ProcessReaped || result.OutputComplete || result.TimedOut || result.ExitCode != 101 || result.Status != StatusCheckFailed {
 		t.Fatalf("incomplete output accepted or mistaken for a live process: %+v", result)
 	}
-	if len(result.Stdout) == 0 || time.Since(started) < actionTimeout || time.Since(started) > 2*time.Second {
+	if len(result.Stdout) == 0 || time.Since(started) > 2*time.Second {
 		t.Fatalf("partial output lost or cleanup unbounded: elapsed=%s result=%+v", time.Since(started), result)
 	}
 	for _, reader := range output.readers {

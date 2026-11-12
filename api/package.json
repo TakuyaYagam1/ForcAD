@@ -6,6 +6,6 @@
     "test": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
-    "@redocly/cli": "2.62.1"
+    "@redocly/cli": "2.77.0"
   }
 }

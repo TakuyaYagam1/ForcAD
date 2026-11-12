@@ -18,7 +18,7 @@ export const adminTeamUpdateLogoPathDefault = ``;
 export const adminTeamUpdateLogoPathMax = 255;
 
 
-export const AdminTeamUpdate = zod.object({
+export const AdminTeamUpdate = zod.looseObject({
   "name": zod.string().min(1).max(adminTeamUpdateNameMax),
   "ip": zod.string().min(1).max(adminTeamUpdateIpMax),
   "token": zod.string().regex(adminTeamUpdateTokenRegExp),
