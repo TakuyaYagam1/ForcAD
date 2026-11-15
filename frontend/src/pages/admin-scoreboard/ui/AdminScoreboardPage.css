@@ -99,7 +99,6 @@
   margin-bottom: 0;
 }
 
-.admin-page--scoreboard > .round-line { margin-bottom: 24px; }
 
 @media (max-width: 1100px) {
   .admin-dashboard-strip {

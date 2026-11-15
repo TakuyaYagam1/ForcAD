@@ -13,7 +13,7 @@ export function useAsciiRoundTrack(running: boolean) {
     }
     const observer = new ResizeObserver(([entry]) => {
       // Include two bracket cells; 10.5px leaves room for a 16px mono glyph.
-      setColumns(Math.max(24, Math.min(80, Math.floor(entry.contentRect.width / 10.5) - 2)));
+      setColumns(Math.max(8, Math.min(140, Math.floor(entry.contentRect.width / 10.5) - 2)));
     });
     observer.observe(track);
     return () => {

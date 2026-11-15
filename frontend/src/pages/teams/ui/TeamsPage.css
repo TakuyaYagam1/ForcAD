@@ -5,6 +5,9 @@
 .team-catalogue-card { display: block; min-width: 0; border-right: 1px solid var(--border-default); padding-right: 22px; }
 .team-catalogue-card:nth-child(3n) { border-right: 0; padding-right: 0; }
 .team-catalogue-art { position: relative; aspect-ratio: 1.45; background: var(--surface-raised); display: flex; align-items: center; justify-content: center; }
+.team-catalogue-card[data-rank="1"] .team-catalogue-art { outline: 2px solid #c9a64b; outline-offset: -2px; }
+.team-catalogue-card[data-rank="2"] .team-catalogue-art { outline: 2px solid #b8c2cc; outline-offset: -2px; }
+.team-catalogue-card[data-rank="3"] .team-catalogue-art { outline: 2px solid #b78355; outline-offset: -2px; }
 .team-catalogue-art .team-avatar--large { background: transparent; width: 105px; height: 105px; }
 .team-catalogue-art .team-avatar--large > span { font-size: 40px; font-weight: 100; }
 .team-catalogue-art > svg { position: absolute; right: 15px; bottom: 15px; }

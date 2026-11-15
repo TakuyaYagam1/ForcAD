@@ -7,6 +7,26 @@
 .scoreboard-page .scoreboard-table .service-column { width: auto; }
 .scoreboard-page .scoreboard-table th.team-column { padding-left: 8px; }
 .scoreboard-page .scoreboard-table td.total-column .score-value { font-size: 24px; }
+@media (min-width: 701px) {
+  .scoreboard-page--compact .scoreboard-toolbar { gap: 8px; padding: 8px 0; min-height: 42px; }
+  .scoreboard-page--compact .status-legend { gap: 8px; }
+  .scoreboard-page--compact .scoreboard-table th { height: 30px; padding: 4px 6px; }
+  .scoreboard-page--compact .scoreboard-table td { height: var(--scoreboard-row-height, 31px); padding: 2px 4px; }
+  .scoreboard-page--compact .scoreboard-table .total-column { padding-right: 12px; }
+  .scoreboard-page--compact .rank-number.rank-badge { font-size: 15px; }
+  .scoreboard-page--compact .team-avatar { width: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); height: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); }
+  .scoreboard-page--compact .team-identity { gap: 10px; }
+  .scoreboard-page--compact .team-identity > span:last-child { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
+  .scoreboard-page--compact .team-name { min-width: 0; font-size: 16px; line-height: 20px; }
+  .scoreboard-page--compact .team-ip { flex-shrink: 0; font-size: 13px; line-height: 18px; white-space: nowrap; }
+  .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 17px; letter-spacing: -.5px; }
+  .scoreboard-page--compact .service-cell { container-type: inline-size; min-height: 26px; height: calc(var(--scoreboard-row-height, 31px) - 5px); padding: 4px 7px; }
+  .scoreboard-page--compact .service-metrics { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 5px; }
+  .scoreboard-page--compact .service-metric { flex: 0 0 auto; gap: 3px; line-height: 18px; }
+  .scoreboard-page--compact .service-metric strong { font-size: 13px; }
+  .scoreboard-page--compact .service-metric > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .scoreboard-page--compact .service-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
 @media (max-width: 700px) {
   .scoreboard-page--compact .table-scroll { overflow: visible; }
   .scoreboard-page--compact .scoreboard-table { min-width: 0; display: block; }
@@ -23,8 +43,17 @@
   .scoreboard-page--compact .service-cell { min-height: 52px; padding: 8px 12px; }
   .scoreboard-page--compact .service-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .scoreboard-page--compact .service-metric { flex-direction: column; gap: 0; }
-  .scoreboard-page--compact .team-name { font-size: 15px; }
-  .scoreboard-page--compact .team-avatar { width: 30px; height: 30px; }
+  .scoreboard-page--compact .team-name { font-size: 16px; line-height: 20px; }
+  .scoreboard-page--compact .team-ip { font-size: 13px; line-height: 16px; white-space: nowrap; }
+  .scoreboard-page--compact .team-avatar { width: 36px; height: 36px; }
   .scoreboard-page--compact .team-identity { gap: 10px; }
   .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 19px; }
+}
+
+@media (min-width: 701px) {
+  @container (min-width: 300px) {
+    .scoreboard-page--compact .service-cell:not(.service-cell--wide-values) .service-metric > span {
+      position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
+    }
+  }
 }

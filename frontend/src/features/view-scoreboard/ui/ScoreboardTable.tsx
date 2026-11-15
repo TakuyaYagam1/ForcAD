@@ -1,9 +1,7 @@
-import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
-import { snapshotScoreboard } from "../model/scoreboardUpdates";
-import { useScoreboardUpdates } from "../model/useScoreboardUpdates";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { getCompletedScoreRound } from "../model/roundDelta";
-import { PreviousRoundDelta } from "./PreviousRoundDelta";
+import { snapshotScoreMotion } from "../model/scoreboardMotion";
+import { useScoreboardMotion } from "../model/useScoreboardMotion";
+import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
@@ -60,35 +58,28 @@ export function ScoreboardTable({
   const { t } = useTranslation("public");
   const navigate = useNavigate();
   const { search } = useLocation();
-  const snapshotRound = useScoreboardStore((state) => {
-    return state.round;
-  });
-  const runtimeRound = useScoreboardStore((state) => {
-    return state.runtimeRound;
-  });
-  const generation = useScoreboardStore((state) => {
-    return state.generation;
-  });
-  const resetPending = useScoreboardStore((state) => {
-    return state.resetPending;
-  });
-  const completedRound = resetPending ? null : getCompletedScoreRound(snapshotRound, runtimeRound);
-  const taskIds = useMemo(() => {
-    return tasks.map((task) => {
-      return task.id;
-    });
-  }, [tasks]);
   const frameRef = useRef<HTMLDivElement>(null);
   const previewLarge =
     !onCellClick &&
     ["127.0.0.1", "localhost"].includes(window.location.hostname) &&
     new URLSearchParams(search).get("preview") === "large";
 
+  const generation = useScoreboardStore((state) => {
+    return state.generation
+  });
+  const resetPending = useScoreboardStore((state) => {
+    return state.resetPending
+  });
+  useScoreboardMotion(frameRef, snapshotScoreMotion(
+    teams, tasks.map((task) => {
+      return task.id
+    }), generation, resetPending,
+  ));
+
   const ranks = new Map(teams.map((team, index) => {
     return [team.id, index + 1]
   }));
   useViewportAnimations(frameRef, teams.length > 0);
-  useScoreboardUpdates(frameRef, snapshotScoreboard(teams, tasks, teamTasks));
 
   const cells = useMemo(
     () => {
@@ -131,20 +122,17 @@ export function ScoreboardTable({
               width: "60px"
             }} />
             <col style={{
-              width: "220px"
+              width: "340px"
             }} />
             <col style={{
-              width: "120px"
-            }} />
-            <col style={{
-              width: "120px"
+              width: "180px"
             }} />
             {tasks.map((task) => {
               return (
                 <col
                   key={task.id}
                   style={{
-                    width: `calc((100% - 520px) / ${tasks.length})`,
+                    width: `calc((100% - 580px) / ${tasks.length})`,
                   }}
                 />
               )
@@ -158,9 +146,6 @@ export function ScoreboardTable({
               </th>
               <th scope="col" className="team-column">
                 {t("scoreboard.table.team")}
-              </th>
-              <th scope="col" className="delta-column">
-                {t("scoreboard.delta.column")}
               </th>
               <th scope="col" className="total-column">
                 {t("scoreboard.table.score")}
@@ -195,6 +180,7 @@ export function ScoreboardTable({
                 >
                   <td className="place-column">
                     <RankBadge rank={rank} />
+                    <span className="scoreboard-leader-outline" aria-hidden="true" />
                   </td>
 
                   <td className="team-column">
@@ -216,17 +202,11 @@ export function ScoreboardTable({
                     </button>
                   </td>
 
-                  <td className="delta-column">
-                    <PreviousRoundDelta scope={completedRound === null ? null : {
-                      generation,
-                      round: completedRound,
-                      teamId: team.id,
-                      taskIds,
-                    }} />
-                  </td>
-
                   <td className="total-column">
-                    <ScoreValue value={team.score} />
+                    <span className="score-total">
+                      <ScoreValue value={team.score} />
+                      <span className="score-delta" aria-hidden="true" />
+                    </span>
                   </td>
 
                   {tasks.map((task, taskIndex) => {

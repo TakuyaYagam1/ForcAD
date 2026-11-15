@@ -2,7 +2,6 @@ import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
-import { CompetitionHeader } from "@/shared/ui/brand/CompetitionHeader";
 import { ArrowUpRight, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -15,7 +14,7 @@ function TeamCard({ team, rank }: {
 }) {
   const { t } = useTranslation("public");
   return (
-    <Link to={`/team/${team.id}`} className="team-catalogue-card">
+    <Link to={`/team/${team.id}`} className="team-catalogue-card" data-rank={rank}>
       <div className="team-catalogue-art">
         <span className="team-catalogue-rank">{String(rank).padStart(2, "0")}</span>
         <TeamAvatar name={team.name} src={team.logo_path} size="large" />
@@ -48,7 +47,7 @@ export function TeamsPage() {
   return (
     <>
       <div className="teams-page">
-        <CompetitionHeader title={t("teams.title")} subtitle={t("teams.subtitle")} />
+        <h1 className="sr-only">{t("teams.title")}</h1>
         {npcTeams.length > 0 && (
           <section className="teams-test-target" aria-label={t("teams.testTarget")}>
             <div className="section-heading">

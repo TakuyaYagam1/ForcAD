@@ -1,4 +1,3 @@
-import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import {
   ScoreboardTable,
@@ -6,13 +5,11 @@ import {
   type ScoreboardTeam,
   type ScoreboardTeamTask,
 } from "@/features/view-scoreboard/ui/ScoreboardTable";
-import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
-import { useQuery } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
+import { useRef } from "react";
+import { useScoreboardViewport } from "../model/useScoreboardViewport";
 import "./ScoreboardWidget.css";
 
 interface ScoreboardWidgetProps {
@@ -38,40 +35,14 @@ export function ScoreboardWidget({
   const teamTasks = useScoreboardStore((state) => {
     return state.teamTasks
   }) ?? [];
-  const round = useScoreboardStore((state) => {
-    return state.round
-  });
-  const roundStart = useScoreboardStore((state) => {
-    return state.roundStart
-  });
   const error = useScoreboardStore((state) => {
     return state.error
   });
-  const roundTime = useScoreboardStore((state) => {
-    return state.roundTime
-  });
-  const setRoundTime = useScoreboardStore((state) => {
-    return state.setRoundTime
-  });
-
-
-  const config = useQuery({
-    queryKey: ["game-config"],
-    queryFn: ({ signal }) => {
-      return fetchScoreboardConfig(signal)
-    },
-    enabled: roundTime === null,
-    retry: 2,
-    refetchInterval: 10000,
-  });
-  useEffect(() => {
-    if (config.data?.round_time) {
-      setRoundTime(config.data.round_time);
-    }
-  }, [config.data, setRoundTime]);
-
+  const pageRef = useRef<HTMLDivElement>(null);
+  useScoreboardViewport(!admin, pageRef, teams.length);
   return (
     <div
+      ref={pageRef}
       className={
         admin
           ? "scoreboard-page scoreboard-page--admin"
@@ -89,7 +60,6 @@ export function ScoreboardWidget({
         </div>
       )}
 
-      {!admin && <StatusesBar round={round} roundStart={roundStart} />}
 
       <div className="scoreboard-toolbar">
         <div
@@ -124,7 +94,6 @@ export function ScoreboardWidget({
           onCellClick={onCellClick}
         />
       </div>
-      {!admin && <><p className="table-hint">{t("scoreboard.tableHint")}</p><RecentEvents /></>}
     </div>
   );
 }

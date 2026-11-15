@@ -17,6 +17,9 @@ test("public team list, direct profile reload, history, and scoreboard load", as
       name: "Профили и результаты"
     })).toBeVisible();
 
+    await expect(page.locator(".teams-page .page-hero")).toHaveCount(0);
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
+
     const teamLinks = page.locator('a[href^="/team/"]');
     await expect(teamLinks).toHaveCount(2);
     const firstTeam = teamLinks.filter({
@@ -69,6 +72,9 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     });
     await page.goto("/");
     expect((await rootScoreboard).status()).toBe(200);
+    await expect(page.getByRole("banner").getByRole("progressbar")).toBeVisible();
+    await expect(page.getByRole("progressbar")).toHaveCount(1);
+    await expect(page.locator(".delta-column, .scoreboard-update-layer, .table-hint, .recent-events--strip")).toHaveCount(0);
     await expect(page.getByRole("heading", {
       name: "Рейтинг команд",
       exact: true
@@ -83,7 +89,8 @@ test("opening a scrolled team starts at the heading and Back restores the scoreb
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   await page.setViewportSize({
-    width: 1440,
+    // Mobile cards keep the second fixture team below the fold.
+    width: 700,
     height: 220
   });
 

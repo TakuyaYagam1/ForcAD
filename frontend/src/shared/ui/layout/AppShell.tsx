@@ -1,7 +1,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
-import { Activity, ArrowUpRight, Grid2X2, ListOrdered, Users } from "lucide-react";
+import { Activity, ListOrdered, Users } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
+import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { usePageEntrance } from "@/shared/lib/usePageEntrance";
 import { useRouteScroll } from "@/shared/lib/useRouteScroll";
@@ -37,6 +40,34 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
       return state.runtimeRound ?? state.round
     },
   );
+  const snapshotRound = useScoreboardStore((state) => {
+    return state.round
+  });
+  const roundStart = useScoreboardStore((state) => {
+    return state.roundStart
+  });
+  const roundTime = useScoreboardStore((state) => {
+    return state.roundTime
+  });
+  const setRoundTime = useScoreboardStore((state) => {
+    return state.setRoundTime
+  });
+  const showRoundProgress = location.pathname !== "/admin/login";
+  const config = useQuery({
+    queryKey: ["game-config"],
+    queryFn: ({ signal }) => {
+      return fetchScoreboardConfig(signal)
+    },
+    enabled: showRoundProgress && roundTime === null,
+    retry: 2,
+    refetchInterval: 10000,
+  });
+  useEffect(() => {
+    if (config.data?.round_time) {
+      setRoundTime(config.data.round_time);
+    }
+  }, [config.data, setRoundTime]);
+
   const teams = useScoreboardStore((state) => {
     return state.teams
   });
@@ -82,6 +113,8 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
             <span>{brand.name}</span>
           </Link>
 
+          {showRoundProgress && <StatusesBar round={snapshotRound} roundStart={roundStart} />}
+
           {showNavigation && (
             <nav className="main-nav" aria-label={t("navigation")}>
               <NavLink to="/live"><Activity aria-hidden="true" />{t("events")}</NavLink>
@@ -114,7 +147,7 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
         </div>
       </header>
 
-      <main id="main-content" className="site-main">
+      <main id="main-content" className={`site-main${location.pathname === "/" ? " site-main--scoreboard" : ""}`}>
         {phase === "paused" && (
           <div
             className="notice notice--paused"
@@ -133,13 +166,6 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
         )}
         <div ref={contentRef} className="page-content">{children}</div>
       </main>
-      <footer className="site-footer">
-        <div className="footer-inner">
-          <Link to="/" className="footer-brand"><Grid2X2 size={16} strokeWidth={1} aria-hidden="true" />{brand.name}</Link>
-          <span>Attack–defence / competition platform</span>
-          <Link to="/admin">{t("operator")}<ArrowUpRight size={14} strokeWidth={1} aria-hidden="true" /></Link>
-        </div>
-      </footer>
     </div>
   );
 }

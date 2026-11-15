@@ -21,7 +21,7 @@ test("a lazy route announces loading while its page chunk is pending", async ({ 
     });
     await expect(page.getByRole("main").getByRole("status")).toHaveAttribute("aria-busy", "true");
     await expect(page.getByRole("banner")).toBeVisible();
-    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
     const header = await page.getByRole("banner").elementHandle();
     releaseChunk();
     await expect(page.locator("#username")).toBeVisible();
@@ -54,7 +54,7 @@ test("a failed lazy route offers an accessible retry action", async ({ browser }
     await page.goto("/admin/login");
     await expect(page.getByRole("alert")).toContainText("Страница не загрузилась");
     await expect(page.getByRole("banner")).toBeVisible();
-    await expect(page.getByRole("contentinfo")).toBeVisible();
+    await expect(page.getByRole("contentinfo")).toHaveCount(0);
     await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.getByRole("button", {
       name: "Перезагрузить страницу"

@@ -56,7 +56,8 @@ export function StatusesBar({ round, roundStart }: {
   });
   const percent = timer.progress === null ? null : Math.floor(timer.progress);
   const running = phase === "running" && timer.progress !== null && !timer.waitingForResults;
-  const { trackRef, columns } = useAsciiRoundTrack(running);
+  const { trackRef, columns: measuredColumns } = useAsciiRoundTrack(running);
+  const columns = measuredColumns;
   const filledColumns = Math.floor((timer.progress ?? 0) / 100 * columns);
   const countdown = formatRoundCountdown(timer.remainingSeconds);
   const status = phase === "finished"
@@ -81,7 +82,7 @@ export function StatusesBar({ round, roundStart }: {
   return (
     <section className="round-line" aria-label={t("scoreboard.round.current")}>
       <div className="round-summary">
-        <span className="round-label">{t("scoreboard.round.timeline")}</span>
+        <span className="round-label sr-only">{t("scoreboard.round.timeline")}</span>
         <strong className="round-percentage">{percent === null ? "—" : `${percent}%`}</strong>
       </div>
       <div
@@ -128,7 +129,7 @@ export function StatusesBar({ round, roundStart }: {
       </div>
       <div className="round-timer">
         <strong>{countdown}</strong>
-        <small aria-live="polite">{status}</small>
+        <small className="sr-only" aria-live="polite">{status}</small>
       </div>
     </section>
   );

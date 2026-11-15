@@ -1,6 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { CheckerStatusPanel } from "@/features/view-checker-status/ui/CheckerStatusPanel";
 import { GameControls } from "@/features/manage-game/ui/GameControls";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
@@ -13,12 +11,6 @@ import "./AdminScoreboardPage.css";
 export function AdminScoreboardPage() {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
-  const round = useScoreboardStore((state) => {
-    return state.round
-  });
-  const roundStart = useScoreboardStore((state) => {
-    return state.roundStart
-  });
   return (
     <AdminShell>
       <div className="admin-page admin-page--scoreboard">
@@ -26,7 +18,6 @@ export function AdminScoreboardPage() {
           <p className="eyebrow">{t("common.organizerPanel")}</p>
           <h1>{t("scoreboard.title")}</h1>
         </div>
-        <StatusesBar round={round} roundStart={roundStart} />
         <div className="admin-dashboard-strip">
           <CheckerStatusPanel />
           <div className="admin-dashboard-actions">

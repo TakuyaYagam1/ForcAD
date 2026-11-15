@@ -92,8 +92,8 @@
 /* One dark instrument palette shared by every public and operator page. */
 .brand-app { min-height: 100vh; display: flex; flex-direction: column; background: var(--color-canvas-mist); }
 .site-header { border-bottom: 1px solid var(--line); }
-.header-inner { max-width: 1332px; min-height: 88px; padding: 0 66px; margin: auto; display: flex; align-items: center; gap: 44px; }
-.brand-lockup { display: inline-flex; align-items: center; gap: 13px; white-space: nowrap; margin-right: auto; }
+.header-inner { width: 100%; max-width: none; min-height: 72px; padding: 0 16px; margin: 0; display: flex; align-items: center; gap: 24px; }
+.brand-lockup { display: inline-flex; align-items: center; gap: 13px; white-space: nowrap; margin-right: 0; }
 .brand-lockup img, .brand-mark-fallback { width: 30px; height: 30px; object-fit: contain; }
 .brand-lockup > span { font-size: 24px; font-weight: 300; letter-spacing: -.9px; }
 .main-nav { display: flex; align-self: stretch; gap: 33px; }
@@ -108,11 +108,6 @@
 .connection-dot--ready { background: var(--text-primary); }
 .connection-dot--error { background: var(--state-error-text); }
 .site-main { width: 100%; max-width: 1332px; margin: 0 auto; padding: 0 66px 66px; flex: 1; min-width: 0; }
-.site-footer { background: var(--surface-strong); color: var(--text-primary); border-top: 1px solid var(--line); }
-.footer-inner { max-width: 1332px; padding: 26px 66px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 22px; }
-.footer-inner > span { color: var(--text-muted); }
-.footer-inner a { display: inline-flex; align-items: center; gap: 8px; }
-.footer-inner a:hover { text-decoration: underline; }
 .skip-link { position: fixed; z-index: 100; left: 15px; top: 15px; padding: 12px 18px; color: var(--text-primary); background: var(--surface-strong); transform: translateY(-180%); }
 .skip-link:focus { transform: translateY(0); }
 .eyebrow { font-size: 13px; font-weight: 300; color: var(--soft); letter-spacing: .02em; }
@@ -234,7 +229,7 @@
   .service-cell:hover { outline: 1px solid var(--text-primary); outline-offset: 2px; }
 }
 @media (max-width: 1100px) {
-  .header-inner, .footer-inner, .demo-panel-inner { padding-left: 33px; padding-right: 33px; }
+  .demo-panel-inner { padding-left: 33px; padding-right: 33px; }
   .site-main { padding-left: 33px; padding-right: 33px; }
   .header-inner { gap: 22px; }
   .main-nav { gap: 22px; }
@@ -242,16 +237,21 @@
   .hero-register { gap: 22px; padding-left: 22px; }
   .demo-panel-label > span { display: none; }
 }
+@media (min-width: 701px) and (max-width: 800px) {
+  .header-inner { gap: 12px; }
+  .main-nav { gap: 8px; }
+}
 @media (max-width: 700px) {
-  .header-inner { min-height: 78px; flex-wrap: wrap; gap: 0; padding: 18px 22px 0; }
-  .brand-lockup { order: 0; }
-  .brand-lockup > span { font-size: 24px; }
-  .header-tools { order: 1; margin-left: auto; }
-  .main-nav { order: 2; width: 100%; justify-content: space-between; gap: 15px; min-height: 64px; margin-top: 10px; }
+  .header-inner { min-height: 0; flex-wrap: wrap; gap: 0; padding: 12px 16px 0; }
+  .brand-lockup { order: 0; gap: 8px; }
+  .brand-lockup img { width: 24px; height: 24px; }
+  .brand-lockup > span { font-size: 20px; }
+  .header-tools { order: 1; gap: 8px; margin-left: auto; }
+  .header-tools .admin-shell__logout { font-size: 13px; }
+  .header-inner > .round-line { order: 2; flex-basis: 100%; max-width: none; margin-top: 6px; }
+  .main-nav { order: 3; width: 100%; justify-content: space-between; gap: 15px; min-height: 44px; margin-top: 0; }
   .main-nav a { flex: 1; flex-direction: row; gap: 8px; }
   .site-main { padding: 0 22px 33px; }
-  .footer-inner { padding: 22px; flex-wrap: wrap; }
-  .footer-inner > span { width: 100%; order: 3; }
   .page-hero { min-height: 0; padding: 33px 0; align-items: flex-start; flex-direction: column; gap: 22px; }
   .hero-copy h1 { font-size: 36px; letter-spacing: -1.5px; }
   .hero-register { align-self: stretch; border-left: 0; padding: 22px 0 0; border-top: 1px solid var(--line); justify-content: space-between; }
@@ -272,4 +272,8 @@
   .service-detail-grid { grid-template-columns: repeat(2, 1fr); }
   .demo-panel-inner { padding: 10px 22px; align-items: flex-start; }
   .demo-panel-actions { gap: 8px 15px; }
+}
+
+@media (min-width: 701px) {
+  .site-main--scoreboard { max-width: none; padding: 0 16px 16px; overflow-x: clip; }
 }

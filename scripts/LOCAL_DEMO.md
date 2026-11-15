@@ -47,7 +47,6 @@ is visible; every third capture can reorder the leading teams. Captures do not
 reset the current round's progress. There is no demo control strip. The normal
 admin interface is available at `/admin/login` with `demo` / `demo`.
 
-The compact ASCII track shows elapsed round progress and the time remaining.
-The scoreboard's separate delta column compares the last two completed rounds,
-including SLA weighting; live captures do not replace that historical delta.
+The compact ASCII track in the shared header shows elapsed round progress and
+the time remaining. Score changes appear immediately without a square-wave effect.
 Demo data and admin edits remain per-browser in memory, resetting on a full reload.

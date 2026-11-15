@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Search, WifiOff } from "lucide-react";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
-import { CompetitionHeader } from "@/shared/ui/brand/CompetitionHeader";
 import { EventItem } from "@/shared/ui/brand/RecentEvents";
 import { useTranslation } from "react-i18next";
 import { getLocale } from "@/shared/i18n";
@@ -25,7 +24,7 @@ export function LiveScoreboardFrame() {
   });
   return (
     <div className="w-full">
-      <CompetitionHeader title={t("liveScoreboard.title")} subtitle={t("liveScoreboard.subtitle")} />
+      <h1 className="sr-only">{t("liveScoreboard.title")}</h1>
       {error && (
         <div className="notice" role="status">
           <WifiOff size={16} />
