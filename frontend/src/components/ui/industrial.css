@@ -87,9 +87,9 @@
 .ui-dialog-content[data-state="closed"] { animation: dialog-content-out 140ms var(--ease-out); }
 @keyframes dialog-overlay-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes dialog-overlay-out { from { opacity: 1; } to { opacity: 0; } }
-/* Separate translate from Tailwind's centering transform; no zoom or diagonal slide. */
-@keyframes dialog-content-in { from { opacity: 0; translate: 0 4px; } to { opacity: 1; translate: 0 0; } }
-@keyframes dialog-content-out { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 4px; } }
+/* Animate transform separately from Tailwind's translate-based centering. */
+@keyframes dialog-content-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes dialog-content-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(4px); } }
 :root[data-motion="off"] :is(.ui-dialog-overlay, .ui-dialog-content),
 :root[data-input-modality="keyboard"] :is(.ui-dialog-overlay, .ui-dialog-content),
 :root[data-page-visibility="hidden"] :is(.ui-dialog-overlay, .ui-dialog-content) {

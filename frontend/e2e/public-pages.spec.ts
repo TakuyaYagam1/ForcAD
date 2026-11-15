@@ -184,3 +184,109 @@ test("service dialog releases its portal and pointer lock after keyboard and pre
     await context.close();
   }
 });
+
+test("service dialog stays centered throughout its opening animation", async ({ browser }) => {
+  const context = await createE2EContext(browser);
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    await page.evaluate(() => {
+      document.addEventListener("animationstart", function pauseDialogOpening(event) {
+        if (!(event.target instanceof HTMLElement) || event.target.getAttribute("role") !== "dialog") {
+          return;
+        }
+        const animation = event.target.getAnimations().find((candidate) => {
+          return candidate instanceof CSSAnimation && candidate.animationName === event.animationName;
+        });
+        if (animation) {
+          animation.pause();
+          animation.currentTime = 0;
+          document.removeEventListener("animationstart", pauseDialogOpening);
+        }
+      });
+    });
+    await page.locator(".service-cell").first().click();
+    const dialog = page.getByRole("dialog");
+    await expect.poll(() => {
+      return dialog.evaluate((element) => {
+        return element.getAnimations().some((animation) => {
+          return animation.playState === "paused";
+        });
+      });
+    }).toBe(true);
+
+    const positions = await dialog.evaluate((element) => {
+      const animation = element.getAnimations().find((candidate) => {
+        return candidate.playState === "paused";
+      })!;
+      const duration = Number(animation.effect!.getComputedTiming().duration);
+      const positions = [0, duration / 2, duration].map((time) => {
+        animation.currentTime = time;
+        const bounds = element.getBoundingClientRect();
+        return {
+          time,
+          horizontalOffset: bounds.x + bounds.width / 2 - window.innerWidth / 2,
+          verticalOffset: bounds.y + bounds.height / 2 - window.innerHeight / 2,
+        };
+      });
+      animation.currentTime = 0;
+      return positions;
+    });
+    for (const position of positions) {
+      expect(Math.abs(position.horizontalOffset), `horizontal center at ${position.time}ms`).toBeLessThan(1);
+      expect(position.verticalOffset, `vertical center at ${position.time}ms`).toBeGreaterThanOrEqual(-1);
+      expect(position.verticalOffset, `vertical center at ${position.time}ms`).toBeLessThanOrEqual(5);
+    }
+    await dialog.evaluate(async (element) => {
+      const animation = element.getAnimations().find((candidate) => {
+        return candidate.playState === "paused";
+      })!;
+      animation.play();
+      await animation.finished;
+    });
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator(".ui-dialog-overlay")).toHaveCount(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("service dialog keeps its geometry while checker logs load", async ({ browser }) => {
+  const context = await createE2EContext(browser);
+  const page = await context.newPage();
+  let releaseLogs!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    releaseLogs = resolve;
+  });
+  try {
+    await page.route(/\/api\/client\/teams\/[^/]+\/tasks\/[^/]+\/logs\/?(?:\?.*)?$/, async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await page.goto("/");
+    await page.locator(".service-cell").first().click();
+    const dialog = page.getByRole("dialog");
+    const history = page.locator(".service-inspector-history");
+    await expect(history).toHaveAttribute("aria-busy", "true");
+    await dialog.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => {
+        return animation.finished;
+      }));
+    });
+    const before = await dialog.boundingBox();
+    expect(before).not.toBeNull();
+    releaseLogs();
+    await expect(history).toHaveAttribute("aria-busy", "false");
+    const after = await dialog.boundingBox();
+    expect(after).not.toBeNull();
+    for (const key of ["x", "y", "width", "height"] as const) {
+      expect(Math.abs(after![key] - before![key])).toBeLessThan(1);
+    }
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  } finally {
+    releaseLogs();
+    await context.close();
+  }
+});
