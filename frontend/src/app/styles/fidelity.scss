@@ -524,10 +524,6 @@ body {
     gap: 38px;
     border-color: rgb(var(--brand-primary-rgb) / 33%);
   }
-  .round-label {
-    font-size: 16px;
-    letter-spacing: 1px;
-  }
   .round-track::before {
     background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent));
     box-shadow: 0 0 8px rgb(var(--brand-primary-rgb) / 31%);

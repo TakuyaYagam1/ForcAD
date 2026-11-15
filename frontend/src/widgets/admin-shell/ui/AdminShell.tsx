@@ -10,9 +10,10 @@ import "./AdminShell.css";
 
 interface AdminShellProps {
   children: ReactNode;
+  headerProgress?: ReactNode;
 }
 
-export function AdminShell({ children }: AdminShellProps) {
+export function AdminShell({ children, headerProgress }: AdminShellProps) {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
   const logout = useAdminAuthStore((state) => {
@@ -44,6 +45,7 @@ export function AdminShell({ children }: AdminShellProps) {
   return (
     <AppShell
       showNavigation={false}
+      headerProgress={headerProgress}
       headerActions={(
         <Button
           type="button"

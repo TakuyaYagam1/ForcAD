@@ -7,9 +7,10 @@ import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
 import { LanguageSwitch } from "./LanguageSwitch";
 
-export function AppShell({ children, headerActions, showNavigation = true }: {
+export function AppShell({ children, headerActions, headerProgress, showNavigation = true }: {
   children: ReactNode;
   headerActions?: ReactNode;
+  headerProgress?: ReactNode;
   showNavigation?: boolean
 }) {
   const { t } = useTranslation("shell");
@@ -45,16 +46,19 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
 
       <header className="site-header">
         <div className="header-inner">
-          <Link
-            to="/"
-            className="brand-lockup"
-            aria-label={t("home", {
-              brand: brand.name
-            })}
-          >
-            <BrandLogo />
-            <span>{brand.name}</span>
-          </Link>
+          <div className="header-brand">
+            <Link
+              to="/"
+              className="brand-lockup"
+              aria-label={t("home", {
+                brand: brand.name
+              })}
+            >
+              <BrandLogo />
+              <span>{brand.name}</span>
+            </Link>
+            {headerProgress && <div className="header-progress">{headerProgress}</div>}
+          </div>
 
           {showNavigation && (
             <nav className="main-nav" aria-label={t("navigation")}>

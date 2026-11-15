@@ -116,11 +116,6 @@
     padding: 0;
   }
 
-  .admin-page--scoreboard > .round-line {
-    flex-shrink: 0;
-    margin: 0 -24px;
-    padding: 8px 24px;
-  }
 
   .admin-page--scoreboard .scoreboard-page--admin,
   .admin-page--scoreboard .scoreboard-reveal {

@@ -6,7 +6,6 @@ import {
   type ScoreboardTeam,
   type ScoreboardTeamTask,
 } from "@/features/view-scoreboard/ui/ScoreboardTable";
-import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
 import { useQuery } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
@@ -39,12 +38,6 @@ export function ScoreboardWidget({
   const teamTasks = useScoreboardStore((state) => {
     return state.teamTasks
   }) ?? [];
-  const round = useScoreboardStore((state) => {
-    return state.round
-  });
-  const roundStart = useScoreboardStore((state) => {
-    return state.roundStart
-  });
   const error = useScoreboardStore((state) => {
     return state.error
   });
@@ -80,7 +73,7 @@ export function ScoreboardWidget({
       className={
         admin
           ? "scoreboard-page scoreboard-page--admin"
-          : "scoreboard-page scoreboard-page--compact"
+          : `scoreboard-page scoreboard-page--compact${teams.length > 10 ? " scoreboard-page--dense" : ""}`
       }
     >
       {!admin && <h1 className="sr-only">{t("scoreboard.title")}</h1>}
@@ -93,8 +86,6 @@ export function ScoreboardWidget({
             : t("scoreboard.connectionLost")}
         </div>
       )}
-
-      {!admin && <StatusesBar round={round} roundStart={roundStart} />}
 
       <div className="scoreboard-toolbar">
         <div

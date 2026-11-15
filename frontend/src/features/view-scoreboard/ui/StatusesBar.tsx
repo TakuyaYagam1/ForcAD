@@ -87,7 +87,6 @@ export function StatusesBar({
     (roundWaiting || (elapsed !== null && roundTime !== null && elapsed >= roundTime));
   return (
     <section className="round-line" aria-label={t("scoreboard.round.current")}>
-      <span className="round-label">{t("scoreboard.round.timeline")}</span>
       <div
         className="round-track"
         role="progressbar"

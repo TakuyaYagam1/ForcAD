@@ -46,14 +46,6 @@
     min-height: 36px;
   }
 
-  .scoreboard-page--compact .round-line {
-    flex-wrap: wrap;
-  }
-
-  .scoreboard-page--compact .round-label,
-  .scoreboard-page--compact .round-timer small {
-    font-size: 0.75rem;
-  }
 
   .scoreboard-page--compact .team-name {
     font-size: 1rem;
@@ -258,33 +250,6 @@
     height: 14px;
   }
 
-  .scoreboard-page--compact .round-line {
-    margin: 0 -24px;
-    min-height: 48px;
-    padding: 0 24px;
-    gap: 24px;
-  }
-
-  .scoreboard-page--compact .round-label {
-    font-size: var(--scoreboard-label-size);
-  }
-
-  .scoreboard-page--compact .round-timer {
-    gap: 6px;
-  }
-
-  .scoreboard-page--compact .round-timer strong {
-    font-size: var(--scoreboard-team-size);
-  }
-
-  .scoreboard-page--compact .round-timer small {
-    font-size: var(--scoreboard-label-size);
-  }
-
-  .scoreboard-page--compact .round-timer .brand-icon {
-    width: 24px;
-    height: 24px;
-  }
 
   .scoreboard-page--compact .scoreboard-toolbar {
     min-height: 44px;
@@ -499,3 +464,147 @@
     gap: 0;
   }
 }
+
+@media (min-width: 901px) {
+  .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table td {
+    height: var(--scoreboard-row-height, 32px);
+    padding: 1px 4px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-name {
+    font-size: clamp(12px, calc(var(--scoreboard-row-height) * 0.38), 16px);
+    line-height: 1.05;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-ip {
+    font-size: clamp(9px, calc(var(--scoreboard-row-height) * 0.28), 12px);
+    line-height: 1;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-identity .team-avatar {
+    width: clamp(20px, calc(var(--scoreboard-row-height) - 6px), 30px);
+    height: clamp(20px, calc(var(--scoreboard-row-height) - 6px), 30px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table .rank-number.rank-badge {
+    height: clamp(20px, calc(var(--scoreboard-row-height) - 4px), 32px);
+    font-size: clamp(15px, calc(var(--scoreboard-row-height) * 0.5), 20px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .score-value {
+    font-size: clamp(14px, calc(var(--scoreboard-row-height) * 0.45), 20px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell {
+    position: relative;
+    min-height: 0;
+    height: calc(var(--scoreboard-row-height) - 3px);
+    padding: 2px 5px;
+    gap: 0;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metrics {
+    grid-template-columns: minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 1.8fr);
+    gap: 3px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric,
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric:last-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    line-height: 1;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metric > span {
+    font-size: clamp(9px, calc(var(--scoreboard-row-height) * 0.27), 12px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metric strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(11px, calc(var(--scoreboard-row-height) * 0.34), 15px);
+    text-overflow: ellipsis;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-state {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 9px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense
+    .service-cell:not(.service-cell--active)
+    .service-metric--sla > span {
+    visibility: hidden;
+  }
+}
+
+.header-progress {
+  flex: 0 1 220px;
+  width: 220px;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.header-progress .round-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.header-progress .round-track {
+  height: 18px;
+  min-width: 30px;
+}
+
+.header-progress .round-tick {
+  height: 5px;
+}
+
+.header-progress .round-tick::after {
+  top: 1px;
+  width: 3px;
+  height: 3px;
+}
+
+.header-progress .round-head {
+  top: 4px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+}
+
+.header-progress .round-timer strong {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.header-progress .round-timer small {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .header-brand {
+    gap: 8px;
+  }
+
+  .header-progress {
+    flex-basis: 120px;
+    width: auto;
+    min-width: 0;
+    max-width: 180px;
+  }
+}
+

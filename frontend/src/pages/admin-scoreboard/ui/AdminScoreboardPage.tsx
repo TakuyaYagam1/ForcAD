@@ -20,10 +20,9 @@ export function AdminScoreboardPage() {
     return state.roundStart
   });
   return (
-    <AdminShell>
+    <AdminShell headerProgress={<StatusesBar round={round} roundStart={roundStart} />}>
       <div className="admin-page admin-page--scoreboard">
         <h1 className="sr-only">{t("scoreboard.title")}</h1>
-        <StatusesBar round={round} roundStart={roundStart} />
         <div className="admin-dashboard-strip">
           <CheckerStatusPanel />
           <div className="admin-dashboard-actions">

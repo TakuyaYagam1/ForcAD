@@ -98,7 +98,8 @@ export function useScoreboardViewport(
         verticalChrome(page) -
         fixedHeight -
         (reveal ? verticalChrome(reveal) : 0) -
-        (tableFrame ? verticalChrome(tableFrame) : 0);
+        (tableFrame ? verticalChrome(tableFrame) : 0) -
+        2; // Leave room for fractional flex heights without a page scrollbar.
 
       // A short window must still show the header and one row (or an empty state).
       const scrollbar = scroll
@@ -107,13 +108,13 @@ export function useScoreboardViewport(
           scroll.offsetHeight - scroll.clientHeight - verticalChrome(scroll),
         )
         : 0;
-      // Fill the viewport with all teams. Filtering keeps the same row density.
+      // Keep twenty rows in the viewport; additional teams scroll in the table.
       // Very short windows retain scrolling instead of shrinking text further.
       if (rows.length && teamCount > 0) {
         const rowHeight = `${Math.max(
           24,
           (Math.floor(available) - (head?.offsetHeight ?? 0) - scrollbar) /
-            Math.max(teamCount, rows.length),
+            Math.min(20, Math.max(teamCount, rows.length)),
         )}px`;
         if (page.style.getPropertyValue("--scoreboard-row-height") !== rowHeight) {
           page.style.setProperty("--scoreboard-row-height", rowHeight);
