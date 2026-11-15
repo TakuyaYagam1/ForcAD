@@ -14,7 +14,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
     expectDocumentSecurity(await page.goto("/teams"));
     expect((await scoreboardResponse).status()).toBe(200);
     await expect(page.getByRole("region", {
-      name: "Топ команд"
+      name: "Профили и результаты"
     })).toBeVisible();
 
     const teamLinks = page.locator('a[href^="/team/"]');
@@ -74,6 +74,105 @@ test("public team list, direct profile reload, history, and scoreboard load", as
       exact: true
     })).toBeVisible();
     expect(cspViolations).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
+test("opening a scrolled team starts at the heading and Back restores the scoreboard", async ({ browser }) => {
+  const context = await createE2EContext(browser);
+  const page = await context.newPage();
+  await page.setViewportSize({
+    width: 1440,
+    height: 220
+  });
+
+  try {
+    await page.goto("/");
+    const team = page.locator(".scoreboard-row .team-identity").last();
+    await expect(team).toBeVisible();
+    await team.scrollIntoViewIfNeeded();
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return window.scrollY;
+      });
+    }).toBeGreaterThan(0);
+    const outgoingPosition = await page.evaluate(() => {
+      return window.scrollY;
+    });
+    const header = await page.getByRole("banner").elementHandle();
+
+    await team.click();
+    await expect(page).toHaveURL(/\/team\/[0-9a-f-]+$/);
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return window.scrollY;
+      });
+    }).toBe(0);
+    await expect(page.getByRole("banner")).toBeInViewport();
+    expect(await header?.evaluate((element) => {
+      return element.isConnected;
+    })).toBe(true);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    await expect.poll(async () => {
+      return Math.abs(await page.evaluate(() => {
+        return window.scrollY;
+      }) - outgoingPosition);
+    }).toBeLessThan(1);
+    expect(await header?.evaluate((element) => {
+      return element.isConnected;
+    })).toBe(true);
+  } finally {
+    await context.close();
+  }
+});
+
+test("service dialog releases its portal and pointer lock after keyboard and preference changes", async ({ browser }) => {
+  const context = await createE2EContext(browser);
+  const page = await context.newPage();
+  try {
+    await page.goto("/");
+    const trigger = page.locator(".service-cell").first();
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".ui-dialog-overlay")).toHaveCount(0);
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return getComputedStyle(document.body).pointerEvents;
+      });
+    }).not.toBe("none");
+
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+
+    await trigger.click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.evaluate(() => {
+      document.addEventListener("animationstart", function disableOnExit(event) {
+        if (event.animationName.endsWith("-out")) {
+          document.removeEventListener("animationstart", disableOnExit);
+          document.documentElement.dataset.motion = "off";
+        }
+      });
+    });
+    await page.locator(".ui-dialog-close").click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator(".ui-dialog-overlay")).toHaveCount(0);
+    await expect.poll(() => {
+      return page.evaluate(() => {
+        return getComputedStyle(document.body).pointerEvents;
+      });
+    }).not.toBe("none");
+    expect(await page.evaluate(() => {
+      return document.getElementById("root")?.getAttribute("aria-hidden");
+    })).toBeNull();
   } finally {
     await context.close();
   }

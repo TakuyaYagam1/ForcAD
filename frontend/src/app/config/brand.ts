@@ -17,8 +17,8 @@ export interface BrandEnvironment {
 export const DEFAULT_BRAND: BrandConfig = {
   name: "ForcAD",
   logo: "/brand/forcad-mark.svg",
-  primary: "#5B8DEF",
-  accent: "#38B7B0",
+  primary: "#E6E8EB",
+  accent: "#7898B3",
 };
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -135,11 +135,11 @@ export function applyBrandConfig(): void {
   );
   root.style.setProperty(
     "--accent",
-    `${accentHue} ${Math.min(accentSaturation, 42)}% 17%`,
+    `${accentHue} ${Math.min(accentSaturation, 42)}% 20%`,
   );
   root.style.setProperty(
     "--accent-foreground",
-    `${accentHue} ${accentSaturation}% 72%`,
+    `${accentHue} ${accentSaturation}% 86%`,
   );
 
   applyBrandMetadata();

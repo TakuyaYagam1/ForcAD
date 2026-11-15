@@ -41,10 +41,10 @@ test("valid build-time brand values are trimmed and normalized", () => {
 });
 
 test("brand colors produce valid HSL tokens for Tailwind CSS variables", () => {
-  assert.equal(hslTriplet(DEFAULT_BRAND.primary), "220 82% 65%");
-  assert.equal(hslTriplet(DEFAULT_BRAND.accent), "177 53% 47%");
-  assert.equal(rgbTriplet(DEFAULT_BRAND.primary), "91 141 239");
-  assert.equal(rgbTriplet(DEFAULT_BRAND.accent), "56 183 176");
+  assert.equal(hslTriplet(DEFAULT_BRAND.primary), "216 11% 91%");
+  assert.equal(hslTriplet(DEFAULT_BRAND.accent), "207 28% 59%");
+  assert.equal(rgbTriplet(DEFAULT_BRAND.primary), "230 232 235");
+  assert.equal(rgbTriplet(DEFAULT_BRAND.accent), "120 152 179");
 });
 
 test("invalid colors and logo paths fall back to safe defaults", () => {
@@ -73,8 +73,8 @@ test("quoted example colors survive Vite dotenv parsing", () => {
       delete process.env[key];
     }
     const values = loadEnv("test", fixtureDirectory, "VITE_BRAND_");
-    assert.equal(values.VITE_BRAND_PRIMARY, "#5B8DEF");
-    assert.equal(values.VITE_BRAND_ACCENT, "#38B7B0");
+    assert.equal(values.VITE_BRAND_PRIMARY, "#E6E8EB");
+    assert.equal(values.VITE_BRAND_ACCENT, "#7898B3");
   } finally {
     keys.forEach((key, index) => {
       if (previousValues[index] === undefined) {

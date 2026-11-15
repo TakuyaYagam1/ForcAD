@@ -1,234 +1,28 @@
-.team-hero {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
+.teams-test-target { margin: 28px 0; padding-bottom: 28px; border-bottom: 1px solid var(--border-default); }
+.teams-test-target .teams-catalogue { margin-top: 22px; }
+.teams-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 22px 0 33px; color: var(--text-muted); }
+.teams-catalogue { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 44px 22px; }
+.team-catalogue-card { display: block; min-width: 0; border-right: 1px solid var(--border-default); padding-right: 22px; }
+.team-catalogue-card:nth-child(3n) { border-right: 0; padding-right: 0; }
+.team-catalogue-art { position: relative; aspect-ratio: 1.45; background: var(--surface-raised); display: flex; align-items: center; justify-content: center; }
+.team-catalogue-art .team-avatar--large { background: transparent; width: 105px; height: 105px; }
+.team-catalogue-art .team-avatar--large > span { font-size: 40px; font-weight: 100; }
+.team-catalogue-art > svg { position: absolute; right: 15px; bottom: 15px; }
+.team-catalogue-rank { position: absolute; left: 15px; top: 12px; font-size: 19px; font-weight: 100; }
+.team-catalogue-caption { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; margin-top: 15px; }
+.team-catalogue-caption h2 { font-size: 19px; font-weight: 300; line-height: 1.15; overflow-wrap: anywhere; }
+.team-catalogue-caption .score-value { font-size: 19px; }
+.team-catalogue-caption .team-ip { margin-top: 7px; }
+.team-catalogue-profile { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 12px; }
+@media (hover: hover) and (pointer: fine) { .team-catalogue-card:hover .team-catalogue-profile { text-decoration: underline; } }
+@media (max-width: 900px) {
+  .teams-catalogue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-catalogue-card:nth-child(3n) { border-right: 1px solid var(--border-default); padding-right: 22px; }
+  .team-catalogue-card:nth-child(2n) { border-right: 0; padding-right: 0; }
 }
-
-.team-hero > .back-link {
-  position: relative;
-  z-index: 2;
-}
-
-.team-hero .team-header {
-  position: static;
-}
-
-.teams-page .teams-test-target {
-  margin: 16px 0 28px;
-}
-
-.teams-page .teams-test-target .teams-grid {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.teams-page .teams-test-target .team-card {
-  max-width: 420px;
-}
-
-.teams-page .teams-leaders {
-  margin-top: 16px;
-}
-
-.teams-page .teams-podium {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: end;
-  gap: 18px;
-}
-
-.teams-page .team-card--podium {
-  --podium-height: 382px;
-
-  min-width: 0;
-  min-height: var(--podium-height);
-  padding: 24px 22px 20px;
-  gap: 0;
-  border-color: #29404d;
-  border-top: 2px solid var(--brand-primary);
-  border-radius: 10px;
-  background: #0a1926;
-  text-align: center;
-}
-
-.teams-page .team-card--podium[data-rank="1"] {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.teams-page .team-card--podium[data-rank="2"] {
-  --podium-height: 344px;
-
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.teams-page .team-card--podium[data-rank="3"] {
-  --podium-height: 306px;
-
-  grid-column: 3;
-  grid-row: 1;
-}
-
-.teams-page .team-card--podium:hover {
-  border-color: color-mix(in srgb, var(--brand-primary) 45%, #29404d);
-  border-top-color: var(--brand-primary);
-  background: #0d2030;
-}
-
-.teams-page .team-podium-head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 4px auto 20px;
-}
-
-.teams-page .team-podium-head .team-avatar {
-  width: 68px;
-  height: 68px;
-  border-color: #355064;
-  border-radius: 12px;
-  background: #07131e;
-}
-
-.teams-page .team-podium-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-.teams-page .team-podium-copy h2 {
-  margin: 0 0 5px;
-  color: var(--ivory);
-  font-weight: 400;
-}
-
-.teams-page .team-podium-copy .team-ip {
-  color: #a8b8c9;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-.teams-page .team-podium-place {
-  order: -1;
-  margin-bottom: 8px;
-  color: var(--brand-primary);
-  font-family: system-ui, sans-serif;
-  font-size: 23px;
-  font-weight: 800;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.teams-page .team-card--podium .team-card-bottom {
-  margin-top: auto;
-  border-color: #28414a;
-  text-align: left;
-  gap: 12px;
-}
-
-.teams-page .team-card--podium .team-card-bottom small {
-  color: #a8b8c9;
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-.teams-page .team-card--podium .score-value {
-  color: var(--brand-primary);
-  font-size: 30px;
-  font-weight: 500;
-}
-
-.teams-page .team-card--podium .text-link {
-  color: #a8b8c9;
-  font-size: 12px;
-  gap: 4px;
-}
-
-.teams-page .team-card--podium .text-link svg {
-  color: var(--brand-accent);
-}
-
-.teams-page .teams-roster {
-  margin-top: 28px;
-}
-
-.teams-page .teams-roster .teams-grid {
-  margin-top: 16px;
-}
-
-@media (max-width: 900px) and (min-width: 701px) {
-  .teams-page .teams-podium {
-    gap: 12px;
-  }
-
-  .teams-page .team-card--podium {
-    padding-right: 14px;
-    padding-left: 14px;
-  }
-
-  .teams-page .team-card--podium .score-value {
-    font-size: 25px;
-  }
-}
-
-@media (max-width: 700px) {
-  .teams-page .teams-podium {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-  }
-
-  .teams-page .team-card--podium {
-    display: grid;
-    grid-template-columns: 92px minmax(0, 1fr);
-    align-items: center;
-    grid-column: auto;
-    grid-row: auto;
-    min-height: 0;
-    padding: 18px 16px;
-    gap: 0 12px;
-    text-align: left;
-  }
-
-  .teams-page .team-card--podium[data-rank] {
-    grid-column: auto;
-    grid-row: auto;
-  }
-
-  .teams-page .team-podium-head {
-    grid-row: 1 / 3;
-    margin: 0;
-  }
-
-  .teams-page .team-podium-head .team-avatar {
-    width: 42px;
-    height: 42px;
-  }
-
-  .teams-page .team-podium-copy {
-    align-items: flex-start;
-    margin: 0;
-  }
-
-  .teams-page .team-podium-copy h2 {
-    font-size: 22px;
-  }
-
-  .teams-page .team-podium-place {
-    margin-bottom: 4px;
-    font-size: 20px;
-  }
-
-  .teams-page .team-card--podium .team-card-bottom {
-    grid-column: 1 / -1;
-    margin-top: 12px;
-    padding-top: 12px;
-  }
-
-  .teams-page .team-card--podium .score-value {
-    font-size: 25px;
-  }
+@media (max-width: 600px) {
+  .teams-toolbar { flex-direction: column; align-items: stretch; }
+  .teams-catalogue { grid-template-columns: 1fr; gap: 33px; }
+  .team-catalogue-card, .team-catalogue-card:nth-child(3n) { border-right: 0; padding-right: 0; }
+  .team-catalogue-art { aspect-ratio: 1.6; }
 }

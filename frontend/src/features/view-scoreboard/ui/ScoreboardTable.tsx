@@ -1,4 +1,9 @@
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
+import { snapshotScoreboard } from "../model/scoreboardUpdates";
+import { useScoreboardUpdates } from "../model/useScoreboardUpdates";
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import { getCompletedScoreRound } from "../model/roundDelta";
+import { PreviousRoundDelta } from "./PreviousRoundDelta";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
@@ -55,6 +60,24 @@ export function ScoreboardTable({
   const { t } = useTranslation("public");
   const navigate = useNavigate();
   const { search } = useLocation();
+  const snapshotRound = useScoreboardStore((state) => {
+    return state.round;
+  });
+  const runtimeRound = useScoreboardStore((state) => {
+    return state.runtimeRound;
+  });
+  const generation = useScoreboardStore((state) => {
+    return state.generation;
+  });
+  const resetPending = useScoreboardStore((state) => {
+    return state.resetPending;
+  });
+  const completedRound = resetPending ? null : getCompletedScoreRound(snapshotRound, runtimeRound);
+  const taskIds = useMemo(() => {
+    return tasks.map((task) => {
+      return task.id;
+    });
+  }, [tasks]);
   const frameRef = useRef<HTMLDivElement>(null);
   const previewLarge =
     !onCellClick &&
@@ -65,6 +88,7 @@ export function ScoreboardTable({
     return [team.id, index + 1]
   }));
   useViewportAnimations(frameRef, teams.length > 0);
+  useScoreboardUpdates(frameRef, snapshotScoreboard(teams, tasks, teamTasks));
 
   const cells = useMemo(
     () => {
@@ -104,22 +128,23 @@ export function ScoreboardTable({
           </caption>
           <colgroup>
             <col style={{
-              width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)"
+              width: "60px"
             }} />
             <col style={{
-              width: onCellClick ? "18rem" : "15%"
+              width: "220px"
             }} />
             <col style={{
-              width: onCellClick ? "9rem" : "6%"
+              width: "120px"
+            }} />
+            <col style={{
+              width: "120px"
             }} />
             {tasks.map((task) => {
               return (
                 <col
                   key={task.id}
                   style={{
-                    width: onCellClick
-                      ? `calc((100% - 506px) / ${tasks.length})`
-                      : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
+                    width: `calc((100% - 520px) / ${tasks.length})`,
                   }}
                 />
               )
@@ -133,6 +158,9 @@ export function ScoreboardTable({
               </th>
               <th scope="col" className="team-column">
                 {t("scoreboard.table.team")}
+              </th>
+              <th scope="col" className="delta-column">
+                {t("scoreboard.delta.column")}
               </th>
               <th scope="col" className="total-column">
                 {t("scoreboard.table.score")}
@@ -188,6 +216,15 @@ export function ScoreboardTable({
                     </button>
                   </td>
 
+                  <td className="delta-column">
+                    <PreviousRoundDelta scope={completedRound === null ? null : {
+                      generation,
+                      round: completedRound,
+                      teamId: team.id,
+                      taskIds,
+                    }} />
+                  </td>
+
                   <td className="total-column">
                     <ScoreValue value={team.score} />
                   </td>
@@ -198,6 +235,9 @@ export function ScoreboardTable({
                       <td key={task.id} className="service-column">
                         <span className="service-cell-name">{task.name}</span>
                         <ServiceCell
+                          teamId={team.id}
+                          taskId={task.id}
+                          teamName={team.name}
                           value={
                             previewLarge && rank === 1 && taskIndex === 0 && value
                               ? {

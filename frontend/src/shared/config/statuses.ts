@@ -9,7 +9,8 @@ export interface ScoreboardStatusMeta {
   code: ScoreboardStatusCode;
   label: string;
   description?: string;
-  color: string; // Hex color for the cell background
+  color: string; // Saturated status background
+  foreground: string; // Readable foreground on the status background
   badgeClassName?: string; // Tailwind classes for the badge
 }
 
@@ -27,31 +28,36 @@ const statusDefinitions: StatusDefinition[] = [
   {
     code: STATUS_OK,
     label: "UP",
-    color: "#6be273",
+    color: "#22b34b",
+    foreground: "#141414",
     badgeClassName: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
   },
   {
     code: 102,
     label: "CORRUPT",
-    color: "#ffe066",
+    color: "#dfb719",
+    foreground: "#141414",
     badgeClassName: "bg-amber-500/15 text-amber-300 border-amber-500/40",
   },
   {
     code: 103,
     label: "MUMBLE",
-    color: "#ff8c42",
+    color: "#e4771c",
+    foreground: "#141414",
     badgeClassName: "bg-orange-500/15 text-orange-300 border-orange-500/40",
   },
   {
     code: 104,
     label: "DOWN",
-    color: "#ff4554",
+    color: "#d63248",
+    foreground: "#ffffff",
     badgeClassName: "bg-red-500/15 text-red-300 border-red-500/40",
   },
   {
     code: 110,
     label: "CHECK FAILED",
-    color: "#78b9e6",
+    color: "#1079bd",
+    foreground: "#ffffff",
     badgeClassName: "bg-slate-500/15 text-slate-300 border-slate-500/40",
   },
 ];

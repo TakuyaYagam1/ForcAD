@@ -1,16 +1,2 @@
-.page-hero {
-  position: relative;
-  min-height: 258px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  border-bottom: 1px solid var(--line);
-}
-
-.page-hero--compact {
-  min-height: 195px;
-}
-
-.page-hero--compact .hero-copy h1 {
-  font-size: clamp(35px, 3.8vw, 48px);
-}
+.page-hero--compact { min-height: 170px; }
+@media (max-width: 700px) { .page-hero--compact { min-height: 0; } }

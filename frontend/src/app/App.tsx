@@ -2,39 +2,16 @@ import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { RequireAdmin } from "./providers/RequireAdmin";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 
-const ScoreboardPage = lazy(() => {
-  return import("@/pages/scoreboard/ui/ScoreboardPage")
-    .then(({ ScoreboardPage }) => {
-      return {
-        default: ScoreboardPage
-      }
-    })
-});
-const LiveScoreboardPage = lazy(() => {
-  return import("@/pages/live-scoreboard/ui/LiveScoreboardPage")
-    .then(({ LiveScoreboardPage }) => {
-      return {
-        default: LiveScoreboardPage
-      }
-    })
-});
-const TeamScoreboardPage = lazy(() => {
-  return import("@/pages/team-scoreboard/ui/TeamScoreboardPage")
-    .then(({ TeamScoreboardPage }) => {
-      return {
-        default: TeamScoreboardPage
-      }
-    })
-});
-const TeamsPage = lazy(() => {
-  return import("@/pages/teams/ui/TeamsPage")
-    .then(({ TeamsPage }) => {
-      return {
-        default: TeamsPage
-      }
-    })
-});
+import { AppShell } from "@/shared/ui/layout/AppShell";
+import { AdminHeaderActions } from "@/widgets/admin-shell/ui/AdminShell";
+import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
+import { ScoreboardPage } from "@/pages/scoreboard/ui/ScoreboardPage";
+import { LiveScoreboardPage } from "@/pages/live-scoreboard/ui/LiveScoreboardPage";
+import { TeamScoreboardPage } from "@/pages/team-scoreboard/ui/TeamScoreboardPage";
+import { TeamsPage } from "@/pages/teams/ui/TeamsPage";
+
 const AdminLoginPage = lazy(() => {
   return import("@/pages/admin-login/ui/AdminLoginPage")
     .then(({ AdminLoginPage }) => {
@@ -79,46 +56,60 @@ const AdminTeamTaskLogPage = lazy(() => {
 function RouteLoading() {
   const { t } = useTranslation("shell");
   return (
-    <main id="main-content" className="site-main">
+    <div className="route-state">
       <div className="empty-state" role="status" aria-live="polite" aria-busy="true">
         {t("loading")}
       </div>
-    </main>
+    </div>
   );
 }
 
 function RouteErrorFallback() {
   const { t } = useTranslation("shell");
   return (
-    <main id="main-content" className="site-main">
+    <div className="route-state">
       <section className="empty-state" role="alert">
         <h2>{t("loadFailed")}</h2>
         <p>{t("loadHelp")}</p>
-        <button
-          className="rounded-md border border-white/15 px-4 py-2 text-sm text-slate-100 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        <Button
+          variant="outline"
           type="button"
           onClick={() => {
             return window.location.reload()
           }}
         >
           {t("reload")}
-        </button>
+        </Button>
       </section>
-    </main>
+    </div>
   );
 }
 
 class RouteErrorBoundary extends Component<
   {
-    children: ReactNode
+    children: ReactNode;
+    resetKey: string
   },
   {
-    hasError: boolean
+    hasError: boolean;
+    resetKey: string
   }
 > {
   state = {
-    hasError: false
+    hasError: false,
+    resetKey: this.props.resetKey
   };
+
+  static getDerivedStateFromProps(props: {
+    resetKey: string
+  }, state: {
+    resetKey: string
+  }) {
+    return props.resetKey === state.resetKey ? null : {
+      hasError: false,
+      resetKey: props.resetKey
+    };
+  }
 
   static getDerivedStateFromError() {
     return {
@@ -136,78 +127,87 @@ class RouteErrorBoundary extends Component<
 
 export default function App() {
   const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+  const isAuthenticated = useAdminAuthStore((state) => {
+    return state.isAuthenticated;
+  });
 
   return (
-    <RouteErrorBoundary key={location.key}>
-      <Suspense fallback={<RouteLoading />}>
-        <Routes>
-          <Route path="/" element={<ScoreboardPage />} />
-          <Route path="/live" element={<LiveScoreboardPage />} />
-          <Route path="/teams" element={<TeamsPage />} />
-          <Route path="/team/:teamId" element={<TeamScoreboardPage />} />
+    <AppShell
+      showNavigation={!isAdmin}
+      headerActions={isAdmin && isAuthenticated ? <AdminHeaderActions /> : undefined}
+    >
+      <RouteErrorBoundary resetKey={location.pathname}>
+        <Suspense fallback={<RouteLoading />}>
+          <Routes>
+            <Route path="/" element={<ScoreboardPage />} />
+            <Route path="/live" element={<LiveScoreboardPage />} />
+            <Route path="/teams" element={<TeamsPage />} />
+            <Route path="/team/:teamId" element={<TeamScoreboardPage />} />
 
-          <Route path="/admin/login" element={<AdminLoginPage />} />
+            <Route path="/admin/login" element={<AdminLoginPage />} />
 
-          <Route
-            path="/admin/scoreboard"
-            element={
-              <RequireAdmin>
-                <AdminScoreboardPage />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/scoreboard"
+              element={
+                <RequireAdmin>
+                  <AdminScoreboardPage />
+                </RequireAdmin>
+              }
+            />
 
-          <Route
-            path="/admin/task/:taskId"
-            element={
-              <RequireAdmin>
-                <TaskAdminPage />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/task/:taskId"
+              element={
+                <RequireAdmin>
+                  <TaskAdminPage />
+                </RequireAdmin>
+              }
+            />
 
-          <Route
-            path="/admin/teamtask_log/team/:teamId/task/:taskId"
-            element={
-              <RequireAdmin>
-                <AdminTeamTaskLogPage />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/teamtask_log/team/:teamId/task/:taskId"
+              element={
+                <RequireAdmin>
+                  <AdminTeamTaskLogPage />
+                </RequireAdmin>
+              }
+            />
 
-          <Route
-            path="/admin/team/create"
-            element={
-              <RequireAdmin>
-                <TeamAdminPage mode="create" />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/team/create"
+              element={
+                <RequireAdmin>
+                  <TeamAdminPage mode="create" />
+                </RequireAdmin>
+              }
+            />
 
-          <Route
-            path="/admin/task/create"
-            element={
-              <RequireAdmin>
-                <TaskAdminPage mode="create" />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/task/create"
+              element={
+                <RequireAdmin>
+                  <TaskAdminPage mode="create" />
+                </RequireAdmin>
+              }
+            />
 
-          <Route
-            path="/admin/team/:teamId"
-            element={
-              <RequireAdmin>
-                <TeamAdminPage mode="edit" />
-              </RequireAdmin>
-            }
-          />
+            <Route
+              path="/admin/team/:teamId"
+              element={
+                <RequireAdmin>
+                  <TeamAdminPage mode="edit" />
+                </RequireAdmin>
+              }
+            />
 
-          <Route path="/admin" element={<Navigate to="/admin/scoreboard" replace />} />
-          <Route path="/admin/create_task" element={<Navigate to="/admin/task/create" replace />} />
-          <Route path="/admin/create_team" element={<Navigate to="/admin/team/create" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </RouteErrorBoundary>
+            <Route path="/admin" element={<Navigate to="/admin/scoreboard" replace />} />
+            <Route path="/admin/create_task" element={<Navigate to="/admin/task/create" replace />} />
+            <Route path="/admin/create_team" element={<Navigate to="/admin/team/create" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </RouteErrorBoundary>
+    </AppShell>
   );
 }

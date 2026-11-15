@@ -92,9 +92,9 @@ export function TaskForm({
   const { t } = useTranslation("admin");
   return (
     <form onSubmit={onSubmit} noValidate>
-      <Card className="admin-form max-w-3xl !p-0">
+      <Card className="admin-form admin-editor-form !p-0">
         <CardHeader>
-          <CardTitle className="text-sm text-slate-100">
+          <CardTitle className="text-sm admin-text-primary">
             {isCreate
               ? t("task.newTitle")
               : t("task.existingTitle", {
@@ -102,7 +102,7 @@ export function TaskForm({
                 id: task.id ?? "-"
               })}
           </CardTitle>
-          <CardDescription className="text-xs text-slate-400">
+          <CardDescription className="text-xs admin-text-muted">
             {t("task.formDescription")}
           </CardDescription>
         </CardHeader>
@@ -136,7 +136,7 @@ export function TaskForm({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 md:col-span-2">
+          <div className="admin-numeric-fields grid grid-cols-3 gap-3 md:col-span-2">
             <TaskNumberField
               field="gets"
               label={t("task.getChecks")}
@@ -188,7 +188,7 @@ export function TaskForm({
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 md:col-span-2">
+          <div className="admin-numeric-fields grid grid-cols-3 gap-3 md:col-span-2">
             <TaskNumberField
               field="checker_timeout"
               label={t("task.timeout")}
@@ -215,7 +215,7 @@ export function TaskForm({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-slate-200">
+          <label className="flex items-center gap-2 text-xs admin-text-primary">
             <Checkbox
               disabled={saving}
               checked={task.active}

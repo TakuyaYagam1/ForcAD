@@ -1,3 +1,99 @@
 .table-frame {
   position: relative;
 }
+
+.scoreboard-table .delta-column {
+  text-align: right;
+  padding-inline: 8px 16px;
+}
+
+.scoreboard-page .scoreboard-table th.delta-column {
+  text-align: right;
+}
+
+.round-delta {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.4;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.round-delta-value {
+  font-size: 17px;
+}
+
+.round-delta--gain .round-delta-value {
+  color: var(--state-success-text);
+}
+
+.round-delta--loss .round-delta-value {
+  color: var(--state-error-text);
+}
+
+@media (max-width: 700px) {
+  .scoreboard-page--compact .scoreboard-table tbody td.delta-column {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    text-align: left;
+    padding: 0 5px 10px;
+  }
+
+  .scoreboard-page--compact .round-delta {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .scoreboard-page--compact .round-delta-value {
+    font-size: 15px;
+  }
+
+  .scoreboard-page--compact .scoreboard-table tbody .place-column,
+  .scoreboard-page--compact .scoreboard-table tbody .team-column,
+  .scoreboard-page--compact .scoreboard-table tbody .total-column {
+    grid-row: 1;
+  }
+}
+
+/* Results never translate: this discrete signal lives below their content. */
+.scoreboard-table tbody td {
+  padding-bottom: 18px;
+}
+
+.scoreboard-update-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.scoreboard-update-rail {
+  position: absolute;
+  inset-inline: 12px;
+  height: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.scoreboard-update-square {
+  display: block;
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  background: var(--text-primary);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scoreboard-update-layer {
+    display: none;
+  }
+}

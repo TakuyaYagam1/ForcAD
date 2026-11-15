@@ -60,13 +60,13 @@ export function DemoControls({ onDataChange }: {
             <RotateCcw size={14} />
             {t("demo.reset")}
           </button>
-          <button
+          {!import.meta.env.PROD && <button
             type="button"
             className="demo-panel-exit"
             onClick={leaveDemoMode}
           >
             {t("demo.exit")}
-          </button>
+          </button>}
         </div>
         <span className="sr-only" role="status" aria-live="polite">
           {message && t(`demo.${message}`)}

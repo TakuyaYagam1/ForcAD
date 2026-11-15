@@ -5,7 +5,6 @@ import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { getLocale } from "@/shared/i18n/index";
 import { formatScore } from "@/shared/lib/formatScore";
 import { normalizeUuid } from "@/shared/lib/uuid";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -46,7 +45,7 @@ export function AdminTeamTaskLogPage() {
       <Link to="/admin/scoreboard" className="back-link">
         <ArrowLeft size={14} />{t("teamTaskLog.back")}
       </Link>
-      <div className="admin-page">
+      <div className="admin-page admin-page--logs">
         <div className="admin-heading">
           <div>
             <p className="eyebrow">{t("common.organizerPanel")}</p>
@@ -65,7 +64,6 @@ export function AdminTeamTaskLogPage() {
                 : t("task.invalidId"))}
             </p>
           </div>
-          <BrandIcon name="terminal" />
         </div>
         {logQuery.isError && (
           <div className="notice" role="alert">
@@ -117,7 +115,11 @@ export function AdminTeamTaskLogPage() {
                     <tr key={entry.id}>
                       <td className="history-round">{numberFormat.format(entry.round)}</td>
                       <td>
-                        <span className="status-tag">
+                        <span className="status-tag" style={meta ? {
+                          color: meta.foreground,
+                          backgroundColor: meta.color,
+                          padding: "3px 7px"
+                        } : undefined}>
                           <i
                             className="status-dot"
                             style={{
@@ -131,8 +133,8 @@ export function AdminTeamTaskLogPage() {
                       <td className="whitespace-nowrap">
                         {formatScore(entry.score)}
                       </td>
-                      <td className="text-[#95bca5]">+{numberFormat.format(entry.stolen)}</td>
-                      <td className="text-[#c88b82]">-{numberFormat.format(entry.lost)}</td>
+                      <td className="admin-text-success">+{numberFormat.format(entry.stolen)}</td>
+                      <td className="admin-text-danger">-{numberFormat.format(entry.lost)}</td>
                       <td>
                         {numberFormat.format(entry.checks_passed)}/{numberFormat.format(entry.checks)}
                       </td>

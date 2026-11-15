@@ -1,0 +1,61 @@
+.round-line {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 146px;
+  align-items: center;
+  gap: 20px;
+  min-height: 72px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.round-summary { display: grid; gap: 3px; }
+.round-label { color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+.round-percentage { font-size: 20px; font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.round-track {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 24px;
+  text-align: center;
+  user-select: none;
+}
+.round-character { position: relative; color: var(--text-muted); opacity: .65; }
+.round-character--filled, .round-character--tip { color: var(--round-progress-color); opacity: 1; }
+.round-bracket { color: var(--text-muted); }
+.round-cursor-frames { display: none; }
+.round-cursor-frames > span { position: absolute; inset: 0; opacity: 0; }
+.round-track[data-cursor="running"] .round-cursor-rest { opacity: 0; }
+.round-track[data-cursor="running"] .round-cursor-frames { display: inline; }
+/* State indication: a one-second terminal cursor cycle in one fixed cell.
+   Only opacity changes; the elapsed portion and all readable values stay still. */
+.round-track[data-cursor="running"] .round-cursor-frames > span {
+  animation: round-cursor-frame 1000ms linear infinite;
+}
+@keyframes round-cursor-frame {
+  0%, 24.99% { opacity: 1; }
+  25%, 100% { opacity: 0; }
+}
+.round-timer { min-width: 0; text-align: right; }
+.round-timer strong { display: block; font-size: 22px; font-weight: 300; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.round-timer small { display: block; margin-top: 3px; font-size: 13px; color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  .round-line { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; min-height: 92px; padding: 9px 0; }
+  .round-summary { grid-column: 1; grid-row: 1; gap: 1px; }
+  .round-timer { grid-column: 2; grid-row: 1; }
+  .round-track { grid-column: 1 / -1; grid-row: 2; line-height: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .round-track[data-cursor="running"] .round-cursor-rest { opacity: 1; }
+  .round-track[data-cursor="running"] .round-cursor-frames { display: none; }
+  .round-track[data-cursor="running"] .round-cursor-frames > span { animation: none; }
+}
+
+:root[data-motion="off"] .round-track .round-cursor-rest { opacity: 1; }
+:root[data-motion="off"] .round-track .round-cursor-frames { display: none; }
+:root[data-motion="off"] .round-track .round-cursor-frames > span { animation: none; }

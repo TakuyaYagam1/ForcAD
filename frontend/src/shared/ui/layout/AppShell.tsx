@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Activity, ArrowUpRight, Grid2X2, ListOrdered, Users } from "lucide-react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { usePageEntrance } from "@/shared/lib/usePageEntrance";
+import { useRouteScroll } from "@/shared/lib/useRouteScroll";
 import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
 import { LanguageSwitch } from "./LanguageSwitch";
@@ -14,7 +16,21 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
 }) {
   const { t } = useTranslation("shell");
   const location = useLocation();
-  const mainRef = usePageEntrance(location.pathname, location.key);
+  useRouteScroll();
+  const keyboardNavigation = useRef(false);
+  const contentRef = usePageEntrance(location.pathname, keyboardNavigation);
+
+  useEffect(() => {
+    const updateVisibility = () => {
+      document.documentElement.dataset.pageVisibility = document.visibilityState;
+    };
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", updateVisibility);
+      delete document.documentElement.dataset.pageVisibility;
+    };
+  }, []);
 
   const round = useScoreboardStore(
     (state) => {
@@ -38,7 +54,17 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
   });
 
   return (
-    <div className="brand-app">
+    <div
+      className="brand-app"
+      onPointerDownCapture={() => {
+        keyboardNavigation.current = false;
+        document.documentElement.dataset.inputModality = "pointer";
+      }}
+      onKeyDownCapture={() => {
+        keyboardNavigation.current = true;
+        document.documentElement.dataset.inputModality = "keyboard";
+      }}
+    >
       <a href="#main-content" className="skip-link">
         {t("skip")}
       </a>
@@ -58,9 +84,9 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
 
           {showNavigation && (
             <nav className="main-nav" aria-label={t("navigation")}>
-              <NavLink to="/live">{t("events")}</NavLink>
-              <NavLink to="/" end className="main-nav__scoreboard">{t("scoreboard")}</NavLink>
-              <NavLink to="/teams">{t("teams")}</NavLink>
+              <NavLink to="/live"><Activity aria-hidden="true" />{t("events")}</NavLink>
+              <NavLink to="/" end><ListOrdered aria-hidden="true" />{t("scoreboard")}</NavLink>
+              <NavLink to="/teams"><Users aria-hidden="true" />{t("teams")}</NavLink>
             </nav>
           )}
 
@@ -88,10 +114,10 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
         </div>
       </header>
 
-      <main ref={mainRef} id="main-content" className="site-main">
+      <main id="main-content" className="site-main">
         {phase === "paused" && (
           <div
-            className="mx-auto my-3 max-w-screen-xl rounded border border-amber-300/20 bg-amber-300/5 px-4 py-3 text-sm text-amber-100"
+            className="notice notice--paused"
             role="status"
           >
             {t("paused")}
@@ -105,52 +131,19 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
               : t("stopped")}
           </div>
         )}
-        {children}
+        <div ref={contentRef} className="page-content">{children}</div>
       </main>
-
+      <footer className="site-footer">
+        <div className="footer-inner">
+          <Link to="/" className="footer-brand"><Grid2X2 size={16} strokeWidth={1} aria-hidden="true" />{brand.name}</Link>
+          <span>Attack–defence / competition platform</span>
+          <Link to="/admin">{t("operator")}<ArrowUpRight size={14} strokeWidth={1} aria-hidden="true" /></Link>
+        </div>
+      </footer>
     </div>
   );
 }
 
 function BrandLogo() {
-  const [imageFailed, setImageFailed] = useState(false);
-
-  if (imageFailed) {
-    return (
-      <svg
-        className="brand-mark-fallback"
-        viewBox="0 0 48 48"
-        fill="none"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <rect
-          x="4"
-          y="4"
-          width="40"
-          height="40"
-          rx="11"
-          stroke="var(--brand-primary)"
-          strokeOpacity=".42"
-        />
-        <path
-          d="M17 34V14h16M17 23h12"
-          stroke="var(--brand-primary)"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M31 29v5"
-          stroke="var(--brand-accent)"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-
-  return <img src={brand.logo} alt="" onError={() => {
-    return setImageFailed(true)
-  }} />;
+  return <img src={brand.logo} alt="" />;
 }

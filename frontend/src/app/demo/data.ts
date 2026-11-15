@@ -111,15 +111,20 @@ export function createDemoHistory(
   const taskOrder = [...new Set(raw.map((item) => {
     return item.task_id
   }))];
+  const teamOrder = [...new Set(raw.map((item) => {
+    return item.team_id;
+  }))];
 
   return Array.from({
     length: 7
   }, (_, offset) => {
     return raw.map((item) => {
+      // Completed snapshots match the scoreboard; prior rounds include gains, losses and ties.
+      const changePerRound = [45, -32, 0, 68, -18][teamOrder.indexOf(item.team_id) % 5];
       return {
         ...item,
         round: round - offset,
-        score: Math.max(0, item.score - offset * 45),
+        score: Math.max(0, item.score - offset * changePerRound),
         stolen: Math.max(0, item.stolen - offset),
         lost: Math.max(0, item.lost - Math.floor(offset / 2)),
         timestamp: `${nowSecs - offset * DEMO_ROUND_TIME}-${taskOrder.indexOf(item.task_id) + 1}`,

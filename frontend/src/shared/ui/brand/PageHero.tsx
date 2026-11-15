@@ -28,9 +28,8 @@ export function PageHero({
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h1>{title}</h1>
         {subtitle && <p className="hero-subtitle">{subtitle}</p>}
-        {children}
       </div>
-
+      {children}
     </section>
   );
 }

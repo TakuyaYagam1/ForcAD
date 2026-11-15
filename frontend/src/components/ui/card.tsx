@@ -1,3 +1,4 @@
+import "./industrial.css"
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -10,7 +11,7 @@ const Card = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "rounded-xl border bg-card text-card-foreground shadow",
+        "ui-card border bg-card text-card-foreground",
         className
       )}
       {...props}
@@ -26,7 +27,7 @@ const CardHeader = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
+      className={cn("ui-card-header flex flex-col space-y-1.5 p-6", className)}
       {...props}
     />
   )
@@ -40,7 +41,7 @@ const CardTitle = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("font-semibold leading-none tracking-tight", className)}
+      className={cn("ui-card-title font-light leading-none tracking-tight", className)}
       {...props}
     />
   )
@@ -54,7 +55,7 @@ const CardDescription = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("ui-card-description text-sm text-muted-foreground", className)}
       {...props}
     />
   )
@@ -66,7 +67,7 @@ const CardContent = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
   return (
-    <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+    <div ref={ref} className={cn("ui-card-content p-6 pt-0", className)} {...props} />
   )
 })
 CardContent.displayName = "CardContent"
@@ -78,7 +79,7 @@ const CardFooter = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("flex items-center p-6 pt-0", className)}
+      className={cn("ui-card-footer flex items-center p-6 pt-0", className)}
       {...props}
     />
   )

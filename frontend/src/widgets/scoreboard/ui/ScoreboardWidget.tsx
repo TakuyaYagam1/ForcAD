@@ -12,8 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
-import { useScoreboardEntrance } from "../model/useScoreboardEntrance";
-import { useScoreboardViewport } from "../model/useScoreboardViewport";
+import { RecentEvents } from "@/shared/ui/brand/RecentEvents";
 import "./ScoreboardWidget.css";
 
 interface ScoreboardWidgetProps {
@@ -55,9 +54,6 @@ export function ScoreboardWidget({
     return state.setRoundTime
   });
 
-  const { pageRef, tableRef } = useScoreboardEntrance(!admin, teams.length > 0);
-
-  useScoreboardViewport(!admin, pageRef, teams.length);
 
   const config = useQuery({
     queryKey: ["game-config"],
@@ -76,7 +72,6 @@ export function ScoreboardWidget({
 
   return (
     <div
-      ref={pageRef}
       className={
         admin
           ? "scoreboard-page scoreboard-page--admin"
@@ -107,7 +102,8 @@ export function ScoreboardWidget({
                 key={status.code}
                 title={status.description}
                 style={{
-                  backgroundColor: status.color
+                  backgroundColor: status.color,
+                  color: status.foreground
                 }}
               >
                 {status.label}
@@ -115,9 +111,10 @@ export function ScoreboardWidget({
             )
           })}
         </div>
+        <span className="toolbar-note">{t("scoreboard.flagsHint")}</span>
       </div>
 
-      <div ref={tableRef} className="scoreboard-reveal">
+      <div className="scoreboard-reveal">
         <ScoreboardTable
           teams={teams as ScoreboardTeam[]}
           tasks={tasks as ScoreboardTask[]}
@@ -127,7 +124,7 @@ export function ScoreboardWidget({
           onCellClick={onCellClick}
         />
       </div>
-
+      {!admin && <><p className="table-hint">{t("scoreboard.tableHint")}</p><RecentEvents /></>}
     </div>
   );
 }

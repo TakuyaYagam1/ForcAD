@@ -1,13 +1,2 @@
-.rank-number.rank-badge {
-  width: auto;
-  height: auto;
-  color: #a8b8ca;
-  font-family: "Inter Tight", Arial, sans-serif;
-  font-size: 18px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-
-.rank-number.rank-badge.rank-number--1 {
-  color: var(--brand-primary);
-}
+.rank-number.rank-badge { display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-family: var(--font-te-20); font-size: 24px; font-weight: 100; font-variant-numeric: tabular-nums; }
+.rank-number.rank-badge.rank-number--1 { color: var(--text-primary); }

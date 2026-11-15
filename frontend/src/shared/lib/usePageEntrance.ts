@@ -1,196 +1,48 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import { isMotionAllowed, watchMotionDisable } from "./motionPreference";
 
-export function usePageEntrance(pathname: string, navigationKey: string) {
-  const mainRef = useRef<HTMLElement>(null);
+/** One short transition per route; live data never restarts it. */
+export function usePageEntrance(
+  pathname: string,
+  keyboardNavigation: RefObject<boolean>,
+) {
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    const kind =
-      pathname === "/teams"
-        ? "teams"
-        : pathname === "/live"
-          ? "events"
-          : /^\/team\/[^/]+\/?$/.test(pathname)
-            ? "team"
-            : null;
-
-    const main = mainRef.current;
-    if (!kind || !main) {
-      return;
-    }
-
+    const content = contentRef.current;
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    if (!isMotionAllowed(preference)) {
+    if (!content || keyboardNavigation.current || !isMotionAllowed(preference) ||
+      typeof content.animate !== "function") {
       return;
     }
 
-    const played = new Set<string>();
-    const animations = new Set<Animation>();
-    let frame = 0;
-    let stopped = false;
-
-    const reveal = (
-      name: string,
-      selector: string,
-      delay: number,
-      stagger = 0,
-      duration = 460,
-      from: Keyframe = {
-        opacity: 0,
-        transform: "translateY(18px)"
+    // Keep the new page readable from its first frame. A tiny displacement
+    // bridges the route change without moving individual rows or delaying data.
+    const animation = content.animate([
+      {
+        opacity: 0.65,
+        transform: "translateY(4px)"
       },
-      to: Keyframe = {
+      {
         opacity: 1,
-        transform: "none"
+        transform: "translateY(0)"
       },
-    ) => {
-      if (played.has(name)) {
-        return;
-      }
-
-      const elements = Array.from(main.querySelectorAll<HTMLElement>(selector));
-      if (!elements.length) {
-        return;
-      }
-
-      played.add(name);
-
-      elements.slice(0, 18).forEach((element, index) => {
-        if (typeof element.animate !== "function") {
-          return;
-        }
-
-        const animation = element.animate([from, to], {
-          duration,
-          delay: delay + Math.min(index, 8) * stagger,
-          easing: "cubic-bezier(.22,1,.36,1)",
-          fill: "both",
-        });
-
-        animation.id = `page-enter-${kind}-${name}-${index}`;
-        animations.add(animation);
-
-        animation.onfinish = () => {
-          animations.delete(animation);
-          animation.cancel();
-        };
-      });
-    };
-
-    const run = () => {
-      frame = 0;
-      if (stopped) {
-        return;
-      }
-
-      if (!isMotionAllowed(preference)) {
-        stop();
-        return;
-      }
-
-      reveal(
-        "title",
-        ".hero-copy h1, .team-header h1",
-        110,
-        0,
-        720,
-        {
-          opacity: 0,
-          clipPath: "inset(0 100% 0 0)"
-        },
-        {
-          opacity: 1,
-          clipPath: "inset(0 0 0 0)"
-        },
-      );
-
-      reveal(
-        "subtitle",
-        ".hero-subtitle, .hero-metadata, .team-header-meta",
-        190,
-        45,
-      );
-
-      reveal("back", ".back-link", 80);
-      reveal("toolbar", ".events-toolbar", 240);
-      reveal("empty", ".empty-state", 280);
-
-      if (kind === "teams") {
-        reveal(
-          "headings",
-          ".teams-leaders > .section-heading, .teams-roster > .section-heading",
-          260,
-          80,
-        );
-
-        reveal("podium", ".teams-podium > .team-card", 300, 90, 620, {
-          opacity: 0,
-          transform: "translateY(28px) scale(.97)",
-        });
-
-        reveal("cards", ".teams-grid > .team-card", 440, 55);
-      } else if (kind === "events") {
-        reveal("events", ".events-list > .event-item", 320, 45);
-        reveal("hint", ".table-hint", 650);
-      } else {
-        reveal("avatar", ".team-header-identity > .team-avatar", 180, 0, 550, {
-          opacity: 0,
-          transform: "scale(.9)",
-        });
-
-        reveal("rank", ".team-current-rank", 240);
-        reveal("stats", ".stats-grid > .stat-card", 280, 70, 520);
-
-        reveal(
-          "panels",
-          ".services-panel, .history-panel, .team-content-aside",
-          500,
-          85,
-          560,
-        );
-      }
-    };
-
-    const schedule = () => {
-      if (!stopped && !frame) {
-        frame = window.requestAnimationFrame(run);
-      }
-    };
-
-    const observer = new MutationObserver(schedule);
-    let stopWatchingMotion = () => {};
-
-    const stop = () => {
-      if (stopped) {
-        return;
-      }
-
-      stopped = true;
-
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-
-      observer.disconnect();
-      stopWatchingMotion();
-
-      animations.forEach((animation) => {
-        return animation.cancel()
-      });
-      animations.clear();
-    };
-
-    observer.observe(main, {
-      childList: true,
-      subtree: true
+    ], {
+      duration: 180,
+      easing: getComputedStyle(document.documentElement).getPropertyValue("--ease-out").trim(),
+      fill: "both",
     });
-    stopWatchingMotion = watchMotionDisable(preference, stop);
-
-    run();
-
+    animation.id = "page-content-enter";
+    let stopWatching = () => {};
+    const stop = () => {
+      animation.onfinish = null;
+      animation.cancel();
+      stopWatching();
+    };
+    stopWatching = watchMotionDisable(preference, stop);
+    animation.onfinish = stop;
     return stop;
-  }, [pathname, navigationKey]);
+  }, [pathname, keyboardNavigation]);
 
-  return mainRef;
+  return contentRef;
 }

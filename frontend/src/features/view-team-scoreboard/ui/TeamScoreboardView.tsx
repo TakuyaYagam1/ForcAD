@@ -204,7 +204,7 @@ export function TeamScoreboardView() {
                         <span>{task.name}</span>
                       </div>
 
-                      <ServiceCell name={task.name} value={value} />
+                      <ServiceCell name={task.name} value={value} teamId={team.id ?? undefined} taskId={task.id ?? undefined} teamName={team.name} />
                     </div>
                   </div>
                 );
@@ -260,7 +260,7 @@ export function TeamScoreboardView() {
                 <table
                   className="scoreboard-table history-table"
                   style={{
-                    minWidth: `${Math.max(650, 182 + tasks.length * 210)}px`
+                    minWidth: `${Math.max(650, 182 + tasks.length * 170)}px`
                   }}
                 >
                   <caption className="sr-only">
@@ -339,6 +339,10 @@ export function TeamScoreboardView() {
                                 <td key={task.id} className="history-value-cell">
                                   <ServiceCell
                                     name={`${task.name}, ${serviceRoundLabel}`}
+                                    teamId={team.id ?? undefined}
+                                    taskId={task.id ?? undefined}
+                                    teamName={team.name}
+                                    snapshotRound={row.round}
                                     value={row.tasks.find(
                                       (value) => {
                                         return value.taskId === task.id

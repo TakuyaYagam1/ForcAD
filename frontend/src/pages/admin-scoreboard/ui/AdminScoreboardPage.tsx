@@ -22,7 +22,10 @@ export function AdminScoreboardPage() {
   return (
     <AdminShell>
       <div className="admin-page admin-page--scoreboard">
-        <h1 className="sr-only">{t("scoreboard.title")}</h1>
+        <div className="admin-dashboard-heading">
+          <p className="eyebrow">{t("common.organizerPanel")}</p>
+          <h1>{t("scoreboard.title")}</h1>
+        </div>
         <StatusesBar round={round} roundStart={roundStart} />
         <div className="admin-dashboard-strip">
           <CheckerStatusPanel />

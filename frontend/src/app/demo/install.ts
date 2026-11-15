@@ -1,3 +1,4 @@
+import { randomUuid } from "@/shared/lib/randomUuid";
 import { validateTeam, validateTask } from "@/shared/lib/adminValidation";
 import { refreshGameQueries } from "@/shared/lib/queryClient";
 import { AxiosError, AxiosHeaders } from "axios";
@@ -27,13 +28,19 @@ const DEMO_SESSION_STORAGE_KEY = "forcad-demo-auth";
 const DEMO_REQUEST_DELAY_MS = 100;
 const DEMO_ADMIN_USERNAME = "demo";
 const DEMO_ADMIN_PASSWORD = "demo";
+// Match the live administration contract so demo mutations use the same client path.
+const DEMO_CSRF_TOKEN = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) => {
+  return byte.toString(16).padStart(2, "0")
+}).join("");
 const DEMO_CAPTURE_DELTA = 185;
+const DEMO_CAPTURE_INTERVAL_MS = 12000;
 const DEMO_PROMOTION_MARGIN = 275;
 const MIN_DEMO_CAPTURE_PASS_RATE = 0.01;
 const GAME_ACTION_PATH =
   /^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/;
 const UUID_PATH = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const ADMIN_ENTITY_PATH = new RegExp(`^/admin/(teams|tasks)(?:/(${UUID_PATH}))?$`, "i");
+const CLIENT_CHECKER_LOG_PATH = new RegExp(`^/client/teams/(${UUID_PATH})/tasks/(${UUID_PATH})/logs$`, "i");
 const CLIENT_TEAM_HISTORY_PATH = new RegExp(`^/client/teams/(${UUID_PATH})$`, "i");
 
 interface DemoCaptureSeed {
@@ -89,6 +96,8 @@ let teamTaskHistory: TeamTaskStateRaw[] = [];
 const demoAdminLogIds = new Map<string, string>();
 let round = DEMO_INITIAL_ROUND;
 let roundStart = 0;
+let nextDemoCaptureAt = 0;
+let demoCaptureSequence = 0;
 let isLoggedIn = false;
 let phase: "waiting" | "running" | "paused" | "finished" = "running";
 let practice = false;
@@ -222,6 +231,8 @@ function rememberSession(value: boolean) {
 }
 
 export function resetDemoData() {
+  nextDemoCaptureAt = Date.now() + DEMO_CAPTURE_INTERVAL_MS;
+  demoCaptureSequence = 0;
   practice = false;
   generation += 1;
   scheduledStart = new Date(Date.now() - ONE_HOUR_MS).toISOString();
@@ -357,11 +368,8 @@ export function simulateDemoCapture(promote = false) {
   attackerCell.stolen += 1;
   victimCell.score = Math.max(0, victimCell.score - delta);
   victimCell.lost += 1;
-  round += 1;
-  pausedSeconds = 0;
+  // A flag capture changes scores, not the current round's clock.
   refreshGameQueries();
-  roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
-  recordSnapshot();
   useScoreboardStore.getState().setRuntime(getRuntime());
   useScoreboardStore.getState().handleUpdateScoreboardMessage({
     round,
@@ -375,6 +383,23 @@ export function simulateDemoCapture(promote = false) {
     task_id: attackerCell.task_id,
     attacker_delta: delta,
   });
+}
+
+/** Advance by the actual round deadline, including any completed pause. */
+function advanceDemoRound() {
+  if (phase !== "running") {
+    return;
+  }
+  const elapsed = Date.now() / 1000 - (roundStart + DEMO_ROUND_TIME) - pausedSeconds;
+  const completed = Math.floor(elapsed / DEMO_ROUND_TIME);
+  if (completed < 1) {
+    return;
+  }
+  round += completed;
+  roundStart += completed * DEMO_ROUND_TIME + pausedSeconds;
+  pausedSeconds = 0;
+  recordSnapshot();
+  publishState();
 }
 
 function makeResponse(
@@ -496,7 +521,7 @@ function getDemoAdminLogId(entry: TeamTaskStateRaw): string {
     return existingId;
   }
 
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   demoAdminLogIds.set(key, id);
   return id;
 }
@@ -521,6 +546,70 @@ function handleClientRequest(
   }
   if (requestPath === "/client/tasks") {
     return makeResponse(config, getParticipantTasks());
+  }
+
+  const checkerLogMatch = requestPath.match(CLIENT_CHECKER_LOG_PATH);
+  if (checkerLogMatch) {
+    const teamId = checkerLogMatch[1]!.toLowerCase();
+    const taskId = checkerLogMatch[2]!.toLowerCase();
+    if (!getParticipantTeams().some((team) => {
+      return team.id === teamId
+    }) ||
+        !getParticipantTasks().some((task) => {
+          return task.id === taskId
+        })) {
+      fail(config, 404, "Team or service not found");
+    }
+    const params = config.params as {
+      limit?: number;
+      before_id?: string
+    } | undefined;
+    const limit = Math.max(1, Math.min(500, Number(params?.limit) || 100));
+    // These are synthetic demo checks, derived from the demo round snapshots.
+    const entries = teamTaskHistory.filter((entry) => {
+      return entry.team_id === teamId && entry.task_id === taskId
+    });
+    const logs = entries.flatMap((entry) => {
+      const finished = Number(entry.timestamp.split("-")[0]) * 1000;
+      return ["get", "put", "check"].map((action, index) => {
+        const duration = 120 + index * 85;
+        const finishedAt = finished - index * 1500;
+        return {
+          id: getDemoAdminLogId({
+            ...entry,
+            timestamp: `${entry.timestamp}:${action}`
+          }),
+          round: entry.round,
+          action,
+          stage: "main",
+          started_at: new Date(finishedAt - duration).toISOString(),
+          finished_at: new Date(finishedAt).toISOString(),
+          duration_ms: duration,
+          timed_out: false,
+          status: entry.status,
+          public_message: action === "put" && entry.status === 101 ? "PUT completed" : entry.message || "OK",
+        };
+      });
+    });
+    const cursorIndex = params?.before_id ? logs.findIndex((log) => {
+      return log.id === params.before_id
+    }) : -1;
+    if (params?.before_id && cursorIndex === -1) {
+      fail(config, 400, "Invalid checker log cursor");
+    }
+    const start = cursorIndex + 1;
+    const page = logs.slice(start, start + limit);
+    const hasMore = start + page.length < logs.length;
+    return makeResponse(config, {
+      team_id: teamId,
+      task_id: taskId,
+      limit,
+      has_more: hasMore,
+      ...(hasMore && page.length ? {
+        next_before_id: page[page.length - 1]!.id
+      } : {}),
+      logs: page,
+    });
   }
 
   const teamHistoryMatch = requestPath.match(CLIENT_TEAM_HISTORY_PATH);
@@ -559,7 +648,8 @@ function handleAdminSessionRequest(
     }
     return makeResponse(config, {
       status: "ok",
-      username: DEMO_ADMIN_USERNAME
+      username: DEMO_ADMIN_USERNAME,
+      csrf_token: DEMO_CSRF_TOKEN,
     });
   }
   if (requestPath === "/admin/status") {
@@ -571,6 +661,7 @@ function handleAdminSessionRequest(
     }
     return makeResponse(config, {
       username: DEMO_ADMIN_USERNAME,
+      csrf_token: DEMO_CSRF_TOKEN,
       status: "ok",
     });
   }
@@ -578,6 +669,7 @@ function handleAdminSessionRequest(
     if (method !== "POST") {
       fail(config, 405, "Sign-out requires POST");
     }
+    requireAdminSession(config, requestPath);
     rememberSession(false);
     return makeResponse(config, {
       status: "ok"
@@ -591,6 +683,10 @@ function requireAdminSession(
 ): void {
   if (requestPath.startsWith("/admin/") && !isLoggedIn) {
     fail(config, 403, "No active demo session");
+  }
+  const mutation = !["GET", "HEAD", "OPTIONS"].includes(config.method?.toUpperCase() ?? "GET");
+  if (requestPath.startsWith("/admin/") && mutation && config.headers.get("X-CSRF-Token") !== DEMO_CSRF_TOKEN) {
+    fail(config, 403, "Invalid demo CSRF token");
   }
 }
 
@@ -702,7 +798,7 @@ function handleAdminEntityRequest(
     fail(config, 404, "Record not found");
   }
 
-  const nextId = existingRecord?.id ?? crypto.randomUUID();
+  const nextId = existingRecord?.id ?? randomUuid();
   let savedRecord: Team | Task;
 
   if (isTeamCollection) {
@@ -852,4 +948,18 @@ export function installDemoData() {
   api.defaults.adapter = demoAdapter;
   http.defaults.adapter = demoAdapter;
   resetDemoData();
+  // Browsers clear the interval with the document. No network clock is needed.
+  window.setInterval(() => {
+    advanceDemoRound();
+    const now = Date.now();
+    if (phase !== "running" || document.hidden) {
+      nextDemoCaptureAt = now + DEMO_CAPTURE_INTERVAL_MS;
+      return;
+    }
+    if (now >= nextDemoCaptureAt) {
+      // Keep the published demo alive without exposing operator/demo controls.
+      simulateDemoCapture(++demoCaptureSequence % 3 === 0);
+      nextDemoCaptureAt = now + DEMO_CAPTURE_INTERVAL_MS;
+    }
+  }, 1000);
 }
