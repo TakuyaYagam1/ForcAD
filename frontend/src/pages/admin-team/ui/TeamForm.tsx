@@ -43,9 +43,9 @@ export function TeamForm({
   const { t } = useTranslation("admin");
   return (
     <form onSubmit={onSubmit} noValidate>
-      <Card className="admin-form max-w-3xl !p-0">
+      <Card className="admin-form admin-editor-form !p-0">
         <CardHeader>
-          <CardTitle className="text-sm text-slate-100">
+          <CardTitle className="text-sm admin-text-primary">
             {isCreate
               ? t("team.newTitle")
               : t("team.existingTitle", {
@@ -53,7 +53,7 @@ export function TeamForm({
                 id: team.id ?? "-"
               })}
           </CardTitle>
-          <CardDescription className="text-xs text-slate-400">
+          <CardDescription className="text-xs admin-text-muted">
             {t("team.formDescription")}
           </CardDescription>
         </CardHeader>
@@ -130,7 +130,7 @@ export function TeamForm({
           </div>
 
           <div className="flex flex-wrap gap-4 md:col-span-2">
-            <label className="flex items-center gap-2 text-xs text-slate-200">
+            <label className="flex items-center gap-2 text-xs admin-text-primary">
               <Checkbox
                 disabled={saving}
                 checked={team.highlighted}
@@ -142,7 +142,7 @@ export function TeamForm({
               {t("team.highlight")}
             </label>
 
-            <label className="flex items-center gap-2 text-xs text-slate-200">
+            <label className="flex items-center gap-2 text-xs admin-text-primary">
               <Checkbox
                 disabled={saving}
                 checked={team.active}

@@ -92,8 +92,8 @@ brand_name = "ForcAD"
 # Logo path relative to public/brand/.
 brand_logo = "forcad-mark.svg"
 # Hex colors in #RRGGBB format.
-brand_primary = "#5B8DEF"
-brand_accent = "#38B7B0"
+brand_primary = "#E6E8EB"
+brand_accent = "#7898B3"
 # Generate and start the Prometheus/Grafana overlay.
 monitoring = true
 # Enable only when the corresponding router exporter or Zeek sensor is set up.

@@ -1,3 +1,6 @@
+import { useScoreboardStore } from "@/entities/scoreboard/model/store";
+import { snapshotScoreMotion } from "../model/scoreboardMotion";
+import { useScoreboardMotion } from "../model/useScoreboardMotion";
 import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { RankBadge } from "@/shared/ui/brand/RankBadge";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
@@ -61,6 +64,18 @@ export function ScoreboardTable({
     ["127.0.0.1", "localhost"].includes(window.location.hostname) &&
     new URLSearchParams(search).get("preview") === "large";
 
+  const generation = useScoreboardStore((state) => {
+    return state.generation
+  });
+  const resetPending = useScoreboardStore((state) => {
+    return state.resetPending
+  });
+  useScoreboardMotion(frameRef, snapshotScoreMotion(
+    teams, tasks.map((task) => {
+      return task.id
+    }), generation, resetPending,
+  ));
+
   const ranks = new Map(teams.map((team, index) => {
     return [team.id, index + 1]
   }));
@@ -104,22 +119,20 @@ export function ScoreboardTable({
           </caption>
           <colgroup>
             <col style={{
-              width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)"
+              width: "60px"
             }} />
             <col style={{
-              width: onCellClick ? "18rem" : "15%"
+              width: "340px"
             }} />
             <col style={{
-              width: onCellClick ? "9rem" : "6%"
+              width: "180px"
             }} />
             {tasks.map((task) => {
               return (
                 <col
                   key={task.id}
                   style={{
-                    width: onCellClick
-                      ? `calc((100% - 506px) / ${tasks.length})`
-                      : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
+                    width: `calc((100% - 580px) / ${tasks.length})`,
                   }}
                 />
               )
@@ -167,6 +180,7 @@ export function ScoreboardTable({
                 >
                   <td className="place-column">
                     <RankBadge rank={rank} />
+                    <span className="scoreboard-leader-outline" aria-hidden="true" />
                   </td>
 
                   <td className="team-column">
@@ -189,7 +203,10 @@ export function ScoreboardTable({
                   </td>
 
                   <td className="total-column">
-                    <ScoreValue value={team.score} />
+                    <span className="score-total">
+                      <ScoreValue value={team.score} />
+                      <span className="score-delta" aria-hidden="true" />
+                    </span>
                   </td>
 
                   {tasks.map((task, taskIndex) => {
@@ -198,6 +215,9 @@ export function ScoreboardTable({
                       <td key={task.id} className="service-column">
                         <span className="service-cell-name">{task.name}</span>
                         <ServiceCell
+                          teamId={team.id}
+                          taskId={task.id}
+                          teamName={team.name}
                           value={
                             previewLarge && rank === 1 && taskIndex === 0 && value
                               ? {

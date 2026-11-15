@@ -1,14 +1,13 @@
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import { roundTimerSeconds } from "../model/roundTimer";
+import { formatRoundCountdown, resolveRoundTimer } from "../model/roundTimer";
+import { useAsciiRoundTrack } from "../model/useAsciiRoundTrack";
+import "./StatusesBar.css";
 
-export function StatusesBar({
-  round,
-  roundStart,
-}: {
+export function StatusesBar({ round, roundStart }: {
   round?: number;
-  roundStart?: number | null;
+  roundStart?: number | null
 }) {
   const { t } = useTranslation("public");
   const roundTime = useScoreboardStore((state) => {
@@ -17,13 +16,9 @@ export function StatusesBar({
   const runtimeRound = useScoreboardStore((state) => {
     return state.runtimeRound
   });
-  const currentRoundStart = useScoreboardStore(
-    (state) => {
-      return state.currentRoundStart
-    },
-  );
-  const displayRound = runtimeRound ?? round;
-  const timerStart = currentRoundStart ?? roundStart;
+  const currentRoundStart = useScoreboardStore((state) => {
+    return state.currentRoundStart
+  });
   const phase = useScoreboardStore((state) => {
     return state.phase
   });
@@ -42,103 +37,95 @@ export function StatusesBar({
   useEffect(() => {
     const timer = window.setInterval(() => {
       return setNow(Date.now())
-    }, 1000);
+    }, 250);
     return () => {
       return window.clearInterval(timer)
     };
   }, []);
-  const startMs = timerStart
-    ? timerStart < 10_000_000_000
-      ? timerStart * 1000
-      : timerStart
-    : null;
-  const effectiveNow = phase === "paused" && pausedAt ? pausedAt * 1000 : now;
-  // Prefer the real current-round timestamp; legacy snapshots describe the completed round.
-  const elapsed =
-    phase === "unknown" ||
-    phase === "waiting" ||
-    phase === "finished" ||
-    startMs === null ||
-    roundTime === null ||
-    !displayRound
-      ? null
-      : Math.max(
-        0,
-        Math.floor(
-          (effectiveNow - startMs) / 1000 -
-              (currentRoundStart ? 0 : (roundTime ?? 0)) -
-              pausedSeconds,
-        ),
-      );
-  const timerSeconds =
-    elapsed === null || !roundTime
-      ? null
-      : roundTimerSeconds(elapsed, roundTime);
-  const progress =
-    timerSeconds === null || !roundTime || !displayRound
-      ? 0
-      : (timerSeconds / roundTime) * 100;
-  const time =
-    timerSeconds === null
-      ? "-:-"
-      : `${String(Math.floor(timerSeconds / 60)).padStart(2, "0")}:${String(timerSeconds % 60).padStart(2, "0")}`;
-  const waitingForResults =
-    phase === "running" &&
-    (roundWaiting || (elapsed !== null && roundTime !== null && elapsed >= roundTime));
+
+  const timer = resolveRoundTimer({
+    nowMs: now,
+    phase,
+    roundTime,
+    currentRoundStart,
+    legacyRoundStart: roundStart,
+    round: runtimeRound ?? round,
+    pausedAt,
+    pausedSeconds,
+    roundWaiting,
+  });
+  const percent = timer.progress === null ? null : Math.floor(timer.progress);
+  const running = phase === "running" && timer.progress !== null && !timer.waitingForResults;
+  const { trackRef, columns: measuredColumns } = useAsciiRoundTrack(running);
+  const columns = measuredColumns;
+  const filledColumns = Math.floor((timer.progress ?? 0) / 100 * columns);
+  const countdown = formatRoundCountdown(timer.remainingSeconds);
+  const status = phase === "finished"
+    ? t("scoreboard.round.finished")
+    : phase === "waiting"
+      ? t("scoreboard.round.waitingStart")
+      : timer.progress === null
+        ? t("scoreboard.round.unavailable")
+        : phase === "paused"
+          ? t("scoreboard.round.paused")
+          : timer.waitingForResults
+            ? t("scoreboard.round.waitingResults")
+            : t("scoreboard.round.remaining");
+  const valueText = percent === null
+    ? status
+    : t("scoreboard.round.progressDescription", {
+      percent,
+      time: countdown,
+      status
+    });
+
   return (
     <section className="round-line" aria-label={t("scoreboard.round.current")}>
-      <span className="round-label">{t("scoreboard.round.timeline")}</span>
       <div
+        ref={trackRef}
         className="round-track"
+        style={{
+          gridTemplateColumns: `repeat(${columns + 2}, minmax(0, 1fr))`
+        }}
         role="progressbar"
         aria-label={t("scoreboard.round.time")}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={Math.floor(progress)}
+        aria-valuenow={percent ?? undefined}
+        aria-valuetext={valueText}
       >
-        <span
-          className="round-track-progress"
-          style={{
-            transform: `scaleX(${progress / 100})`
-          }}
-        />
+        <span className="round-bracket" aria-hidden="true">[</span>
         {Array.from({
-          length: 18
+          length: columns
         }, (_, index) => {
+          const filled = index < filledColumns;
+          const tip = timer.progress !== null && index === filledColumns;
           return (
-            <i key={index} className="round-tick" />
-          )
+            <span
+              key={index}
+              className={`round-character${filled ? " round-character--filled" : ""}${tip ? " round-character--tip" : ""}`}
+              aria-hidden="true"
+            >
+              {tip ? (
+                <>
+                  <span className="round-cursor-rest">{">"}</span>
+                  <span className="round-cursor-frames">
+                    {["/", "-", "\\", "|"].map((character, frame) => {
+                      return <span key={frame} style={{
+                        animationDelay: `${frame * 250}ms`
+                      }}>{character}</span>
+                    })}
+                  </span>
+                </>
+              ) : filled ? "=" : "-"}
+            </span>
+          );
         })}
-        <span
-          className="round-head"
-          style={{
-            transform: `translateX(${progress}cqw)`
-          }}
-          aria-hidden="true"
-        />
+        <span className="round-bracket" aria-hidden="true">]</span>
       </div>
       <div className="round-timer">
-        <div>
-          <strong>{time}</strong>
-          <small
-            className={
-              waitingForResults
-                ? "round-waiting-label"
-                : undefined
-            }
-            aria-live="polite"
-          >
-            {phase === "finished"
-              ? t("scoreboard.round.finished")
-              : phase === "paused"
-                ? t("scoreboard.round.paused")
-                : waitingForResults
-                  ? t("scoreboard.round.waitingResults")
-                  : phase === "unknown"
-                    ? t("scoreboard.round.unavailable")
-                    : t("scoreboard.round.sinceStart")}
-          </small>
-        </div>
+        <strong>{countdown}</strong>
+        <small className="sr-only" aria-live="polite">{status}</small>
       </div>
     </section>
   );

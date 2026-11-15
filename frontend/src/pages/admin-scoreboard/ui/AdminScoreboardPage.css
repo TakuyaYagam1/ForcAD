@@ -2,42 +2,46 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 370px);
   align-items: stretch;
-  gap: 16px;
-  margin: 12px 0;
+  gap: 0;
+  margin: 0 0 20px;
+  border: 1px solid var(--border-default);
 }
 
 .checker-status {
   min-width: 0;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #0c1a28;
+  padding: 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .checker-status__heading {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  margin-bottom: 9px;
+  margin-bottom: 16px;
 }
 
 .checker-status__heading h2 {
   margin: 0;
-  color: var(--ivory);
-  font-size: 15px;
-  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 300;
+  letter-spacing: -.015em;
 }
 
 .checker-status__heading small,
 .checker-status__card small {
-  color: var(--soft);
-  font-size: 11px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.5;
 }
 
 .checker-status__grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 0;
 }
 
 .checker-status__card {
@@ -45,35 +49,39 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding: 9px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: #101f2e;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-right-width: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .checker-status__card strong {
   overflow: hidden;
-  color: var(--ivory);
-  font-size: 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 300;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .checker-status__card > span {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 300;
 }
 
-.checker-status__card--reporting > span { color: #70e47b; }
-.checker-status__card--failed > span { color: #78b9e6; }
-.checker-status__card--stalled > span { color: #ff4554; }
-.checker-status__card--waiting > span { color: var(--soft); }
+.checker-status__card--reporting > span { color: var(--state-success-text); }
+.checker-status__card--failed > span { color: var(--state-info-text); }
+.checker-status__card--stalled > span { color: var(--state-error-text); }
+.checker-status__card--waiting > span { color: var(--text-muted); }
 
 .admin-dashboard-actions {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 20px;
+  border-left: 1px solid var(--border-default);
 }
 
 .admin-dashboard-actions .admin-actions {
@@ -91,59 +99,8 @@
   margin-bottom: 0;
 }
 
-@media (min-width: 901px) {
-  .brand-app:has(.admin-page--scoreboard) {
-    display: flex;
-    flex-direction: column;
-    min-height: 100dvh;
-  }
 
-  .site-main:has(> .admin-page--scoreboard) {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    width: 100%;
-    max-width: none;
-    min-height: 0;
-    padding: 0 24px 8px;
-  }
-
-  .admin-page--scoreboard {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-    padding: 0;
-  }
-
-  .admin-page--scoreboard > .round-line {
-    flex-shrink: 0;
-    margin: 0 -24px;
-    padding: 8px 24px;
-  }
-
-  .admin-page--scoreboard .scoreboard-page--admin,
-  .admin-page--scoreboard .scoreboard-reveal {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .admin-page--scoreboard .table-frame,
-  .admin-page--scoreboard .table-scroll {
-    flex: 1;
-    min-height: 0;
-    height: 100%;
-    max-height: none;
-  }
-
-  .admin-page--scoreboard .scoreboard-table {
-    height: 100%;
-  }
-}
-
-@media (max-width: 1200px) {
+@media (max-width: 1100px) {
   .admin-dashboard-strip {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -159,4 +116,26 @@
     flex-wrap: nowrap;
     align-items: stretch;
   }
+}
+
+.admin-dashboard-heading { display: flex; align-items: baseline; gap: 24px; padding: 30px 0 24px; }
+.admin-dashboard-heading .eyebrow { font-size: 13px; color: var(--text-muted); font-weight: 300; letter-spacing: .08em; }
+.admin-dashboard-heading h1 { margin: 0; font-family: var(--font-te-20, "Inter", sans-serif); color: var(--text-primary); font-size: 40px; font-weight: 300; letter-spacing: -.045em; line-height: 1.11; }
+.checker-status__card:last-child { border-right-width: 1px; }
+.admin-dashboard-actions .game-controls > div > div { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
+.admin-dashboard-actions .game-controls .ui-button { width: 100%; }
+.admin-shell__logout { color: var(--text-primary); }
+@media (max-width: 1100px) {
+  .admin-dashboard-actions { border-left: 0; border-top: 1px solid var(--border-default); flex-direction: row; align-items: flex-start; }
+  .admin-dashboard-actions .admin-actions { flex: 1; flex-direction: row; }
+  .admin-dashboard-actions .game-controls { flex: 1; }
+}
+@media (max-width: 700px) {
+  .admin-dashboard-heading { display: block; padding: 22px 0; }
+  .admin-dashboard-heading h1 { margin-top: 12px; font-size: 32px; }
+  .checker-status { padding: 16px; }
+  .checker-status__heading { flex-wrap: wrap; gap: 6px; }
+  .checker-status__card { border-right-width: 1px; }
+  .admin-dashboard-actions { flex-direction: column; padding: 16px; }
+  .admin-dashboard-actions .admin-actions, .admin-dashboard-actions .game-controls { width: 100%; }
 }

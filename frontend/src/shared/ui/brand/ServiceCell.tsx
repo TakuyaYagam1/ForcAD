@@ -6,12 +6,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { STATUS_META_BY_CODE, STATUS_OK } from "@/shared/config/statuses";
+import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { formatScore } from "@/shared/lib/formatScore";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import { ServiceDetails } from "./ServiceDetails";
 
-interface ServiceValue {
+export interface ServiceValue {
   status: number;
   score: number;
   checks: number;
@@ -24,10 +25,18 @@ export function ServiceCell({
   value,
   name,
   onClick,
+  teamId,
+  taskId,
+  teamName,
+  snapshotRound,
 }: {
   value?: ServiceValue;
   name: string;
   onClick?: () => void;
+  teamId?: string;
+  taskId?: string;
+  teamName?: string;
+  snapshotRound?: number;
 }) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
@@ -39,16 +48,13 @@ export function ServiceCell({
     (value?.score ?? 0) >= 10000 ||
     (value?.stolen ?? 0) >= 1000 ||
     (value?.lost ?? 0) >= 1000;
-  const checkerResponse =
-    value?.message ||
-    (value?.status === STATUS_OK ? "OK" : meta?.label) ||
-    t("service.noCheckerMessage");
   const trigger = (
     <button
       type="button"
       className={`service-cell${meta ? " service-cell--active" : ""}${wideValues ? " service-cell--wide-values" : ""}`}
       style={meta ? {
-        backgroundColor: meta.color
+        backgroundColor: meta.color,
+        color: meta.foreground
       } : undefined}
       onClick={onClick}
       aria-label={t("service.ariaLabel", {
@@ -81,42 +87,14 @@ export function ServiceCell({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="brand-dialog service-dialog">
-        <DialogHeader>
+      <DialogContent className="brand-dialog service-dialog service-log-dialog">
+        <DialogHeader className="service-inspector-header">
           <DialogTitle>{name}</DialogTitle>
-          <DialogDescription className="sr-only">
-            {meta?.description ?? t("service.noData")}
+          <DialogDescription>
+            {teamName ? `${teamName} · ` : ""}{t("service.detailsDescription")}
           </DialogDescription>
         </DialogHeader>
-        <div className="service-detail-grid">
-          <div>
-            <span>{t("service.score")}</span>
-            <strong>{formatScore(value?.score ?? 0)}</strong>
-          </div>
-          <div>
-            <span>SLA</span>
-            <strong>{sla}</strong>
-          </div>
-          <div>
-            <span>{t("service.capturedFlags")}</span>
-            <strong>+{formatScore(value?.stolen ?? 0)}</strong>
-          </div>
-          <div>
-            <span>{t("service.lostFlags")}</span>
-            <strong>-{formatScore(value?.lost ?? 0)}</strong>
-          </div>
-        </div>
-        <div className="checker-message">
-          <span className="eyebrow">{t("service.checkerResponse")}</span>
-          <pre
-            className={meta ? "checker-result--status" : undefined}
-            style={meta ? {
-              backgroundColor: meta.color
-            } : undefined}
-          >
-            {checkerResponse}
-          </pre>
-        </div>
+        <ServiceDetails teamId={teamId} taskId={taskId} value={value} snapshotRound={snapshotRound} />
       </DialogContent>
     </Dialog>
   );

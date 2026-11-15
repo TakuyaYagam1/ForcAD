@@ -3,6 +3,7 @@ import {
   mkdirSync,
   mkdtempSync,
   rmSync,
+  realpathSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -45,8 +46,8 @@ test("team logo path resolver accepts files in its directory only", (context) =>
     })
   });
 
-  assert.equal(resolveTeamLogoPath(logoDirectory, "team-one.png"), insideFile);
-  assert.equal(resolveTeamLogoPath(logoDirectory, "team-two.svg"), insideSvg);
+  assert.equal(resolveTeamLogoPath(logoDirectory, "team-one.png"), realpathSync(insideFile));
+  assert.equal(resolveTeamLogoPath(logoDirectory, "team-two.svg"), realpathSync(insideSvg));
   assert.equal(resolveTeamLogoPath(logoDirectory, "../outside.png"), null);
   assert.equal(resolveTeamLogoPath(logoDirectory, "linked.png"), null);
   assert.equal(resolveTeamLogoPath(logoDirectory, "team-one.pdf"), null);

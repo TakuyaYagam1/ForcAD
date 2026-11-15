@@ -3,6 +3,7 @@ import { type ReactNode, useEffect } from "react";
 import { useAdminAuthStore } from "@/features/auth-admin/model/useAdminAuth";
 import { AdminAuthErrorMessage } from "@/features/auth-admin/ui/AdminAuthErrorMessage";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   children: ReactNode;
@@ -32,22 +33,26 @@ export function RequireAdmin({ children }: Props) {
 
   if (!isAuthChecked) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-        {t("common.checkingSession")}
-      </div>
+      <>
+        <div className="empty-state" role="status" aria-busy="true">
+          {t("common.checkingSession")}
+        </div>
+      </>
     );
   }
 
   if (!isAuthenticated && error) {
     return (
-      <div className="notice" role="alert">
-        <AdminAuthErrorMessage error={error} />
-        <button type="button" onClick={() => {
-          return void checkSession()
-        }}>
-          {t("common.retry")}
-        </button>
-      </div>
+      <>
+        <div className="notice" role="alert">
+          <AdminAuthErrorMessage error={error} />
+          <Button variant="outline" type="button" onClick={() => {
+            return void checkSession()
+          }}>
+            {t("common.retry")}
+          </Button>
+        </div>
+      </>
     );
   }
 

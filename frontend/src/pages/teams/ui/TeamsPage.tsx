@@ -1,13 +1,10 @@
 import type { ScoreboardTeam } from "@/entities/scoreboard/model/store";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
-import { useViewportAnimations } from "@/shared/lib/useViewportAnimations";
 import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
-import { AppShell } from "@/shared/ui/layout/AppShell";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { getLocale } from "@/shared/i18n";
-import { useRef } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./TeamsPage.css";
 
@@ -16,100 +13,56 @@ function TeamCard({ team, rank }: {
   rank: number
 }) {
   const { t } = useTranslation("public");
-  const podium = rank >= 1 && rank <= 3;
-  const locale = getLocale();
-  const formattedRank = new Intl.NumberFormat(locale).format(rank);
-
   return (
-    <Link
-      to={`/team/${team.id}`}
-      className={`team-card ${podium ? "team-card--podium" : ""}`}
-      data-rank={rank}
-    >
-      {podium ? (
-        <>
-          <div className="team-podium-head">
-            <TeamAvatar name={team.name} src={team.logo_path} />
-          </div>
-          <div className="team-podium-copy">
-            <h2>{team.name}</h2>
-            <span className="team-ip">{team.ip}</span>
-            <span className="team-podium-place">
-              {t("teams.podiumPlace", {
-                rank: formattedRank
-              })}
-            </span>
-          </div>
-        </>
-      ) : (
-        <>
-          <span className="team-card-place">
-            {t("teams.podiumPlace", {
-              rank: formattedRank
-            })}
-          </span>
-          <div className="team-card-top">
-            <TeamAvatar name={team.name} src={team.logo_path} />
-            <div>
-              <h2>{team.name}</h2>
-              <span className="team-ip">{team.ip}</span>
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="team-card-bottom">
-        <div>
-          <small>{t("teams.score")}</small>
-          <ScoreValue value={team.score ?? 0} />
-        </div>
-        <span className="text-link">
-          {t("teams.profile")} <ArrowUpRight size={16} />
-        </span>
+    <Link to={`/team/${team.id}`} className="team-catalogue-card" data-rank={rank}>
+      <div className="team-catalogue-art">
+        <span className="team-catalogue-rank">{String(rank).padStart(2, "0")}</span>
+        <TeamAvatar name={team.name} src={team.logo_path} size="large" />
+        <ArrowUpRight size={18} strokeWidth={1} aria-hidden="true" />
       </div>
+      <div className="team-catalogue-caption"><div><h2>{team.name}</h2><span className="team-ip">{team.ip}</span></div><ScoreValue value={team.score ?? 0} /></div>
+      <span className="team-catalogue-profile">{t("teams.profile")} <ArrowUpRight size={13} strokeWidth={1} aria-hidden="true" /></span>
     </Link>
   );
 }
 
 export function TeamsPage() {
-  const { t } = useTranslation("public");
-  const leadersRef = useRef<HTMLElement>(null);
+  const { t, i18n } = useTranslation("public");
   const teams = useScoreboardStore((state) => {
     return state.teams
   }) ?? [];
   const npcTeams = useScoreboardStore((state) => {
     return state.npcTeams
   });
+  const [filter, setFilter] = useState("");
+  const query = filter.trim().toLocaleLowerCase(i18n.language);
   const ranked = teams.map((team, index) => {
     return {
       team,
       rank: index + 1
     }
+  }).filter(({ team }) => {
+    return `${team.name} ${team.ip}`.toLocaleLowerCase(i18n.language).includes(query)
   });
-  const leaders = ranked.slice(0, 3);
-  const others = ranked.slice(3);
-  useViewportAnimations(leadersRef, leaders.length > 0);
-
   return (
-    <AppShell>
+    <>
       <div className="teams-page">
-        <h1 className="sr-only">{t("teams.leaders")}</h1>
+        <h1 className="sr-only">{t("teams.title")}</h1>
         {npcTeams.length > 0 && (
           <section className="teams-test-target" aria-label={t("teams.testTarget")}>
             <div className="section-heading">
               <h2>{t("teams.testTarget")}</h2>
               <p>{t("teams.testTargetDescription")}</p>
             </div>
-            <div className="teams-grid">
+            <div className="teams-catalogue">
               {npcTeams.map((team) => {
                 return (
-                  <article className="team-card" key={team.id}>
-                    <div className="team-card-top">
-                      <TeamAvatar name={team.name} src={team.logo_path} />
-                      <div>
-                        <h2>{team.name}</h2>
-                        <span className="team-ip">{team.ip}</span>
-                      </div>
+                  <article className="team-catalogue-card" key={team.id}>
+                    <div className="team-catalogue-art">
+                      <TeamAvatar name={team.name} src={team.logo_path} size="large" />
+                    </div>
+                    <div className="team-catalogue-caption">
+                      <div><h2>{team.name}</h2><span className="team-ip">{team.ip}</span></div>
                     </div>
                   </article>
                 )
@@ -117,52 +70,19 @@ export function TeamsPage() {
             </div>
           </section>
         )}
+        <div className="teams-toolbar"><span>{t("teams.currentRankingOrder")}</span><label className="search-field"><Search size={17} aria-hidden="true" /><input type="search" aria-label={t("teams.searchLabel")} placeholder={t("teams.searchPlaceholder")} value={filter} onChange={(event) => {
+          return setFilter(event.target.value)
+        }} /></label></div>
         {ranked.length ? (
-          <>
-            {leaders.length > 0 && (
-              <section
-                ref={leadersRef}
-                data-viewport-animation="running"
-                className="teams-leaders"
-                aria-label={t("teams.leaders")}
-              >
-                <div className="teams-podium">
-                  {leaders.map(({ team, rank }) => {
-                    return (
-                      <TeamCard key={team.id} team={team} rank={rank} />
-                    )
-                  })}
-                </div>
-              </section>
-            )}
-
-            {others.length > 0 && (
-              <section
-                className="teams-roster"
-                aria-label={t("teams.rosterLabel")}
-              >
-                {leaders.length > 0 && (
-                  <div className="section-heading">
-                    <h2>{t("teams.otherTeams")}</h2>
-                  </div>
-                )}
-                <div className="teams-grid">
-                  {others.map(({ team, rank }) => {
-                    return (
-                      <TeamCard key={team.id} team={team} rank={rank} />
-                    )
-                  })}
-                </div>
-              </section>
-            )}
-          </>
+          <section className="teams-catalogue" aria-label={t("teams.profilesAndResults")}>
+            {ranked.map(({ team, rank }) => {
+              return <TeamCard key={team.id} team={team} rank={rank} />
+            })}
+          </section>
         ) : (
-          <div className="empty-state mt-5">
-            <h2>{t("teams.waitingTitle")}</h2>
-            <p>{t("teams.waitingDescription")}</p>
-          </div>
+          <div className="empty-state"><h2>{t(query ? "teams.notFoundTitle" : "teams.waitingTitle")}</h2><p>{t(query ? "teams.notFoundDescription" : "teams.waitingDescription")}</p></div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

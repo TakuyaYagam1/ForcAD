@@ -114,7 +114,7 @@ export function GameControls() {
       ? t("game.errors.stateChanged")
       : apiErrorMessage(error, t("game.errors.commandFailed"));
   return (
-    <section className="mb-5" aria-label={t("game.sectionLabel")}>
+    <section className="game-controls" aria-label={t("game.sectionLabel")}>
       <div className="flex flex-wrap items-center justify-end gap-4">
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" disabled={disabled || !playing} onClick={() => {
@@ -134,7 +134,7 @@ export function GameControls() {
             </Button>
           )}
           <Button variant={canStart ? "default" : "destructive"}
-            className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+            className={canStart ? "game-controls__start" : undefined}
             disabled={disabled || (!canStart && !playing)}
             onClick={() => {
               return openConfirmation(canStart ? "start_final" : "finish")
@@ -144,7 +144,7 @@ export function GameControls() {
           </Button>
         </div>
       </div>
-      {errorMessage && !confirmation && <p className="mt-3 text-sm text-red-300" role="alert">{errorMessage}</p>}
+      {errorMessage && !confirmation && <p className="mt-3 text-sm admin-text-danger" role="alert">{errorMessage}</p>}
       <Dialog open={confirmation !== null} onOpenChange={(open) => {
         if (!mutation.isPending && !open) {
           setConfirmation(null);
@@ -170,17 +170,17 @@ export function GameControls() {
                     : t("game.finishConfirmation")}
             </DialogDescription>
           </DialogHeader>
-          {staleConfirmation && <p className="text-sm text-amber-200" role="alert">
+          {staleConfirmation && <p className="text-sm admin-text-warning" role="alert">
             {t("game.staleConfirmation")}
           </p>}
-          {errorMessage && <p className="text-sm text-red-300" role="alert">{errorMessage}</p>}
+          {errorMessage && <p className="text-sm admin-text-danger" role="alert">{errorMessage}</p>}
           <DialogFooter>
             <Button ref={cancelRef} variant="outline" disabled={mutation.isPending}
               onClick={() => {
                 return setConfirmation(null)
               }}>{t("common.cancel")}</Button>
             <Button variant={starting ? "default" : "destructive"}
-              className={starting ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+              className={starting ? "game-controls__start" : undefined}
               disabled={disabled || staleConfirmation || (starting ? !canStart : !playing)
                 || (confirmation === "start_practice" && !canStartPractice)}
               onClick={() => {

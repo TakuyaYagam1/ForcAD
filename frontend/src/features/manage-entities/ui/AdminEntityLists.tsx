@@ -39,7 +39,7 @@ export function AdminEntityLists() {
         return (
           <section className="admin-form p-5" key={kind}>
             <h2>{title}</h2>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs admin-text-muted mb-3">
               {t("entities.disabledDescription")}
             </p>
             {query.isPending && <p>{t("common.loading")}</p>}
@@ -65,7 +65,7 @@ export function AdminEntityLists() {
                     </Link>
                     <span
                       className={
-                        item.active ? "text-emerald-300" : "text-slate-400"
+                        item.active ? "admin-text-success" : "admin-text-muted"
                       }
                     >
                       {item.active ? t("common.active") : t("common.inactive")}

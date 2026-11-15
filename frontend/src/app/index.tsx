@@ -10,7 +10,6 @@ import "./styles/index.scss";
 import "./styles/fidelity.scss";
 import { LiveEventsProvider } from "./providers/LiveEventsProvider";
 import { DEMO_MODE } from "./demo/mode";
-import type { ComponentType } from "react";
 
 import { queryClient } from "@/shared/lib/queryClient";
 import { applyBrandConfig, applyBrandMetadata } from "./config/brand";
@@ -20,33 +19,19 @@ async function mountApp() {
   await i18nReady;
   applyBrandConfig();
   i18n.on("languageChanged", applyBrandMetadata);
-  let DemoPanel: ComponentType<{
-    onDataChange: () => void
-  }> | null = null;
   if (DEMO_MODE) {
     const { installDemoData } = await import("./demo/install");
     installDemoData();
-    DemoPanel = (await import("./demo/DemoControls")).DemoControls;
   }
-  const content = (
-    <>
-      {DemoPanel && (
-        <DemoPanel onDataChange={() => {
-          return void queryClient.invalidateQueries()
-        }} />
-      )}
-      <App />
-    </>
-  );
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           {DEMO_MODE ? (
-            content
+            <App />
           ) : (
             <GameEventsProvider>
-              <LiveEventsProvider>{content}</LiveEventsProvider>
+              <LiveEventsProvider><App /></LiveEventsProvider>
             </GameEventsProvider>
           )}
         </BrowserRouter>

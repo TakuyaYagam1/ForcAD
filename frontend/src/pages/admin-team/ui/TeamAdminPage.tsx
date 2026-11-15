@@ -208,7 +208,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
 
   return (
     <AdminShell>
-      <div className="admin-page">
+      <div className="admin-page admin-page--editor">
         <Link to="/admin/scoreboard" className="back-link admin-back-link">
           <ArrowLeft size={18} aria-hidden="true" />
           {t("common.backToDashboard")}
@@ -217,14 +217,14 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
           <div>
             <p className="eyebrow">{t("common.organizerPanel")}</p>
             <h1>{isCreate ? t("team.createTitle") : t("team.editTitle")}</h1>
-            <p className="text-xs text-slate-400">{t("team.pageDescription")}</p>
+            <p className="text-xs admin-text-muted">{t("team.pageDescription")}</p>
           </div>
         </div>
 
         {loading ? (
-          <div className="text-sm text-slate-400">{t("common.loadingData")}</div>
+          <div className="text-sm admin-text-muted">{t("common.loadingData")}</div>
         ) : !team || !canSave ? (
-          <div className="text-sm text-red-300">
+          <div className="text-sm admin-text-danger">
             {errorMessage ?? t("team.notFound")}
           </div>
         ) : (

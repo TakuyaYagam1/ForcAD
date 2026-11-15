@@ -78,7 +78,7 @@ export function AdminLoginForm() {
       <p>{t("login.description")}</p>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-5 admin-form border-0 p-0 bg-transparent"
+        className="space-y-5 admin-form login-form"
       >
         {authError && (
           <div className="notice" role="alert">
@@ -96,7 +96,7 @@ export function AdminLoginForm() {
             {...register("username")}
           />
           {errors.username && (
-            <p id="username-error" className="text-xs text-red-300">
+            <p id="username-error" className="text-xs admin-text-danger">
               {t("login.usernameRequired")}
             </p>
           )}
@@ -127,7 +127,7 @@ export function AdminLoginForm() {
             </button>
           </div>
           {errors.password && (
-            <p id="password-error" className="text-xs text-red-300">
+            <p id="password-error" className="text-xs admin-text-danger">
               {t("login.passwordRequired")}
             </p>
           )}

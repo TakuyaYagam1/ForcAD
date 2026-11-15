@@ -16,7 +16,7 @@ function verticalChrome(element: HTMLElement): number {
 
 function outerHeight(element: HTMLElement): number {
   const style = window.getComputedStyle(element);
-  if (style.display === "none") {
+  if (style.display === "none" || style.position === "absolute" || style.position === "fixed") {
     return 0;
   }
   return (
@@ -95,6 +95,11 @@ export function useScoreboardViewport(
         outerHeight(header) -
         verticalChrome(shell) -
         verticalChrome(main) -
+        Array.from(main.children).filter((element): element is HTMLElement => {
+          return element instanceof HTMLElement && !element.contains(page);
+        }).reduce((total, element) => {
+          return total + outerHeight(element);
+        }, 0) -
         verticalChrome(page) -
         fixedHeight -
         (reveal ? verticalChrome(reveal) : 0) -
@@ -111,7 +116,7 @@ export function useScoreboardViewport(
       // Very short windows retain scrolling instead of shrinking text further.
       if (rows.length && teamCount > 0) {
         const rowHeight = `${Math.max(
-          24,
+          31,
           (Math.floor(available) - (head?.offsetHeight ?? 0) - scrollbar) /
             Math.max(teamCount, rows.length),
         )}px`;

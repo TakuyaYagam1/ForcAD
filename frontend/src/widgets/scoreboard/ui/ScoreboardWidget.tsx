@@ -1,4 +1,3 @@
-import { fetchScoreboardConfig } from "@/entities/scoreboard/api/config";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import {
   ScoreboardTable,
@@ -6,13 +5,10 @@ import {
   type ScoreboardTeam,
   type ScoreboardTeamTask,
 } from "@/features/view-scoreboard/ui/ScoreboardTable";
-import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { SCOREBOARD_STATUSES } from "@/shared/config/statuses";
-import { useQuery } from "@tanstack/react-query";
 import { WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useEffect } from "react";
-import { useScoreboardEntrance } from "../model/useScoreboardEntrance";
+import { useRef } from "react";
 import { useScoreboardViewport } from "../model/useScoreboardViewport";
 import "./ScoreboardWidget.css";
 
@@ -39,41 +35,11 @@ export function ScoreboardWidget({
   const teamTasks = useScoreboardStore((state) => {
     return state.teamTasks
   }) ?? [];
-  const round = useScoreboardStore((state) => {
-    return state.round
-  });
-  const roundStart = useScoreboardStore((state) => {
-    return state.roundStart
-  });
   const error = useScoreboardStore((state) => {
     return state.error
   });
-  const roundTime = useScoreboardStore((state) => {
-    return state.roundTime
-  });
-  const setRoundTime = useScoreboardStore((state) => {
-    return state.setRoundTime
-  });
-
-  const { pageRef, tableRef } = useScoreboardEntrance(!admin, teams.length > 0);
-
+  const pageRef = useRef<HTMLDivElement>(null);
   useScoreboardViewport(!admin, pageRef, teams.length);
-
-  const config = useQuery({
-    queryKey: ["game-config"],
-    queryFn: ({ signal }) => {
-      return fetchScoreboardConfig(signal)
-    },
-    enabled: roundTime === null,
-    retry: 2,
-    refetchInterval: 10000,
-  });
-  useEffect(() => {
-    if (config.data?.round_time) {
-      setRoundTime(config.data.round_time);
-    }
-  }, [config.data, setRoundTime]);
-
   return (
     <div
       ref={pageRef}
@@ -94,7 +60,6 @@ export function ScoreboardWidget({
         </div>
       )}
 
-      {!admin && <StatusesBar round={round} roundStart={roundStart} />}
 
       <div className="scoreboard-toolbar">
         <div
@@ -107,7 +72,8 @@ export function ScoreboardWidget({
                 key={status.code}
                 title={status.description}
                 style={{
-                  backgroundColor: status.color
+                  backgroundColor: status.color,
+                  color: status.foreground
                 }}
               >
                 {status.label}
@@ -115,9 +81,10 @@ export function ScoreboardWidget({
             )
           })}
         </div>
+        <span className="toolbar-note">{t("scoreboard.flagsHint")}</span>
       </div>
 
-      <div ref={tableRef} className="scoreboard-reveal">
+      <div className="scoreboard-reveal">
         <ScoreboardTable
           teams={teams as ScoreboardTeam[]}
           tasks={tasks as ScoreboardTask[]}
@@ -127,7 +94,6 @@ export function ScoreboardWidget({
           onCellClick={onCellClick}
         />
       </div>
-
     </div>
   );
 }

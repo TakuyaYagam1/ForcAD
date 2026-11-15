@@ -1,6 +1,10 @@
 const STORAGE_KEY = "forcad-demo-mode";
 
 function readDemoMode() {
+  // A published static demo has no live backend to switch to.
+  if (import.meta.env.PROD && import.meta.env.MODE === "demo") {
+    return true;
+  }
   const requested = new URLSearchParams(window.location.search).get("demo");
   if (requested === "1" || requested === "0") {
     try {

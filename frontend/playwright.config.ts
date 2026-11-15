@@ -40,6 +40,11 @@ export default defineConfig({
     browserName: "chromium",
     screenshot: "off",
     trace: "off",
+    launchOptions: process.env.FORCAD_E2E_BROWSER_EXECUTABLE
+      ? {
+        executablePath: process.env.FORCAD_E2E_BROWSER_EXECUTABLE
+      }
+      : undefined,
     video: "off",
   },
 });
