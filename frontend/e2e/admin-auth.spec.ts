@@ -62,9 +62,20 @@ test("admin access, login persistence, and logout use the live session", async (
       exact: true
     });
     await expect(startPractice).toBeVisible();
-    const teamBox = await addTeam.boundingBox();
-    const serviceBox = await addService.boundingBox();
-    const startBox = await startPractice.boundingBox();
+    // Read every rectangle in one frame so the shared page entrance transform
+    // cannot move the buttons between measurements.
+    const [teamBox, serviceBox, startBox] = await page.evaluate((elements) => {
+      return elements.map((element) => {
+        if (!element || element.getClientRects().length === 0) {
+          return null;
+        }
+        const rect = element.getBoundingClientRect();
+        return {
+          y: rect.y,
+          height: rect.height
+        };
+      });
+    }, [await addTeam.elementHandle(), await addService.elementHandle(), await startPractice.elementHandle()]);
     expect(teamBox).not.toBeNull();
     expect(serviceBox).not.toBeNull();
     expect(startBox).not.toBeNull();

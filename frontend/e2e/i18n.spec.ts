@@ -9,7 +9,7 @@ test("language switching preserves the team list, survives reload and translates
   try {
     await page.goto("/teams");
     await expect(page.getByRole("region", {
-      name: "Топ команд"
+      name: "Профили и результаты"
     })).toBeVisible();
     await expect(page.locator('a[href^="/team/"]').filter({
       hasText: "first"
@@ -23,7 +23,7 @@ test("language switching preserves the team list, survives reload and translates
       exact: true
     }).click();
     await expect(page.getByRole("region", {
-      name: "Top teams"
+      name: "Profiles and results"
     })).toBeVisible();
     await expect(page.locator('a[href^="/team/"]').filter({
       hasText: "first"
@@ -51,7 +51,7 @@ test("language switching preserves the team list, survives reload and translates
 
     await page.reload();
     await expect(page.getByRole("region", {
-      name: "Top teams"
+      name: "Profiles and results"
     })).toBeVisible();
     await expect(page).toHaveTitle("ForcAD - team standings");
     await page.goto("/admin/login");
