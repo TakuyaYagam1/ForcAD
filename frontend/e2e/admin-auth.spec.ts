@@ -70,16 +70,22 @@ test("admin access, login persistence, and logout use the live session", async (
           return null;
         }
         const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
         return {
           y: rect.y,
-          height: rect.height
+          bottom: rect.bottom,
+          // Computed border-box height avoids fractional transform rounding.
+          height: style.height,
+          boxSizing: style.boxSizing
         };
       });
     }, [await addTeam.elementHandle(), await addService.elementHandle(), await startPractice.elementHandle()]);
     expect(teamBox).not.toBeNull();
     expect(serviceBox).not.toBeNull();
     expect(startBox).not.toBeNull();
-    expect(serviceBox!.y).toBeGreaterThanOrEqual(teamBox!.y + teamBox!.height);
+    expect(serviceBox!.y).toBeGreaterThanOrEqual(teamBox!.bottom);
+    expect(teamBox!.boxSizing).toBe("border-box");
+    expect(startBox!.boxSizing).toBe("border-box");
     expect(teamBox!.height).toBe(startBox!.height);
     await expect(page.locator(".admin-actions .brand-icon")).toHaveCount(0);
     await expect(page.locator("header").getByRole("button", {
