@@ -2,9 +2,11 @@
 
 [Documentation index](../README.md#documentation)
 
-ForcAD has one Go backend and separately deployed process roles. All roles use
-the same game rules, database schema and release. One `forcad` binary selects
-the process role through `FORCAD_ROLE`.
+ForcAD ships one Go backend binary and deploys it as separate process roles.
+`FORCAD_ROLE` accepts `api`, `receiver`, `worker`, `ticker`, or `all`; if it is
+unset, the binary runs the `api` role. The default Compose file sets one role
+per application service. All roles use the same game configuration, database
+schema, and release.
 
 ## Runtime
 

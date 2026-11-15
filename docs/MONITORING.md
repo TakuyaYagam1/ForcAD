@@ -71,24 +71,26 @@ endpoints have no authentication; keep them private. `/drain` still requires
 
 | Dashboard | Use |
 | --- | --- |
-| ForcAD | Per-team board RPS, flags, errors, latency, WS and router traffic |
-| Traffic | Selected-team totals for board traffic; router packets/bytes and top source IPs |
-| Game traffic | Source team -> target team activity, HTTP/WS, TCP/UDP and capture health |
-| Checker | Checker action results, duration, timeouts and unfinished jobs |
-| Errors | Recent HTTP errors by route, error ratio, latency, WS drops and pool errors |
-| Infrastructure | Current pools by component, busiest DB pool, Redis waits and per-replica details |
+| ForcAD | Board overview plus Checker, Errors and Infrastructure sections |
+| Traffic | Board totals and game source → target activity, flows and capture health |
+| DDoS | Victim load, source-team fan-out and observed source → victim directions |
+| Relay | Denied direct vulnbox → configured vulnbox packets before SNAT |
 
-The main UID is `forcad-monitoring`; others are `forcad-traffic`,
-`forcad-game-traffic`, `forcad-checker`, `forcad-errors` and `forcad-infrastructure`.
-Links preserve the time range. All sections start expanded. Table heights are
-fixed; long tables use pagination. Short graph legends do not use value tables.
+The UIDs are `forcad-monitoring`, `forcad-traffic`, `forcad-ddos` and
+`forcad-relay`. Links preserve the time range. The ForcAD overview is expanded;
+its other sections can be expanded by heading. Team selectors support searching.
+Table heights remain fixed in native Grafana, but tables scroll inside their
+panels instead of using page arrows. The Errors route table and Traffic top
+sources table offer 20, 50 or 100 rows through the Rows selector. Short graph
+legends do not use value tables.
 
 **Board metrics:** RPS covers backend requests, including flags, but excludes
 static assets and Nginx rejections. WS counts successful upgrades. `Unknown`
-means no team attribution. Expand a team row for UUID/IP. Missing sources or
-latency samples show N/A. Flag totals use Prometheus `increase`, span game
-sessions and are estimates, not authoritative scores. Duplicates are separate
-from other rejections.
+means no team attribution. Use Expand all / Collapse all above Team overview
+to show or hide every team's nested UUID/IP details; individual rows can also
+be expanded independently. Missing sources or latency samples show N/A.
+Flag totals use Prometheus `increase`, span game sessions and are estimates,
+not authoritative scores. Duplicates are separate from other rejections.
 
 **Infrastructure and Errors:** select Component, then Replica. Series aggregate
 into `api`, `receiver`, `worker` and `ticker`; maximum DB utilization uses the
@@ -127,7 +129,7 @@ Follow the [ForcAD](../infrastracture/forcad/README.md#install-and-test) and
 public inventory, install counters and enable the exporter on private TCP/9109.
 In `infrastracture/settings.toml`, `router_metrics` adds the scrape target; it
 does not install the Router exporter. Install that service on the Router with
-`sudo bash install.sh --network-metrics`. No agent is installed on vulnboxes.
+`sudo bash install.sh --network-metrics`. No exporter runs on vulnboxes.
 The VPN must preserve peer IPs; the router accounts for traffic before game
 SNAT.
 
@@ -146,7 +148,7 @@ Counter scope:
 - Team totals count forwarded IPv4/IPv6 packets matching configured networks,
   including those a later firewall rule may drop.
 - Source/vulnbox pairs count packets after router filtering, before SNAT.
-  Traffic shows the 50 busiest pairs over five minutes. These count packet
+  Traffic shows the busiest pairs over five minutes. These count packet
   direction, not who initiated a connection.
 - Pair sets expire after 15 minutes and hold 4096 entries per IP family. New
   pairs may be absent when full.
@@ -170,12 +172,14 @@ identify targets. Board, checker and admin traffic are excluded. No proxy or
 nginx exporter is required. Unique vulnbox IPs are needed to join team names;
 otherwise IP labels remain visible.
 
-Start with **Active directions - last minute**. Sort by RPS, packets/s, bandwidth
-or connections. Click a team name in a row to select that direction. Source and
-Target filters accept one team or All; **All teams** clears both. Graphs show
-selection totals. Inactive directions disappear; unavailable measurements stay
-N/A. A team accessing its own box appears on both sides and is not evidence of
-an attack.
+In **Traffic**, start with **Active directions - last minute**. Sort by RPS,
+packets/s, bandwidth or connections. Click a team name in a row to select that
+direction. Source and Target filters accept one team or All; **All teams**
+clears both. Graphs show selection totals. Inactive directions disappear;
+unavailable measurements stay N/A. A team accessing its own box appears on
+both sides and is not evidence of an attack. **DDoS** summarizes router rates
+by victim and by source; attribution of source peers needs healthy game-sensor
+metadata. High rates guide investigation rather than proving a violation.
 
 | Metric | Counts |
 | --- | --- |
@@ -194,12 +198,30 @@ Failed/stale sensors are omitted from game panels, so multiple sensors can yield
 partial totals. Check capture status, heartbeat, drops and gaps before interpreting
 traffic. High rates guide investigation; they do not prove a rules violation.
 
+## Direct relay attempts
+
+The Router already drops direct configured vulnbox-to-vulnbox forwarding.
+Before that drop, its bounded `relay_attempts` nft set counts packets from a
+team vulnbox toward another configured vulnbox on the game interfaces. The set
+holds at most 4096 distinct configured pairs; once full, new pairs may lack
+counters while the firewall still drops their packets. The exporter exposes
+`forcad_network_relay_attempt_packets_total{source_team_ip,team_ip}` and
+`forcad_network_relay_scrape_success` separately from the existing traffic
+counters. **Relay** shows denied pairs and collection status. Counters reset
+when Router rules are replaced; source and target IPs identify configured
+vulnboxes, not users or application-level proxies.
+
+Vulnbox WAN egress to public destinations remains allowed for
+player-installed monitoring tools. An indirect path through an external
+server does not match the direct drop and cannot be reliably detected or
+blocked by these Router counters. No automatic bans are configured.
+
 ## Alerts and checks
 
 Rules cover DB/Redis pool saturation, HTTP errors, WS capacity/drops, stale
-inventory, router collection failures and sensor health. An empty router/sensor
-target list has no down alert. Alerts stay in Prometheus: no Alertmanager or
-automatic bans are configured.
+inventory, router network/source collection failures and sensor health. An
+empty router/sensor target list has no down alert. Alerts stay in Prometheus:
+no Alertmanager or automatic bans are configured.
 
 Not collected: checker per-round SLA, PostgreSQL sessions, PgBouncer queues,
 Redis server limits and Nginx rejections. Backend disappearance has no dedicated
@@ -213,5 +235,5 @@ make -C infrastracture test-dashboards
 ```
 
 These use isolated containers. Try the [local demo](../deployment/demo/README.md)
-for five-team WireGuard traffic. Router capacity, NIC offloads and Debian
-boot order still require staging checks on the intended hosts.
+for ten-team WireGuard traffic. Router capacity, NIC offloads and Debian boot
+order still require staging checks on the intended hosts.

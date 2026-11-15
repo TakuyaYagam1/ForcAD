@@ -23,9 +23,9 @@ def build_infrastructure_cases(dashboard):
     for panel in panels:
         panels.extend(panel.get("panels", []))
     queries = {
-        panel["id"]: panel["targets"][0]["expr"]
+        panel["title"]: panel["targets"][0]["expr"]
         for panel in panels
-        if panel.get("targets")
+        if panel.get("targets") and panel["targets"][0].get("expr")
     }
     series = []
 
@@ -78,16 +78,16 @@ def build_infrastructure_cases(dashboard):
                 "interval": "15s",
                 "input_series": series,
                 "promql_expr_test": [
-                    check(expr(10), 1),
-                    check(expr(13), 5),
-                    check(expr(11), 90),
-                    check(f"count({expr(7)})", 32),
-                    check(f"count({expr(3)})", 4),
+                    check(expr("Unreachable replicas"), 1),
+                    check(expr("Healthy replicas"), 5),
+                    check(expr("Highest DB pool usage"), 90),
+                    check(f'count({expr("Components - current pools")})', 32),
+                    check(f'count({expr("Highest DB pool usage per component")})', 4),
                     check(
-                        expr(3, "forcad_api"), 90, '{component="api",job="forcad_api"}'
+                        expr("Highest DB pool usage per component", "forcad_api"), 90, '{component="api",job="forcad_api"}'
                     ),
                     check(
-                        expr(3, "forcad_api", "10.0.0.2:9090"),
+                        expr("Highest DB pool usage per component", "forcad_api", "10.0.0.2:9090"),
                         10,
                         '{component="api",job="forcad_api"}',
                     ),
@@ -102,7 +102,7 @@ def build_cases(dashboard):
     for panel in panels:
         panels.extend(panel.get("panels", []))
     queries = {
-        panel["id"]: panel["targets"][0]["expr"]
+        panel["title"]: panel["targets"][0]["expr"]
         for panel in panels
         if panel.get("targets")
     }
@@ -159,19 +159,19 @@ def build_cases(dashboard):
     def scalar(expr, value):
         return check(expr, [{"labels": "{}", "value": value}])
 
-    overview = expression(11)
+    overview = expression("Active directions - last minute")
     named_pair = "Team 01 [10.183.101.2] -> Team 02 [10.183.102.2]"
     tests = [
-        scalar(expression(5), 398),
-        scalar(expression(5, "10.183.101.2"), 38),
-        scalar(expression(5, target="10.183.102.2"), 38),
-        scalar(expression(5, "10.183.101.2", "10.183.102.2"), 20),
-        scalar(expression(5, "10.183.102.2", "10.183.101.2"), 1),
+        scalar(expression("Game HTTP requests/s"), 398),
+        scalar(expression("Game HTTP requests/s", "10.183.101.2"), 38),
+        scalar(expression("Game HTTP requests/s", target="10.183.102.2"), 38),
+        scalar(expression("Game HTTP requests/s", "10.183.101.2", "10.183.102.2"), 20),
+        scalar(expression("Game HTTP requests/s", "10.183.102.2", "10.183.101.2"), 1),
         scalar(f"count({overview})", 380 * 6),
-        scalar(f"count({expression(11, '10.183.101.2')})", 19 * 6),
-        check(expression(11, "10.183.101.2", "10.183.101.2"), []),
+        scalar(f"count({expression('Active directions - last minute', '10.183.101.2')})", 19 * 6),
+        check(expression("Active directions - last minute", "10.183.101.2", "10.183.101.2"), []),
         check(
-            expression(11, "10.183.101.2", "10.183.102.2"),
+            expression("Active directions - last minute", "10.183.101.2", "10.183.102.2"),
             [
                 {
                     "labels": "{"
@@ -190,7 +190,7 @@ def build_cases(dashboard):
             ],
         ),
     ]
-    for panel in (5, 6, 7, 8, 12, 13):
+    for panel in ("Game HTTP requests/s", "Open game WebSockets", "New TCP flows/s", "Established TCP connections", "VPN -> vulnbox packets/s", "VPN -> vulnbox bandwidth"):
         tests.append(scalar(f"count({expression(panel)})", 1))
     unnamed = [
         row
@@ -221,14 +221,14 @@ def build_cases(dashboard):
                 "input_series": unnamed,
                 "promql_expr_test": [
                     scalar(f"count({overview})", 380 * 6),
-                    scalar(expression(5), 398),
+                    scalar(expression("Game HTTP requests/s"), 398),
                 ],
             },
             {
                 "name": "stale sensor produces gaps, not zero HTTP traffic",
                 "interval": "15s",
                 "input_series": stale,
-                "promql_expr_test": [check(expression(5), [])],
+                "promql_expr_test": [check(expression("Game HTTP requests/s"), [])],
             },
         ],
     }

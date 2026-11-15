@@ -2,7 +2,6 @@
 
 Use this directory for visual components shared across pages and features.
 
-- `backgrounds/` contains page backgrounds.
 - `brand/` contains `BrandIcon`, `PageHero`, `RankBadge`, `RecentEvents`,
   `ScoreValue`, `ServiceCell`, `StatCard`, and `TeamAvatar`.
 - `layout/` contains `AppShell` and `LanguageSwitch`.

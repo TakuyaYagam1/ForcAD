@@ -53,6 +53,14 @@ x-player: &player
     retries: 12
 
 services:
+  postgres:
+    volumes:
+      - demo-postgres-data:/var/lib/postgresql
+
+  postgres-data:
+    volumes:
+      - demo-postgres-data:/var/lib/postgresql
+
   api:
     environment:
       TRUSTED_PROXY_CIDRS: 172.30.240.10/32
@@ -233,3 +241,6 @@ networks:
     internal: true
     ipam:
       config: [{subnet: 10.183.2.0/24, gateway: 10.183.2.254}]
+
+volumes:
+  demo-postgres-data: {}

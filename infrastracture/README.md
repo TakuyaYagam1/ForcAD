@@ -21,14 +21,13 @@ python3 render.py
 Use [settings.example.toml](settings.example.toml) for field descriptions. Set
 the addresses, interfaces, game settings, tasks, teams and monitoring options
 for your deployment. Team order assigns consecutive VLANs and one /24 network
-per entry. Player teams each receive one /29 VPN block with up to five members;
-six or seven members use /28 blocks. Add one `[[teams.entries]]` with
-`kind = "npc"` for a dedicated test target (for example, entry 19 after 18
-player teams). Its VLAN and vulnbox IP are allocated in sequence, but it
-receives no participant VPN block or client identities. Deploy the same
-services on this separate vulnbox and ensure participants can reach its
-service IP through the attack VPN. Size the participant VPN pool for player
-teams only and keep it separate from the admin VPN. Put logos under
+per entry. Configure 1-32 entries, with at least one player team and at most one
+NPC. Player teams receive one /29 participant VPN block for up to five members
+or one /28 block for six or seven members. An NPC receives a VLAN and vulnbox
+address in sequence, but no participant VPN block or client identities. Size
+the participant VPN pool for player teams only and keep it separate from the
+admin VPN. Deploy the same services on an NPC vulnbox and ensure participants
+can reach its service IP through the attack VPN. Put logos under
 `public/teams/` or `public/brand/`, and checkers under `checkers/`. Leave a logo
 value empty when none is needed.
 
@@ -66,11 +65,11 @@ Docker project or volumes. Its live address and gateway must
 already match the rendered settings; the installer does not restart networking.
 
 Run installation with `sudo` from the account that will manage the host. The
-installer uses `SUDO_USER` for ownership of host-bundle files and the ForcAD
-checkout, including WireGuard keys. Reinstalls keep the recorded owner. A direct
-root install remains root-owned. Secret files use mode `0600` and the WireGuard
-directory uses `0700`. Database/container storage and recovery records retain
-service or root ownership.
+installer assigns managed Router/VPN files and the ForcAD checkout, including
+WireGuard keys, to `SUDO_USER`. Reinstalls retain the recorded owner; a direct
+root install remains root-owned. Secret files use mode `0600`, and
+`/etc/wireguard` uses `0700`. Database/container storage and recovery records
+retain service or root ownership.
 
 Router and VPN install missing host prerequisites automatically. If Python is
 absent, their shell wrappers bootstrap it. `--files-only` still installs
@@ -79,15 +78,26 @@ applying network settings or managed services.
 
 ## Monitoring
 
-In `[env]`, `monitoring = true` enables Prometheus and Grafana on ForcAD.
-`router_metrics` and `game_metrics` configure scrape targets; they do not
-install Router exporters.
+In `[env]`, set `monitoring = true` to generate a Grafana password and start the
+Prometheus/Grafana overlay on ForcAD. Set `router_metrics` or `game_metrics` only
+when that Router exporter will also be installed: these settings add the
+corresponding Prometheus target on ForcAD, but do not change the Router.
 
-Enable Router exporters on the Router with `install.sh --network-metrics` and/or
-`install.sh --game-metrics`. The network exporter is bundled. Game metrics
-require Zeek 9 or newer at `/opt/zeek`; the installer checks for it, installs
-Zeek when needed and creates the `forcad-sensor` account. Prometheus and Grafana
-listen on localhost on ForcAD. See [monitoring access](../docs/MONITORING.md).
+Enable the exporters separately on the Router with
+`install.sh --network-metrics` and/or `install.sh --game-metrics`. The network
+exporter is bundled. Game metrics use Zeek 9 or newer at `/opt/zeek`; the
+installer adds Zeek when needed and creates the `forcad-sensor` account. Both
+exporters listen on the Router address facing ForcAD. The Router explicitly
+permits the ForcAD host to reach those ports; admin VPN clients already have
+general Router access. Prometheus and Grafana bind to localhost on ForcAD. See
+[monitoring access](../docs/MONITORING.md).
+
+## Default traffic policy
+
+The Router starts in pre-game mode and forwards only the configured WireGuard
+UDP ports from WAN. Direct inter-vulnbox forwarding stays blocked, while
+vulnboxes retain public WAN egress. See the [Router firewall
+policy](router/README.md#firewall-and-removal).
 
 ## Re-render and uninstall
 

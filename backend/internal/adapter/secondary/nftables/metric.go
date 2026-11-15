@@ -53,9 +53,11 @@ type teamSample struct {
 type scrapeSnapshot struct {
 	success       bool
 	sourceSuccess bool
+	relaySuccess  bool
 	duration      float64
 	teams         []teamSample
 	sources       []sourceSample
+	relayAttempts []relaySample
 }
 
 func (handler *metricsHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -120,6 +122,10 @@ func (handler *metricsHandler) scrape(requestContext context.Context, started ti
 			snapshot.sources, snapshot.sourceSuccess, _ = parseNftSources(sourceData, handler.inventory)
 		}
 	}
+	relayData, relayErr := handler.lister.ListRelayAttempts(ctx)
+	if relayErr == nil {
+		snapshot.relayAttempts, snapshot.relaySuccess, _ = parseNftRelayAttempts(relayData, handler.inventory)
+	}
 	snapshot.duration = time.Since(started).Seconds()
 	return snapshot
 }
@@ -137,6 +143,7 @@ type snapshotCollector struct {
 	snapshot        scrapeSnapshot
 	success         *prometheus.Desc
 	sourceSuccess   *prometheus.Desc
+	relaySuccess    *prometheus.Desc
 	duration        *prometheus.Desc
 	receiveBytes    *prometheus.Desc
 	transmitBytes   *prometheus.Desc
@@ -144,6 +151,7 @@ type snapshotCollector struct {
 	transmitPackets *prometheus.Desc
 	sourceBytes     *prometheus.Desc
 	sourcePackets   *prometheus.Desc
+	relayPackets    *prometheus.Desc
 }
 
 func newSnapshotCollector(snapshot scrapeSnapshot) *snapshotCollector {
@@ -151,6 +159,7 @@ func newSnapshotCollector(snapshot scrapeSnapshot) *snapshotCollector {
 		snapshot:        snapshot,
 		success:         prometheus.NewDesc("forcad_network_scrape_success", "Whether the latest network counter scrape completed.", nil, nil),
 		sourceSuccess:   prometheus.NewDesc("forcad_network_source_scrape_success", "Whether the latest source-IP counter scrape completed.", nil, nil),
+		relaySuccess:    prometheus.NewDesc("forcad_network_relay_scrape_success", "Whether the latest denied direct-relay counter scrape completed.", nil, nil),
 		duration:        prometheus.NewDesc("forcad_network_scrape_duration_seconds", "Time spent scraping network counters.", nil, nil),
 		receiveBytes:    prometheus.NewDesc("forcad_team_network_receive_bytes_total", "Bytes received by a team.", []string{"team_ip"}, nil),
 		transmitBytes:   prometheus.NewDesc("forcad_team_network_transmit_bytes_total", "Bytes transmitted by a team.", []string{"team_ip"}, nil),
@@ -158,12 +167,14 @@ func newSnapshotCollector(snapshot scrapeSnapshot) *snapshotCollector {
 		transmitPackets: prometheus.NewDesc("forcad_team_network_transmit_packets_total", "Packets transmitted by a team.", []string{"team_ip"}, nil),
 		sourceBytes:     prometheus.NewDesc("forcad_network_source_bytes_total", "Bytes sent from an IP address to a team vulnbox before SNAT.", []string{"source_ip", "team_ip"}, nil),
 		sourcePackets:   prometheus.NewDesc("forcad_network_source_packets_total", "Packets sent from an IP address to a team vulnbox before SNAT.", []string{"source_ip", "team_ip"}, nil),
+		relayPackets:    prometheus.NewDesc("forcad_network_relay_attempt_packets_total", "Packets denied while attempting direct vulnbox-to-vulnbox relay.", []string{"source_team_ip", "team_ip"}, nil),
 	}
 }
 
 func (collector *snapshotCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.success
 	ch <- collector.sourceSuccess
+	ch <- collector.relaySuccess
 	ch <- collector.duration
 	ch <- collector.receiveBytes
 	ch <- collector.transmitBytes
@@ -171,6 +182,7 @@ func (collector *snapshotCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- collector.transmitPackets
 	ch <- collector.sourceBytes
 	ch <- collector.sourcePackets
+	ch <- collector.relayPackets
 }
 
 func (collector *snapshotCollector) Collect(ch chan<- prometheus.Metric) {
@@ -184,6 +196,11 @@ func (collector *snapshotCollector) Collect(ch chan<- prometheus.Metric) {
 		sourceSuccess = 1
 	}
 	ch <- prometheus.MustNewConstMetric(collector.sourceSuccess, prometheus.GaugeValue, sourceSuccess)
+	relaySuccess := 0.0
+	if collector.snapshot.relaySuccess {
+		relaySuccess = 1
+	}
+	ch <- prometheus.MustNewConstMetric(collector.relaySuccess, prometheus.GaugeValue, relaySuccess)
 	ch <- prometheus.MustNewConstMetric(collector.duration, prometheus.GaugeValue, collector.snapshot.duration)
 	for _, team := range collector.snapshot.teams {
 		if team.hasReceive {
@@ -199,6 +216,11 @@ func (collector *snapshotCollector) Collect(ch chan<- prometheus.Metric) {
 		for _, source := range collector.snapshot.sources {
 			ch <- prometheus.MustNewConstMetric(collector.sourceBytes, prometheus.CounterValue, float64(source.value.bytes), source.sourceIP, source.teamIP)
 			ch <- prometheus.MustNewConstMetric(collector.sourcePackets, prometheus.CounterValue, float64(source.value.packets), source.sourceIP, source.teamIP)
+		}
+	}
+	if collector.snapshot.relaySuccess {
+		for _, attempt := range collector.snapshot.relayAttempts {
+			ch <- prometheus.MustNewConstMetric(collector.relayPackets, prometheus.CounterValue, float64(attempt.packets), attempt.sourceTeamIP, attempt.teamIP)
 		}
 	}
 }

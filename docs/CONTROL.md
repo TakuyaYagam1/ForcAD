@@ -21,8 +21,8 @@ without connecting to Docker or storage.
 | `resume` | Resume the paused game, accounting for elapsed pause time. Does not reset scores or revive a finished game. |
 | `validate` / `validate-config` | Validate `config/config.yml` without changing it or connecting to storage. `--full` also requires valid admin and storage settings; `--config PATH` selects another file. |
 | `print_tokens` / `print-tokens` / `tokens` | Print team UUIDs, names and tokens from PostgreSQL. Share each team only its own token. |
-| `reset --confirm` | Stop the project, clear game data and the configured Redis database. Preserve configuration and checkers; leave the project stopped. `--full` also removes verified local PostgreSQL data. |
-| `clean --confirm` | Perform a full reset and remove generated runtime credentials and the external-storage Compose file. Preserve the game YAML and checkers; run `setup` before starting again. |
+| `reset --confirm` | Stop the project, clear PostgreSQL game tables and the configured Redis database, remove Compose volumes (including the built-in NATS stream), and leave the project stopped. Configuration, credentials and checkers remain. External NATS is not purged. `--full` also removes verified local PostgreSQL data. |
+| `clean --confirm` | Perform a full reset and remove generated runtime credentials and the external-storage Compose file. Preserve the game YAML and checkers; run `setup` before starting again. External NATS is not purged. |
 | `rd` / `compose` | Run arbitrary Compose arguments with the correct project paths and external-storage configuration. |
 | `monitoring` | Run Compose with the optional Prometheus/Grafana overlay. See [Monitoring](MONITORING.md). |
 | `network-config` | Export public team addresses and traffic networks from the game YAML. No credentials are included. |

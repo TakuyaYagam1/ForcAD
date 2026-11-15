@@ -15,7 +15,16 @@ import (
 const (
 	maxCounterOutputBytes = 1 << 20
 	maxSourceOutputBytes  = 2 << 20
+	maxRelayOutputBytes   = 2 << 20
 	nftCommandTimeout     = 3 * time.Second
+)
+
+type nftQuery uint8
+
+const (
+	namedCounterQuery nftQuery = iota
+	sourceSetQuery
+	relaySetQuery
 )
 
 type counterValue struct {
@@ -28,10 +37,11 @@ type counterLabel struct {
 	direction string
 }
 
-// CounterLister reads named and per-source counters used by the network exporter.
+// CounterLister reads named, per-source, and denied relay counters used by the network exporter.
 type CounterLister interface {
 	ListCounters(ctx context.Context) ([]byte, error)
 	ListSources(ctx context.Context) ([]byte, error)
+	ListRelayAttempts(ctx context.Context) ([]byte, error)
 }
 
 // ExecCounterLister runs the fixed, read-only nft counter query.
@@ -40,7 +50,7 @@ type ExecCounterLister struct{}
 // ListCounters returns bounded JSON from the monitoring table.
 func (ExecCounterLister) ListCounters(ctx context.Context) ([]byte, error) {
 	const location = "nftables.ExecCounterLister.ListCounters"
-	data, err := runNftQuery(ctx, maxCounterOutputBytes, false)
+	data, err := runNftQuery(ctx, maxCounterOutputBytes, namedCounterQuery)
 	if err != nil {
 		return nil, fmt.Errorf("%s - list named counters: %w", location, err)
 	}
@@ -50,14 +60,24 @@ func (ExecCounterLister) ListCounters(ctx context.Context) ([]byte, error) {
 // ListSources returns bounded JSON for the active source-IP counters.
 func (ExecCounterLister) ListSources(ctx context.Context) ([]byte, error) {
 	const location = "nftables.ExecCounterLister.ListSources"
-	data, err := runNftQuery(ctx, maxSourceOutputBytes, true)
+	data, err := runNftQuery(ctx, maxSourceOutputBytes, sourceSetQuery)
 	if err != nil {
 		return nil, fmt.Errorf("%s - list source counters: %w", location, err)
 	}
 	return data, nil
 }
 
-func runNftQuery(ctx context.Context, maxBytes int, sources bool) ([]byte, error) {
+// ListRelayAttempts returns bounded JSON for direct vulnbox relay attempts.
+func (ExecCounterLister) ListRelayAttempts(ctx context.Context) ([]byte, error) {
+	const location = "nftables.ExecCounterLister.ListRelayAttempts"
+	data, err := runNftQuery(ctx, maxRelayOutputBytes, relaySetQuery)
+	if err != nil {
+		return nil, fmt.Errorf("%s - list relay counters: %w", location, err)
+	}
+	return data, nil
+}
+
+func runNftQuery(ctx context.Context, maxBytes int, query nftQuery) ([]byte, error) {
 	const location = "nftables.runNftQuery"
 	bounded, cancel := context.WithTimeout(ctx, nftCommandTimeout)
 	defer cancel()
@@ -65,10 +85,18 @@ func runNftQuery(ctx context.Context, maxBytes int, sources bool) ([]byte, error
 		limit:  maxBytes,
 		cancel: cancel,
 	}
-	command := exec.CommandContext(bounded, "nft", "-j", "list", "counters", "table", "inet", tableName)
-	if sources {
-		command = exec.CommandContext(bounded, "nft", "-j", "list", "sets", "table", "inet", tableName)
+	var arguments []string
+	switch query {
+	case namedCounterQuery:
+		arguments = []string{"-j", "list", "counters", "table", "inet", tableName}
+	case sourceSetQuery:
+		arguments = []string{"-j", "list", "sets", "table", "inet", tableName}
+	case relaySetQuery:
+		arguments = []string{"-j", "list", "set", "inet", routerTableName, relaySetName}
+	default:
+		return nil, fmt.Errorf("%s - unsupported read-only nft query", location)
 	}
+	command := exec.CommandContext(bounded, "nft", arguments...)
 	command.Stdout = &output
 	command.Stderr = io.Discard
 	if err := command.Run(); err != nil {

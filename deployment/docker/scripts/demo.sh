@@ -34,7 +34,7 @@ elif [[ "${1:-}" == phase ]]; then
     exit
 elif [[ "${1:-}" == load ]]; then
     team="${2:-}"
-    [[ "$team" =~ ^[1-9][0-9]*$ ]] && compose config --services | grep -qx "demo-farm$team" || {
+    [[ "$team" =~ ^[1-9][0-9]*$ ]] && compose config --services | grep -x "demo-farm$team" >/dev/null || {
         echo 'Usage: demo.sh load TEAM_NUMBER [--rps 20 --seconds 45 --ws 5]' >&2; exit 2;
     }
     shift 2

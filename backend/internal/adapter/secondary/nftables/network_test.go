@@ -478,6 +478,10 @@ func (counterListerFunc) ListSources(context.Context) ([]byte, error) {
 	return nil, errors.New("source fixture unavailable")
 }
 
+func (counterListerFunc) ListRelayAttempts(context.Context) ([]byte, error) {
+	return nil, errors.New("relay fixture unavailable")
+}
+
 func TestParseNftSources(t *testing.T) {
 	inventory := singleTeamInventory()
 	fingerprint, err := inventoryFingerprint(inventory)
@@ -524,6 +528,20 @@ func TestParseNftSources(t *testing.T) {
 	if err != nil || !complete || len(samples) != 1 || samples[0].sourceIP != "10.200.0.2" || samples[0].value.bytes != 1234 {
 		t.Fatalf("source counters were not decoded: %+v, complete=%t, error=%v", samples, complete, err)
 	}
+	foreign := set("relay_attempts", "ipv4_addr", nil)
+	foreign["set"].(map[string]any)["table"] = routerTableName
+	response["nftables"] = []any{
+		set("sources_v4", "ipv4_addr", []any{element}),
+		set("sources_v6", "ipv6_addr", nil),
+		foreign,
+	}
+	data, err = json.Marshal(response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if samples, complete, err := parseNftSources(data, inventory); err != nil || !complete || len(samples) != 1 {
+		t.Fatalf("unrelated router sets must not disable source collection: %+v, complete=%t, error=%v", samples, complete, err)
+	}
 	unknown := map[string]any{
 		"elem": map[string]any{
 			"val": map[string]any{
@@ -545,9 +563,218 @@ func TestParseNftSources(t *testing.T) {
 	}
 }
 
+func TestParseNftRelayAttemptsAcceptsOnlyConfiguredTeamPairs(t *testing.T) {
+	inventory := Inventory{
+		Teams: []InventoryTeam{
+			{
+				TeamIP:   "192.0.2.10",
+				Networks: []string{"192.0.2.10/32"},
+			},
+			{
+				TeamIP:   "192.0.2.20",
+				Networks: []string{"192.0.2.20/32"},
+			},
+		},
+	}
+	valid := relayResponse(t, inventory, []relayFixture{{
+		sourceTeamIP: "192.0.2.10",
+		teamIP:       "192.0.2.20",
+		packets:      12,
+	}})
+	samples, complete, err := parseNftRelayAttempts(valid, inventory)
+	if err != nil || !complete || len(samples) != 1 {
+		t.Fatalf("relay attempts were not decoded: %+v, complete=%t, error=%v", samples, complete, err)
+	}
+	if samples[0].sourceTeamIP != "192.0.2.10" || samples[0].teamIP != "192.0.2.20" || samples[0].packets != 12 {
+		t.Fatalf("relay sample = %+v", samples[0])
+	}
+
+	cases := []struct {
+		name string
+		data []byte
+	}{
+		{
+			name: "unknown source",
+			data: relayResponse(t, inventory, []relayFixture{{
+				sourceTeamIP: "192.0.2.99",
+				teamIP:       "192.0.2.20",
+				packets:      1,
+			}}),
+		},
+		{
+			name: "unknown target",
+			data: relayResponse(t, inventory, []relayFixture{{
+				sourceTeamIP: "192.0.2.10",
+				teamIP:       "192.0.2.99",
+				packets:      1,
+			}}),
+		},
+		{
+			name: "duplicate pair",
+			data: relayResponse(t, inventory, []relayFixture{
+				{
+					sourceTeamIP: "192.0.2.10",
+					teamIP:       "192.0.2.20",
+					packets:      1,
+				},
+				{
+					sourceTeamIP: "192.0.2.10",
+					teamIP:       "192.0.2.20",
+					packets:      2,
+				},
+			}),
+		},
+		{
+			name: "fractional counter",
+			data: []byte(strings.Replace(string(valid), `"packets":12`, `"packets":1.5`, 1)),
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if _, _, err := parseNftRelayAttempts(test.data, inventory); err == nil {
+				t.Fatal("accepted invalid relay counter data")
+			}
+		})
+	}
+
+	changed := inventory
+	changed.Teams = append([]InventoryTeam(nil), inventory.Teams...)
+	changed.Teams[0].Networks = []string{"198.51.100.10/32"}
+	if _, _, err := parseNftRelayAttempts(valid, changed); err == nil {
+		t.Fatal("accepted relay counters from a different inventory")
+	}
+}
+
+func TestMetricsHandlerExportsRelayAttemptsAndIndependentReadiness(t *testing.T) {
+	inventory := singleTeamInventory()
+	counters := counterResponse(t, inventory, []counterFixture{
+		{
+			teamIP:    "192.0.2.10",
+			direction: "rx",
+			packets:   7,
+			bytes:     70,
+		},
+		{
+			teamIP:    "192.0.2.10",
+			direction: "tx",
+			packets:   9,
+			bytes:     90,
+		},
+	})
+	relays := relayResponse(t, inventory, []relayFixture{{
+		sourceTeamIP: "192.0.2.10",
+		teamIP:       "192.0.2.10",
+		packets:      4,
+	}})
+	handler, err := NewMetricsHandler(context.Background(), inventory, relayCounterLister{
+		counters: counters,
+		relays:   relays,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := scrapeHandler(handler)
+	for _, expected := range []string{
+		"forcad_network_relay_scrape_success 1",
+		`forcad_network_relay_attempt_packets_total{source_team_ip="192.0.2.10",team_ip="192.0.2.10"} 4`,
+	} {
+		if !strings.Contains(output, expected) {
+			t.Errorf("metrics do not contain %q:\n%s", expected, output)
+		}
+	}
+
+	failedHandler, err := NewMetricsHandler(context.Background(), inventory, relayCounterLister{
+		counters: counters,
+		relayErr: errors.New("relay fixture unavailable"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	failed := scrapeHandler(failedHandler)
+	if !strings.Contains(failed, "forcad_network_scrape_success 1") ||
+		!strings.Contains(failed, "forcad_network_relay_scrape_success 0") ||
+		strings.Contains(failed, "forcad_network_relay_attempt_packets_total{") {
+		t.Fatalf("failed relay scrape was not isolated from existing counters:\n%s", failed)
+	}
+}
+
+type relayFixture struct {
+	sourceTeamIP string
+	teamIP       string
+	packets      uint64
+}
+
+func relayResponse(t *testing.T, inventory Inventory, fixtures []relayFixture) []byte {
+	t.Helper()
+	fingerprint, err := inventoryFingerprint(inventory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	elements := make([]map[string]any, 0, len(fixtures))
+	for _, fixture := range fixtures {
+		elements = append(elements, map[string]any{
+			"elem": map[string]any{
+				"val": map[string]any{
+					"concat": []string{fixture.sourceTeamIP, fixture.teamIP},
+				},
+				"counter": map[string]any{
+					"packets": fixture.packets,
+					"bytes":   fixture.packets * 10,
+				},
+			},
+		})
+	}
+	data, err := json.Marshal(map[string]any{
+		"nftables": []any{
+			map[string]any{
+				"metainfo": map[string]any{},
+			},
+			map[string]any{
+				"set": map[string]any{
+					"family":  "inet",
+					"table":   routerTableName,
+					"name":    relaySetName,
+					"comment": inventoryComment(fingerprint),
+					"type":    []string{"ipv4_addr", "ipv4_addr"},
+					"elem":    elements,
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+type relayCounterLister struct {
+	counters []byte
+	relays   []byte
+	relayErr error
+}
+
+func (lister relayCounterLister) ListCounters(context.Context) ([]byte, error) {
+	return lister.counters, nil
+}
+
+func (relayCounterLister) ListSources(context.Context) ([]byte, error) {
+	return nil, errors.New("source fixture unavailable")
+}
+
+func (lister relayCounterLister) ListRelayAttempts(context.Context) ([]byte, error) {
+	return lister.relays, lister.relayErr
+}
+
 func TestParseNftCountersRejectsOversizedPayload(t *testing.T) {
 	data := fmt.Appendf(nil, `{"nftables":[%q]}`, strings.Repeat("x", maxCounterOutputBytes))
 	if _, _, err := parseNftCounters(data, singleTeamInventory()); err == nil {
 		t.Fatal("accepted oversized nft output")
+	}
+}
+
+func TestParseNftRelayAttemptsRejectsOversizedPayload(t *testing.T) {
+	data := fmt.Appendf(nil, `{"nftables":[%q]}`, strings.Repeat("x", maxRelayOutputBytes))
+	if _, _, err := parseNftRelayAttempts(data, singleTeamInventory()); err == nil {
+		t.Fatal("accepted oversized relay output")
 	}
 }

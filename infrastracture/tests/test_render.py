@@ -356,6 +356,7 @@ class RenderTests(unittest.TestCase):
                 }
                 self.assertEqual(json.loads(files["router/network.json"]), expected)
 
+
     def test_output_is_private_and_never_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory) / "bundle"

@@ -2,6 +2,7 @@
 """Generate private host bundles and WireGuard configs without applying them."""
 
 import argparse
+import hashlib
 import ipaddress
 import json
 import os
@@ -569,6 +570,36 @@ def nft_set(values, quote=False):
         + " }"
     )
 
+def network_inventory(team_list):
+    return {
+        "teams": [
+            {
+                "team_ip": team["vulnbox"],
+                "networks": [
+                    f"{team['vulnbox']}/32",
+                    *(
+                        [team["vpn_cidr"]]
+                        if team["vpn_cidr"] is not None
+                        else []
+                    ),
+                ],
+            }
+            for team in team_list
+        ]
+    }
+
+
+def network_inventory_comment(inventory):
+    canonical = bytearray()
+    for team in sorted(inventory["teams"], key=lambda item: item["team_ip"]):
+        canonical.extend(team["team_ip"].encode())
+        canonical.append(0)
+        for network in sorted(team["networks"]):
+            canonical.extend(network.encode())
+            canonical.append(0)
+        canonical.extend(b"\n")
+    return "forcad_inventory_sha256_" + hashlib.sha256(canonical).hexdigest()
+
 
 def template(relative, **values):
     content = (ROOT / relative).read_text()
@@ -592,6 +623,7 @@ def ownership_rules(config, action):
 def router_rules(config):
     router = config["router"]
     team_list = teams(config)
+    inventory = network_inventory(team_list)
     layout = network_layout(config)
     definitions = {
         "wan_if": json.dumps(router["wan_interface"]),
@@ -631,6 +663,8 @@ def router_rules(config):
         ),
         GAME_PORTS="\n".join(game_rules),
         OWN_MANAGEMENT=ownership_rules(config, "jump allowed_flow"),
+        RELAY_SET_SIZE=str(min(len(team_list) ** 2, 4096)),
+        RELAY_COMMENT=network_inventory_comment(inventory),
         SNAT="\n".join(
             f'        oifname "{team["interface"]}" ip daddr {team["vulnbox"]} '
             f"ip saddr {{ $forcad_ip, $attack_net, $admin_net }} snat to {team['gateway']}"
@@ -1082,26 +1116,7 @@ net.ipv6.conf.default.disable_ipv6=1
     )
     files["router/active.nft"] = 'include "/etc/forcad/router/pre-game.nft"\n'
     files["router/network.json"] = (
-        json.dumps(
-            {
-                "teams": [
-                    {
-                        "team_ip": team["vulnbox"],
-                        "networks": [
-                            f"{team['vulnbox']}/32",
-                            *(
-                                [team["vpn_cidr"]]
-                                if team["vpn_cidr"] is not None
-                                else []
-                            ),
-                        ],
-                    }
-                    for team in teams(config)
-                ]
-            },
-            indent=2,
-        )
-        + "\n"
+        json.dumps(network_inventory(teams(config)), indent=2) + "\n"
     )
     files["router/network-metrics.service"] = (
         (ROOT / "router/network-metrics.service")

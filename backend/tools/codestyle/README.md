@@ -2,7 +2,8 @@
 
 From `backend/`, `go run ./tools/codestyle --check ..` checks all repository Go
 files recursively, including generated code and Go fixtures outside the module.
-`--fix` rewrites files and then applies `gofmt`.
+`--fix` applies ordinary `gofmt` normalization plus the expanded layout and
+rewrites files whose output differs.
 
 The rule puts block statements, switch/select case bodies, struct/interface
 field declarations and keyed literal entries on separate lines. Multiline
@@ -24,13 +25,14 @@ error or changed syntax tree fails without rewriting that file. Symlinks are
 not followed, and cache, vendor, node_modules and reports directories are
 skipped. Saved load-test evidence and old diagnostic test assets stay intact.
 
-`make fmt`, `fmt-check` and `lint-go` enforce the rule. Each Go generation target
-formats its generated output too. The separate upstream `gofmt` rewrite rule
+`make fmt` applies the layout rule after `golangci-lint fmt`; `make fmt-check`
+checks both formatters. `make lint-go` runs the layout and error checks before
+`golangci-lint`. Each Go generation target formats its generated output too.
+The separate upstream `gofmt` rewrite in the SQLC and Wire generation targets
 converts `interface{}` to `any`; the `revive` `use-any` rule enforces it, and
-`predeclared` detects builtin shadowing. Generated-code hooks run that standard
-rewrite before this AST layout formatter. The layout formatter does not change
+`predeclared` detects builtin shadowing. The layout formatter does not change
 type aliases or weaken its syntax-tree guard. Exit status is 0 for success, 1
-for a check violation, and 2 for a usage, parsing or filesystem error.
+for a check violation, and 2 for a usage, parsing, or filesystem error.
 
 `go run ./tools/codestyle --check-errors .` checks handwritten production error
 constructors. A `fmt.Errorf` call starts with `"%s - "` and passes a visible,

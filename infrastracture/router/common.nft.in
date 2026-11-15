@@ -8,6 +8,14 @@ add table ip forcad_nat
 delete table ip forcad_nat
 
 table inet forcad_router {
+    set relay_attempts {
+        type ipv4_addr . ipv4_addr;
+        flags dynamic;
+        size @@RELAY_SET_SIZE@@;
+        counter;
+        comment "@@RELAY_COMMENT@@";
+    }
+
     chain check_source {
         meta nfproto ipv6 counter drop
 @@SOURCE_CHECKS@@
@@ -65,6 +73,7 @@ table inet forcad_router {
 
         # Direct relays and connections initiated by vulnboxes into internal
         # networks stay blocked even when conntrack contains an old flow.
+        iifname $team_ifs oifname $team_ifs ip saddr $vulnboxes ip daddr $vulnboxes update @relay_attempts { ip saddr . ip daddr counter }
         iifname $team_ifs oifname $team_ifs counter drop
         ct original ip saddr $vulnboxes ct original ip daddr $non_public_nets counter drop
 

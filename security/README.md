@@ -29,21 +29,19 @@ networks. Checkers are trusted code, not a sandbox; see
 [OWASP SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
 
 Run checks from the repository root. They inspect local source, dependencies,
-and images. They do not start a game or contact participant services. Trivy and
-`govulncheck` may access vulnerability data. Trivy may download checks on its
-first run. Image scans require Docker; the `security-image` target also needs
-an existing local image.
-
-Requirements: Go from `backend/go.mod`, Python 3, GNU Make, Docker, Trivy,
-Gitleaks, and Semgrep. Run the full source scan with:
+and images; they do not start a game or contact participant services. The
+aggregate source scan needs the Go version declared in `backend/go.mod`,
+Python 3, GNU Make, Trivy, Gitleaks, and Semgrep. Trivy and `govulncheck` may
+download vulnerability data. Image scans additionally need Docker and may pull
+base images and the pinned Trivy image.
 
 ```sh
 make -C deployment security
 ```
 
-The target runs `security-filesystem`, `security-secrets`, `security-semgrep`,
-and `security-go-vuln`. A finding or scanner error fails the target. Run one
-scanner directly, for example:
+This runs `security-filesystem`, `security-secrets`, `security-semgrep`, and
+`security-go-vuln`, continuing through all four targets and failing if any
+scanner reports a finding or error. Run one scanner directly, for example:
 
 ```sh
 make -C deployment security-semgrep
@@ -85,11 +83,12 @@ packages, nginx, PostgreSQL, PgBouncer, and NATS; coverage of source-built C/C++
 binaries is limited. JavaScript build dependencies remain in the
 `security-filesystem` scope. Redis, Prometheus, and Grafana are
 externally supplied and are not built or scanned by this image matrix. The
-scanner keeps local build cache, removes its temporary image tag and archive,
-and does not start application containers, sign, or publish images. JSON, table
-summaries, and image IDs are stored under `REPORTS/images/<target>/`. GitHub uploads report
-files only, not image archives or build cache; source and image reports are
-retained as workflow artifacts for 45 days.
+scanner keeps its Trivy database cache, removes its temporary image tag and
+archive, and does not start application containers, sign, or publish images.
+JSON, table summaries, and image IDs are stored under
+`REPORTS/images/<target>/`. GitHub uploads report files only, not image archives
+or caches; source and image reports are retained as workflow artifacts for 45
+days.
 
 `make -C deployment security-test` checks Semgrep positive and negative
 fixtures, then runs Python unit tests for secret-scan input handling and image
@@ -97,9 +96,11 @@ scanner cleanup/error cases. It does not run the source scanners. Reports and
 caches default to `security/reports/` and `security/.cache/`; set `REPORTS` and
 `CACHE` to use other paths.
 
-GitHub Actions runs the full `security` workflow monthly on the 1st at 09:17
-Europe/Moscow (`17 6 1 * *`) and supports manual dispatch. This includes the
-container image builds and scans. Findings or scanner errors fail the workflow.
+GitHub Actions runs the `security` workflow monthly on the 1st at 06:17 UTC
+(09:17 Europe/Moscow) and supports manual dispatch. Separate jobs run the Go
+dependency check, source scans, and all six image builds and scans. Findings or
+scanner errors fail their job.
+
 The separate `tests` workflow runs on pushes and pull requests targeting `main`
 and supports manual dispatch. Dependabot uses one cross-ecosystem group for all
 six ecosystems, including major versions, every Monday at 09:00 Europe/Moscow;

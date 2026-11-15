@@ -1,0 +1,493 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "type": "dashboards",
+      "title": "ForcAD dashboards",
+      "tags": [
+        "forcad"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "What this dashboard measures",
+      "description": "Scope and interpretation of relay-attempt counters.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 7
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## Denied direct relay attempts\n\nThe Router counts packets sent directly from one configured vulnbox address to another after source-spoof checks and immediately before the existing deny rule. Every series is an inventory-mapped source/target team pair.\n\nA count is evidence of an **attempted direct** vulnbox-to-vulnbox packet, not a successful relay or proxy. Direct traffic remains blocked if monitoring or scraping fails. Vulnbox WAN egress remains unrestricted; indirect relays through external systems are outside this counter's scope."
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Router capture status",
+      "description": "Ready only when Prometheus can reach the router exporter and its bounded relay-set scrape succeeds. Missing data stays N/A.",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "N/A",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Capturing",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad_network_relay_scrape_success{job=\"forcad_router\"} * on (job, instance) (up{job=\"forcad_router\"} == bool 1))",
+          "legendFormat": "Capture",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Denied packets in range",
+      "description": "Counter increase for the selected source and target teams while capture was ready.",
+      "gridPos": {
+        "x": 8,
+        "y": 7,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
+          "legendFormat": "Denied packets",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Active denied pairs",
+      "description": "Selected source/target pairs with a non-zero denied packet rate in the last five minutes.",
+      "gridPos": {
+        "x": 16,
+        "y": 7,
+        "w": 8,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count((sum by (source_team_ip, team_ip) (rate(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[5m]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))) > 0) or vector(0)",
+          "legendFormat": "Active pairs",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Denied direct relay packet rate - ${source:text} to ${target:text}",
+      "description": "Router-denied packets per second for each selected inventory-mapped source/target team pair.",
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "packets/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (source_team_ip, team_ip) (rate(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
+          "legendFormat": "{{source_team_ip}} -> {{team_ip}}",
+          "refId": "A",
+          "range": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Denied direct relay attempts by source and target",
+      "description": "Counter increase over the selected time range. Rows scroll inside this tall panel; pagination is disabled.",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "enablePagination": false,
+        "sortBy": [
+          {
+            "displayName": "Denied packets",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc((((sum by (source_team_ip, team_ip) (increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info) * on (team_ip) group_left (target_team_name) forcad:game_target_info) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "source_team_ip": 1,
+              "target_team_name": 2,
+              "team_ip": 3,
+              "Value": 4
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "source_team_ip": "Source vulnbox IP",
+              "target_team_name": "Target team",
+              "team_ip": "Target vulnbox IP",
+              "Value": "Denied packets"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "label": "Source team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join(forcad:game_source_info, \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join(forcad:game_source_info, \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Target team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join(forcad:game_target_info, \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join(forcad:game_target_info, \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Relay",
+  "uid": "forcad-relay",
+  "version": 1,
+  "description": "Denied direct vulnbox-to-vulnbox packet attempts and router capture readiness. External relay paths are out of scope."
+}
