@@ -1,9 +1,15 @@
 # Branding
 
-For `./control.sh start`, copy `frontend/.env.example` to
-`deployment/docker/.env` and edit its `VITE_BRAND_*` values. Compose reads that
-file from its project directory and passes the values as image build arguments.
-Keep the example values to use the ForcAD brand.
+From the repository root, copy the Compose environment sample, then edit its
+`VITE_BRAND_*` values:
+
+```sh
+cp -n frontend/.env.example deployment/docker/.env
+```
+
+Compose reads `deployment/docker/.env` from its project directory and passes
+the values as image build arguments. Keep the example values to use the ForcAD
+brand.
 
 For local Vite development, put values in `frontend/.env.local`. Vite compiles
 them into the bundle, so changing nginx runtime variables does not change the

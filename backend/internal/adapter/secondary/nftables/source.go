@@ -67,6 +67,16 @@ func decodeSourceItems(items []json.RawMessage, comment string, knownTeams map[s
 		if !isSet {
 			return nil, false, fmt.Errorf("%s - unexpected nft item", location)
 		}
+		var identity struct {
+			Table string `json:"table"`
+		}
+		if err := json.Unmarshal(rawSet, &identity); err != nil || identity.Table == "" {
+			return nil, false, fmt.Errorf("%s - invalid nft set table", location)
+		}
+		// nft list sets emits every set in the family, including Router sets.
+		if identity.Table != tableName {
+			continue
+		}
 		name, entries, err := decodeSourceSet(rawSet, comment, knownTeams)
 		if err != nil {
 			return nil, false, fmt.Errorf("%s - decode source set: %w", location, err)

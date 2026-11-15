@@ -5,6 +5,9 @@
 Use `./control.sh --help` or the [Control CLI guide](CONTROL.md) for commands.
 See the [manual setup guide](../README.md#manual-application-setup) for first
 start and [Configuration](CONFIGURATION.md) for game fields and credentials.
+
+Run commands from the repository root.
+
 `start` builds and starts containers; it does not start a game session. Use
 `pause` and `resume` to control the game clock and flag acceptance without
 stopping containers.
@@ -31,9 +34,11 @@ a secret until it is removed; `clean` also removes that legacy generated file.
 Ticker provisions the shared persistent stream and durable consumer at startup,
 even before a game starts. Workers fetch only when a local slot is free and
 acknowledge after SQL settlement. SQL claims and leases remain authoritative
-when messages are redelivered. The standard `forcad-nats` volume survives normal
-container recreation and is included in a full reset. Broker monitoring binds
-to host loopback port 8222; it is not an authenticated public endpoint.
+when messages are redelivered. The standard `forcad-nats` volume survives
+container recreation and `down` without `--volumes`; `reset` and `clean` remove
+it with the other Compose volumes. An external NATS stream is not purged by
+these commands. Broker monitoring binds to host loopback port 8222; it is not
+an authenticated public endpoint.
 
 ## Status and credentials
 
@@ -72,6 +77,11 @@ but still need both the session cookie and CSRF header. Never automatically repl
 an administrative mutation after a network error: its side effects may have committed.
 This follows the OWASP
 [synchronizer token pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern).
+
+Lifecycle clients call `POST /api/admin/game/{action}/`, where `action` is
+`start`, `start_practice`, `start_final`, `pause`, `resume` or `finish`.
+`start_final` and `finish` require `{"confirm":true}`. Include the current
+`generation` when the client must reject a stale lifecycle change.
 
 ### Database credentials and upgrades
 
@@ -374,21 +384,25 @@ an earlier game. The initializer and `migrate` command only apply `Up` migration
 
 ## Reset
 
-These commands require `--confirm` and stop the Compose project. Use dedicated
-PostgreSQL and Redis storage: a normal reset clears game tables and flushes the
-configured Redis database, then leaves the project stopped. The YAML and
-credential files remain. The next `./control.sh start` initializes a new game from the
-YAML.
+These commands require `--confirm`, stop all project containers and leave the
+project down. Use dedicated PostgreSQL, Redis and NATS storage. A normal reset
+clears the game tables and configured Redis logical database, then removes the
+Compose volumes, including the built-in NATS stream and staged configuration
+volume. It preserves `config/config.yml`, generated credential files and
+checkers on the host. An external NATS stream is not purged. The next
+`./control.sh start` recreates runtime volumes and initializes a new game from
+the YAML.
 
 ```bash
 ./control.sh reset --confirm
 ```
 
 `--full` also removes the verified local PostgreSQL data directory. It supports
-the built-in storage layout on a local Linux Docker daemon and refuses external
-or unexpected storage. `clean` performs that full reset and removes generated
-credential files and the external Compose override under `config/runtime/`;
-run `./control.sh setup` before starting again.
+only the built-in storage layout on Linux with a local Unix-socket Docker daemon
+and refuses external, mounted or unexpected storage. `clean` performs that full
+reset and removes generated credential files and the managed external-storage
+Compose file under `config/runtime/`; run `./control.sh setup` before starting
+again.
 
 ```bash
 ./control.sh reset --full --confirm

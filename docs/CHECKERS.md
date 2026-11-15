@@ -28,10 +28,12 @@ checker put HOST PRIVATE_DATA FLAG PLACE
 checker get HOST PRIVATE_DATA FLAG PLACE
 ```
 
-For PUT, `PRIVATE_DATA` starts as a random 40-character hexadecimal identifier.
-`FLAG` is 31 uppercase ASCII letters/digits followed by `=`. `PLACE` is a random
-integer from 1 through the task's `places`. GET receives the saved private data,
-flag and location for a previously stored flag.
+For PUT, `PRIVATE_DATA` starts as a random 40-character lowercase hexadecimal
+identifier. `FLAG` is 31 uppercase ASCII letters/digits followed by `=`; its
+first character is the uppercase first character of the task name, so task
+names must start with an ASCII letter or digit. `PLACE` is a random integer
+from 1 through the task's `places`. GET receives the saved private data, flag,
+and location for a previously stored flag.
 
 ## Output and exit codes
 

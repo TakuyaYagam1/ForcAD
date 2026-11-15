@@ -109,10 +109,8 @@ def main():
     assert set(dashboards) == {
         "forcad-monitoring",
         "forcad-traffic",
-        "forcad-errors",
-        "forcad-infrastructure",
-        "forcad-game-traffic",
-        "forcad-checker",
+        "forcad-ddos",
+        "forcad-relay",
     }, "Monitoring dashboards are missing"
     auth = "admin:" + os.environ["GRAFANA_ADMIN_PASSWORD"]
     for dashboard in dashboards.values():
@@ -133,6 +131,8 @@ def main():
                         "$__interval", "15s"
                     )
                     expression = expression.replace("$__range", "1h")
+                    expression = expression.replace("${rows:raw}", "50")
+                    expression = expression.replace("${service:regex}", ".*")
                     expression = expression.replace("${team}", ".*").replace(
                         "$team", ".*"
                     )
@@ -143,9 +143,9 @@ def main():
                         "${instance}", ".*"
                     )
                     query(expression)
-    game_dashboard = dashboards["forcad-monitoring"]
+    main_dashboard = dashboards["forcad-monitoring"]
     table_query = next(
-        panel for panel in game_dashboard["panels"] if panel["type"] == "table"
+        panel for panel in main_dashboard["panels"] if panel["type"] == "table"
     )["targets"][0]["expr"]
     table = query(table_query)
     columns = {

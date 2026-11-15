@@ -6,6 +6,9 @@ Copy [config/config.yml.example](../config/config.yml.example) to
 `config/config.yml`, edit it, then run `./control.sh setup` from the repository root.
 Setup validates the YAML and creates the private runtime environment files.
 Unknown fields and invalid values are rejected.
+The parser accepts one YAML document up to 1 MiB. It rejects unknown fields,
+YAML aliases, extra documents, invalid scalar types, and values outside the
+ranges below.
 
 ## Game
 
@@ -24,7 +27,7 @@ Unknown fields and invalid values are rejected.
 | `volga_attacks_mode` | Requires the attacker's matching service to be UP. Default: `false`. |
 | `checkers_path` | Base checker directory in the worker. Default: `/checkers/`. |
 | `env_path` | Default checker environment path. Default: `/opt/checkers/bin`. |
-| `get_period` | Default GET interval in seconds. If omitted, uses `round_time`. |
+| `get_period` | Default CHECK/GET interval in seconds in `blitz` mode. If omitted, uses `round_time`. |
 
 With `extra_checks > 0`, each additional CHECK runs at a random time in a
 separate part of the round. Times are persisted in PostgreSQL and shifted on
@@ -110,19 +113,23 @@ PostgreSQL.
 
 ## Tasks and checkers
 
-Each task needs a `name` and `checker`. A relative checker path is resolved under
-`game.checkers_path`; an absolute path is used as written. Compose mounts the
-host's `checkers/` directory read-only in the worker.
+Configure at least one task. Each task needs a `name` and `checker`. To generate
+PUT flags, the task name must start with an ASCII letter or digit; that
+character becomes the flag prefix. Configuration validation does not check
+this prefix, so an invalid name fails when the worker generates a PUT flag. A
+relative checker path is resolved under `game.checkers_path`; an absolute path
+is used as written. Compose mounts the host's `checkers/` directory read-only
+in the worker.
 
 | Field | Meaning |
 | --- | --- |
-| `checker_type` | Checker protocol type. Default: `hackerdom`. |
-| `checker_timeout` | Seconds allowed for each checker action. Default: `10`. |
+| `checker_type` | `_`-separated output-contract tags. Default: `hackerdom`; `pfr` and `nfr` change successful PUT storage as described in [CHECKERS.md](./CHECKERS.md). |
+| `checker_timeout` | Positive seconds allowed for each checker action. Default: `10`. |
 | `puts`, `gets` | Nonnegative action counts. Default: `1` each; their sum cannot exceed `1024`. |
 | `places` | Number of flag locations. Default: `1`; must be positive. |
 | `env_path` | Task override for `game.env_path`. |
-| `default_score` | Task override for `game.default_score`. |
-| `get_period` | Task override for the GET interval; otherwise inherits the game value. |
+| `default_score` | Nonnegative task override for `game.default_score`. |
+| `get_period` | Positive task override for the CHECK/GET interval in `blitz` mode; otherwise inherits the game value. |
 
 See [CHECKERS.md](./CHECKERS.md) for the executable arguments, output and status
 contract.
@@ -131,7 +138,8 @@ contract.
 
 `admin` has `username` and `password`. If the whole section is absent, setup uses
 the username `forcad` and generates a password. If the section is present, both
-fields are required and the password must be at least 16 characters.
+fields are required, the username must not be empty, and the password must be
+at least 16 characters.
 
 Setup generates storage sections and passwords only when the whole `storages`
 section is absent. In that case it uses database `postgres:5432/forcad`,
@@ -149,6 +157,9 @@ The storage sections are `db` (`host`, `port`, `user`, `password`, `dbname`),
 `nats` (`host`, `port`, `user`, `password`) and `redis` (`host`,
 `port`, `password`, `db`). Treat `config/config.yml` and `config/runtime/` as
 private because they contain credentials.
+Custom storage hosts must not be empty, ports must be in `1..65535`, and the
+Redis database index must be in `0..1024`. Database user/name and NATS
+user/password values must not be empty.
 
 Checker delivery uses NATS JetStream with persistent file storage. Setup writes
 `NATS_USER`, `NATS_PASSWORD` and a URL-escaped `NATS_URL` to the private

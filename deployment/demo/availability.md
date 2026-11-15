@@ -46,9 +46,10 @@ repeat the experiment. Private reports are written to
 
 ## Decision
 
-Keep the general default at `0` and the demo at `2`. Extra checks caught two
-outages that the main workflow missed in this sample, with no false DOWN in the
-control teams. This supports the feature as an opt-in experiment.
+Keep the general and demo defaults at `0`; set the demo to `2` only for this
+experiment. Extra checks caught two outages that the main workflow missed in
+this sample, with no false DOWN in the control teams. This supports the feature
+as an opt-in experiment.
 
 The fault cycle kept the target available for about 41% of the time. This run
 does not represent a 2%-availability cycle. It also does not prove continuous
@@ -56,8 +57,8 @@ availability, resistance to every checker-detection strategy, or production
 capacity. This sample does not establish that two extra checks are enough for
 an event.
 
-The demo creates 15 jobs per round instead of 5. For a fully successful
-workflow with two PUTs and two GETs, each team/task goes from 5 checker actions
-to 7. The real CPU and memory costs depend on the checker. Test real checkers
-with longer outages and the intended team and service count before considering
-a nonzero default.
+In this five-team run, enabling two extra checks created 15 jobs per round
+instead of 5. For a fully successful workflow with two PUTs and two GETs, each
+team/task went from 5 checker actions to 7. The real CPU and memory costs
+depend on the checker. Test real checkers with longer outages and the intended
+team and service count before considering a nonzero default.

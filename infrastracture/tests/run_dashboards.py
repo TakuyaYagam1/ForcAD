@@ -76,12 +76,12 @@ def main():
                 "pwd -P && promtool check config /work/prometheus.yml && exec prometheus --config.file=/work/prometheus.yml --storage.tsdb.path=/work/data --web.listen-address=127.0.0.1:9090",
             )
             containers.append(prometheus)
-            game = json.loads((MONITORING / "grafana/dashboards/game.json").read_text())
-            infrastructure = json.loads(
-                (MONITORING / "grafana/dashboards/infrastructure.json").read_text()
+            traffic = json.loads((MONITORING / "grafana/dashboards/traffic.json").read_text())
+            forcad = json.loads(
+                (MONITORING / "grafana/dashboards/forcad.json").read_text()
             )
-            cases = build_cases(game)
-            cases["tests"].extend(build_infrastructure_cases(infrastructure)["tests"])
+            cases = build_cases(traffic)
+            cases["tests"].extend(build_infrastructure_cases(forcad)["tests"])
             result = subprocess.run(
                 [
                     "docker",
@@ -158,12 +158,12 @@ def main():
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
                 try:
-                    get("http://127.0.0.1:3000/api/dashboards/uid/forcad-game-traffic")
+                    get("http://127.0.0.1:3000/api/dashboards/uid/forcad-traffic")
                     break
                 except subprocess.CalledProcessError:
                     time.sleep(0.5)
             else:
-                raise AssertionError("Grafana did not provision the game dashboard")
+                raise AssertionError("Grafana did not provision the traffic dashboard")
             queries = 0
             dashboards = list((MONITORING / "grafana/dashboards").glob("*.json"))
             for path in dashboards:
@@ -186,6 +186,7 @@ def main():
                             "${team}": ".*",
                             "${team:regex}": ".*",
                             "${service:regex}": ".*",
+                            "${rows:raw}": "50",
                             "${source}": ".*",
                             "${target}": ".*",
                             "${component}": ".*",

@@ -47,6 +47,9 @@ bash deployment/docker/scripts/demo.sh up
 runtime files under `config/runtime/demo/`, rebuilds the stack, and recreates
 its containers while retaining volumes. The settings use the same schema as
 the infrastructure renderer.
+The demo PostgreSQL data lives in the `forcad_demo-postgres-data` Docker volume,
+separate from the regular deployment's `docker_volumes/postgres/data` bind mount.
+`demo.sh down` preserves the demo volume.
 
 The board binds to `127.0.0.1:8080` by default. Set
 `FORCAD_DEMO_HTTP_PORT` in `config/runtime/demo.env` when that host port is
@@ -61,15 +64,17 @@ Use `demo.sh` for this stack so every Compose overlay remains enabled.
 | Service | URL | Credentials |
 | --- | --- | --- |
 | Board and admin | [localhost:8080](http://localhost:8080/) / [admin login](http://localhost:8080/admin/login) | `config/runtime/admin.env` |
-| Grafana dashboards | [Checker](http://localhost:3000/d/forcad-checker) / [Game traffic](http://localhost:3000/d/forcad-game-traffic) / [board traffic](http://localhost:3000/d/forcad-traffic) | `admin`; password in `config/runtime/demo.env` |
+| Grafana dashboards | [ForcAD](http://localhost:3000/d/forcad-monitoring) / [Traffic](http://localhost:3000/d/forcad-traffic) / [DDoS](http://localhost:3000/d/forcad-ddos) / [Relay](http://localhost:3000/d/forcad-relay) | `admin`; password in `config/runtime/demo.env` |
 | Prometheus targets | [localhost:9090/targets](http://localhost:9090/targets) | None |
 
 Start practice in the board admin panel. Allow two rounds for checker results
 and about one minute for rates. Each farm reads flags from the next team's
 `/demo/flags` endpoint, submits them to the board, and generates HTTP,
-WebSocket, TCP, and UDP traffic. In the Game traffic dashboard, sort active
-directions by load and select a team name to inspect a pair. Select **All teams**
-to clear the filters.
+WebSocket, TCP, and UDP traffic. In **Traffic**, sort active directions by
+load and select a team name to inspect a pair; **All teams** clears both
+filters. **DDoS** highlights load by victim and source; **Relay** counts
+direct vulnbox-to-vulnbox packets dropped by the Router. External paths remain
+outside this direct-relay counter; vulnbox Internet access stays enabled.
 
 ## Exercise the network
 
@@ -110,7 +115,7 @@ that `2` is a suitable general default; test real checkers at the expected
 team and service count before enabling them. See
 [configuration](../../docs/CONFIGURATION.md#game) for limits and setup.
 
-With a fresh practice session, 60-second rounds, and `extra_checks = 2`, run:
+With a running practice session, 60-second rounds, and `extra_checks = 2`, run:
 
 ```sh
 api/.venv/bin/python deployment/demo/availability.py healthy --rounds 3
@@ -120,7 +125,7 @@ api/.venv/bin/python deployment/demo/availability.py pause
 
 `healthy` checks that every team passes. `fault` blocks team 3's notes port for
 22 seconds after each 15-second available interval. The fault schedule does
-not read checker timing; the other nine teams act as controls. The script
+not read checker timing; all other configured teams act as controls. The script
 removes its temporary nftables table on exit. `pause` pauses through the admin
 API, restarts the ticker and worker, resumes the game, and checks that pending
 job IDs and times survive the restart and that the jobs complete. Reports are

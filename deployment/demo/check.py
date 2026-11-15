@@ -177,8 +177,18 @@ def main():
             ("10.183.1.2", 22),
         ):
             probe("demo-player1", host, "tcp", port, allowed=False)
+        relay_pair = (
+            'forcad_network_relay_attempt_packets_total'
+            '{source_team_ip="10.183.101.2",team_ip="10.183.102.2"}'
+        )
+        relay_before = value(relay_pair)
         probe("demo-team1", "10.183.102.2", allowed=False)
         probe("demo-team2", "10.183.101.2", allowed=False)
+        wait_for(
+            "blocked vulnbox-to-vulnbox attempt is attributed to both teams",
+            lambda: value(relay_pair) > relay_before,
+        )
+        passed("direct relay blocked and attributed before masquerade")
         result = execute(
             "demo-player1", "ping", "-c", "1", "-W", "1", "10.183.200.9", check=False
         )
@@ -257,32 +267,39 @@ def main():
         assert value("sum(forcad_game_tcp_established_total)") > 0
         passed("TCP and UDP metrics reach Prometheus")
         dashboard = json.loads(
-            (ROOT / "deployment/monitoring/grafana/dashboards/game.json").read_text()
+            (ROOT / "deployment/monitoring/grafana/dashboards/traffic.json").read_text()
         )
         panels = list(dashboard["panels"])
         for panel in panels:
             panels.extend(panel.get("panels", []))
             for target in panel.get("targets", []):
-                expression = (
-                    target.get("expr", "")
-                    .replace("$__rate_interval", "1m")
-                    .replace("${source}", ".*")
-                    .replace("${target}", ".*")
-                )
+                expression = target.get("expr", "")
+                for name, replacement in (
+                    ("$__rate_interval", "1m"),
+                    ("$__interval", "15s"),
+                    ("$__range", "1h"),
+                    ("${team:regex}", ".*"),
+                    ("${team}", ".*"),
+                    ("${rows:raw}", "50"),
+                    ("${source}", ".*"),
+                    ("${target}", ".*"),
+                ):
+                    expression = expression.replace(name, replacement)
                 if expression:
                     rows = query(expression)
                     if panel["type"] == "timeseries":
                         assert len(rows) <= 1, (panel["title"], rows)
-        pairs = query(
-            "sum by (source_team_ip, team_ip) (rate(forcad_network_source_packets_total[1m]) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info)"
+        wait_for(
+            "dashboard queries and VPN source -> team packet attribution",
+            lambda: any(
+                row["metric"]
+                == {"source_team_ip": "10.183.101.2", "team_ip": "10.183.102.2"}
+                and float(row["value"][1]) > 0
+                for row in query(
+                    "sum by (source_team_ip, team_ip) (rate(forcad_network_source_packets_total[1m]) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info)"
+                )
+            ),
         )
-        assert any(
-            row["metric"]
-            == {"source_team_ip": "10.183.101.2", "team_ip": "10.183.102.2"}
-            and float(row["value"][1]) > 0
-            for row in pairs
-        ), pairs
-        passed("dashboard queries and VPN source -> team packet attribution")
 
         selector = '{source_team_ip="10.183.101.2",team_ip="10.183.102.2"}'
         before = value("forcad_game_http_requests_total" + selector)

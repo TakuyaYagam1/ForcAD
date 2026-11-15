@@ -1,14 +1,15 @@
 # Load testing
 
 `make -C backend test-load` runs the harness against an isolated local Compose
-stack through Nginx. It requires Linux or WSL, Bash, Make, Go, Python 3, and
-Docker Compose. The harness removes its test containers, images, and volumes on
-exit.
+stack through Nginx. It requires Bash, Make, Go, Python 3, and Docker with the
+Compose plugin. The wrapper supports Linux/WSL and its explicit
+MINGW/MSYS/Cygwin path for Docker Desktop on Windows. Its exit trap attempts to
+remove the isolated containers, images, volumes, and temporary files.
 
-The workload uses 20 teams, three fixture services, six REST routes, active
-Python checkers, and 20 WebSocket observers. Flag traffic sends 40 batches per
-second with 100 values per batch, including duplicates. The stack runs two
-receivers and two workers with eight checker slots each.
+The default workload uses 20 teams, three fixture services, six REST routes,
+active Python checkers, and 20 WebSocket observers. Its steady stages send 40
+flag batches per second with 100 values per batch, including duplicates. The
+default stack runs two receivers and two workers with eight checker slots each.
 When an NPC target is configured, its accepted flags are still persisted and
 reconciled, but they do not count toward player readiness or score/counter checks.
 
@@ -108,8 +109,8 @@ bucket uses the production per-client rate, burst and rejection code.
 From the repository root:
 
 ```sh
-make -C backend test-load                                       # smoke: 500 RPS for 30s
-LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # 500 to 10000 RPS
+make -C backend test-load                                        # smoke: 500 RPS for a 30s steady stage
+LOAD_PROFILE=stress LOAD_DIAGNOSTICS=1 make -C backend test-load # five 1m stages, 500 to 10000 RPS
 ```
 
 For the 28-team synthetic checker run (20 workers, eight slots each):

@@ -9,8 +9,8 @@ Use the Go version declared in [backend/go.mod](../backend/go.mod). CI uses Node
 26.8.2 and Python 3.14.8 ([test workflow](../.github/workflows/tests.yml)); pnpm
 12.11.2 is declared in the [API](../api/package.json) and
 [frontend](../frontend/package.json) manifests. Python supports code generation,
-test tools and checkers; the backend runtime is Go. Infrastructure generators
-support Python 3.11+ for Debian 12/13.
+test tools and checkers; the backend runtime is Go. Infrastructure rendering
+requires Python 3.11 or newer; generated host installers support Debian 12/13.
 GNU Make is required. Docker with the Compose plugin is required for integration
 and deployment checks.
 
@@ -30,8 +30,8 @@ pnpm lockfiles.
 ## Code generation
 
 Author the API contract in `api/index.yml`, `api/routes/`, and `api/components/`.
-Choose a focused generator when changing one client, or run the full generation
-target before reviewing generated output:
+From the repository root, choose a focused generator when changing one client,
+or run the full generation target before reviewing generated output:
 
 | Command | Generated code |
 | --- | --- |
@@ -54,16 +54,17 @@ when generation exits. Review generated changes under
 
 The Go module is in `backend/`. `cmd/forcad` contains the CLI entry point;
 `internal` holds domain logic, use cases, adapters, and application wiring.
-Database migrations and sqlc queries live in `backend/db/`. Run focused targets
-as `make -C backend build`, `make -C backend test`, `make -C backend race`, or
-`make -C backend vet`.
+Database migrations and sqlc queries live in `backend/db/`. From the repository
+root, run focused targets as `make -C backend build`, `make -C backend test`,
+`make -C backend race`, or `make -C backend vet`.
 
 ## Frontend development
 
-`make -C frontend dev` starts Vite. Its `/api` and `/api/events/ws` proxies use
-`FORCAD_BACKEND_URL`, defaulting to `http://127.0.0.1:8080`. To run the frontend
-with local demo fixtures and its in-memory API adapter, use
-`pnpm --dir frontend dev:demo`; the demo login is `demo` / `demo`.
+From the repository root, `make -C frontend dev` starts Vite. Its `/api` and
+`/api/events/ws` proxies use `FORCAD_BACKEND_URL`, defaulting to
+`http://127.0.0.1:8080`. To run the frontend with local demo fixtures and its
+in-memory API adapter, use `pnpm --dir frontend dev:demo`; the demo login is
+`demo` / `demo`.
 The [frontend application](../frontend/) contains its source and package
 scripts. See [BRANDING.md](../frontend/BRANDING.md) for theme settings.
 
@@ -92,10 +93,10 @@ Backend `test` runs Go unit tests; `race` enables the race detector and
 These targets do not start containers or run browser tests.
 
 `make -C deployment test` runs the backend integration suite against isolated
-PostgreSQL, PgBouncer, Redis, and NATS JetStream containers, then builds a temporary deployment
-and checks its HTTP endpoints. `make -C frontend e2e` delegates to
-`make -C deployment e2e`, which also runs the Playwright flows in `frontend/e2e`.
-Both deployment targets require Docker Compose.
+PostgreSQL, PgBouncer, Redis, and NATS JetStream containers, then builds an
+isolated deployment and checks its HTTP endpoints. `make -C frontend e2e`
+delegates to `make -C deployment e2e`, which also runs the Playwright flows in
+`frontend/e2e`. Both deployment targets require Docker Compose.
 
 The deployment API checks cover public reads, team/task CRUD, session login and
 logout, authorization and input errors, generation conflicts, pause/resume,
@@ -108,8 +109,9 @@ checks generated nftables rules and the exporter in a disposable container.
 
 Network firewalls, the Zeek sensor and dashboard queries have separate
 [infrastructure checks](../infrastracture/COMMANDS.md#workstation). The
-[network demo](../deployment/demo/README.md) exercises five-team WireGuard
-traffic. It is separate from Vite's in-memory demo and the backend load suite.
+[network demo](../deployment/demo/README.md) exercises ten team segments by
+default and supports 2 to 32 teams. It is separate from Vite's in-memory demo
+and the backend load suite.
 
 For local security checks and their exact coverage, see [security/README.md](../security/README.md).
 
@@ -130,10 +132,11 @@ benchmark establishes production capacity. Check frontend chunks with
 
 ## Load regression
 
-`make -C backend test-load` runs Vegeta against an isolated production stack:
-20 teams, three storage services with Python checkers, flag farms and reconnecting
-WebSocket spectators. Profiles cover smoke, sustained load, spikes, endpoint
-steps up to 10000 offered RPS, and a four-hour soak. Reports distinguish actual
-delivery from requested load and reconcile flag responses with the database.
+From the repository root, `make -C backend test-load` runs Vegeta against an
+isolated production stack with 20 teams, three fixture services with Python
+checkers, flag farms, and reconnecting WebSocket spectators. Profiles cover
+smoke, sustained load, spikes, endpoint steps up to 10000 offered RPS, and a
+four-hour soak. Reports distinguish actual delivery from requested load and
+reconcile flag responses with the database.
 See [load testing](../backend/load_test/README.md) for commands, thresholds and
 measurement limits. `make -C deployment test-load` runs the same suite.

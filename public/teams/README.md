@@ -17,7 +17,7 @@ logo = "team.jpg"
 The renderer writes `/team-logos/team.jpg` to the game config. When editing the
 game config or using the API directly, set `logo_path` to
 `/team-logos/<filename>`. The backend also accepts an empty value, another safe
-root-relative path, or an HTTP(S) URL. Local paths are limited to 255
+root-relative path, or an HTTP(S) URL. All logo values are limited to 255
 characters and reject traversal segments, backslashes, and control characters.
 Leave `logo_path` empty when the team has no logo.
 

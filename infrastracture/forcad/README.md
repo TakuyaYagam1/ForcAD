@@ -12,18 +12,26 @@ existing deployment.
 
 ## Install and test
 
-The top-level `install.sh` installs prerequisites, clones the configured
-revision, installs the generated config and assets, initializes the game
-configuration, and starts the application and selected monitoring. Scripts
-under `host/` are helpers called by the installer.
+The top-level `install.sh` takes no options. It installs prerequisites, clones
+the configured revision into the unused install path, copies generated config
+and assets, initializes the game, and starts the application. If `monitoring`
+under `[env]` is `true`, it also starts Prometheus and Grafana. Scripts under
+`host/` are installer helpers, not a separate procedure.
 
 The installer stages network files but does not restart networking. Apply any
 address or gateway changes from the host console before installation. Run the
 top-level `test.sh` after install.
 
-When enabled, monitoring listens on localhost. `config/runtime/admin.env`
-contains admin credentials; `deployment/docker/.env` contains the Grafana
-password. Keep both private. See [monitoring access](../../docs/MONITORING.md).
+Prometheus and Grafana bind to localhost. The rendered `router_metrics` and
+`game_metrics` settings add scrape targets but do not install exporters on the
+Router; enable those with the corresponding Router install flags.
+`config/runtime/admin.env` contains ForcAD admin credentials, and
+`deployment/docker/.env` contains the generated Grafana password. Keep both
+private. See [monitoring access](../../docs/MONITORING.md).
+
+The managed checkout is assigned to the original `SUDO_USER`, except
+service-owned database and container storage. A direct root install remains
+root-owned. Reinstallation is refused; this bundle creates a fresh deployment.
 
 ## Removal
 
