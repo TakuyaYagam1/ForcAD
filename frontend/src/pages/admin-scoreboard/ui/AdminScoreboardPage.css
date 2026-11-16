@@ -1,35 +1,50 @@
+.admin-dashboard-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 24px;
+  padding: 0 0 24px;
+}
+.admin-dashboard-heading .eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: .08em;
+}
+.admin-dashboard-heading h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-te-20, "Inter", sans-serif);
+  font-size: 40px;
+  font-weight: 300;
+  letter-spacing: -.045em;
+  line-height: 1.11;
+}
 .admin-dashboard-strip {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 370px);
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
   align-items: stretch;
-  gap: 0;
   margin: 0 0 20px;
   border: 1px solid var(--border-default);
 }
-
 .checker-status {
   min-width: 0;
-  padding: 20px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  padding: 22px;
 }
-
 .checker-status__heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 12px;
+  gap: 8px 15px;
   margin-bottom: 16px;
 }
-
 .checker-status__heading h2 {
   margin: 0;
   color: var(--text-primary);
   font-size: 19px;
   font-weight: 300;
-  letter-spacing: -.015em;
 }
-
 .checker-status__heading small,
 .checker-status__card small {
   color: var(--text-muted);
@@ -37,105 +52,93 @@
   font-weight: 300;
   line-height: 1.5;
 }
-
 .checker-status__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
 }
-
 .checker-status__card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
-  padding: 12px;
+  padding: 15px;
   border: 1px solid var(--border-default);
-  border-right-width: 0;
-  border-radius: 0;
-  background: transparent;
+  overflow-wrap: anywhere;
 }
-
 .checker-status__card strong {
-  overflow: hidden;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 300;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
 }
-
 .checker-status__card > span {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 300;
+  line-height: 1.5;
 }
-
 .checker-status__card--reporting > span { color: var(--state-success-text); }
 .checker-status__card--failed > span { color: var(--state-info-text); }
 .checker-status__card--stalled > span { color: var(--state-error-text); }
 .checker-status__card--waiting > span { color: var(--text-muted); }
-
 .admin-dashboard-actions {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
-  padding: 20px;
+  gap: 15px;
+  min-width: 0;
+  padding: 22px;
   border-left: 1px solid var(--border-default);
 }
-
-.admin-dashboard-actions .admin-actions {
-  flex-direction: column;
-  align-items: stretch;
-  min-width: 0;
+.admin-dashboard-actions .admin-actions,
+.admin-dashboard-actions .game-controls > div > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
-}
-
-.admin-dashboard-actions .admin-actions button {
   width: 100%;
+  min-width: 0;
 }
-
-.admin-dashboard-actions section {
-  margin-bottom: 0;
+.admin-dashboard-actions .ui-button { width: 100%; }
+.admin-dashboard-actions section { margin-bottom: 0; }
+.scoreboard-page--admin .scoreboard-table th {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
-
-
+.scoreboard-page--admin .scoreboard-table th.place-column {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.scoreboard-page--admin .scoreboard-table th button,
+.scoreboard-page--admin .team-identity {
+  min-height: 44px;
+  width: 100%;
+  text-align: left;
+}
+.scoreboard-page--admin .team-name {
+  font-size: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.scoreboard-page--admin .team-ip { overflow-wrap: anywhere; }
+.scoreboard-page--admin .scoreboard-table td.total-column .score-value { font-size: 19px; }
+.scoreboard-page--admin .service-metric {
+  flex-wrap: wrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.scoreboard-page--admin .service-metric strong { min-width: 0; }
 @media (max-width: 1100px) {
-  .admin-dashboard-strip {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 700px) {
-  .checker-status__grid {
+  .admin-dashboard-strip { grid-template-columns: minmax(0, 1fr); }
+  .admin-dashboard-actions {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    border-left: 0;
+    border-top: 1px solid var(--border-default);
   }
-
-  .admin-dashboard-actions .admin-actions {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-  }
-}
-
-.admin-dashboard-heading { display: flex; align-items: baseline; gap: 24px; padding: 30px 0 24px; }
-.admin-dashboard-heading .eyebrow { font-size: 13px; color: var(--text-muted); font-weight: 300; letter-spacing: .08em; }
-.admin-dashboard-heading h1 { margin: 0; font-family: var(--font-te-20, "Inter", sans-serif); color: var(--text-primary); font-size: 40px; font-weight: 300; letter-spacing: -.045em; line-height: 1.11; }
-.checker-status__card:last-child { border-right-width: 1px; }
-.admin-dashboard-actions .game-controls > div > div { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
-.admin-dashboard-actions .game-controls .ui-button { width: 100%; }
-.admin-shell__logout { color: var(--text-primary); }
-@media (max-width: 1100px) {
-  .admin-dashboard-actions { border-left: 0; border-top: 1px solid var(--border-default); flex-direction: row; align-items: flex-start; }
-  .admin-dashboard-actions .admin-actions { flex: 1; flex-direction: row; }
-  .admin-dashboard-actions .game-controls { flex: 1; }
 }
 @media (max-width: 700px) {
-  .admin-dashboard-heading { display: block; padding: 22px 0; }
-  .admin-dashboard-heading h1 { margin-top: 12px; font-size: 32px; }
-  .checker-status { padding: 16px; }
-  .checker-status__heading { flex-wrap: wrap; gap: 6px; }
-  .checker-status__card { border-right-width: 1px; }
-  .admin-dashboard-actions { flex-direction: column; padding: 16px; }
-  .admin-dashboard-actions .admin-actions, .admin-dashboard-actions .game-controls { width: 100%; }
+  .admin-dashboard-heading h1 { font-size: 32px; }
+  .checker-status, .admin-dashboard-actions { padding: 16px; }
+  .admin-dashboard-actions { grid-template-columns: minmax(0, 1fr); }
 }

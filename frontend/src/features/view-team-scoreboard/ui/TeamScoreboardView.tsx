@@ -212,172 +212,6 @@ export function TeamScoreboardView() {
             </div>
           </section>
 
-          <section className="team-panel history-panel">
-            <div className="section-heading">
-              <h2>{t("teamScoreboard.historyTitle")}</h2>
-
-              {history.length > 5 && (
-                <button
-                  type="button"
-                  className="history-expand text-link"
-                  aria-expanded={expandedHistory}
-                  onClick={() => {
-                    return setExpandedHistory(!expandedHistory)
-                  }}
-                >
-                  {expandedHistory
-                    ? t("teamScoreboard.collapseHistory")
-                    : t("teamScoreboard.expandHistory", {
-                      formattedCount: formatNumber(history.length),
-                    })}
-                </button>
-              )}
-            </div>
-
-            {historyQuery.isError && (
-              <div className="notice" role="alert">
-                <AlertCircle size={15} />
-                {t("teamScoreboard.historyLoadError")}
-                <button
-                  type="button"
-                  className="text-link"
-                  onClick={() => {
-                    return void historyQuery.refetch()
-                  }}
-                >
-                  {t("teamScoreboard.retry")}
-                </button>
-              </div>
-            )}
-
-            <div className="table-frame">
-              <div
-                className="table-scroll"
-                role="region"
-                aria-label={t("teamScoreboard.historyRegionLabel")}
-                tabIndex={0}
-              >
-                <table
-                  className="scoreboard-table history-table"
-                  style={{
-                    minWidth: `${Math.max(650, 182 + tasks.length * 170)}px`
-                  }}
-                >
-                  <caption className="sr-only">
-                    {t("teamScoreboard.historyCaption")}
-                  </caption>
-                  <colgroup>
-                    <col style={{
-                      width: "72px"
-                    }} />
-                    <col style={{
-                      width: "110px"
-                    }} />
-                    {tasks.map((task) => {
-                      return <col key={task.id} />
-                    })}
-                  </colgroup>
-
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("teamScoreboard.round")}</th>
-
-                      <th
-                        scope="col"
-                        className="total-column"
-                        title={t("teamScoreboard.historicalScoreTitle")}
-                      >
-                        {t("teamScoreboard.score")}
-                      </th>
-
-                      {tasks.map((task) => {
-                        return (
-                          <th scope="col" key={task.id}>
-                            {task.name}
-                          </th>
-                        )
-                      })}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {(expandedHistory ? history : history.slice(0, 5)).map(
-                      (row, index) => {
-                        const formattedRound = formatNumber(row.round);
-                        const roundLabel = row.incomplete
-                          ? t("teamScoreboard.incompleteRound", {
-                            round: formattedRound,
-                          })
-                          : formattedRound;
-                        const serviceRoundLabel = t(
-                          "teamScoreboard.roundForService",
-                          {
-                            round: roundLabel
-                          },
-                        );
-
-                        return (
-                          <tr
-                            key={row.round}
-                            className={index === 0 ? "history-current" : ""}
-                          >
-                            <td className="history-round">{roundLabel}</td>
-
-                            <td
-                              className="total-column"
-                              title={
-                                row.incomplete
-                                  ? t("teamScoreboard.partialScoreTitle")
-                                  : t("teamScoreboard.scoreWithSlaTitle")
-                              }
-                            >
-                              {formatScore(row.score)}
-                            </td>
-
-                            {tasks.map((task) => {
-                              return (
-                                <td key={task.id} className="history-value-cell">
-                                  <ServiceCell
-                                    name={`${task.name}, ${serviceRoundLabel}`}
-                                    teamId={team.id ?? undefined}
-                                    taskId={task.id ?? undefined}
-                                    teamName={team.name}
-                                    snapshotRound={row.round}
-                                    value={row.tasks.find(
-                                      (value) => {
-                                        return value.taskId === task.id
-                                      },
-                                    )}
-                                  />
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        );
-                      },
-                    )}
-
-                    {!history.length && (
-                      <tr>
-                        <td
-                          colSpan={2 + tasks.length}
-                          className="quiet-empty text-center"
-                        >
-                          {historyQuery.isPending
-                            ? t("teamScoreboard.loadingHistory")
-                            : t("teamScoreboard.historyUnavailable")}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <p className="sr-only">
-              {t("teamScoreboard.totalScoreNote")}
-            </p>
-          </section>
         </div>
 
         <aside
@@ -386,6 +220,176 @@ export function TeamScoreboardView() {
         >
           <RecentEvents teamId={teamId} />
         </aside>
+
+        <section className="team-panel history-panel">
+          <div className="section-heading">
+            <h2>{t("teamScoreboard.historyTitle")}</h2>
+
+            {history.length > 5 && (
+              <button
+                type="button"
+                className="history-expand text-link"
+                aria-expanded={expandedHistory}
+                onClick={() => {
+                  return setExpandedHistory(!expandedHistory)
+                }}
+              >
+                {expandedHistory
+                  ? t("teamScoreboard.collapseHistory")
+                  : t("teamScoreboard.expandHistory", {
+                    formattedCount: formatNumber(history.length),
+                  })}
+              </button>
+            )}
+          </div>
+
+          {historyQuery.isError && (
+            <div className="notice" role="alert">
+              <AlertCircle size={15} />
+              {t("teamScoreboard.historyLoadError")}
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  return void historyQuery.refetch()
+                }}
+              >
+                {t("teamScoreboard.retry")}
+              </button>
+            </div>
+          )}
+
+          <div className="table-frame">
+            <div
+              className="table-scroll history-region"
+              role="region"
+              aria-label={t("teamScoreboard.historyRegionLabel")}
+              tabIndex={0}
+            >
+              <table
+                className={`scoreboard-table history-table${tasks.length > 4 ? " history-table--stacked" : ""}`}
+                role="table"
+              >
+                <caption className="sr-only">
+                  {t("teamScoreboard.historyCaption")}
+                </caption>
+                <colgroup>
+                  <col style={{
+                    width: "72px"
+                  }} />
+                  <col style={{
+                    width: "110px"
+                  }} />
+                  {tasks.map((task) => {
+                    return <col key={task.id} />
+                  })}
+                </colgroup>
+
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th scope="col" role="columnheader">{t("teamScoreboard.round")}</th>
+
+                    <th
+                      scope="col"
+                      role="columnheader"
+                      className="total-column"
+                      title={t("teamScoreboard.historicalScoreTitle")}
+                    >
+                      {t("teamScoreboard.score")}
+                    </th>
+
+                    {tasks.map((task) => {
+                      return (
+                        <th scope="col" role="columnheader" key={task.id}>
+                          {task.name}
+                        </th>
+                      )
+                    })}
+                  </tr>
+                </thead>
+
+                <tbody role="rowgroup">
+                  {(expandedHistory ? history : history.slice(0, 5)).map(
+                    (row, index) => {
+                      const formattedRound = formatNumber(row.round);
+                      const roundLabel = row.incomplete
+                        ? t("teamScoreboard.incompleteRound", {
+                          round: formattedRound,
+                        })
+                        : formattedRound;
+                      const serviceRoundLabel = t(
+                        "teamScoreboard.roundForService",
+                        {
+                          round: roundLabel
+                        },
+                      );
+
+                      return (
+                        <tr
+                          key={row.round}
+                          role="row"
+                          className={index === 0 ? "history-current" : ""}
+                        >
+                          <td role="cell" className="history-round" data-label={t("teamScoreboard.round")}>{roundLabel}</td>
+
+                          <td
+                            role="cell"
+                            data-label={t("teamScoreboard.score")}
+                            className="total-column"
+                            title={
+                              row.incomplete
+                                ? t("teamScoreboard.partialScoreTitle")
+                                : t("teamScoreboard.scoreWithSlaTitle")
+                            }
+                          >
+                            {formatScore(row.score)}
+                          </td>
+
+                          {tasks.map((task) => {
+                            return (
+                              <td role="cell" key={task.id} className="history-value-cell" data-label={task.name}>
+                                <ServiceCell
+                                  name={`${task.name}, ${serviceRoundLabel}`}
+                                  teamId={team.id ?? undefined}
+                                  taskId={task.id ?? undefined}
+                                  teamName={team.name}
+                                  snapshotRound={row.round}
+                                  value={row.tasks.find(
+                                    (value) => {
+                                      return value.taskId === task.id
+                                    },
+                                  )}
+                                />
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      );
+                    },
+                  )}
+
+                  {!history.length && (
+                    <tr role="row">
+                      <td
+                        role="cell"
+                        colSpan={2 + tasks.length}
+                        className="quiet-empty text-center"
+                      >
+                        {historyQuery.isPending
+                          ? t("teamScoreboard.loadingHistory")
+                          : t("teamScoreboard.historyUnavailable")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <p className="sr-only">
+            {t("teamScoreboard.totalScoreNote")}
+          </p>
+        </section>
       </div>
     </div>
   );

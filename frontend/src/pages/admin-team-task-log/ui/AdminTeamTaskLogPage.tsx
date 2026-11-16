@@ -42,10 +42,10 @@ export function AdminTeamTaskLogPage() {
   const numberFormat = new Intl.NumberFormat(getLocale());
   return (
     <AdminShell>
-      <Link to="/admin/scoreboard" className="back-link">
-        <ArrowLeft size={14} />{t("teamTaskLog.back")}
-      </Link>
       <div className="admin-page admin-page--logs">
+        <Link to="/admin/scoreboard" className="back-link admin-back-link">
+          <ArrowLeft size={14} />{t("teamTaskLog.back")}
+        </Link>
         <div className="admin-heading">
           <div>
             <p className="eyebrow">{t("common.organizerPanel")}</p>
@@ -86,9 +86,9 @@ export function AdminTeamTaskLogPage() {
             aria-label={t("teamTaskLog.regionLabel")}
             tabIndex={0}
           >
-            <table className="scoreboard-table">
-              <thead>
-                <tr>
+            <table className="scoreboard-table" role="table" aria-label={t("teamTaskLog.regionLabel")}>
+              <thead role="rowgroup">
+                <tr role="row">
                   {[
                     t("teamTaskLog.round"),
                     t("teamTaskLog.status"),
@@ -101,20 +101,20 @@ export function AdminTeamTaskLogPage() {
                     t("teamTaskLog.command"),
                   ].map((label) => {
                     return (
-                      <th scope="col" key={label}>
+                      <th role="columnheader" scope="col" key={label}>
                         {label}
                       </th>
                     )
                   })}
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {logQuery.data?.map((entry) => {
                   const meta = STATUS_META_BY_CODE[entry.status];
                   return (
-                    <tr key={entry.id}>
-                      <td className="history-round">{numberFormat.format(entry.round)}</td>
-                      <td>
+                    <tr role="row" key={entry.id}>
+                      <td role="cell" data-label={t("teamTaskLog.round")} className="history-round">{numberFormat.format(entry.round)}</td>
+                      <td role="cell" data-label={t("teamTaskLog.status")}>
                         <span className="status-tag" style={meta ? {
                           color: meta.foreground,
                           backgroundColor: meta.color,
@@ -130,25 +130,25 @@ export function AdminTeamTaskLogPage() {
                           {meta?.label ?? entry.status}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap">
+                      <td role="cell" data-label={t("teamTaskLog.score")}>
                         {formatScore(entry.score)}
                       </td>
-                      <td className="admin-text-success">+{numberFormat.format(entry.stolen)}</td>
-                      <td className="admin-text-danger">-{numberFormat.format(entry.lost)}</td>
-                      <td>
+                      <td role="cell" data-label={t("teamTaskLog.captured")} className="admin-text-success">+{numberFormat.format(entry.stolen)}</td>
+                      <td role="cell" data-label={t("teamTaskLog.lost")} className="admin-text-danger">-{numberFormat.format(entry.lost)}</td>
+                      <td role="cell" data-label={t("teamTaskLog.checks")}>
                         {numberFormat.format(entry.checks_passed)}/{numberFormat.format(entry.checks)}
                       </td>
-                      <td>
+                      <td role="cell" data-label={t("teamTaskLog.publicMessage")}>
                         <pre className="log-message">
                           {entry.public_message || "-"}
                         </pre>
                       </td>
-                      <td>
+                      <td role="cell" data-label={t("teamTaskLog.privateMessage")}>
                         <pre className="log-message">
                           {entry.private_message || "-"}
                         </pre>
                       </td>
-                      <td>
+                      <td role="cell" data-label={t("teamTaskLog.command")}>
                         <pre className="log-message">
                           {entry.command || "-"}
                         </pre>
@@ -157,15 +157,15 @@ export function AdminTeamTaskLogPage() {
                   );
                 })}
                 {!validIds && (
-                  <tr>
-                    <td colSpan={9} className="quiet-empty text-center" role="alert">
-                      {t("teamTaskLog.invalidIds")}
+                  <tr role="row">
+                    <td role="cell" colSpan={9} className="quiet-empty text-center">
+                      <span role="alert">{t("teamTaskLog.invalidIds")}</span>
                     </td>
                   </tr>
                 )}
                 {validIds && !logQuery.data?.length && (
-                  <tr>
-                    <td colSpan={9} className="quiet-empty text-center">
+                  <tr role="row">
+                    <td role="cell" colSpan={9} className="quiet-empty text-center">
                       {logQuery.isPending
                         ? t("teamTaskLog.loadingEntries")
                         : t("teamTaskLog.empty")}
