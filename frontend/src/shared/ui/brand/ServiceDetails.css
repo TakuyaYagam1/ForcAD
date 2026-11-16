@@ -1,7 +1,10 @@
 .service-dialog.service-log-dialog {
   width: min(780px, calc(100vw - 32px));
   max-width: 780px;
+  height: min(900px, calc(100dvh - 32px));
   max-height: min(900px, calc(100dvh - 32px));
+  align-content: start;
+  scrollbar-gutter: stable;
   overflow: auto;
   padding: 0;
   gap: 0;
@@ -62,4 +65,24 @@
   .service-inspector-check-facts { grid-template-columns: 1fr 1fr; }
   .service-inspector-log-heading { gap: 8px; font-size: 13px; }
   .service-inspector-error { flex-wrap: wrap; }
+}
+
+.service-inspector-check-facts > div { min-width: 0; }
+.service-inspector-check-facts dd { min-height: 40px; line-height: 20px; }
+.service-inspector-check-note { min-height: 40px; margin-bottom: 12px; }
+.service-inspector-check-note p { margin: 0; line-height: 20px; }
+.service-inspector-response > pre { height: 104px; box-sizing: border-box; }
+.service-inspector-skeleton { display: block; height: 13px; width: 72%; max-width: 180px; margin-top: 5px; background: var(--surface-raised); }
+.service-inspector-response-skeleton { width: 85%; max-width: 340px; }
+.service-inspector-log-placeholder { min-height: 116px; box-sizing: border-box; padding: 15px 0; border-bottom: 1px solid var(--border-default); }
+.service-inspector-log-placeholder .service-inspector-skeleton:first-child { height: 24px; width: 62%; margin-top: 0; }
+.service-inspector-log-placeholder .service-inspector-skeleton:nth-child(2) { width: 80%; margin-top: 10px; }
+.service-inspector-log-placeholder .service-inspector-skeleton:nth-child(3) { width: 50%; margin-top: 8px; }
+.service-inspector-loading-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.service-inspector-content-ready { animation: service-inspector-reveal 180ms var(--ease-out); }
+@keyframes service-inspector-reveal { from { opacity: 0; } to { opacity: 1; } }
+:root[data-motion="off"] .service-inspector-content-ready,
+:root[data-page-visibility="hidden"] .service-inspector-content-ready { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .service-inspector-content-ready { animation: none; }
 }

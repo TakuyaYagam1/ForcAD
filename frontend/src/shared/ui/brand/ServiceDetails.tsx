@@ -58,6 +58,7 @@ export function ServiceDetails({
     return page.logs
   }) ?? [];
   const latest = logs[0];
+  const initialLoading = logsQuery.isPending && Boolean(teamId && taskId);
   const latestStatus = latest?.status ?? (snapshotRound === undefined ? value?.status : undefined);
   const meta = latestStatus === undefined ? undefined : STATUS_META_BY_CODE[latestStatus];
   const latestMessage = latest?.public_message || (latest?.status === STATUS_OK ? "OK" : "") ||
@@ -94,25 +95,23 @@ export function ServiceDetails({
           <h3 id="service-latest-heading">{t("service.lastCheck")}</h3>
           <StatusLabel status={latestStatus} />
         </div>
-        {latest ? (
-          <dl className="service-inspector-check-facts">
-            <div><dt>{t("service.completedAt")}</dt><dd><time dateTime={latest.finished_at}>{dateTime(latest.finished_at)}</time></dd></div>
-            <div><dt>{t("service.duration")}</dt><dd>{number(latest.duration_ms)} {t("service.milliseconds")}</dd></div>
-            <div><dt>{t("service.round")}</dt><dd>{number(latest.round)}</dd></div>
-            <div><dt>{t("service.action")}</dt><dd>{latest.action} / {latest.stage}</dd></div>
-          </dl>
-        ) : (
-          <p className="service-inspector-hint">{logsQuery.isPending && teamId && taskId ? t("service.loadingChecks") : t("service.checkTimeUnavailable")}</p>
-        )}
-        {latest?.timed_out && <p className="service-inspector-timeout"><AlertCircle size={14} />{t("service.timedOut")}</p>}
+        <dl className={`service-inspector-check-facts${latest ? " service-inspector-content-ready" : ""}`} aria-busy={initialLoading}>
+          <div><dt>{t("service.completedAt")}</dt><dd>{latest ? <time dateTime={latest.finished_at}>{dateTime(latest.finished_at)}</time> : initialLoading ? <span className="service-inspector-skeleton" aria-hidden="true" /> : "—"}</dd></div>
+          <div><dt>{t("service.duration")}</dt><dd>{latest ? <>{number(latest.duration_ms)} {t("service.milliseconds")}</> : initialLoading ? <span className="service-inspector-skeleton" aria-hidden="true" /> : "—"}</dd></div>
+          <div><dt>{t("service.round")}</dt><dd>{latest ? number(latest.round) : initialLoading ? <span className="service-inspector-skeleton" aria-hidden="true" /> : "—"}</dd></div>
+          <div><dt>{t("service.action")}</dt><dd>{latest ? <>{latest.action} / {latest.stage}</> : initialLoading ? <span className="service-inspector-skeleton" aria-hidden="true" /> : "—"}</dd></div>
+        </dl>
+        <div className="service-inspector-check-note">
+          {latest?.timed_out ? <p className="service-inspector-timeout"><AlertCircle size={14} />{t("service.timedOut")}</p> : !latest && !initialLoading ? <p className="service-inspector-hint">{t("service.checkTimeUnavailable")}</p> : null}
+        </div>
         <div className="service-inspector-response">
           <span>{t("service.checkerResponse")}</span>
-          <pre style={meta ? {
+          <pre className={latest ? "service-inspector-content-ready" : undefined} style={meta ? {
             borderLeftColor: meta.color
-          } : undefined}>{latestMessage}</pre>
+          } : undefined}>{initialLoading && !latest && !(snapshotRound === undefined && value?.message) ? <span className="service-inspector-skeleton service-inspector-response-skeleton" aria-hidden="true" /> : latestMessage}</pre>
         </div>
       </section>
-      <section className="service-inspector-history" aria-labelledby="service-history-heading">
+      <section className="service-inspector-history" aria-labelledby="service-history-heading" aria-busy={initialLoading}>
         <div className="service-inspector-section-heading">
           <h3 id="service-history-heading">{t("service.checkHistory")}</h3>
           {teamId && taskId && <button className="service-inspector-button" type="button" disabled={logsQuery.isFetching} onClick={() => {
@@ -122,7 +121,18 @@ export function ServiceDetails({
         <p className="service-inspector-hint">{t("service.historyDescription")}</p>
         {!teamId || !taskId ? <p className="service-inspector-state">{t("service.logsUnavailable")}</p> : (
           <>
-            {logsQuery.isPending && <p className="service-inspector-state" role="status">{t("service.loadingChecks")}</p>}
+            {initialLoading && <>
+              <p className="service-inspector-loading-status" role="status">{t("service.loadingChecks")}</p>
+              <div className="service-inspector-log-list" aria-hidden="true">
+                {[0, 1, 2].map((row) => {
+                  return <div className="service-inspector-log-placeholder" key={row}>
+                    <span className="service-inspector-skeleton" />
+                    <span className="service-inspector-skeleton" />
+                    <span className="service-inspector-skeleton" />
+                  </div>
+                })}
+              </div>
+            </>}
             {logsQuery.isError && <div className="service-inspector-error" role="alert"><AlertCircle size={16} /><span>{t("service.logsError")}</span><button type="button" className="service-inspector-button" onClick={() => {
               return void (logsQuery.isFetchNextPageError ? logsQuery.fetchNextPage() : logsQuery.refetch())
             }}>{t("service.retry")}</button></div>}
@@ -130,7 +140,7 @@ export function ServiceDetails({
             {logs.length > 0 && <ol className="service-inspector-log-list">
               {logs.map((log) => {
                 return (
-                  <li key={log.id}>
+                  <li key={log.id} className="service-inspector-content-ready">
                     <details className="service-inspector-log">
                       <summary>
                         <span className="service-inspector-log-heading"><StatusLabel status={log.status} /><time dateTime={log.finished_at}>{dateTime(log.finished_at)}</time></span>
