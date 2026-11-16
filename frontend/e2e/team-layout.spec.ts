@@ -70,7 +70,7 @@ test("team round history fits desktop and mobile without horizontal scrolling", 
               score: 1234567890.12,
               checks: 10,
               checks_passed: 9,
-              timestamp: "2026-11-16T12:00:00Z",
+              timestamp: `${1794820800 - index}-0`,
               message: null,
             };
           });
