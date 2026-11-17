@@ -51,7 +51,7 @@ test("admin validates and restores team and service edits", async ({ browser }) 
       await teamNameInput.fill(editedTeamName);
       const teamUpdate = page.waitForResponse((response) => {
         const url = new URL(response.url());
-        return url.pathname === `/api/admin/teams/${teamId}/` && response.request().method() === "PUT";
+        return url.pathname === `/api/v1/admin/teams/${teamId}/` && response.request().method() === "PUT";
       });
       await page.getByRole("button", {
         name: "Сохранить",
@@ -71,7 +71,7 @@ test("admin validates and restores team and service edits", async ({ browser }) 
       await teamIPInput.fill(originalTeamIP);
       const teamRestore = page.waitForResponse((response) => {
         const url = new URL(response.url());
-        return url.pathname === `/api/admin/teams/${teamId}/` && response.request().method() === "PUT";
+        return url.pathname === `/api/v1/admin/teams/${teamId}/` && response.request().method() === "PUT";
       });
       await page.getByRole("button", {
         name: "Сохранить",
@@ -98,7 +98,7 @@ test("admin validates and restores team and service edits", async ({ browser }) 
       await taskNameInput.fill(editedTaskName);
       const taskUpdate = page.waitForResponse((response) => {
         const url = new URL(response.url());
-        return url.pathname === `/api/admin/tasks/${taskId}/` && response.request().method() === "PUT";
+        return url.pathname === `/api/v1/admin/tasks/${taskId}/` && response.request().method() === "PUT";
       });
       await page.getByRole("button", {
         name: "Сохранить",
@@ -120,7 +120,7 @@ test("admin validates and restores team and service edits", async ({ browser }) 
       await taskNameInput.fill(originalTaskName);
       const taskRestore = page.waitForResponse((response) => {
         const url = new URL(response.url());
-        return url.pathname === `/api/admin/tasks/${taskId}/` && response.request().method() === "PUT";
+        return url.pathname === `/api/v1/admin/tasks/${taskId}/` && response.request().method() === "PUT";
       });
       await page.getByRole("button", {
         name: "Сохранить",

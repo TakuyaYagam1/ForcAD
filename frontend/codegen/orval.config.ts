@@ -30,7 +30,7 @@ const transformForHttpClient = defineTransformer((spec) => {
     return spec;
   }
 
-  delete document.paths["/api/events/ws"];
+  delete document.paths["/api/v1/events/ws"];
   const responseComponents = document.components?.responses ?? {};
   for (const pathItem of Object.values(document.paths)) {
     for (const method of httpMethods) {

@@ -57,7 +57,7 @@ func TestHTTPServerHeaderValueLimit(t *testing.T) {
 		},
 		{
 			name: "websocket upgrade headers",
-			path: "/api/events/ws",
+			path: "/api/v1/events/ws",
 			headers: http.Header{
 				"Connection":            {"Upgrade"},
 				"Upgrade":               {"websocket"},

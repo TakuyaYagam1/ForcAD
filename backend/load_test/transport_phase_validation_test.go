@@ -39,7 +39,7 @@ func TestTransportPhasesCaptureSlowHeadersAndConnectionReuse(t *testing.T) {
 	defer server.Close()
 	client, phases := phaseTestClient(t, 3*time.Second)
 	for range 2 {
-		request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/client/attack_data/?token=secret-query", nil)
+		request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/v1/client/attack_data/?token=secret-query", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,7 +60,7 @@ func TestTransportPhasesCaptureSlowHeadersAndConnectionReuse(t *testing.T) {
 		t.Fatalf("incorrect slow-header counts: %+v", report)
 	}
 	for index, record := range report.Records {
-		if record.Sequence != "537431" || record.Route != "/api/client/attack_data/" || record.Status != 200 || record.StartedUTC.IsZero() {
+		if record.Sequence != "537431" || record.Route != "/api/v1/client/attack_data/" || record.Status != 200 || record.StartedUTC.IsZero() {
 			t.Fatalf("request correlation was lost: %+v", record)
 		}
 		seen := make(map[string]bool)
@@ -136,7 +136,7 @@ func TestTransportPhasesCaptureBodyReadDeadline(t *testing.T) {
 	}))
 	defer server.Close()
 	client, phases := phaseTestClient(t, 50*time.Millisecond)
-	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/client/status/", nil)
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/v1/client/status/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestTransportPhaseDeadlineSurvivesFullSlowAndHTTPErrorsBuckets(t *testing.T
 			ErrorCategory: "http_5xx",
 		})
 	}
-	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/client/attack_data/", nil)
+	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/api/v1/client/attack_data/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -207,7 +207,7 @@ func TestTransportPhaseDeadlineSurvivesFullSlowAndHTTPErrorsBuckets(t *testing.T
 		t.Fatalf("HTTP errors or slow requests displaced a transport timeout: %+v", report)
 	}
 	record := report.Records[2]
-	if record.ErrorCategory != "deadline" || record.Sequence != "537431" || record.Route != "/api/client/attack_data/" {
+	if record.ErrorCategory != "deadline" || record.Sequence != "537431" || record.Route != "/api/v1/client/attack_data/" {
 		t.Fatalf("retained timeout lost correlation: %+v", record)
 	}
 	seen := make(map[string]bool)
@@ -294,7 +294,7 @@ func TestAttackTransportPhasesAreDiagnosticOnly(t *testing.T) {
 			rps:      100,
 			duration: 50 * time.Millisecond,
 			workers:  4,
-			target:   readTarget(server.URL, "/api/client/status/"),
+			target:   readTarget(server.URL, "/api/v1/client/status/"),
 			validate: validateRead(false),
 		})
 		if settings.phases == "" {
@@ -320,7 +320,7 @@ func TestTransportPhasesRetainFast5xxButNotExpected429(t *testing.T) {
 	}))
 	defer server.Close()
 	client, phases := phaseTestClient(t, 3*time.Second)
-	for _, path := range []string{"/flags", "/api/client/attack_data/"} {
+	for _, path := range []string{"/flags", "/api/v1/client/attack_data/"} {
 		request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+path, nil)
 		if err != nil {
 			t.Fatal(err)

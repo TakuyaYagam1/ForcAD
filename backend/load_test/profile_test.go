@@ -62,8 +62,8 @@ type stage struct {
 }
 
 var readPaths = []string{
-	"/api/client/status/", "/api/client/scoreboard/", "/api/client/teams/",
-	"/api/client/tasks/", "/api/client/config/", "/api/client/attack_data/",
+	"/api/v1/client/status/", "/api/v1/client/scoreboard/", "/api/v1/client/teams/",
+	"/api/v1/client/tasks/", "/api/v1/client/config/", "/api/v1/client/attack_data/",
 }
 
 func loadProfile() (string, []stage, error) {

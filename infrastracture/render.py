@@ -994,7 +994,7 @@ def host_bundle(config):
                     for name, value in host["wireguard"].items()
                 ]
         host["checks"] = {
-            "forcad_url": f"http://{layout['forcad_host']}/api/client/status/",
+            "forcad_url": f"http://{layout['forcad_host']}/api/v1/client/status/",
             "metrics_address": str(layout["forcad_router"]),
         }
         result[f"{bundle_root}host.json"] = json.dumps(host, indent=2) + "\n"

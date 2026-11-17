@@ -227,7 +227,7 @@ class CheckerResultScopeTests(unittest.TestCase):
             'websockets': {'connections': 0, 'messages': 0, 'failures': 0},
             'websocket_reconnect_interval_seconds': 20,
             'checker_results': 0, 'correctness_passed': False,
-            'error': 'load.deployment.post - send request: Post "http://127.0.0.1:44622/api/admin/login/": '
+            'error': 'load.deployment.post - send request: Post "http://127.0.0.1:44622/api/v1/admin/login/": '
                      'read tcp 127.0.0.1:48550->127.0.0.1:44622: read: connection reset by peer',
         }
         (self.report_dir / 'report.json').write_text(json.dumps(report), encoding='utf-8')

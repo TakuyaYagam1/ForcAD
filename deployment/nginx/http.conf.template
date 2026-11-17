@@ -65,19 +65,19 @@ server {
     real_ip_header X-Forwarded-For;
     real_ip_recursive on;
 
-    location = /api/client/metrics {
+    location = /api/v1/client/metrics {
         return 404;
     }
 
-    location = /api/admin/metrics {
+    location = /api/v1/admin/metrics {
         return 404;
     }
 
-    location = /api/http-receiver/metrics {
+    location = /api/v1/http-receiver/metrics {
         return 404;
     }
 
-    location = /api/events/ws {
+    location = /api/v1/events/ws {
         proxy_pass http://api_backend;
         include proxy_params_ws;
         include /etc/nginx/api_limits.conf;

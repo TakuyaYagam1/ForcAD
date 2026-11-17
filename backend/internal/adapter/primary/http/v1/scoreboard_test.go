@@ -50,7 +50,7 @@ func TestScoreboardResponsePreservesJSONAcrossPooledWrites(t *testing.T) {
 		var expected jx.Encoder
 		httpresponse.Scoreboard(board).Encode(&expected)
 		response := httptest.NewRecorder()
-		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/client/scoreboard/", nil))
+		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/client/scoreboard/", nil))
 		if response.Code != http.StatusOK || response.Header().Get("Content-Type") != "application/json; charset=utf-8" {
 			t.Fatalf("response status=%d, headers=%v", response.Code, response.Header())
 		}
@@ -85,7 +85,7 @@ func TestScoreboardServiceFailureUsesErrorHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := httptest.NewRecorder()
-	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/client/scoreboard/", nil))
+	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/client/scoreboard/", nil))
 	if !errors.Is(handled, want) || response.Code != http.StatusServiceUnavailable || response.Body.String() != `{"error":"Service temporarily unavailable"}` {
 		t.Fatalf("error response changed: handled=%v, status=%d, body=%s", handled, response.Code, response.Body.String())
 	}

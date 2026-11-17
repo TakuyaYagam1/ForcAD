@@ -61,7 +61,7 @@ root, run focused targets as `make -C backend build`, `make -C backend test`,
 ## Frontend development
 
 From the repository root, `make -C frontend dev` starts Vite. Its `/api` and
-`/api/events/ws` proxies use `FORCAD_BACKEND_URL`, defaulting to
+`/api/v1/events/ws` proxies use `FORCAD_BACKEND_URL`, defaulting to
 `http://127.0.0.1:8080`. To run the frontend with local demo fixtures and its
 in-memory API adapter, use `pnpm --dir frontend dev:demo`; the demo login is
 `demo` / `demo`.

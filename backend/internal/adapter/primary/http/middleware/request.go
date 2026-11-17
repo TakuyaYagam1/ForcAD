@@ -49,7 +49,7 @@ func RequestContext(publicOrigin string, trusted []*net.IPNet) func(http.Handler
 			if cookie, err := r.Cookie("session"); err == nil {
 				session = cookie.Value
 			}
-			if strings.HasPrefix(r.URL.Path, "/api/admin/") {
+			if strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
 				w.Header().Set("Cache-Control", "no-store")
 			}
 			ctx := WithRequestInfo(r.Context(), session, secure)

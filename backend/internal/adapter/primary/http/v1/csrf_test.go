@@ -11,7 +11,7 @@ import (
 func TestAdminMutationsRequireSessionCSRF(t *testing.T) {
 	game := &testGame{}
 	router := testRouter(t, "api", game, testAuth{}, &testFlags{})
-	for _, path := range []string{"/api/admin/game/pause/", "/api/admin/teams/", "/api/admin/tasks/", "/api/admin/events/", "/api/admin/logout/"} {
+	for _, path := range []string{"/api/v1/admin/game/pause/", "/api/v1/admin/teams/", "/api/v1/admin/tasks/", "/api/v1/admin/events/", "/api/v1/admin/logout/"} {
 		for _, token := range []string{"", "invalid", strings.Repeat("b", 64)} {
 			headers := map[string]string{
 				"Cookie":       "session=valid",
@@ -30,13 +30,13 @@ func TestAdminMutationsRequireSessionCSRF(t *testing.T) {
 		"Cookie":       "session=valid",
 		"X-CSRF-Token": strings.Repeat("c", 64),
 	}
-	if response := performRequest(router, http.MethodPost, "/api/admin/game/pause/", `{}`, headers); response.Code != http.StatusOK || game.changed != "pause" {
+	if response := performRequest(router, http.MethodPost, "/api/v1/admin/game/pause/", `{}`, headers); response.Code != http.StatusOK || game.changed != "pause" {
 		t.Fatalf("headerless CLI with valid CSRF rejected: %d", response.Code)
 	}
-	if response := performRequest(router, http.MethodPost, "/api/admin/logout/", `{}`, headers); response.Code != http.StatusOK {
+	if response := performRequest(router, http.MethodPost, "/api/v1/admin/logout/", `{}`, headers); response.Code != http.StatusOK {
 		t.Fatalf("authenticated logout rejected: %d", response.Code)
 	}
-	if response := performRequest(router, http.MethodPost, "/api/admin/logout/", `{}`, nil); response.Code != http.StatusForbidden {
+	if response := performRequest(router, http.MethodPost, "/api/v1/admin/logout/", `{}`, nil); response.Code != http.StatusForbidden {
 		t.Fatal("logout bypassed authenticated session")
 	}
 }
@@ -47,8 +47,8 @@ func TestLoginAndSessionExposeCSRFOnlyInNoncacheableJSON(t *testing.T) {
 		method, path, body string
 		headers            map[string]string
 	}{
-		{http.MethodPost, "/api/admin/login/", `{"username":"admin","password":"password"}`, nil},
-		{http.MethodGet, "/api/admin/status/", "", map[string]string{
+		{http.MethodPost, "/api/v1/admin/login/", `{"username":"admin","password":"password"}`, nil},
+		{http.MethodGet, "/api/v1/admin/status/", "", map[string]string{
 			"Cookie": "session=valid",
 		}},
 	} {
@@ -72,7 +72,7 @@ func TestLoginRejectsSimpleContentTypesAndUntrustedOrigins(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
 	body := `{"username":"admin","password":"password"}`
 	for _, kind := range []string{"text/plain", "application/x-www-form-urlencoded", "multipart/form-data"} {
-		response := performRequest(router, http.MethodPost, "/api/admin/login/", body, map[string]string{
+		response := performRequest(router, http.MethodPost, "/api/v1/admin/login/", body, map[string]string{
 			"Content-Type": kind,
 		})
 		if response.Code != http.StatusUnsupportedMediaType || response.Header().Get("Set-Cookie") != "" {
@@ -96,11 +96,11 @@ func TestLoginRejectsSimpleContentTypesAndUntrustedOrigins(t *testing.T) {
 			"Referer": "https://other.example/page",
 		},
 	} {
-		if response := performRequest(router, http.MethodPost, "/api/admin/login/", body, headers); response.Code != http.StatusForbidden {
+		if response := performRequest(router, http.MethodPost, "/api/v1/admin/login/", body, headers); response.Code != http.StatusForbidden {
 			t.Fatalf("untrusted login headers accepted: %d", response.Code)
 		}
 	}
-	req := httptest.NewRequest(http.MethodPost, "/api/admin/game/pause/", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/game/pause/", strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Cookie", "session=valid")
 	req.Header.Add("X-CSRF-Token", strings.Repeat("c", 64))

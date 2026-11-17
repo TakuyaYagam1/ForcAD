@@ -14,182 +14,182 @@ type Handler interface {
 	// Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
 	// cross-origin browser requests. Responses are Cache-Control no-store.
 	//
-	// POST /api/admin/login/
+	// POST /api/v1/admin/login/
 	AdminLogin(ctx context.Context, req *AdminLoginRequest) (AdminLoginRes, error)
 	// AdminLogout implements adminLogout operation.
 	//
 	// Ends the authenticated session. Requires its X-CSRF-Token header.
 	//
-	// POST /api/admin/logout/
+	// POST /api/v1/admin/logout/
 	AdminLogout(ctx context.Context) (AdminLogoutRes, error)
 	// ChangeAdminGameState implements changeAdminGameState operation.
 	//
 	// Start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
 	//
-	// POST /api/admin/game/{action}/
+	// POST /api/v1/admin/game/{action}/
 	ChangeAdminGameState(ctx context.Context, req OptGameActionRequest, params ChangeAdminGameStateParams) (ChangeAdminGameStateRes, error)
 	// CreateAdminEvent implements createAdminEvent operation.
 	//
 	// Publish an organizer announcement.
 	//
-	// POST /api/admin/events/
+	// POST /api/v1/admin/events/
 	CreateAdminEvent(ctx context.Context, req *AnnouncementCreate) (CreateAdminEventRes, error)
 	// CreateAdminTask implements createAdminTask operation.
 	//
 	// Create a task.
 	//
-	// POST /api/admin/tasks/
+	// POST /api/v1/admin/tasks/
 	CreateAdminTask(ctx context.Context, req *AdminTaskWrite) (CreateAdminTaskRes, error)
 	// CreateAdminTeam implements createAdminTeam operation.
 	//
 	// The server generates the team token and ignores any supplied token value.
 	//
-	// POST /api/admin/teams/
+	// POST /api/v1/admin/teams/
 	CreateAdminTeam(ctx context.Context, req *AdminTeamCreate) (CreateAdminTeamRes, error)
 	// CreateAdminTeamTask implements createAdminTeamTask operation.
 	//
 	// The route is registered but has no create handler and returns 404.
 	//
-	// POST /api/admin/teamtasks/
+	// POST /api/v1/admin/teamtasks/
 	CreateAdminTeamTask(ctx context.Context) (CreateAdminTeamTaskRes, error)
 	// DeleteAdminTask implements deleteAdminTask operation.
 	//
 	// Deactivate a task.
 	//
-	// DELETE /api/admin/tasks/{task_id}/
+	// DELETE /api/v1/admin/tasks/{task_id}/
 	DeleteAdminTask(ctx context.Context, params DeleteAdminTaskParams) (DeleteAdminTaskRes, error)
 	// DeleteAdminTeam implements deleteAdminTeam operation.
 	//
 	// Deactivate a team.
 	//
-	// DELETE /api/admin/teams/{team_id}/
+	// DELETE /api/v1/admin/teams/{team_id}/
 	DeleteAdminTeam(ctx context.Context, params DeleteAdminTeamParams) (DeleteAdminTeamRes, error)
 	// DeleteAdminTeamTask implements deleteAdminTeamTask operation.
 	//
 	// The route is registered but has no delete handler and returns 404.
 	//
-	// DELETE /api/admin/teamtasks/{teamtask_id}/
+	// DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 	DeleteAdminTeamTask(ctx context.Context, params DeleteAdminTeamTaskParams) (DeleteAdminTeamTaskRes, error)
 	// GetAdminHealth implements getAdminHealth operation.
 	//
 	// Check the administration API service.
 	//
-	// GET /api/admin/health/
+	// GET /api/v1/admin/health/
 	GetAdminHealth(ctx context.Context) (*StatusResponse, error)
 	// GetAdminMetrics implements getAdminMetrics operation.
 	//
 	// Read administration API Prometheus metrics.
 	//
-	// GET /api/admin/metrics
+	// GET /api/v1/admin/metrics
 	GetAdminMetrics(ctx context.Context) (Metrics, error)
 	// GetAdminSessionStatus implements getAdminSessionStatus operation.
 	//
 	// Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
 	// no-store.
 	//
-	// GET /api/admin/status/
+	// GET /api/v1/admin/status/
 	GetAdminSessionStatus(ctx context.Context) (GetAdminSessionStatusRes, error)
 	// GetAdminTask implements getAdminTask operation.
 	//
 	// Get one task, including administration fields.
 	//
-	// GET /api/admin/tasks/{task_id}/
+	// GET /api/v1/admin/tasks/{task_id}/
 	GetAdminTask(ctx context.Context, params GetAdminTaskParams) (GetAdminTaskRes, error)
 	// GetAdminTasks implements getAdminTasks operation.
 	//
 	// List all tasks, including inactive tasks.
 	//
-	// GET /api/admin/tasks/
+	// GET /api/v1/admin/tasks/
 	GetAdminTasks(ctx context.Context) (GetAdminTasksRes, error)
 	// GetAdminTeam implements getAdminTeam operation.
 	//
 	// Get one team, including administration fields.
 	//
-	// GET /api/admin/teams/{team_id}/
+	// GET /api/v1/admin/teams/{team_id}/
 	GetAdminTeam(ctx context.Context, params GetAdminTeamParams) (GetAdminTeamRes, error)
 	// GetAdminTeamTask implements getAdminTeamTask operation.
 	//
 	// The route is registered but has no retrieve handler and returns 404.
 	//
-	// GET /api/admin/teamtasks/{teamtask_id}/
+	// GET /api/v1/admin/teamtasks/{teamtask_id}/
 	GetAdminTeamTask(ctx context.Context, params GetAdminTeamTaskParams) (GetAdminTeamTaskRes, error)
 	// GetAdminTeamTaskHistory implements getAdminTeamTaskHistory operation.
 	//
 	// Get checker history for a team and task pair.
 	//
-	// GET /api/admin/teamtasks/
+	// GET /api/v1/admin/teamtasks/
 	GetAdminTeamTaskHistory(ctx context.Context, params GetAdminTeamTaskHistoryParams) (GetAdminTeamTaskHistoryRes, error)
 	// GetAdminTeams implements getAdminTeams operation.
 	//
 	// List all teams, including inactive teams.
 	//
-	// GET /api/admin/teams/
+	// GET /api/v1/admin/teams/
 	GetAdminTeams(ctx context.Context) (GetAdminTeamsRes, error)
 	// GetClientCheckerLogs implements getClientCheckerLogs operation.
 	//
 	// Get public checker results for one team and service.
 	//
-	// GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
+	// GET /api/v1/client/teams/{team_id}/tasks/{task_id}/logs/
 	GetClientCheckerLogs(ctx context.Context, params GetClientCheckerLogsParams) (GetClientCheckerLogsRes, error)
 	// GetClientConfig implements getClientConfig operation.
 	//
 	// Get the current game configuration.
 	//
-	// GET /api/client/config/
+	// GET /api/v1/client/config/
 	GetClientConfig(ctx context.Context) (*GameConfig, error)
 	// GetClientCtftimeScoreboard implements getClientCtftimeScoreboard operation.
 	//
 	// Get the CTFtime standings.
 	//
-	// GET /api/client/ctftime/
+	// GET /api/v1/client/ctftime/
 	GetClientCtftimeScoreboard(ctx context.Context) (GetClientCtftimeScoreboardRes, error)
 	// GetClientEvents implements getClientEvents operation.
 	//
 	// Read recent public events or events after a cursor.
 	//
-	// GET /api/client/events/
+	// GET /api/v1/client/events/
 	GetClientEvents(ctx context.Context, params GetClientEventsParams) (GetClientEventsRes, error)
 	// GetClientHealth implements getClientHealth operation.
 	//
 	// Check the client API service.
 	//
-	// GET /api/client/health/
+	// GET /api/v1/client/health/
 	GetClientHealth(ctx context.Context) (*StatusResponse, error)
 	// GetClientMetrics implements getClientMetrics operation.
 	//
 	// Read client API Prometheus metrics.
 	//
-	// GET /api/client/metrics
+	// GET /api/v1/client/metrics
 	GetClientMetrics(ctx context.Context) (Metrics, error)
 	// GetClientStatus implements getClientStatus operation.
 	//
 	// Get the current runtime status.
 	//
-	// GET /api/client/status/
+	// GET /api/v1/client/status/
 	GetClientStatus(ctx context.Context) (*GameRuntimeStatus, error)
 	// GetClientTasks implements getClientTasks operation.
 	//
 	// List tasks visible to participants.
 	//
-	// GET /api/client/tasks/
+	// GET /api/v1/client/tasks/
 	GetClientTasks(ctx context.Context) ([]ParticipantTask, error)
 	// GetClientTeamHistory implements getClientTeamHistory operation.
 	//
 	// Get participant-visible task history for a team.
 	//
-	// GET /api/client/teams/{team_id}/
+	// GET /api/v1/client/teams/{team_id}/
 	GetClientTeamHistory(ctx context.Context, params GetClientTeamHistoryParams) ([]ParticipantTeamTaskHistory, error)
 	// GetClientTeams implements getClientTeams operation.
 	//
 	// List teams visible to participants.
 	//
-	// GET /api/client/teams/
+	// GET /api/v1/client/teams/
 	GetClientTeams(ctx context.Context) ([]ParticipantTeam, error)
 	// GetEventsHealth implements getEventsHealth operation.
 	//
 	// Check the event service.
 	//
-	// GET /api/events/health/
+	// GET /api/v1/events/health/
 	GetEventsHealth(ctx context.Context) (*StatusResponse, error)
 	// GetFlagReceiverHealth implements getFlagReceiverHealth operation.
 	//
@@ -201,14 +201,14 @@ type Handler interface {
 	//
 	// Read flag receiver Prometheus metrics.
 	//
-	// GET /api/http-receiver/metrics
+	// GET /api/v1/http-receiver/metrics
 	GetReceiverMetrics(ctx context.Context) (Metrics, error)
 	// OpenEventStream implements openEventStream operation.
 	//
 	// Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
 	// public and contains only participant-visible scoreboard updates and flag-steal notifications.
 	//
-	// GET /api/events/ws
+	// GET /api/v1/events/ws
 	OpenEventStream(ctx context.Context) (*OpenEventStreamSwitchingProtocols, error)
 	// SubmitFlags implements submitFlags operation.
 	//
@@ -220,19 +220,19 @@ type Handler interface {
 	//
 	// Replace a task's editable fields.
 	//
-	// PUT /api/admin/tasks/{task_id}/
+	// PUT /api/v1/admin/tasks/{task_id}/
 	UpdateAdminTask(ctx context.Context, req *AdminTaskWrite, params UpdateAdminTaskParams) (UpdateAdminTaskRes, error)
 	// UpdateAdminTeam implements updateAdminTeam operation.
 	//
 	// Replace a team's editable fields.
 	//
-	// PUT /api/admin/teams/{team_id}/
+	// PUT /api/v1/admin/teams/{team_id}/
 	UpdateAdminTeam(ctx context.Context, req *AdminTeamUpdate, params UpdateAdminTeamParams) (UpdateAdminTeamRes, error)
 	// UpdateAdminTeamTask implements updateAdminTeamTask operation.
 	//
 	// The route is registered but has no update handler and returns 404.
 	//
-	// PUT /api/admin/teamtasks/{teamtask_id}/
+	// PUT /api/v1/admin/teamtasks/{teamtask_id}/
 	UpdateAdminTeamTask(ctx context.Context, params UpdateAdminTeamTaskParams) (UpdateAdminTeamTaskRes, error)
 }
 
@@ -242,13 +242,13 @@ type RawHandler interface {
 	//
 	// Get public flag data grouped by task and team address.
 	//
-	// GET /api/client/attack_data/
+	// GET /api/v1/client/attack_data/
 	GetClientAttackData(ctx context.Context, params GetClientAttackDataParams, w http.ResponseWriter) error
 	// GetScoreboard implements getScoreboard operation.
 	//
 	// Used to initialize and resynchronize clients after event-stream reconnects.
 	//
-	// GET /api/client/scoreboard/
+	// GET /api/v1/client/scoreboard/
 	GetScoreboard(ctx context.Context, w http.ResponseWriter) error
 }
 

@@ -177,7 +177,7 @@ func TestClientCheckerLogsRouteEncodesPublicPage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := "/api/client/teams/" + teamID.String() + "/tasks/" + taskID.String() + "/logs/?limit=100"
+	path := "/api/v1/client/teams/" + teamID.String() + "/tasks/" + taskID.String() + "/logs/?limit=100"
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 	if response.Code != http.StatusOK {

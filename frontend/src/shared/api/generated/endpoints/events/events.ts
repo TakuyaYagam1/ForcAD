@@ -65,7 +65,7 @@ export const getEventsHealth = (
 
   return axiosMutator<StatusResponse>(
     {
-      url: `/api/events/health/`,
+      url: `/api/v1/events/health/`,
       method: 'GET',
       signal
     },
@@ -77,7 +77,7 @@ export const getEventsHealth = (
 
 export const getGetEventsHealthQueryKey = () => {
   return [
-    `/api/events/health/`
+    `/api/v1/events/health/`
   ] as const;
 }
 

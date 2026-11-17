@@ -60,16 +60,16 @@ export function createAxiosMutator(api: AxiosInstance, http: AxiosInstance) {
       ...options
     };
     const requestUrl = merged.url ?? "";
-    const isApiRequest = requestUrl.startsWith("/api/");
+    const isApiRequest = requestUrl.startsWith("/api/v1/");
     const instance = isApiRequest ? api : http;
-    const url = isApiRequest ? requestUrl.slice("/api".length) : requestUrl;
+    const url = isApiRequest ? requestUrl.slice("/api/v1".length) : requestUrl;
     const normalized = new URL(requestUrl, "https://forcad.invalid");
-    const admin = requestUrl.startsWith("/api/admin/") &&
+    const admin = requestUrl.startsWith("/api/v1/admin/") &&
       normalized.origin === "https://forcad.invalid" &&
-      normalized.pathname.startsWith("/api/admin/") && !requestUrl.includes("\\");
-    const login = admin && normalized.pathname === "/api/admin/login/";
-    const status = admin && normalized.pathname === "/api/admin/status/";
-    const logout = admin && normalized.pathname === "/api/admin/logout/";
+      normalized.pathname.startsWith("/api/v1/admin/") && !requestUrl.includes("\\");
+    const login = admin && normalized.pathname === "/api/v1/admin/login/";
+    const status = admin && normalized.pathname === "/api/v1/admin/status/";
+    const logout = admin && normalized.pathname === "/api/v1/admin/logout/";
     const mutation = !["GET", "HEAD", "OPTIONS"].includes((merged.method ?? "GET").toUpperCase());
     const headers = new AxiosHeaders(merged.headers as RawAxiosHeaders | AxiosHeaders | undefined);
     const suppliedCSRF = headers.has("X-CSRF-Token");

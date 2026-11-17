@@ -61,7 +61,7 @@ export const getClientMetrics = (
 
   return axiosMutator<string>(
     {
-      url: `/api/client/metrics`,
+      url: `/api/v1/client/metrics`,
       method: 'GET',
       signal
     },
@@ -73,7 +73,7 @@ export const getClientMetrics = (
 
 export const getGetClientMetricsQueryKey = () => {
   return [
-    `/api/client/metrics`
+    `/api/v1/client/metrics`
   ] as const;
 }
 
@@ -184,7 +184,7 @@ export const getAdminMetrics = (
 
   return axiosMutator<string>(
     {
-      url: `/api/admin/metrics`,
+      url: `/api/v1/admin/metrics`,
       method: 'GET',
       signal
     },
@@ -196,7 +196,7 @@ export const getAdminMetrics = (
 
 export const getGetAdminMetricsQueryKey = () => {
   return [
-    `/api/admin/metrics`
+    `/api/v1/admin/metrics`
   ] as const;
 }
 
@@ -307,7 +307,7 @@ export const getReceiverMetrics = (
 
   return axiosMutator<string>(
     {
-      url: `/api/http-receiver/metrics`,
+      url: `/api/v1/http-receiver/metrics`,
       method: 'GET',
       signal
     },
@@ -319,7 +319,7 @@ export const getReceiverMetrics = (
 
 export const getGetReceiverMetricsQueryKey = () => {
   return [
-    `/api/http-receiver/metrics`
+    `/api/v1/http-receiver/metrics`
   ] as const;
 }
 

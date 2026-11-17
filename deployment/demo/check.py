@@ -169,7 +169,7 @@ def main():
         probe("demo-player1", "10.183.102.2", "tcp", 22, allowed=False)
         probe("demo-player2", "10.183.101.2", "tcp", 22, allowed=False)
         probe("demo-admin", "10.183.102.2", "tcp", 22)
-        probe("demo-player1", "10.183.2.10", port=80, path="/api/client/teams/")
+        probe("demo-player1", "10.183.2.10", port=80, path="/api/v1/client/teams/")
         for host, port in (
             ("10.183.2.10", 9090),
             ("10.183.2.1", 9109),
@@ -203,7 +203,7 @@ def main():
             probe("demo-player1", target, "tcp", 22, allowed=False)
         probe("demo-admin", "10.183.102.2", "tcp", 22)
         probe("demo-forcad", "10.183.102.2", peer="10.183.102.1")
-        probe("demo-player1", "10.183.2.10", port=80, path="/api/client/teams/")
+        probe("demo-player1", "10.183.2.10", port=80, path="/api/v1/client/teams/")
         phase("game")
 
         existing = execute(

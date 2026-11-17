@@ -20,7 +20,7 @@ var _ RawHandler = UnimplementedHandler{}
 // Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
 // cross-origin browser requests. Responses are Cache-Control no-store.
 //
-// POST /api/admin/login/
+// POST /api/v1/admin/login/
 func (UnimplementedHandler) AdminLogin(ctx context.Context, req *AdminLoginRequest) (r AdminLoginRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -29,7 +29,7 @@ func (UnimplementedHandler) AdminLogin(ctx context.Context, req *AdminLoginReque
 //
 // Ends the authenticated session. Requires its X-CSRF-Token header.
 //
-// POST /api/admin/logout/
+// POST /api/v1/admin/logout/
 func (UnimplementedHandler) AdminLogout(ctx context.Context) (r AdminLogoutRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -38,7 +38,7 @@ func (UnimplementedHandler) AdminLogout(ctx context.Context) (r AdminLogoutRes, 
 //
 // Start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
 //
-// POST /api/admin/game/{action}/
+// POST /api/v1/admin/game/{action}/
 func (UnimplementedHandler) ChangeAdminGameState(ctx context.Context, req OptGameActionRequest, params ChangeAdminGameStateParams) (r ChangeAdminGameStateRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -47,7 +47,7 @@ func (UnimplementedHandler) ChangeAdminGameState(ctx context.Context, req OptGam
 //
 // Publish an organizer announcement.
 //
-// POST /api/admin/events/
+// POST /api/v1/admin/events/
 func (UnimplementedHandler) CreateAdminEvent(ctx context.Context, req *AnnouncementCreate) (r CreateAdminEventRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -56,7 +56,7 @@ func (UnimplementedHandler) CreateAdminEvent(ctx context.Context, req *Announcem
 //
 // Create a task.
 //
-// POST /api/admin/tasks/
+// POST /api/v1/admin/tasks/
 func (UnimplementedHandler) CreateAdminTask(ctx context.Context, req *AdminTaskWrite) (r CreateAdminTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -65,7 +65,7 @@ func (UnimplementedHandler) CreateAdminTask(ctx context.Context, req *AdminTaskW
 //
 // The server generates the team token and ignores any supplied token value.
 //
-// POST /api/admin/teams/
+// POST /api/v1/admin/teams/
 func (UnimplementedHandler) CreateAdminTeam(ctx context.Context, req *AdminTeamCreate) (r CreateAdminTeamRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -74,7 +74,7 @@ func (UnimplementedHandler) CreateAdminTeam(ctx context.Context, req *AdminTeamC
 //
 // The route is registered but has no create handler and returns 404.
 //
-// POST /api/admin/teamtasks/
+// POST /api/v1/admin/teamtasks/
 func (UnimplementedHandler) CreateAdminTeamTask(ctx context.Context) (r CreateAdminTeamTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -83,7 +83,7 @@ func (UnimplementedHandler) CreateAdminTeamTask(ctx context.Context) (r CreateAd
 //
 // Deactivate a task.
 //
-// DELETE /api/admin/tasks/{task_id}/
+// DELETE /api/v1/admin/tasks/{task_id}/
 func (UnimplementedHandler) DeleteAdminTask(ctx context.Context, params DeleteAdminTaskParams) (r DeleteAdminTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -92,7 +92,7 @@ func (UnimplementedHandler) DeleteAdminTask(ctx context.Context, params DeleteAd
 //
 // Deactivate a team.
 //
-// DELETE /api/admin/teams/{team_id}/
+// DELETE /api/v1/admin/teams/{team_id}/
 func (UnimplementedHandler) DeleteAdminTeam(ctx context.Context, params DeleteAdminTeamParams) (r DeleteAdminTeamRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -101,7 +101,7 @@ func (UnimplementedHandler) DeleteAdminTeam(ctx context.Context, params DeleteAd
 //
 // The route is registered but has no delete handler and returns 404.
 //
-// DELETE /api/admin/teamtasks/{teamtask_id}/
+// DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 func (UnimplementedHandler) DeleteAdminTeamTask(ctx context.Context, params DeleteAdminTeamTaskParams) (r DeleteAdminTeamTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -110,7 +110,7 @@ func (UnimplementedHandler) DeleteAdminTeamTask(ctx context.Context, params Dele
 //
 // Check the administration API service.
 //
-// GET /api/admin/health/
+// GET /api/v1/admin/health/
 func (UnimplementedHandler) GetAdminHealth(ctx context.Context) (r *StatusResponse, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -119,7 +119,7 @@ func (UnimplementedHandler) GetAdminHealth(ctx context.Context) (r *StatusRespon
 //
 // Read administration API Prometheus metrics.
 //
-// GET /api/admin/metrics
+// GET /api/v1/admin/metrics
 func (UnimplementedHandler) GetAdminMetrics(ctx context.Context) (r Metrics, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -129,7 +129,7 @@ func (UnimplementedHandler) GetAdminMetrics(ctx context.Context) (r Metrics, _ e
 // Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
 // no-store.
 //
-// GET /api/admin/status/
+// GET /api/v1/admin/status/
 func (UnimplementedHandler) GetAdminSessionStatus(ctx context.Context) (r GetAdminSessionStatusRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -138,7 +138,7 @@ func (UnimplementedHandler) GetAdminSessionStatus(ctx context.Context) (r GetAdm
 //
 // Get one task, including administration fields.
 //
-// GET /api/admin/tasks/{task_id}/
+// GET /api/v1/admin/tasks/{task_id}/
 func (UnimplementedHandler) GetAdminTask(ctx context.Context, params GetAdminTaskParams) (r GetAdminTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -147,7 +147,7 @@ func (UnimplementedHandler) GetAdminTask(ctx context.Context, params GetAdminTas
 //
 // List all tasks, including inactive tasks.
 //
-// GET /api/admin/tasks/
+// GET /api/v1/admin/tasks/
 func (UnimplementedHandler) GetAdminTasks(ctx context.Context) (r GetAdminTasksRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -156,7 +156,7 @@ func (UnimplementedHandler) GetAdminTasks(ctx context.Context) (r GetAdminTasksR
 //
 // Get one team, including administration fields.
 //
-// GET /api/admin/teams/{team_id}/
+// GET /api/v1/admin/teams/{team_id}/
 func (UnimplementedHandler) GetAdminTeam(ctx context.Context, params GetAdminTeamParams) (r GetAdminTeamRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -165,7 +165,7 @@ func (UnimplementedHandler) GetAdminTeam(ctx context.Context, params GetAdminTea
 //
 // The route is registered but has no retrieve handler and returns 404.
 //
-// GET /api/admin/teamtasks/{teamtask_id}/
+// GET /api/v1/admin/teamtasks/{teamtask_id}/
 func (UnimplementedHandler) GetAdminTeamTask(ctx context.Context, params GetAdminTeamTaskParams) (r GetAdminTeamTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -174,7 +174,7 @@ func (UnimplementedHandler) GetAdminTeamTask(ctx context.Context, params GetAdmi
 //
 // Get checker history for a team and task pair.
 //
-// GET /api/admin/teamtasks/
+// GET /api/v1/admin/teamtasks/
 func (UnimplementedHandler) GetAdminTeamTaskHistory(ctx context.Context, params GetAdminTeamTaskHistoryParams) (r GetAdminTeamTaskHistoryRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -183,7 +183,7 @@ func (UnimplementedHandler) GetAdminTeamTaskHistory(ctx context.Context, params 
 //
 // List all teams, including inactive teams.
 //
-// GET /api/admin/teams/
+// GET /api/v1/admin/teams/
 func (UnimplementedHandler) GetAdminTeams(ctx context.Context) (r GetAdminTeamsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -192,7 +192,7 @@ func (UnimplementedHandler) GetAdminTeams(ctx context.Context) (r GetAdminTeamsR
 //
 // Get public flag data grouped by task and team address.
 //
-// GET /api/client/attack_data/
+// GET /api/v1/client/attack_data/
 func (UnimplementedHandler) GetClientAttackData(ctx context.Context, params GetClientAttackDataParams, w http.ResponseWriter) error {
 	return ht.ErrNotImplemented
 }
@@ -201,7 +201,7 @@ func (UnimplementedHandler) GetClientAttackData(ctx context.Context, params GetC
 //
 // Get public checker results for one team and service.
 //
-// GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
+// GET /api/v1/client/teams/{team_id}/tasks/{task_id}/logs/
 func (UnimplementedHandler) GetClientCheckerLogs(ctx context.Context, params GetClientCheckerLogsParams) (r GetClientCheckerLogsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -210,7 +210,7 @@ func (UnimplementedHandler) GetClientCheckerLogs(ctx context.Context, params Get
 //
 // Get the current game configuration.
 //
-// GET /api/client/config/
+// GET /api/v1/client/config/
 func (UnimplementedHandler) GetClientConfig(ctx context.Context) (r *GameConfig, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -219,7 +219,7 @@ func (UnimplementedHandler) GetClientConfig(ctx context.Context) (r *GameConfig,
 //
 // Get the CTFtime standings.
 //
-// GET /api/client/ctftime/
+// GET /api/v1/client/ctftime/
 func (UnimplementedHandler) GetClientCtftimeScoreboard(ctx context.Context) (r GetClientCtftimeScoreboardRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -228,7 +228,7 @@ func (UnimplementedHandler) GetClientCtftimeScoreboard(ctx context.Context) (r G
 //
 // Read recent public events or events after a cursor.
 //
-// GET /api/client/events/
+// GET /api/v1/client/events/
 func (UnimplementedHandler) GetClientEvents(ctx context.Context, params GetClientEventsParams) (r GetClientEventsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -237,7 +237,7 @@ func (UnimplementedHandler) GetClientEvents(ctx context.Context, params GetClien
 //
 // Check the client API service.
 //
-// GET /api/client/health/
+// GET /api/v1/client/health/
 func (UnimplementedHandler) GetClientHealth(ctx context.Context) (r *StatusResponse, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -246,7 +246,7 @@ func (UnimplementedHandler) GetClientHealth(ctx context.Context) (r *StatusRespo
 //
 // Read client API Prometheus metrics.
 //
-// GET /api/client/metrics
+// GET /api/v1/client/metrics
 func (UnimplementedHandler) GetClientMetrics(ctx context.Context) (r Metrics, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -255,7 +255,7 @@ func (UnimplementedHandler) GetClientMetrics(ctx context.Context) (r Metrics, _ 
 //
 // Get the current runtime status.
 //
-// GET /api/client/status/
+// GET /api/v1/client/status/
 func (UnimplementedHandler) GetClientStatus(ctx context.Context) (r *GameRuntimeStatus, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -264,7 +264,7 @@ func (UnimplementedHandler) GetClientStatus(ctx context.Context) (r *GameRuntime
 //
 // List tasks visible to participants.
 //
-// GET /api/client/tasks/
+// GET /api/v1/client/tasks/
 func (UnimplementedHandler) GetClientTasks(ctx context.Context) (r []ParticipantTask, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -273,7 +273,7 @@ func (UnimplementedHandler) GetClientTasks(ctx context.Context) (r []Participant
 //
 // Get participant-visible task history for a team.
 //
-// GET /api/client/teams/{team_id}/
+// GET /api/v1/client/teams/{team_id}/
 func (UnimplementedHandler) GetClientTeamHistory(ctx context.Context, params GetClientTeamHistoryParams) (r []ParticipantTeamTaskHistory, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -282,7 +282,7 @@ func (UnimplementedHandler) GetClientTeamHistory(ctx context.Context, params Get
 //
 // List teams visible to participants.
 //
-// GET /api/client/teams/
+// GET /api/v1/client/teams/
 func (UnimplementedHandler) GetClientTeams(ctx context.Context) (r []ParticipantTeam, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -291,7 +291,7 @@ func (UnimplementedHandler) GetClientTeams(ctx context.Context) (r []Participant
 //
 // Check the event service.
 //
-// GET /api/events/health/
+// GET /api/v1/events/health/
 func (UnimplementedHandler) GetEventsHealth(ctx context.Context) (r *StatusResponse, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -309,7 +309,7 @@ func (UnimplementedHandler) GetFlagReceiverHealth(ctx context.Context) (r *Statu
 //
 // Read flag receiver Prometheus metrics.
 //
-// GET /api/http-receiver/metrics
+// GET /api/v1/http-receiver/metrics
 func (UnimplementedHandler) GetReceiverMetrics(ctx context.Context) (r Metrics, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -318,7 +318,7 @@ func (UnimplementedHandler) GetReceiverMetrics(ctx context.Context) (r Metrics, 
 //
 // Used to initialize and resynchronize clients after event-stream reconnects.
 //
-// GET /api/client/scoreboard/
+// GET /api/v1/client/scoreboard/
 func (UnimplementedHandler) GetScoreboard(ctx context.Context, w http.ResponseWriter) error {
 	return ht.ErrNotImplemented
 }
@@ -328,7 +328,7 @@ func (UnimplementedHandler) GetScoreboard(ctx context.Context, w http.ResponseWr
 // Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
 // public and contains only participant-visible scoreboard updates and flag-steal notifications.
 //
-// GET /api/events/ws
+// GET /api/v1/events/ws
 func (UnimplementedHandler) OpenEventStream(ctx context.Context) (r *OpenEventStreamSwitchingProtocols, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -346,7 +346,7 @@ func (UnimplementedHandler) SubmitFlags(ctx context.Context, req []string) (r Su
 //
 // Replace a task's editable fields.
 //
-// PUT /api/admin/tasks/{task_id}/
+// PUT /api/v1/admin/tasks/{task_id}/
 func (UnimplementedHandler) UpdateAdminTask(ctx context.Context, req *AdminTaskWrite, params UpdateAdminTaskParams) (r UpdateAdminTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -355,7 +355,7 @@ func (UnimplementedHandler) UpdateAdminTask(ctx context.Context, req *AdminTaskW
 //
 // Replace a team's editable fields.
 //
-// PUT /api/admin/teams/{team_id}/
+// PUT /api/v1/admin/teams/{team_id}/
 func (UnimplementedHandler) UpdateAdminTeam(ctx context.Context, req *AdminTeamUpdate, params UpdateAdminTeamParams) (r UpdateAdminTeamRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -364,7 +364,7 @@ func (UnimplementedHandler) UpdateAdminTeam(ctx context.Context, req *AdminTeamU
 //
 // The route is registered but has no update handler and returns 404.
 //
-// PUT /api/admin/teamtasks/{teamtask_id}/
+// PUT /api/v1/admin/teamtasks/{teamtask_id}/
 func (UnimplementedHandler) UpdateAdminTeamTask(ctx context.Context, params UpdateAdminTeamTaskParams) (r UpdateAdminTeamTaskRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

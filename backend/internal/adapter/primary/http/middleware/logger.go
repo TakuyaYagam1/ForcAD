@@ -43,7 +43,7 @@ func Logger(logger *slog.Logger, trusted []*net.IPNet, route func(*http.Request)
 
 func isHealthRequest(path string) bool {
 	switch path {
-	case "/healthz", "/readyz", "/flags/health/", "/api/client/health/", "/api/admin/health/", "/api/events/health/":
+	case "/healthz", "/readyz", "/flags/health/", "/api/v1/client/health/", "/api/v1/admin/health/", "/api/v1/events/health/":
 		return true
 	default:
 		return false

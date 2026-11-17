@@ -13,14 +13,14 @@ def expect(request, path, status=200, data=None, method="GET", **options):
 
 def check_public(request, team_id):
     paths = (
-        "/api/client/teams/",
-        "/api/client/tasks/",
-        "/api/client/config/",
-        "/api/client/attack_data/",
-        "/api/client/ctftime/",
-        "/api/client/status/",
-        "/api/client/scoreboard/",
-        f"/api/client/teams/{team_id}/",
+        "/api/v1/client/teams/",
+        "/api/v1/client/tasks/",
+        "/api/v1/client/config/",
+        "/api/v1/client/attack_data/",
+        "/api/v1/client/ctftime/",
+        "/api/v1/client/status/",
+        "/api/v1/client/scoreboard/",
+        f"/api/v1/client/teams/{team_id}/",
     )
     for path in paths:
         payload = expect(request, path)
@@ -37,39 +37,39 @@ def check_public(request, team_id):
                 f"{path} exposes {private_field}"
             )
     for path in (
-        "/api/client/health/",
-        "/api/admin/health/",
-        "/api/events/health/",
+        "/api/v1/client/health/",
+        "/api/v1/admin/health/",
+        "/api/v1/events/health/",
         "/flags/health/",
     ):
         assert expect(request, path) == {"status": "ok"}
     for path in (
-        "/api/client/metrics",
-        "/api/admin/metrics",
-        "/api/http-receiver/metrics",
+        "/api/v1/client/metrics",
+        "/api/v1/admin/metrics",
+        "/api/v1/http-receiver/metrics",
     ):
         assert request(path)[0] == 404, f"{path} exposed publicly"
-    expect(request, "/api/client/teams/not-a-uuid/", 400)
+    expect(request, "/api/v1/client/teams/not-a-uuid/", 400)
 
 
 def check_unauthorized(request, team_id):
-    for path in ("/api/admin/teams/", "/api/admin/tasks/", "/api/admin/status/"):
+    for path in ("/api/v1/admin/teams/", "/api/v1/admin/tasks/", "/api/v1/admin/status/"):
         expect(request, path, 403)
     for collection in ("teams", "tasks", "teamtasks"):
-        expect(request, f"/api/admin/{collection}/", 403, {}, "POST")
+        expect(request, f"/api/v1/admin/{collection}/", 403, {}, "POST")
         for method in ("GET", "PUT", "DELETE"):
-            expect(request, f"/api/admin/{collection}/{team_id}/", 403, method=method)
-    expect(request, "/api/admin/game/start_practice/", 403, {}, "POST")
-    expect(request, "/api/admin/logout/", 403, {}, "POST")
+            expect(request, f"/api/v1/admin/{collection}/{team_id}/", 403, method=method)
+    expect(request, "/api/v1/admin/game/start_practice/", 403, {}, "POST")
+    expect(request, "/api/v1/admin/logout/", 403, {}, "POST")
 
 
 def check_admin(request, csrf_token):
-    session = expect(request, "/api/admin/status/")
+    session = expect(request, "/api/v1/admin/status/")
     assert re.fullmatch(r"[0-9a-f]{64}", csrf_token), "invalid session CSRF token"
     assert session["csrf_token"] == csrf_token, "session CSRF token changed"
     wrong_csrf = ("0" if csrf_token[0] != "0" else "1") + csrf_token[1:]
     # Invalid input keeps this rejection check harmless even if the guard regresses.
-    for path in ("/api/admin/teams/", "/api/admin/logout/"):
+    for path in ("/api/v1/admin/teams/", "/api/v1/admin/logout/"):
         expect(request, path, 403, {}, "POST", csrf=False)
         expect(
             request,
@@ -79,32 +79,32 @@ def check_admin(request, csrf_token):
             "POST",
             extra_headers={"X-CSRF-Token": wrong_csrf},
         )
-    assert expect(request, "/api/admin/status/")["csrf_token"] == csrf_token, (
+    assert expect(request, "/api/v1/admin/status/")["csrf_token"] == csrf_token, (
         "rejected mutation changed the session"
     )
-    teams = expect(request, "/api/admin/teams/")
-    tasks = expect(request, "/api/admin/tasks/")
+    teams = expect(request, "/api/v1/admin/teams/")
+    tasks = expect(request, "/api/v1/admin/tasks/")
     assert teams and tasks, "deployment fixture has no team or task"
     check_team(request, teams[0])
     check_task(request, tasks[0])
-    path = f"/api/admin/teamtasks/?team_id={teams[0]['id']}&task_id={tasks[0]['id']}"
+    path = f"/api/v1/admin/teamtasks/?team_id={teams[0]['id']}&task_id={tasks[0]['id']}"
     assert isinstance(expect(request, path), list)
-    expect(request, "/api/admin/teamtasks/", 400)
-    expect(request, "/api/admin/teamtasks/", 404, method="POST")
+    expect(request, "/api/v1/admin/teamtasks/", 400)
+    expect(request, "/api/v1/admin/teamtasks/", 404, method="POST")
     for method in ("GET", "PUT", "DELETE"):
-        expect(request, f"/api/admin/teamtasks/{uuid.uuid4()}/", 404, method=method)
-    expect(request, "/api/admin/game/start_final/", 400, {}, "POST")
-    expect(request, "/api/admin/game/finish/", 400, {}, "POST")
+        expect(request, f"/api/v1/admin/teamtasks/{uuid.uuid4()}/", 404, method=method)
+    expect(request, "/api/v1/admin/game/start_final/", 400, {}, "POST")
+    expect(request, "/api/v1/admin/game/finish/", 400, {}, "POST")
     expect(
         request,
-        "/api/admin/game/start_final/",
+        "/api/v1/admin/game/start_final/",
         409,
         {"confirm": True, "generation": -1},
         "POST",
     )
     expect(
         request,
-        "/api/admin/game/start_practice/",
+        "/api/v1/admin/game/start_practice/",
         403,
         {},
         "POST",
@@ -113,7 +113,7 @@ def check_admin(request, csrf_token):
 
 
 def check_team(request, existing):
-    collection = "/api/admin/teams/"
+    collection = "/api/v1/admin/teams/"
     expect(request, collection, 400, {"name": "invalid", "ip": "not-an-ip"}, "POST")
     expect(
         request,
@@ -143,7 +143,7 @@ def check_team(request, existing):
     )
     expect(request, path, method="DELETE")
     assert not expect(request, path)["active"], "delete did not deactivate the team"
-    assert all(team["id"] != team_id for team in expect(request, "/api/client/teams/"))
+    assert all(team["id"] != team_id for team in expect(request, "/api/v1/client/teams/"))
     missing = f"{collection}{uuid.uuid4()}/"
     expect(request, missing, 404)
     expect(request, missing, 404, updated, "PUT")
@@ -152,7 +152,7 @@ def check_team(request, existing):
 
 
 def check_task(request, existing):
-    collection = "/api/admin/tasks/"
+    collection = "/api/v1/admin/tasks/"
     data = {
         **existing,
         "name": "acceptance",
@@ -174,7 +174,7 @@ def check_task(request, existing):
     assert expect(request, path, data=updated, method="PUT")["places"] == 2
     expect(request, path, method="DELETE")
     assert not expect(request, path)["active"], "delete did not deactivate the task"
-    assert all(task["id"] != task_id for task in expect(request, "/api/client/tasks/"))
+    assert all(task["id"] != task_id for task in expect(request, "/api/v1/client/tasks/"))
     missing = f"{collection}{uuid.uuid4()}/"
     expect(request, missing, 404)
     expect(request, missing, 404, updated, "PUT")

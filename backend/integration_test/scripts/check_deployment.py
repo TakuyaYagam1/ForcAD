@@ -81,8 +81,8 @@ def request(path, data=None, method="GET", token=None, extra_headers=None, csrf=
     if (
         csrf
         and csrf_token
-        and path.startswith("/api/admin/")
-        and path != "/api/admin/login/"
+        and path.startswith("/api/v1/admin/")
+        and path != "/api/v1/admin/login/"
         and method not in ("GET", "HEAD", "OPTIONS")
     ):
         headers["X-CSRF-Token"] = csrf_token
@@ -150,21 +150,21 @@ check_public(request, team_two_id)
 check_unauthorized(request, team_two_id)
 expect(
     request,
-    "/api/admin/login/",
+    "/api/v1/admin/login/",
     403,
     {"username": "invalid", "password": "invalid"},
     "POST",
 )
 expect(
     request,
-    "/api/admin/login/",
+    "/api/v1/admin/login/",
     415,
     {"username": "invalid", "password": "invalid"},
     "POST",
     extra_headers={"Content-Type": "text/plain"},
 )
 status, body = request(
-    "/api/admin/login/",
+    "/api/v1/admin/login/",
     {
         "username": credentials["ADMIN_USERNAME"],
         "password": credentials["ADMIN_PASSWORD"],
@@ -178,17 +178,17 @@ check_admin(request, csrf_token)
 # The optional browser flow runs first and returns the game to waiting. Read the
 # current generation from persisted state instead of assuming prior transitions.
 status, _ = request(
-    "/api/admin/game/start_final/",
+    "/api/v1/admin/game/start_final/",
     {"confirm": True, "generation": current_generation()},
     "POST",
 )
 assert status == 200, "final did not start"
 check_flag_input(request, credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])
-expect(request, "/api/admin/game/pause/", data={}, method="POST")
+expect(request, "/api/v1/admin/game/pause/", data={}, method="POST")
 expect(
     request, "/flags", 503, [], "PUT", token=credentials["FORCAD_E2E_TEAM_ONE_TOKEN"]
 )
-expect(request, "/api/admin/game/resume/", data={}, method="POST")
+expect(request, "/api/v1/admin/game/resume/", data={}, method="POST")
 
 flag = ""
 round_time = int(query("SELECT round_time FROM GameConfig WHERE id=1;"))
@@ -235,7 +235,7 @@ address = urllib.parse.urlsplit(origin)
 connection = http.client.HTTPConnection(address.hostname, address.port, timeout=5)
 connection.request(
     "GET",
-    "/api/events/ws",
+    "/api/v1/events/ws",
     headers={
         "Connection": "Upgrade",
         "Upgrade": "websocket",
@@ -249,7 +249,7 @@ assert response.status == 101, "native WebSocket upgrade failed through nginx"
 connection.close()
 
 status, _ = request(
-    "/api/admin/game/finish/",
+    "/api/v1/admin/game/finish/",
     {"confirm": True, "generation": current_generation()},
     "POST",
 )
@@ -257,10 +257,10 @@ assert status == 200, "final did not finish"
 assert (
     request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410
 ), "finished game accepts flags"
-expect(request, "/api/admin/logout/", data={}, method="POST")
+expect(request, "/api/v1/admin/logout/", data={}, method="POST")
 csrf_token = ""
-expect(request, "/api/admin/status/", 403)
-expect(request, "/api/admin/logout/", 403, {}, "POST")
+expect(request, "/api/v1/admin/status/", 403)
+expect(request, "/api/v1/admin/logout/", 403, {}, "POST")
 print(
     "Deployment checks passed: public reads, admin CRUD/auth/CSRF/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics."
 )

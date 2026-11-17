@@ -38,7 +38,7 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 // Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
 // cross-origin browser requests. Responses are Cache-Control no-store.
 //
-// POST /api/admin/login/
+// POST /api/v1/admin/login/
 func (s *Server) handleAdminLoginRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -52,7 +52,7 @@ func (s *Server) handleAdminLoginRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("adminLogin"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/login/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/login/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -190,7 +190,7 @@ func (s *Server) handleAdminLoginRequest(
 //
 // Ends the authenticated session. Requires its X-CSRF-Token header.
 //
-// POST /api/admin/logout/
+// POST /api/v1/admin/logout/
 func (s *Server) handleAdminLogoutRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -204,7 +204,7 @@ func (s *Server) handleAdminLogoutRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("adminLogout"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/logout/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/logout/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -371,7 +371,7 @@ func (s *Server) handleAdminLogoutRequest(
 //
 // Start_final and finish require confirm=true. generation is an optional optimistic concurrency check.
 //
-// POST /api/admin/game/{action}/
+// POST /api/v1/admin/game/{action}/
 func (s *Server) handleChangeAdminGameStateRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -385,7 +385,7 @@ func (s *Server) handleChangeAdminGameStateRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("changeAdminGameState"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/game/{action}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/game/{action}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -582,7 +582,7 @@ func (s *Server) handleChangeAdminGameStateRequest(
 //
 // Publish an organizer announcement.
 //
-// POST /api/admin/events/
+// POST /api/v1/admin/events/
 func (s *Server) handleCreateAdminEventRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -596,7 +596,7 @@ func (s *Server) handleCreateAdminEventRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminEvent"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/events/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/events/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -778,7 +778,7 @@ func (s *Server) handleCreateAdminEventRequest(
 //
 // Create a task.
 //
-// POST /api/admin/tasks/
+// POST /api/v1/admin/tasks/
 func (s *Server) handleCreateAdminTaskRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -792,7 +792,7 @@ func (s *Server) handleCreateAdminTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTask"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/tasks/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/tasks/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -974,7 +974,7 @@ func (s *Server) handleCreateAdminTaskRequest(
 //
 // The server generates the team token and ignores any supplied token value.
 //
-// POST /api/admin/teams/
+// POST /api/v1/admin/teams/
 func (s *Server) handleCreateAdminTeamRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -988,7 +988,7 @@ func (s *Server) handleCreateAdminTeamRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTeam"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/teams/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teams/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -1170,7 +1170,7 @@ func (s *Server) handleCreateAdminTeamRequest(
 //
 // The route is registered but has no create handler and returns 404.
 //
-// POST /api/admin/teamtasks/
+// POST /api/v1/admin/teamtasks/
 func (s *Server) handleCreateAdminTeamTaskRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -1184,7 +1184,7 @@ func (s *Server) handleCreateAdminTeamTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createAdminTeamTask"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/api/admin/teamtasks/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teamtasks/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -1351,7 +1351,7 @@ func (s *Server) handleCreateAdminTeamTaskRequest(
 //
 // Deactivate a task.
 //
-// DELETE /api/admin/tasks/{task_id}/
+// DELETE /api/v1/admin/tasks/{task_id}/
 func (s *Server) handleDeleteAdminTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -1365,7 +1365,7 @@ func (s *Server) handleDeleteAdminTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTask"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.HTTPRouteKey.String("/api/admin/tasks/{task_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/tasks/{task_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -1547,7 +1547,7 @@ func (s *Server) handleDeleteAdminTaskRequest(
 //
 // Deactivate a team.
 //
-// DELETE /api/admin/teams/{team_id}/
+// DELETE /api/v1/admin/teams/{team_id}/
 func (s *Server) handleDeleteAdminTeamRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -1561,7 +1561,7 @@ func (s *Server) handleDeleteAdminTeamRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTeam"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.HTTPRouteKey.String("/api/admin/teams/{team_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teams/{team_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -1743,7 +1743,7 @@ func (s *Server) handleDeleteAdminTeamRequest(
 //
 // The route is registered but has no delete handler and returns 404.
 //
-// DELETE /api/admin/teamtasks/{teamtask_id}/
+// DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 func (s *Server) handleDeleteAdminTeamTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -1757,7 +1757,7 @@ func (s *Server) handleDeleteAdminTeamTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("deleteAdminTeamTask"),
 		semconv.HTTPRequestMethodKey.String("DELETE"),
-		semconv.HTTPRouteKey.String("/api/admin/teamtasks/{teamtask_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teamtasks/{teamtask_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -1939,7 +1939,7 @@ func (s *Server) handleDeleteAdminTeamTaskRequest(
 //
 // Check the administration API service.
 //
-// GET /api/admin/health/
+// GET /api/v1/admin/health/
 func (s *Server) handleGetAdminHealthRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -1953,7 +1953,7 @@ func (s *Server) handleGetAdminHealthRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminHealth"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/health/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/health/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2072,7 +2072,7 @@ func (s *Server) handleGetAdminHealthRequest(
 //
 // Read administration API Prometheus metrics.
 //
-// GET /api/admin/metrics
+// GET /api/v1/admin/metrics
 func (s *Server) handleGetAdminMetricsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -2086,7 +2086,7 @@ func (s *Server) handleGetAdminMetricsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminMetrics"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/metrics"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/metrics"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2206,7 +2206,7 @@ func (s *Server) handleGetAdminMetricsRequest(
 // Returns the session-bound CSRF token for administrative mutations. Responses are Cache-Control
 // no-store.
 //
-// GET /api/admin/status/
+// GET /api/v1/admin/status/
 func (s *Server) handleGetAdminSessionStatusRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -2220,7 +2220,7 @@ func (s *Server) handleGetAdminSessionStatusRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminSessionStatus"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/status/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/status/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2387,7 +2387,7 @@ func (s *Server) handleGetAdminSessionStatusRequest(
 //
 // Get one task, including administration fields.
 //
-// GET /api/admin/tasks/{task_id}/
+// GET /api/v1/admin/tasks/{task_id}/
 func (s *Server) handleGetAdminTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -2401,7 +2401,7 @@ func (s *Server) handleGetAdminTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTask"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/tasks/{task_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/tasks/{task_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2583,7 +2583,7 @@ func (s *Server) handleGetAdminTaskRequest(
 //
 // List all tasks, including inactive tasks.
 //
-// GET /api/admin/tasks/
+// GET /api/v1/admin/tasks/
 func (s *Server) handleGetAdminTasksRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -2597,7 +2597,7 @@ func (s *Server) handleGetAdminTasksRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTasks"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/tasks/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/tasks/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2764,7 +2764,7 @@ func (s *Server) handleGetAdminTasksRequest(
 //
 // Get one team, including administration fields.
 //
-// GET /api/admin/teams/{team_id}/
+// GET /api/v1/admin/teams/{team_id}/
 func (s *Server) handleGetAdminTeamRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -2778,7 +2778,7 @@ func (s *Server) handleGetAdminTeamRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeam"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/teams/{team_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teams/{team_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -2960,7 +2960,7 @@ func (s *Server) handleGetAdminTeamRequest(
 //
 // The route is registered but has no retrieve handler and returns 404.
 //
-// GET /api/admin/teamtasks/{teamtask_id}/
+// GET /api/v1/admin/teamtasks/{teamtask_id}/
 func (s *Server) handleGetAdminTeamTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -2974,7 +2974,7 @@ func (s *Server) handleGetAdminTeamTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeamTask"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/teamtasks/{teamtask_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teamtasks/{teamtask_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3156,7 +3156,7 @@ func (s *Server) handleGetAdminTeamTaskRequest(
 //
 // Get checker history for a team and task pair.
 //
-// GET /api/admin/teamtasks/
+// GET /api/v1/admin/teamtasks/
 func (s *Server) handleGetAdminTeamTaskHistoryRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -3170,7 +3170,7 @@ func (s *Server) handleGetAdminTeamTaskHistoryRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeamTaskHistory"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/teamtasks/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teamtasks/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3356,7 +3356,7 @@ func (s *Server) handleGetAdminTeamTaskHistoryRequest(
 //
 // List all teams, including inactive teams.
 //
-// GET /api/admin/teams/
+// GET /api/v1/admin/teams/
 func (s *Server) handleGetAdminTeamsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -3370,7 +3370,7 @@ func (s *Server) handleGetAdminTeamsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getAdminTeams"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/admin/teams/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teams/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3537,7 +3537,7 @@ func (s *Server) handleGetAdminTeamsRequest(
 //
 // Get public flag data grouped by task and team address.
 //
-// GET /api/client/attack_data/
+// GET /api/v1/client/attack_data/
 func (s *Server) handleGetClientAttackDataRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -3551,7 +3551,7 @@ func (s *Server) handleGetClientAttackDataRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientAttackData"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/attack_data/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/attack_data/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3683,7 +3683,7 @@ func (s *Server) handleGetClientAttackDataRequest(
 //
 // Get public checker results for one team and service.
 //
-// GET /api/client/teams/{team_id}/tasks/{task_id}/logs/
+// GET /api/v1/client/teams/{team_id}/tasks/{task_id}/logs/
 func (s *Server) handleGetClientCheckerLogsRequest(
 	args [2]string,
 	argsEscaped bool,
@@ -3697,7 +3697,7 @@ func (s *Server) handleGetClientCheckerLogsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientCheckerLogs"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/teams/{team_id}/tasks/{task_id}/logs/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/teams/{team_id}/tasks/{task_id}/logs/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3847,7 +3847,7 @@ func (s *Server) handleGetClientCheckerLogsRequest(
 //
 // Get the current game configuration.
 //
-// GET /api/client/config/
+// GET /api/v1/client/config/
 func (s *Server) handleGetClientConfigRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -3861,7 +3861,7 @@ func (s *Server) handleGetClientConfigRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientConfig"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/config/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/config/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -3980,7 +3980,7 @@ func (s *Server) handleGetClientConfigRequest(
 //
 // Get the CTFtime standings.
 //
-// GET /api/client/ctftime/
+// GET /api/v1/client/ctftime/
 func (s *Server) handleGetClientCtftimeScoreboardRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -3994,7 +3994,7 @@ func (s *Server) handleGetClientCtftimeScoreboardRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientCtftimeScoreboard"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/ctftime/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/ctftime/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4113,7 +4113,7 @@ func (s *Server) handleGetClientCtftimeScoreboardRequest(
 //
 // Read recent public events or events after a cursor.
 //
-// GET /api/client/events/
+// GET /api/v1/client/events/
 func (s *Server) handleGetClientEventsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4127,7 +4127,7 @@ func (s *Server) handleGetClientEventsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientEvents"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/events/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/events/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4265,7 +4265,7 @@ func (s *Server) handleGetClientEventsRequest(
 //
 // Check the client API service.
 //
-// GET /api/client/health/
+// GET /api/v1/client/health/
 func (s *Server) handleGetClientHealthRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4279,7 +4279,7 @@ func (s *Server) handleGetClientHealthRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientHealth"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/health/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/health/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4398,7 +4398,7 @@ func (s *Server) handleGetClientHealthRequest(
 //
 // Read client API Prometheus metrics.
 //
-// GET /api/client/metrics
+// GET /api/v1/client/metrics
 func (s *Server) handleGetClientMetricsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4412,7 +4412,7 @@ func (s *Server) handleGetClientMetricsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientMetrics"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/metrics"),
+		semconv.HTTPRouteKey.String("/api/v1/client/metrics"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4531,7 +4531,7 @@ func (s *Server) handleGetClientMetricsRequest(
 //
 // Get the current runtime status.
 //
-// GET /api/client/status/
+// GET /api/v1/client/status/
 func (s *Server) handleGetClientStatusRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4545,7 +4545,7 @@ func (s *Server) handleGetClientStatusRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientStatus"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/status/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/status/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4664,7 +4664,7 @@ func (s *Server) handleGetClientStatusRequest(
 //
 // List tasks visible to participants.
 //
-// GET /api/client/tasks/
+// GET /api/v1/client/tasks/
 func (s *Server) handleGetClientTasksRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4678,7 +4678,7 @@ func (s *Server) handleGetClientTasksRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTasks"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/tasks/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/tasks/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4797,7 +4797,7 @@ func (s *Server) handleGetClientTasksRequest(
 //
 // Get participant-visible task history for a team.
 //
-// GET /api/client/teams/{team_id}/
+// GET /api/v1/client/teams/{team_id}/
 func (s *Server) handleGetClientTeamHistoryRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -4811,7 +4811,7 @@ func (s *Server) handleGetClientTeamHistoryRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTeamHistory"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/teams/{team_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/teams/{team_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -4949,7 +4949,7 @@ func (s *Server) handleGetClientTeamHistoryRequest(
 //
 // List teams visible to participants.
 //
-// GET /api/client/teams/
+// GET /api/v1/client/teams/
 func (s *Server) handleGetClientTeamsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -4963,7 +4963,7 @@ func (s *Server) handleGetClientTeamsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getClientTeams"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/teams/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/teams/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -5082,7 +5082,7 @@ func (s *Server) handleGetClientTeamsRequest(
 //
 // Check the event service.
 //
-// GET /api/events/health/
+// GET /api/v1/events/health/
 func (s *Server) handleGetEventsHealthRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -5096,7 +5096,7 @@ func (s *Server) handleGetEventsHealthRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getEventsHealth"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/events/health/"),
+		semconv.HTTPRouteKey.String("/api/v1/events/health/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -5348,7 +5348,7 @@ func (s *Server) handleGetFlagReceiverHealthRequest(
 //
 // Read flag receiver Prometheus metrics.
 //
-// GET /api/http-receiver/metrics
+// GET /api/v1/http-receiver/metrics
 func (s *Server) handleGetReceiverMetricsRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -5362,7 +5362,7 @@ func (s *Server) handleGetReceiverMetricsRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getReceiverMetrics"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/http-receiver/metrics"),
+		semconv.HTTPRouteKey.String("/api/v1/http-receiver/metrics"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -5481,7 +5481,7 @@ func (s *Server) handleGetReceiverMetricsRequest(
 //
 // Used to initialize and resynchronize clients after event-stream reconnects.
 //
-// GET /api/client/scoreboard/
+// GET /api/v1/client/scoreboard/
 func (s *Server) handleGetScoreboardRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -5495,7 +5495,7 @@ func (s *Server) handleGetScoreboardRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getScoreboard"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/client/scoreboard/"),
+		semconv.HTTPRouteKey.String("/api/v1/client/scoreboard/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -5605,7 +5605,7 @@ func (s *Server) handleGetScoreboardRequest(
 // Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
 // public and contains only participant-visible scoreboard updates and flag-steal notifications.
 //
-// GET /api/events/ws
+// GET /api/v1/events/ws
 func (s *Server) handleOpenEventStreamRequest(
 	args [0]string,
 	argsEscaped bool,
@@ -5619,7 +5619,7 @@ func (s *Server) handleOpenEventStreamRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("openEventStream"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/api/events/ws"),
+		semconv.HTTPRouteKey.String("/api/v1/events/ws"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -5934,7 +5934,7 @@ func (s *Server) handleSubmitFlagsRequest(
 //
 // Replace a task's editable fields.
 //
-// PUT /api/admin/tasks/{task_id}/
+// PUT /api/v1/admin/tasks/{task_id}/
 func (s *Server) handleUpdateAdminTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -5948,7 +5948,7 @@ func (s *Server) handleUpdateAdminTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTask"),
 		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.HTTPRouteKey.String("/api/admin/tasks/{task_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/tasks/{task_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -6145,7 +6145,7 @@ func (s *Server) handleUpdateAdminTaskRequest(
 //
 // Replace a team's editable fields.
 //
-// PUT /api/admin/teams/{team_id}/
+// PUT /api/v1/admin/teams/{team_id}/
 func (s *Server) handleUpdateAdminTeamRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -6159,7 +6159,7 @@ func (s *Server) handleUpdateAdminTeamRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTeam"),
 		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.HTTPRouteKey.String("/api/admin/teams/{team_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teams/{team_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
@@ -6356,7 +6356,7 @@ func (s *Server) handleUpdateAdminTeamRequest(
 //
 // The route is registered but has no update handler and returns 404.
 //
-// PUT /api/admin/teamtasks/{teamtask_id}/
+// PUT /api/v1/admin/teamtasks/{teamtask_id}/
 func (s *Server) handleUpdateAdminTeamTaskRequest(
 	args [1]string,
 	argsEscaped bool,
@@ -6370,7 +6370,7 @@ func (s *Server) handleUpdateAdminTeamTaskRequest(
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("updateAdminTeamTask"),
 		semconv.HTTPRequestMethodKey.String("PUT"),
-		semconv.HTTPRouteKey.String("/api/admin/teamtasks/{teamtask_id}/"),
+		semconv.HTTPRouteKey.String("/api/v1/admin/teamtasks/{teamtask_id}/"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)

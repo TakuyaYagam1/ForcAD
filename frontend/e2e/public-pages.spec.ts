@@ -9,7 +9,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
   try {
     const scoreboardResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/scoreboard/" && response.request().method() === "GET";
     });
     expectDocumentSecurity(await page.goto("/teams"));
     expect((await scoreboardResponse).status()).toBe(200);
@@ -36,7 +36,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
 
     const historyResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === `/api/client/teams/${teamId}/` && response.request().method() === "GET";
+      return url.pathname === `/api/v1/client/teams/${teamId}/` && response.request().method() === "GET";
     });
     await page.goto(`/team/${teamId}`);
     expect((await historyResponse).status()).toBe(200);
@@ -57,7 +57,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
 
     const directReloadHistory = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === `/api/client/teams/${teamId}/` && response.request().method() === "GET";
+      return url.pathname === `/api/v1/client/teams/${teamId}/` && response.request().method() === "GET";
     });
     await page.reload();
     expect((await directReloadHistory).status()).toBe(200);
@@ -68,7 +68,7 @@ test("public team list, direct profile reload, history, and scoreboard load", as
 
     const rootScoreboard = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/scoreboard/" && response.request().method() === "GET";
     });
     await page.goto("/");
     expect((await rootScoreboard).status()).toBe(200);
@@ -391,7 +391,7 @@ test("service dialog keeps its geometry while checker logs load", async ({ brows
     releaseLogs = resolve;
   });
   try {
-    await page.route(/\/api\/client\/teams\/[^/]+\/tasks\/[^/]+\/logs\/?(?:\?.*)?$/, async (route) => {
+    await page.route(/\/api\/v1\/client\/teams\/[^/]+\/tasks\/[^/]+\/logs\/?(?:\?.*)?$/, async (route) => {
       await gate;
       await route.continue();
     });
