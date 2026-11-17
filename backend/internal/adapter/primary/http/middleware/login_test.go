@@ -11,7 +11,11 @@ type loginBudget struct {
 	used map[string]bool
 }
 
-func (l *loginBudget) Allow(_ context.Context, key string, _, _, _ int) (bool, error) {
+func (l *loginBudget) Allow(
+	_ context.Context,
+	key string,
+	_, _, _ int,
+) (bool, error) {
 	if l.used[key] {
 		return false, nil
 	}
@@ -20,7 +24,9 @@ func (l *loginBudget) Allow(_ context.Context, key string, _, _, _ int) (bool, e
 }
 
 func TestLoginLimitAtTrustedIngressDoesNotShareProxyBucket(t *testing.T) {
-	budget := &loginBudget{used: make(map[string]bool)}
+	budget := &loginBudget{
+		used: make(map[string]bool),
+	}
 	handler := LoginLimit(budget, nil, nil, true)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -37,7 +43,9 @@ func TestLoginLimitAtTrustedIngressDoesNotShareProxyBucket(t *testing.T) {
 }
 
 func TestLoginLimitDirectIgnoresSpoofedForwardedFor(t *testing.T) {
-	budget := &loginBudget{used: make(map[string]bool)}
+	budget := &loginBudget{
+		used: make(map[string]bool),
+	}
 	handler := LoginLimit(budget, nil, nil, false)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
