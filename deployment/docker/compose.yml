@@ -1,0 +1,378 @@
+name: "${COMPOSE_PROJECT_NAME:-forcad}"
+
+x-memory: &memory
+  mem_reservation: "${FORCAD_SERVICE_MEMORY_RESERVATION:-1g}"
+  mem_limit: "${FORCAD_SERVICE_MEMORY:-0}"
+  logging:
+    driver: local
+    options: {max-size: "10m", max-file: "3", mode: non-blocking, max-buffer-size: "4m"}
+
+x-service: &service
+  <<: *memory
+  build:
+    context: ../..
+    dockerfile: backend/Dockerfile
+    target: runtime
+  env_file:
+    - path: ../../config/runtime/postgres_runtime.env
+      format: raw
+    - path: ../../config/runtime/redis_environment.env
+      format: raw
+    - path: ../../config/runtime/nats_environment.env
+      format: raw
+  restart: on-failure
+  pids_limit: ${FORCAD_SERVICE_PIDS:-512}
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-runtime-settings: &runtime-settings
+  FORCAD_CONFIG: /run/forcad-config/config.yml
+  DATABASE_POOLER_ADDR: pgbouncer:6432
+  FORCAD_API_HTTP_MAX_INFLIGHT: "${FORCAD_API_HTTP_MAX_INFLIGHT:-256}"
+  FORCAD_RECEIVER_HTTP_MAX_INFLIGHT: "${FORCAD_RECEIVER_HTTP_MAX_INFLIGHT:-128}"
+  FORCAD_API_DATABASE_MAX_CONNS: "${FORCAD_API_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-32}}"
+  FORCAD_WORKER_DATABASE_MAX_CONNS: "${FORCAD_WORKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_TICKER_DATABASE_MAX_CONNS: "${FORCAD_TICKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-8}}"
+  METRICS_ADDR: 127.0.0.1:9090
+  PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
+  TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+  CHECKER_JOB_GRACE: "${CHECKER_JOB_GRACE:-30s}"
+  CHECKER_WORKFLOW_TIMEOUT: "${CHECKER_WORKFLOW_TIMEOUT:-30m}"
+  WORKER_CONCURRENCY: "${FORCAD_WORKER_CONCURRENCY:-8}"
+  FORCAD_CHECKER_MEMORY_LIMIT_MB: "${FORCAD_CHECKER_MEMORY_LIMIT_MB:-1024}"
+  FORCAD_CHECKER_OUTPUT_LIMIT_BYTES: "${FORCAD_CHECKER_OUTPUT_LIMIT_BYTES:-1048576}"
+  FLAG_RATE: "${FLAG_RATE:-200}"
+  FLAG_BURST: "${FLAG_BURST:-400}"
+  NATS_STREAM: "${NATS_STREAM:-FORCAD_CHECKERS}"
+  NATS_SUBJECT: "${NATS_SUBJECT:-forcad.checker.jobs}"
+  NATS_CONSUMER: "${NATS_CONSUMER:-forcad-workers}"
+  NATS_MAX_ACK_PENDING: "${NATS_MAX_ACK_PENDING:-1024}"
+
+x-app-dependencies: &app-dependencies
+  pgbouncer:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  nats:
+    condition: service_healthy
+  initializer:
+    condition: service_completed_successfully
+
+x-app-service: &app-service
+  <<: *service
+  depends_on: *app-dependencies
+  volumes:
+    - forcad-config:/run/forcad-config:ro
+
+x-worker: &worker-service
+  <<: *app-service
+  build:
+    context: ../..
+    dockerfile: backend/Dockerfile
+    target: worker
+  volumes:
+    - ../../checkers:/checkers:ro
+    - forcad-config:/run/forcad-config:ro
+
+services:
+  api:
+    <<: *app-service
+    mem_reservation: "${FORCAD_API_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_API_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: api
+      DATABASE_MIN_CONNS: "${FORCAD_API_DATABASE_MIN_CONNS:-0}"
+      GOGC: "${FORCAD_API_GOGC:-100}"
+      GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-off}"
+    env_file:
+      - path: ../../config/runtime/admin.env
+        format: raw
+      - path: ../../config/runtime/postgres_runtime.env
+        format: raw
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
+      - path: ../../config/runtime/nats_environment.env
+        format: raw
+    deploy:
+      replicas: ${FORCAD_API_REPLICAS:-4}
+
+  receiver:
+    <<: *app-service
+    mem_reservation: "${FORCAD_RECEIVER_MEMORY_RESERVATION:-2g}"
+    mem_limit: "${FORCAD_RECEIVER_MEMORY:-0}"
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: receiver
+      GOMEMLIMIT: "${FORCAD_RECEIVER_GOMEMLIMIT:-off}"
+    deploy:
+      replicas: ${FORCAD_RECEIVER_REPLICAS:-2}
+
+  worker:
+    <<: *worker-service
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: worker
+      GOMEMLIMIT: "${FORCAD_WORKER_GOMEMLIMIT:-off}"
+    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
+    mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
+    pids_limit: ${FORCAD_WORKER_PIDS:-2048}
+    deploy:
+      replicas: ${FORCAD_WORKER_REPLICAS:-2}
+
+  ticker:
+    <<: *app-service
+    mem_reservation: "${FORCAD_TICKER_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_TICKER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: ticker
+    deploy:
+      replicas: ${FORCAD_TICKER_REPLICAS:-1}
+
+  initializer:
+    <<: *service
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: initializer
+    command: ["init"]
+    env_file:
+      - path: ../../config/runtime/admin.env
+        format: raw
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
+      - path: ../../config/runtime/nats_environment.env
+        format: raw
+    environment:
+      <<: *runtime-settings
+      FORCAD_ROLE: api
+      FORCAD_CONFIG: /run/forcad-config/config.yml
+      DATABASE_POOLER_ADDR: ""
+      FORCAD_REQUIRE_RUNTIME_DB: "1"
+    volumes:
+      - forcad-config:/run/forcad-config:ro
+    restart: "no"
+    depends_on:
+      config-loader:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  config-loader:
+    <<: *service
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/stage_config"]
+    command: []
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    volumes:
+      - ../../config/runtime/game.yml:/source/config.yml:ro
+      - forcad-config:/run/forcad-config
+    restart: "no"
+    healthcheck:
+      disable: true
+
+  nginx:
+    <<: *memory
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+      args:
+        DNS_RESOLVER: 127.0.0.11
+        VITE_BRAND_NAME: "${VITE_BRAND_NAME:-ForcAD}"
+        VITE_BRAND_LOGO: "${VITE_BRAND_LOGO:-/brand/forcad-mark.svg}"
+        VITE_BRAND_PRIMARY: "${VITE_BRAND_PRIMARY:-#E6E8EB}"
+        VITE_BRAND_ACCENT: "${VITE_BRAND_ACCENT:-#7898B3}"
+    ports:
+      - "${FORCAD_NGINX_BIND:-0.0.0.0}:${FORCAD_NGINX_HTTP_PORT:-8080}:8080"
+      - "${FORCAD_NGINX_BIND:-0.0.0.0}:${FORCAD_NGINX_HTTP_ALT_PORT:-80}:8080"
+    volumes:
+      - ../../public/teams:/var/www/front/team-logos:ro
+    environment:
+      PUBLIC_SCHEME: "${PUBLIC_SCHEME:-http}"
+      TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+    restart: on-failure
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      api:
+        condition: service_healthy
+      receiver:
+        condition: service_healthy
+
+  redis:
+    <<: *memory
+    mem_reservation: "${FORCAD_REDIS_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_REDIS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxclients 10000"]
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    restart: on-failure
+    sysctls:
+      net.core.somaxconn: 1024
+    env_file:
+      - path: ../../config/runtime/redis_environment.env
+        format: raw
+    ports:
+      - "127.0.0.1:${FORCAD_REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -qx PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nats:
+    <<: *memory
+    mem_reservation: "${FORCAD_NATS_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_NATS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    image: forcad_nats:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/nats/Dockerfile
+    restart: on-failure
+    env_file:
+      - path: ../../config/runtime/nats_environment.env
+        format: raw
+    volumes:
+      - forcad-nats:/data
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    ports:
+      - "127.0.0.1:${FORCAD_NATS_HOST_PORT:-4222}:4222"
+      - "127.0.0.1:${FORCAD_NATS_MONITOR_HOST_PORT:-8222}:8222"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:8222/healthz?js-enabled-only=true'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  pgbouncer:
+    <<: *memory
+    mem_reservation: "${FORCAD_PGBOUNCER_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_PGBOUNCER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    build:
+      context: ../..
+      dockerfile: deployment/docker/pgbouncer/Dockerfile
+    env_file:
+      - path: ../../config/runtime/postgres_runtime.env
+        format: raw
+    environment:
+      <<: *runtime-settings
+      FORCAD_API_REPLICAS: "${FORCAD_API_REPLICAS:-4}"
+      FORCAD_RECEIVER_REPLICAS: "${FORCAD_RECEIVER_REPLICAS:-2}"
+      FORCAD_WORKER_REPLICAS: "${FORCAD_WORKER_REPLICAS:-2}"
+      FORCAD_TICKER_REPLICAS: "${FORCAD_TICKER_REPLICAS:-1}"
+      PGBOUNCER_MAX_CLIENTS: "${PGBOUNCER_MAX_CLIENTS:-1024}"
+      PGBOUNCER_API_CLIENTS: "${PGBOUNCER_API_CLIENTS:-}"
+      PGBOUNCER_RECEIVER_CLIENTS: "${PGBOUNCER_RECEIVER_CLIENTS:-}"
+      PGBOUNCER_WORKER_CLIENTS: "${PGBOUNCER_WORKER_CLIENTS:-}"
+      PGBOUNCER_TICKER_CLIENTS: "${PGBOUNCER_TICKER_CLIENTS:-}"
+      PGBOUNCER_API_CONNECTIONS: "${PGBOUNCER_API_CONNECTIONS:-32}"
+      PGBOUNCER_API_MIN_CONNECTIONS: "${PGBOUNCER_API_MIN_CONNECTIONS:-0}"
+      PGBOUNCER_RECEIVER_CONNECTIONS: "${PGBOUNCER_RECEIVER_CONNECTIONS:-64}"
+      PGBOUNCER_WORKER_CONNECTIONS: "${PGBOUNCER_WORKER_CONNECTIONS:-32}"
+      PGBOUNCER_TICKER_CONNECTIONS: "${PGBOUNCER_TICKER_CONNECTIONS:-8}"
+    ports:
+      - "127.0.0.1:${FORCAD_PGBOUNCER_HOST_PORT:-6432}:6432"
+    read_only: true
+    tmpfs:
+      - /run/pgbouncer:uid=10001,gid=10001,mode=0700,size=1m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "PGPASSWORD=$$POSTGRES_PASSWORD psql -h 127.0.0.1 -p 6432 -U \"$$POSTGRES_USER\" -d forcad_ticker -X -Atc 'SELECT 1' | grep -qx 1"]
+      interval: 5s
+      timeout: 4s
+      retries: 10
+      start_period: 5s
+
+  postgres:
+    <<: *memory
+    mem_reservation: "${FORCAD_POSTGRES_MEMORY_RESERVATION:-1g}"
+    mem_limit: "${FORCAD_POSTGRES_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
+    shm_size: "${FORCAD_POSTGRES_SHM_SIZE:-64m}"
+    image: forcad_postgres:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/postgres/Dockerfile
+    volumes:
+      - ../../docker_volumes/postgres/data:/var/lib/postgresql
+    env_file:
+      - path: ../../config/runtime/postgres_environment.env
+        format: raw
+    restart: on-failure
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      postgres-data:
+        condition: service_completed_successfully
+    command:
+      - postgres
+      - --max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-500}
+      - --shared-buffers=${FORCAD_POSTGRES_SHARED_BUFFERS:-128MB}
+    ports:
+      - "127.0.0.1:${FORCAD_POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  postgres-data:
+    <<: *memory
+    image: forcad_postgres:local
+    build:
+      context: ../..
+      dockerfile: deployment/docker/postgres/Dockerfile
+    user: "0:0"
+    entrypoint: ["/usr/local/bin/prepare-data"]
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ../../docker_volumes/postgres/data:/var/lib/postgresql
+    restart: "no"
+
+volumes:
+  forcad-nats:
+  forcad-config: {}

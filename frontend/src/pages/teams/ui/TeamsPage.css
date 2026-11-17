@@ -1,0 +1,31 @@
+.teams-test-target { margin: 28px 0; padding-bottom: 28px; border-bottom: 1px solid var(--border-default); }
+.teams-test-target .teams-catalogue { margin-top: 22px; }
+.teams-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding: 22px 0 33px; color: var(--text-muted); }
+.teams-catalogue { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 44px 22px; }
+.team-catalogue-card { display: block; min-width: 0; border-right: 1px solid var(--border-default); padding-right: 22px; }
+.team-catalogue-card:nth-child(3n) { border-right: 0; padding-right: 0; }
+.team-catalogue-art { position: relative; aspect-ratio: 1.45; background: var(--surface-raised); display: flex; align-items: center; justify-content: center; }
+.team-catalogue-card[data-rank="1"] .team-catalogue-art { outline: 2px solid #c9a64b; outline-offset: -2px; }
+.team-catalogue-card[data-rank="2"] .team-catalogue-art { outline: 2px solid #b8c2cc; outline-offset: -2px; }
+.team-catalogue-card[data-rank="3"] .team-catalogue-art { outline: 2px solid #b78355; outline-offset: -2px; }
+.team-catalogue-art .team-avatar--large { background: transparent; width: 105px; height: 105px; }
+.team-catalogue-art .team-avatar--large > span { font-size: 40px; font-weight: 100; }
+.team-catalogue-art > svg { position: absolute; right: 15px; bottom: 15px; }
+.team-catalogue-rank { position: absolute; left: 15px; top: 12px; font-size: 19px; font-weight: 100; }
+.team-catalogue-caption { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; margin-top: 15px; }
+.team-catalogue-caption h2 { font-size: 19px; font-weight: 300; line-height: 1.15; overflow-wrap: anywhere; }
+.team-catalogue-caption .score-value { font-size: 19px; }
+.team-catalogue-caption .team-ip { margin-top: 7px; }
+.team-catalogue-profile { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; margin-top: 12px; }
+@media (hover: hover) and (pointer: fine) { .team-catalogue-card:hover .team-catalogue-profile { text-decoration: underline; } }
+@media (max-width: 900px) {
+  .teams-catalogue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .team-catalogue-card:nth-child(3n) { border-right: 1px solid var(--border-default); padding-right: 22px; }
+  .team-catalogue-card:nth-child(2n) { border-right: 0; padding-right: 0; }
+}
+@media (max-width: 600px) {
+  .teams-toolbar { flex-direction: column; align-items: stretch; }
+  .teams-catalogue { grid-template-columns: 1fr; gap: 33px; }
+  .team-catalogue-card, .team-catalogue-card:nth-child(3n) { border-right: 0; padding-right: 0; }
+  .team-catalogue-art { aspect-ratio: 1.6; }
+}

@@ -1,0 +1,24 @@
+post:
+  operationId: createAdminEvent
+  tags:
+  - admin
+  summary: Publish an organizer announcement.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AnnouncementCreate"
+  responses:
+    '201':
+      description: Announcement saved.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/PublicEvent"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"

@@ -1,0 +1,64 @@
+version: 2
+
+multi-ecosystem-groups:
+  dependencies:
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Moscow
+
+updates:
+  - package-ecosystem: gomod
+    directory: /backend
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: npm
+    directories:
+      - /api
+      - /frontend
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: pip
+    directories:
+      - /api/scripts
+      - /backend
+      - /checkers
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /backend/integration_test/fixtures/network
+      - /backend/load_test/test-data/services
+      - /deployment/demo
+      - /deployment/docker/pgbouncer
+      - /deployment/docker/postgres
+      - /deployment/docker/nats
+      - /frontend
+      - /infrastracture/tests
+    ignore:
+      # BuildKit supplies this local build context; it is not a registry image.
+      - dependency-name: app
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /backend/load_test
+      - /deployment/docker
+    ignore:
+      # These images are built locally by ForcAD.
+      - dependency-name: forcad_postgres
+      - dependency-name: forcad_nats
+      - dependency-name: forcad-demo
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: dependencies

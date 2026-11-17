@@ -1,0 +1,25 @@
+get:
+  operationId: getClientEvents
+  tags:
+  - client
+  summary: Read recent public events or events after a cursor.
+  security: []
+  parameters:
+  - name: after
+    in: query
+    description: Stable event ID returned by an earlier response.
+    schema:
+      type: string
+      minLength: 1
+      maxLength: 100
+  responses:
+    '200':
+      description: Up to 100 public events. Recent events are newest first; events after a cursor are oldest first.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/PublicEvent"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"

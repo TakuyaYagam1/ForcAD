@@ -1,0 +1,13 @@
+get:
+  operationId: getClientStatus
+  tags:
+  - client
+  summary: Get the current runtime status.
+  security: []
+  responses:
+    '200':
+      description: Current runtime state.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/GameRuntimeStatus"

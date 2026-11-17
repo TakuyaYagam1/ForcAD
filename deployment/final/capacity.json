@@ -1,0 +1,90 @@
+{
+  "assumptions": {
+    "teams": 28,
+    "members": 196,
+    "services": 3,
+    "puts_per_team": 40,
+    "gets_per_service": 1,
+    "round_seconds": 60,
+    "rounds": 300,
+    "flag_lifetime": 5
+  },
+  "replicas": {
+    "api": 4,
+    "receiver": 4,
+    "worker": 20,
+    "ticker": 1
+  },
+  "database_clients_by_role": {
+    "api": 64,
+    "receiver": 64,
+    "worker": 80,
+    "ticker": 8
+  },
+  "database_clients_total": 216,
+  "pooler_client_limits_by_role": {
+    "api": 256,
+    "receiver": 256,
+    "worker": 256,
+    "ticker": 256
+  },
+  "pooler_global_client_limit": 1024,
+  "pooler_servers_by_role": {
+    "api": 32,
+    "receiver": 64,
+    "worker": 32,
+    "ticker": 8
+  },
+  "pooler_servers_total": 136,
+  "postgres_connections": 200,
+  "redis_client_ceiling": 928,
+  "checker_action_slots": 160,
+  "actions_per_round_upper_bound": 1288,
+  "slot_work_seconds_by_mean_action_seconds": {
+    "1": 8.05,
+    "2": 16.1,
+    "3": 24.15,
+    "5": 40.25,
+    "10": 80.5,
+    "20": 161.0
+  },
+  "max_mean_action_seconds_at_half_slot_utilization": 3.73,
+  "http_inflight_by_role": {
+    "api": 1024,
+    "receiver": 512
+  },
+  "memory_reservation_gib_by_service": {
+    "api": 2.0,
+    "grafana": 0.5,
+    "nginx": 0.125,
+    "pgbouncer": 0.125,
+    "postgres": 4.0,
+    "prometheus": 2.0,
+    "nats": 0.5,
+    "receiver": 2.0,
+    "redis": 0.5,
+    "ticker": 0.125,
+    "worker": 15.0
+  },
+  "memory_reservation_total_gib": 26.875,
+  "hard_memory_gib_by_service": {
+    "api": null,
+    "grafana": null,
+    "nginx": null,
+    "pgbouncer": null,
+    "postgres": null,
+    "prometheus": null,
+    "nats": null,
+    "receiver": null,
+    "redis": null,
+    "ticker": null,
+    "worker": null
+  },
+  "hard_memory_total_gib": null,
+  "host_headroom_gib": null,
+  "flags_created": 336000,
+  "flags_live": 5600,
+  "max_unique_steals": 9072000,
+  "errors": [],
+  "note": "Soft reservations are not preallocated or guaranteed RAM. Null hard limits mean unlimited memory, not zero usage; host headroom requires measurement. Slot work is a lower bound, not measured round duration."
+}

@@ -1,0 +1,2 @@
+.page-hero--compact { min-height: 170px; }
+@media (max-width: 700px) { .page-hero--compact { min-height: 0; } }

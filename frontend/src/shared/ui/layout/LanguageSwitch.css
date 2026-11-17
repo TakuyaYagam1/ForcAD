@@ -1,0 +1,4 @@
+.language-switch { display: inline-flex; flex-shrink: 0; border: 1px solid var(--border-default); }
+.language-switch button { padding: 7px 9px; color: var(--text-muted); font-size: 13px; line-height: 1.4; font-weight: 300; }
+.language-switch button[aria-pressed="true"] { background: var(--control-background); color: var(--control-foreground); }
+.language-switch button:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }

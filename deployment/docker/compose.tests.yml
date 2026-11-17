@@ -1,0 +1,35 @@
+name: forcad
+
+services:
+  api:
+    restart: "no"
+
+  receiver:
+    restart: "no"
+
+  worker:
+    restart: "no"
+
+  ticker:
+    restart: "no"
+
+  initializer:
+    restart: "no"
+
+  config-loader:
+    restart: "no"
+
+  nginx:
+    restart: "no"
+
+  redis:
+    restart: "no"
+
+  postgres:
+    restart: "no"
+
+  postgres-data:
+    restart: "no"
+
+  nats:
+    restart: "no"

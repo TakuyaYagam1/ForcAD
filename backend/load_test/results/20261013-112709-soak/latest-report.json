@@ -1,0 +1,171 @@
+{
+  "started": "2026-10-13T11:27:53.768079465Z",
+  "finished": "2026-10-13T16:37:13.487675662Z",
+  "profile": "soak",
+  "diagnostics": true,
+  "database_storage": "disk",
+  "container_logging": "default",
+  "go_version": "go1.27.2",
+  "generator_cpus": 32,
+  "gomaxprocs": 32,
+  "docker_host": {
+    "cpus": 32,
+    "memory_bytes": 29422698496,
+    "storage_driver": "overlayfs",
+    "logging_driver": "json-file",
+    "security_options": [
+      "name=seccomp,profile=builtin",
+      "name=cgroupns"
+    ]
+  },
+  "stages": [
+    {
+      "name": "warmup",
+      "started": "2026-10-13T11:27:59.297562194Z",
+      "finished": "2026-10-13T11:28:09.309648136Z",
+      "seconds": 10,
+      "reads": {
+        "offered_rps": 50,
+        "achieved_rps": 49.99739534069207,
+        "requests": 500,
+        "statuses": {
+          "200": 500
+        },
+        "p95_ms": 2.718322,
+        "p99_ms": 5.21318,
+        "generator_lag_p99_ms": 1.118563,
+        "generator_lag_p999_ms": 3.148597,
+        "generator_lag_max_ms": 3.148597,
+        "generator_max_starts_fixed_1ms": 1,
+        "generator_max_starts_fixed_10ms": 1,
+        "generator_valid": true,
+        "slo_passed": true,
+        "failures": 0
+      },
+      "flags": {
+        "offered_rps": 20,
+        "achieved_rps": 19.99892528575364,
+        "requests": 200,
+        "statuses": {
+          "200": 200
+        },
+        "p95_ms": 11.065852,
+        "p99_ms": 12.923859,
+        "generator_lag_p99_ms": 1.112754,
+        "generator_lag_p999_ms": 1.190138,
+        "generator_lag_max_ms": 1.190138,
+        "generator_max_starts_fixed_1ms": 1,
+        "generator_max_starts_fixed_10ms": 1,
+        "generator_valid": true,
+        "slo_passed": true,
+        "failures": 0
+      },
+      "accepted": 1508,
+      "committed": 1508,
+      "integrity_passed": true
+    },
+    {
+      "name": "steady-01",
+      "started": "2026-10-13T11:28:11.507646043Z",
+      "finished": "2026-10-13T16:28:32.175476156Z",
+      "seconds": 18000,
+      "reads": {
+        "offered_rps": 10000,
+        "achieved_rps": 9999.999881650001,
+        "requests": 180000000,
+        "statuses": {
+          "200": 179997347,
+          "503": 2653
+        },
+        "rejections": {
+          "capacity": 2653
+        },
+        "p95_ms": 6.807755,
+        "p99_ms": 11.184407,
+        "generator_lag_p99_ms": 2.747141,
+        "generator_lag_p999_ms": 6.626964,
+        "generator_lag_max_ms": 126.137825,
+        "generator_max_starts_fixed_1ms": 323,
+        "generator_max_starts_fixed_10ms": 489,
+        "generator_valid": true,
+        "slo_passed": false,
+        "failures": 2653,
+        "first_error": "load.validateRead - HTTP 503: 503 Service Unavailable"
+      },
+      "flags": {
+        "offered_rps": 40,
+        "achieved_rps": 39.99999926072446,
+        "requests": 720000,
+        "statuses": {
+          "200": 720000
+        },
+        "p95_ms": 23.247292,
+        "p99_ms": 33.285496,
+        "generator_lag_p99_ms": 2.991554,
+        "generator_lag_p999_ms": 6.771844,
+        "generator_lag_max_ms": 90.29515,
+        "generator_max_starts_fixed_1ms": 4,
+        "generator_max_starts_fixed_10ms": 4,
+        "generator_valid": true,
+        "slo_passed": true,
+        "failures": 0
+      },
+      "accepted": 2041676,
+      "committed": 2041676,
+      "integrity_passed": true
+    },
+    {
+      "name": "recovery",
+      "started": "2026-10-13T16:28:46.78646783Z",
+      "finished": "2026-10-13T16:29:17.272741441Z",
+      "seconds": 30,
+      "reads": {
+        "offered_rps": 100,
+        "achieved_rps": 99.99854296456316,
+        "requests": 3000,
+        "statuses": {
+          "200": 3000
+        },
+        "p95_ms": 2.476438,
+        "p99_ms": 4.409508,
+        "generator_lag_p99_ms": 1.107598,
+        "generator_lag_p999_ms": 2.718903,
+        "generator_lag_max_ms": 4.278071,
+        "generator_max_starts_fixed_1ms": 1,
+        "generator_max_starts_fixed_10ms": 1,
+        "generator_valid": true,
+        "slo_passed": true,
+        "failures": 0
+      },
+      "flags": {
+        "offered_rps": 20,
+        "achieved_rps": 19.999602353239638,
+        "requests": 600,
+        "statuses": {
+          "200": 600
+        },
+        "p95_ms": 16.188466,
+        "p99_ms": 18.348656,
+        "generator_lag_p99_ms": 1.171209,
+        "generator_lag_p999_ms": 1.391414,
+        "generator_lag_max_ms": 1.407025,
+        "generator_max_starts_fixed_1ms": 1,
+        "generator_max_starts_fixed_10ms": 1,
+        "generator_valid": true,
+        "slo_passed": true,
+        "failures": 0
+      },
+      "accepted": 5428,
+      "committed": 5428,
+      "integrity_passed": true
+    }
+  ],
+  "websockets": {
+    "connections": 17220,
+    "messages": 40013108,
+    "failures": 0
+  },
+  "checker_results": 110617,
+  "correctness_passed": false,
+  "error": "load.checkAttack - reads: 2653 failures: load.validateRead - HTTP 503: 503 Service Unavailable"
+}

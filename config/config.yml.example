@@ -1,0 +1,68 @@
+# Первенство России. Скопируйте в config.yml и замените TEST-NET адреса на адреса vulnbox.
+# Выдайте командам приватные токены и впишите их вместо null только в локальный config.yml.
+game:
+  mode: classic
+  round_time: 60
+  rounds: 240
+  start_time: "2027-12-31 23:59:59" # Резервная дата; финал запускается из админки.
+  timezone: Europe/Moscow
+  default_score: 2500
+  flag_lifetime: 5
+  checkers_path: /checkers/
+  env_path: /opt/checkers/bin
+
+tasks:
+  - name: kincare
+    checker: kincare/checker.py
+    checker_type: pfr
+    checker_timeout: 15
+    places: 5
+    puts: 5
+    gets: 3
+  - name: wahrwelt
+    checker: wahrwelt/checker.py
+    checker_type: pfr
+    checker_timeout: 20
+    places: 10
+    puts: 10
+    gets: 1
+  - name: sentinel
+    checker: sentinel/checker.py
+    checker_type: pfr
+    checker_timeout: 15
+    places: 3
+    puts: 3
+    gets: 3
+    default_score: 2500
+
+# Адреса 192.0.2.0/24 - документальные, не действующие адреса vulnbox.
+teams:
+  # Брянская область
+  - name: "WhrisFlag"
+    ip: 192.0.2.122
+    token: null
+  # Курская область
+  - name: "Мбоу гимназия 44"
+    ip: 192.0.2.123
+    token: null
+  # г. Москва
+  - name: "NeuroPolymer"
+    ip: 192.0.2.124
+    token: null
+  # Республика Коми
+  - name: "Caplag Academy"
+    ip: 192.0.2.125
+    token: null
+  # Краснодарский край
+  - name: "Threat Consulting Group"
+    ip: 192.0.2.126
+    token: null
+  # Донецкая Народная Республика
+  - name: "E-notGPT | Junior"
+    ip: 192.0.2.127
+    token: null
+  # Тестовая цель вне зачёта; адрес NPC также согласовать с сетевой схемой.
+  - name: NPC
+    kind: npc
+    ip: 192.0.2.202
+    token: null

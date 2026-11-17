@@ -1,0 +1,18 @@
+Router application
+
+From the extracted router bundle, with console access:
+
+  sudo bash install.sh
+  sudo bash test.sh
+
+The installer supports Debian 12/13, adds missing prerequisites, applies network
+settings, sysctl and firewall, then starts the selected exporters. Network
+metric files and the exporter are in the bundle. Add --network-metrics and/or
+--game-metrics to enable exporters. --game-metrics also ensures Zeek 9 or newer
+at /opt/zeek and creates the forcad-sensor account when needed.
+
+The initial firewall mode is pre-game. Wait until VPN, ForcAD and vulnboxes are
+reachable before running test.sh. Use --files-only to stage files without
+applying network settings or managed services; prerequisites and requested
+metrics packages may still be installed. See COMMANDS.md for option details and
+the game-mode switch.

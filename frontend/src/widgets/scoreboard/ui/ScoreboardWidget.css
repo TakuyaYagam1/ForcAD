@@ -1,0 +1,206 @@
+.scoreboard-page { min-width: 0; }
+.scoreboard-page .scoreboard-table { table-layout: fixed; min-width: 1050px; }
+.scoreboard-page .scoreboard-table th { text-align: left; }
+.scoreboard-page .scoreboard-table th.place-column { text-align: center; }
+.scoreboard-page .scoreboard-table th.total-column { text-align: right; }
+.scoreboard-page .scoreboard-table .total-column { padding-right: 18px; }
+.scoreboard-page .scoreboard-table .service-column { width: auto; }
+.scoreboard-page .scoreboard-table th.team-column { padding-left: 8px; }
+.scoreboard-page .scoreboard-table td.total-column .score-value { font-size: 24px; }
+@media (min-width: 701px) {
+  .scoreboard-page--compact .scoreboard-toolbar { gap: 8px; padding: 8px 0; min-height: 42px; }
+  .scoreboard-page--compact .table-scroll { max-height: var(--scoreboard-table-max-height, none); }
+  .scoreboard-page--compact .status-legend { gap: 8px; }
+  .scoreboard-page--compact .scoreboard-table th { height: 30px; padding: 4px 6px; }
+  .scoreboard-page--compact .scoreboard-table td { height: var(--scoreboard-row-height, 31px); padding: 2px 4px; }
+  .scoreboard-page--compact .scoreboard-table .total-column { padding-right: 12px; }
+  .scoreboard-page--compact .rank-number.rank-badge { font-size: 15px; }
+  .scoreboard-page--compact .team-avatar { width: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); height: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); }
+  .scoreboard-page--compact .team-identity { gap: 10px; }
+  .scoreboard-page--compact .team-identity > span:last-child { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
+  .scoreboard-page--compact .team-name { min-width: 0; font-size: 16px; line-height: 20px; }
+  .scoreboard-page--compact .team-ip { flex-shrink: 0; font-size: 13px; line-height: 18px; white-space: nowrap; }
+  .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 17px; letter-spacing: -.5px; }
+  .scoreboard-page--compact .service-cell { container-type: inline-size; min-height: 26px; height: calc(var(--scoreboard-row-height, 31px) - 5px); padding: 4px 7px; }
+  .scoreboard-page--compact .service-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: baseline; gap: 5px; }
+  .scoreboard-page--compact .service-metric { flex: 0 0 auto; gap: 3px; line-height: 18px; }
+  .scoreboard-page--compact .service-metric strong { font-size: 13px; }
+  .scoreboard-page--compact .service-metric > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .scoreboard-page--compact .service-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+@media (max-width: 700px) {
+  .scoreboard-page--compact .table-scroll { overflow: visible; }
+  .scoreboard-page--compact .scoreboard-table { min-width: 0; display: block; }
+  .scoreboard-page--compact .scoreboard-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .scoreboard-page--compact .scoreboard-table tbody { display: grid; gap: 22px; }
+  .scoreboard-page--compact .scoreboard-table tbody tr { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; border-top: 1px solid var(--border-default); padding-top: 7px; }
+  .scoreboard-page--compact .scoreboard-table tbody td { min-width: 0; width: auto; padding: 10px 5px; border-bottom: 0; }
+  .scoreboard-page--compact .scoreboard-table tbody .place-column { grid-column: 1; }
+  .scoreboard-page--compact .scoreboard-table tbody .team-column { grid-column: 2; }
+  .scoreboard-page--compact .scoreboard-table tbody .total-column { grid-column: 3; padding-right: 0; }
+  .scoreboard-page--compact .scoreboard-table tbody .service-column { grid-column: 1 / -1; padding: 3px 0; }
+  .scoreboard-page--compact .service-column { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 10px; }
+  .scoreboard-page--compact .service-cell-name { display: block; font-size: 13px; overflow-wrap: anywhere; }
+  .scoreboard-page--compact .service-cell { min-height: 52px; padding: 8px 12px; }
+  .scoreboard-page--compact .service-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .scoreboard-page--compact .service-metric { flex-direction: column; gap: 0; }
+  .scoreboard-page--compact .team-name { font-size: 16px; line-height: 20px; }
+  .scoreboard-page--compact .team-ip { font-size: 13px; line-height: 16px; white-space: nowrap; }
+  .scoreboard-page--compact .team-avatar { width: 36px; height: 36px; }
+  .scoreboard-page--compact .team-identity { gap: 10px; }
+  .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 19px; }
+}
+
+@media (min-width: 701px) {
+  @container (min-width: 300px) {
+    .scoreboard-page--compact .service-cell:not(.service-cell--wide-values) .service-metric > span {
+      position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
+    }
+  }
+}
+
+@media (min-width: 901px) {
+  .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table td {
+    height: var(--scoreboard-row-height, 32px);
+    padding: 1px 4px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-name {
+    font-size: clamp(12px, calc(var(--scoreboard-row-height) * 0.38), 16px);
+    line-height: 1.05;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-ip {
+    font-size: clamp(9px, calc(var(--scoreboard-row-height) * 0.28), 12px);
+    line-height: 1;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .team-identity .team-avatar {
+    width: clamp(20px, calc(var(--scoreboard-row-height) - 6px), 30px);
+    height: clamp(20px, calc(var(--scoreboard-row-height) - 6px), 30px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table .rank-number.rank-badge {
+    height: clamp(20px, calc(var(--scoreboard-row-height) - 4px), 32px);
+    font-size: clamp(15px, calc(var(--scoreboard-row-height) * 0.5), 20px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .score-value {
+    font-size: clamp(14px, calc(var(--scoreboard-row-height) * 0.45), 20px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell {
+    position: relative;
+    min-height: 0;
+    height: calc(var(--scoreboard-row-height) - 3px);
+    padding: 2px 5px;
+    gap: 0;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metrics {
+    grid-template-columns: minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 1.8fr);
+    gap: 3px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric,
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric:last-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    line-height: 1;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metric > span {
+    font-size: clamp(9px, calc(var(--scoreboard-row-height) * 0.27), 12px);
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-metric strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: clamp(11px, calc(var(--scoreboard-row-height) * 0.34), 15px);
+    text-overflow: ellipsis;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-state {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 9px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense
+    .service-cell:not(.service-cell--active)
+    .service-metric--sla > span {
+    visibility: hidden;
+  }
+}
+
+.header-progress {
+  flex: 0 1 220px;
+  width: 220px;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.header-progress .round-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.header-progress .round-track {
+  flex: 1 1 auto;
+  height: 18px;
+  min-width: 30px;
+}
+
+.header-progress .round-tick {
+  height: 5px;
+}
+
+.header-progress .round-tick::after {
+  top: 1px;
+  width: 3px;
+  height: 3px;
+}
+
+.header-progress .round-head {
+  top: 4px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+}
+
+.header-progress .round-timer strong {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.header-progress .round-timer small {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .header-brand {
+    gap: 8px;
+  }
+
+  .header-progress {
+    flex-basis: 120px;
+    width: auto;
+    min-width: 0;
+    max-width: 180px;
+  }
+}
+

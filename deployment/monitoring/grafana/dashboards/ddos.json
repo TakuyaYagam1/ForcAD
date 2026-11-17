@@ -1,0 +1,1269 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "All teams",
+      "url": "/d/forcad-ddos?var-source=All&var-target=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "ForcAD dashboards",
+      "tags": [
+        "forcad"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "version": 1,
+  "description": "Observed source-team to victim-team traffic for DDoS investigation. Rates identify directions to inspect; they do not assert malicious intent.",
+  "uid": "forcad-ddos",
+  "title": "DDoS",
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad:game_sensor_ready or on (job, instance) (0 * up{job=\"forcad_game_sensor\"}))",
+          "legendFormat": "Capture status",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Sensor ready",
+      "description": "Healthy means every configured game sensor is up, current and inventory-matched. No data means no sensor target is configured."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 45
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(time() - forcad_game_sync_timestamp_seconds)",
+          "legendFormat": "Heartbeat age",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Sensor heartbeat age",
+      "description": "Sensors older than 45 seconds are excluded from traffic queries; investigate stale values before interpreting rates."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_capture_dropped_packets_total[1m]))",
+          "legendFormat": "Capture drops/s",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Capture drops/s",
+      "description": "Kernel capture drops across sensors. Any sustained nonzero rate can make observed traffic incomplete."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_stream_gaps_total[1m]))",
+          "legendFormat": "Stream gaps/s",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Stream gaps/s",
+      "description": "TCP stream gaps across sensors. Nonzero values can reflect packet loss, offload effects or asymmetric visibility."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Unavailable",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Healthy",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "No data"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 3
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad_network_source_scrape_success{job=\"forcad_router\"} or on (job, instance) (0 * up{job=\"forcad_router\"}))",
+          "legendFormat": "Router counters",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Router counters",
+      "description": "Healthy means every configured router exporter is up and its source-to-vulnbox counter scrape succeeded."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 1,
+          "noValue": "N/A",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect victim in Traffic",
+                    "url": "/d/forcad-traffic?var-source=All&var-target=${__data.fields[\"Target IP\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 12,
+        "h": 10
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Packets/s",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc((sum by (team_ip) (rate(forcad_network_source_packets_total{job=\"forcad_router\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id!=\"__unknown__\"})) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Victim teams by observed packets/s",
+      "description": "Forwarded source-to-vulnbox packets summed per destination over the last minute, using only healthy router source counters. Victim means destination, not a verdict; high volume alone does not prove malicious traffic.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "team_id": true
+            },
+            "indexByName": {
+              "team_name": 0,
+              "team_ip": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "team_name": "Victim team",
+              "team_ip": "Target IP",
+              "Value": "Packets/s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 0,
+          "noValue": "N/A",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect source in Traffic",
+                    "url": "/d/forcad-traffic?var-source=${__data.fields[\"Source IP\"]}&var-target=All&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Active targets",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(((count by (source_team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0))) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Source teams by active target fan-out",
+      "description": "Distinct destination vulnboxes with new TCP or UDP flows from each source during the last minute, using only healthy game sensors. Fan-out is an investigation aid and does not establish intent.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "source_team_ip": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "source_team_ip": "Source IP",
+              "Value": "Active targets"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect pair in Traffic",
+                    "url": "/d/forcad-traffic?var-source=${__data.fields[\"Source IP\"]}&var-target=${__data.fields[\"Target IP\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect pair in Traffic",
+                    "url": "/d/forcad-traffic?var-source=${__data.fields[\"Source IP\"]}&var-target=${__data.fields[\"Target IP\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 18
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Packets/s",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info * on (team_ip) group_left (target_team_name) forcad:game_target_info) > 0",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Observed source -> victim directions - last minute",
+      "description": "Router packets/s for known VPN peer -> vulnbox pairs, with healthy router/source collection and unique team-name joins. Click either team name to preserve the pair and time range in Traffic. Healthy game-sensor metadata is required for attribution; high volume alone does not prove a rules violation.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "target_team_name": 1,
+              "Value": 2,
+              "source_team_ip": 3,
+              "team_ip": 4
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "target_team_name": "Victim team",
+              "source_team_ip": "Source IP",
+              "team_ip": "Target IP",
+              "Value": "Packets/s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Selected direction: ${source:text} -> ${target:text}",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 9
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))",
+          "legendFormat": "Packets/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Selected router packets/s",
+      "description": "Packets from the selected VPN source team to the selected vulnbox after router filtering and before SNAT. Includes non-game ports; volume is an investigation aid, not an automatic verdict."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 9
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})))",
+          "legendFormat": "Bandwidth",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Selected router bandwidth",
+      "description": "Bits/s from the selected VPN source team to the selected vulnbox after router filtering and before SNAT. Includes non-game ports."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "flows/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 9
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP flows/s",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "UDP flows/s",
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Selected new flows/s",
+      "description": "New TCP and UDP flows observed by healthy game sensors. TCP includes incomplete handshakes; UDP uses a 60-second idle timeout."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 9
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP connections",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Selected established TCP connections",
+      "description": "Established TCP connections observed by healthy game sensors until close/reset or five idle minutes. Restarts and capture loss can undercount."
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "label": "Source team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Target team",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  }
+}

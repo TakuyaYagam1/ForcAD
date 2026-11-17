@@ -1,0 +1,253 @@
+package bootstrap
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/TakuyaYagam1/ForcAD/config"
+)
+
+const (
+	drainRequestTimeout = 5 * time.Second
+	healthProbeTimeout  = 3 * time.Second
+	maxCapacityReplicas = 1024
+)
+
+func commandConfig(path string) (config.Config, error) {
+	const location = "bootstrap.commandConfig"
+
+	fallback := map[string]string{
+		"FORCAD_ROLE": "ticker",
+	}
+	if path != "" {
+		document, err := config.LoadDocument(path)
+		if err != nil {
+			return config.Config{}, fmt.Errorf("%s - %w", location, err)
+		}
+		if document.Admin != nil {
+			fallback["ADMIN_USERNAME"] = document.Admin.Username
+			fallback["ADMIN_PASSWORD"] = document.Admin.Password
+		}
+		if document.Storages != nil {
+			s := document.Storages
+			if s.DB.Runtime != nil {
+				fallback["FORCAD_RUNTIME_DB_USER"], fallback["FORCAD_RUNTIME_DB_PASSWORD"] = s.DB.Runtime.Username, s.DB.Runtime.Password
+			}
+			fallback["POSTGRES_HOST"], fallback["POSTGRES_PORT"], fallback["POSTGRES_USER"], fallback["POSTGRES_PASSWORD"], fallback["POSTGRES_DB"] = s.DB.Host, strconv.Itoa(s.DB.Port), s.DB.User, s.DB.Password, s.DB.DBName
+			fallback["REDIS_HOST"], fallback["REDIS_PORT"], fallback["REDIS_PASSWORD"], fallback["REDIS_DB"] = s.Redis.Host, strconv.Itoa(s.Redis.Port), s.Redis.Password, strconv.Itoa(s.Redis.DB)
+			fallback["NATS_HOST"], fallback["NATS_PORT"], fallback["NATS_USER"], fallback["NATS_PASSWORD"] = s.NATS.Host, strconv.Itoa(s.NATS.Port), s.NATS.User, s.NATS.Password
+		}
+	}
+	cfg, err := config.Load(func(key string) (string, bool) {
+		// Migrations and operator commands use the source PostgreSQL endpoint.
+		// In particular, Goose's session advisory lock must bypass PgBouncer.
+		if key == "DATABASE_POOLER_ADDR" {
+			return "", true
+		}
+		// CLI operations use a separate pool and must not inherit an application
+		// minimum that can exceed the ticker-role connection limit used here.
+		if key == "DATABASE_MIN_CONNS" {
+			return "0", true
+		}
+		if key == "FORCAD_ROLE" {
+			return "ticker", true
+		}
+		if value, ok := os.LookupEnv(key); ok {
+			return value, true
+		}
+		value, ok := fallback[key]
+		return value, ok
+	})
+	if err != nil {
+		return cfg, fmt.Errorf("%s - load command storage configuration: %w", location, err)
+	}
+	return cfg, nil
+}
+
+func RunDrainCommand(ctx context.Context, args []string, out io.Writer) error {
+	const location = "bootstrap.RunDrainCommand"
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("%s - drain command canceled: %w", location, err)
+	}
+	options := flag.NewFlagSet("drain", flag.ContinueOnError)
+	options.SetOutput(out)
+	defaultEndpoint, err := controlEndpoint("/drain")
+	if err != nil {
+		return fmt.Errorf("%s - %w", location, err)
+	}
+	endpoint := options.String("url", defaultEndpoint, "local control endpoint")
+	if err := options.Parse(args); err != nil {
+		return fmt.Errorf("%s - parse drain command: %w", location, err)
+	}
+	if options.NArg() != 0 {
+		return fmt.Errorf("%s - unexpected drain arguments", location)
+	}
+	token := os.Getenv("CONTROL_TOKEN")
+	if token == "" {
+		return fmt.Errorf("%s - CONTROL_TOKEN is required", location)
+	}
+	req, err := controlHTTPRequest(ctx, http.MethodPost, *endpoint)
+	if err != nil {
+		return fmt.Errorf("%s - create drain request", location)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	client := controlHTTPClient(drainRequestTimeout)
+	// #nosec G704 -- This CLI probes the configured control endpoint and refuses redirects.
+	response, err := client.Do(req)
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return fmt.Errorf("%s - drain request canceled: %w", location, ctxErr)
+		}
+		return fmt.Errorf("%s - send drain request", location)
+	}
+	defer func() {
+		_ = response.Body.Close()
+	}()
+	if response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("%s - drain returned HTTP %d", location, response.StatusCode)
+	}
+	_, err = fmt.Fprintln(out, "Drain requested")
+	if err != nil {
+		return fmt.Errorf("%s - write drain result: %w", location, err)
+	}
+	return nil
+}
+
+// RunHealthCommand is a container readiness probe with no external shell or
+// network utility dependency. It never follows a redirect to another host.
+func RunHealthCommand(ctx context.Context, args []string) error {
+	const location = "bootstrap.RunHealthCommand"
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("%s - readiness probe canceled: %w", location, err)
+	}
+	if len(args) != 0 {
+		return fmt.Errorf("%s - health does not accept arguments", location)
+	}
+	endpoint, err := controlEndpoint("/readyz")
+	if err != nil {
+		return fmt.Errorf("%s - %w", location, err)
+	}
+	req, err := controlHTTPRequest(ctx, http.MethodGet, endpoint)
+	if err != nil {
+		return fmt.Errorf("%s - create readiness request: %w", location, err)
+	}
+	client := controlHTTPClient(healthProbeTimeout)
+	// #nosec G704 -- This CLI probes the configured control endpoint and refuses redirects.
+	response, err := client.Do(req)
+	if err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return fmt.Errorf("%s - readiness probe canceled: %w", location, ctxErr)
+		}
+		return fmt.Errorf("%s - readiness probe could not connect", location)
+	}
+	defer func() {
+		_ = response.Body.Close()
+	}()
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s - readiness returned HTTP %d", location, response.StatusCode)
+	}
+	return nil
+}
+
+func RunRuntimeCapacityCommand(ctx context.Context, args []string) error {
+	const location = "bootstrap.RunRuntimeCapacityCommand"
+	if err := RuntimeCapacity(ctx, args, os.Stdout); err != nil {
+		return fmt.Errorf("%s - inspect runtime capacity: %w", location, err)
+	}
+	return nil
+}
+
+func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
+	const location = "bootstrap.RuntimeCapacity"
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("%s - runtime capacity command canceled: %w", location, err)
+	}
+	options := flag.NewFlagSet("runtime-capacity", flag.ContinueOnError)
+	options.SetOutput(out)
+	apiReplicas := options.Int("api-replicas", 4, "API process count")
+	receiverReplicas := options.Int("receiver-replicas", 2, "receiver process count")
+	workerReplicas := options.Int("worker-replicas", 2, "worker process count")
+	tickerReplicas := options.Int("ticker-replicas", 1, "scheduler process count")
+	if err := options.Parse(args); err != nil {
+		return fmt.Errorf("%s - parse runtime capacity command: %w", location, err)
+	}
+	if options.NArg() != 0 {
+		return fmt.Errorf("%s - unexpected capacity arguments", location)
+	}
+	for _, n := range []int{*apiReplicas, *receiverReplicas, *workerReplicas, *tickerReplicas} {
+		if n < 0 || n > maxCapacityReplicas {
+			return fmt.Errorf("%s - replica count must be between 0 and 1024", location)
+		}
+	}
+	cfg, err := commandConfig("")
+	if err != nil {
+		return fmt.Errorf("%s - %w", location, err)
+	}
+	report := struct {
+		DatabaseConnectionCeiling int64            `json:"database_connection_ceiling"`
+		DatabaseConnectionsByRole map[string]int64 `json:"database_connections_by_role"`
+		CheckerProcessCeiling     int64            `json:"checker_process_ceiling"`
+		CheckerMemoryCeilingMiB   int64            `json:"checker_memory_ceiling_mib"`
+		HTTPInflightCeiling       int64            `json:"http_inflight_ceiling"`
+		PerTeamFlagsPerSecond     int              `json:"per_team_flags_per_second"`
+		PerTeamFlagBurst          int              `json:"per_team_flag_burst"`
+		Note                      string           `json:"note"`
+	}{
+		DatabaseConnectionsByRole: make(map[string]int64),
+		CheckerProcessCeiling:     int64(*workerReplicas) * int64(cfg.WorkerConcurrency),
+		CheckerMemoryCeilingMiB:   int64(*workerReplicas) * int64(cfg.WorkerConcurrency) * int64(cfg.CheckerMemoryMB),
+		PerTeamFlagsPerSecond:     cfg.FlagRate,
+		PerTeamFlagBurst:          cfg.FlagBurst,
+		Note:                      "Configured ceilings, not measured throughput or reserved RAM. Include database, runtime and operating system overhead in the host budget.",
+	}
+	for role, replicas := range map[string]int{
+		"api":      *apiReplicas,
+		"receiver": *receiverReplicas,
+		"worker":   *workerReplicas,
+		"ticker":   *tickerReplicas,
+	} {
+		if role == "api" || role == "receiver" {
+			limit, err := config.HTTPInflightLimit(role, os.LookupEnv)
+			if err != nil {
+				return fmt.Errorf("%s - %w", location, err)
+			}
+			report.HTTPInflightCeiling += int64(replicas) * int64(limit)
+		}
+		limit, err := config.DatabasePoolSize(role, os.LookupEnv)
+		if err != nil {
+			return fmt.Errorf("%s - %w", location, err)
+		}
+		report.DatabaseConnectionsByRole[role] = int64(replicas) * int64(limit)
+		report.DatabaseConnectionCeiling += int64(replicas) * int64(limit)
+	}
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(report); err != nil {
+		return fmt.Errorf("%s - encode runtime capacity: %w", location, err)
+	}
+	return nil
+}
+
+func controlEndpoint(route string) (string, error) {
+	const location = "bootstrap.controlEndpoint"
+	address := os.Getenv("METRICS_ADDR")
+	if address == "" {
+		address = ":9090"
+	}
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return "", fmt.Errorf("%s - parse metrics address: %w", location, err)
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return "http://" + net.JoinHostPort(host, port) + route, nil
+}

@@ -1,0 +1,144 @@
+.admin-dashboard-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px 24px;
+  padding: 0 0 24px;
+}
+.admin-dashboard-heading .eyebrow {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: .08em;
+}
+.admin-dashboard-heading h1 {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-te-20, "Inter", sans-serif);
+  font-size: 40px;
+  font-weight: 300;
+  letter-spacing: -.045em;
+  line-height: 1.11;
+}
+.admin-dashboard-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  align-items: stretch;
+  margin: 0 0 20px;
+  border: 1px solid var(--border-default);
+}
+.checker-status {
+  min-width: 0;
+  padding: 22px;
+}
+.checker-status__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 15px;
+  margin-bottom: 16px;
+}
+.checker-status__heading h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 300;
+}
+.checker-status__heading small,
+.checker-status__card small {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 300;
+  line-height: 1.5;
+}
+.checker-status__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+}
+.checker-status__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid var(--border-default);
+  overflow-wrap: anywhere;
+}
+.checker-status__card strong {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 1.5;
+}
+.checker-status__card > span {
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.5;
+}
+.checker-status__card--reporting > span { color: var(--state-success-text); }
+.checker-status__card--failed > span { color: var(--state-info-text); }
+.checker-status__card--stalled > span { color: var(--state-error-text); }
+.checker-status__card--waiting > span { color: var(--text-muted); }
+.admin-dashboard-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 22px;
+  border-left: 1px solid var(--border-default);
+}
+.admin-dashboard-actions .admin-actions,
+.admin-dashboard-actions .game-controls > div > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.admin-dashboard-actions .ui-button { width: 100%; }
+.admin-dashboard-actions section { margin-bottom: 0; }
+.scoreboard-page--admin .scoreboard-table th {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.scoreboard-page--admin .scoreboard-table th.place-column {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.scoreboard-page--admin .scoreboard-table th button,
+.scoreboard-page--admin .team-identity {
+  min-height: 44px;
+  width: 100%;
+  text-align: left;
+}
+.scoreboard-page--admin .team-name {
+  font-size: 16px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.scoreboard-page--admin .team-ip { overflow-wrap: anywhere; }
+.scoreboard-page--admin .scoreboard-table td.total-column .score-value { font-size: 19px; }
+.scoreboard-page--admin .service-metric {
+  flex-wrap: wrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.scoreboard-page--admin .service-metric strong { min-width: 0; }
+@media (max-width: 1100px) {
+  .admin-dashboard-strip { grid-template-columns: minmax(0, 1fr); }
+  .admin-dashboard-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    border-left: 0;
+    border-top: 1px solid var(--border-default);
+  }
+}
+@media (max-width: 700px) {
+  .admin-dashboard-heading h1 { font-size: 32px; }
+  .checker-status, .admin-dashboard-actions { padding: 16px; }
+  .admin-dashboard-actions { grid-template-columns: minmax(0, 1fr); }
+}

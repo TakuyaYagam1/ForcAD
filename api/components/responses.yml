@@ -1,0 +1,18 @@
+ApiError:
+  description: Request failed.
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yml#/ApiError"
+Health:
+  description: Service is healthy.
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yml#/StatusResponse"
+Metrics:
+  description: Prometheus text exposition format.
+  content:
+    text/plain:
+      schema:
+        type: string

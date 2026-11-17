@@ -1,0 +1,21 @@
+VPN removal
+
+From the extracted vpn bundle, with console access:
+
+  sudo bash uninstall.sh --dry-run
+  sudo bash uninstall.sh
+
+Removal stops and disables wg-attack and wg-admin, removes their server configs
+and managed firewall files, and restores recorded network, sysctl and service
+state. It deletes wg-attack.conf and wg-admin.conf even when adopted from
+/etc/wireguard. Keep private copies if you may reinstall. Other WireGuard
+configs are preserved.
+
+Files created by install are removed normally, including edited copies. If a
+pre-existing shared file changed after installation, uninstall stops. Review
+it, then use --force to save the current copy and restore the recorded original.
+This does not restore adopted WireGuard configs; the two role configs are
+deleted. Use --files-only only for a staged install without a live journal;
+revert manual live changes yourself. Keep recovery and dependency records if
+removal fails. Package cleanup defaults to keep; pre-existing packages are
+never removed. See COMMANDS.md for options.

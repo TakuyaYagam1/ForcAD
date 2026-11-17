@@ -1,0 +1,46 @@
+get:
+  operationId: getAdminTeams
+  tags:
+  - admin
+  summary: List all teams, including inactive teams.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: All teams with administration fields.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/AdminTeam"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+post:
+  operationId: createAdminTeam
+  tags:
+  - admin
+  summary: Create a team.
+  description: The server generates the team token and ignores any supplied token
+    value.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminTeamCreate"
+  responses:
+    '201':
+      description: The created team.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminTeam"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"

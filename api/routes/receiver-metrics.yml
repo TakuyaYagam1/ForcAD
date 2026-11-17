@@ -1,0 +1,9 @@
+get:
+  operationId: getReceiverMetrics
+  tags:
+  - metrics
+  summary: Read flag receiver Prometheus metrics.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Metrics"

@@ -1,0 +1,40 @@
+schemas:
+  FlagSubmissionResult:
+    type: object
+    additionalProperties: false
+    required:
+    - msg
+    - flag
+    properties:
+      msg:
+        type: string
+      flag:
+        type: string
+  FlagNotification:
+    type: object
+    additionalProperties: false
+    required:
+    - attacker_id
+    - victim_id
+    - task_id
+    - attacker_delta
+    - generation
+    - event_id
+    - created_at
+    properties:
+      attacker_id:
+        "$ref": "#/schemas/Uuid"
+      victim_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      attacker_delta:
+        type: number
+      generation:
+        type: integer
+        format: int64
+      event_id:
+        type: string
+      created_at:
+        type: string
+        format: date-time

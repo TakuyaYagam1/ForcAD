@@ -1,0 +1,182 @@
+# Architecture
+
+[Documentation index](../README.md#documentation)
+
+ForcAD ships one Go backend binary and deploys it as separate process roles.
+`FORCAD_ROLE` accepts `api`, `receiver`, `worker`, `ticker`, or `all`; if it is
+unset, the binary runs the `api` role. The default Compose file sets one role
+per application service. All roles use the same game configuration, database
+schema, and release.
+
+## Runtime
+
+The [default Compose file](../deployment/docker/compose.yml) starts:
+
+| Service | Replicas | Responsibility |
+| --- | --- | --- |
+| `api` | 4 | Public and admin REST endpoints; native WebSocket events |
+| `receiver` | 2 | Flag submission at `/flags` and per-flag results |
+| `worker` | 2 | NATS JetStream consumption and external checker execution |
+| `ticker` | 1 | Round scheduling, job publication and expired-job recovery |
+| `nginx` | 1 | Frontend assets and routing to API/receiver replicas |
+| `pgbouncer` | 1 | Transaction pooling with separate server budgets per application role |
+| `postgres` | 1 | Authoritative game state, flags, scores, sessions and jobs |
+| `redis` | 1 | Shared admission limits and public event distribution |
+| `nats` | 1 | Durable JetStream checker job delivery |
+
+`initializer`, `config-loader` and `postgres-data` are startup jobs. They prepare
+configuration/storage, apply embedded migrations and initialize a new game.
+
+Python remains in the worker image for checker programs. The `api` service
+serves the public and admin REST endpoints and WebSocket events.
+
+The optional monitoring overlay adds Prometheus and Grafana. Application metrics
+describe ForcAD; router counters and a passive Zeek sensor describe game traffic.
+See [Monitoring](MONITORING.md) and the [network layout](../infrastracture/README.md).
+
+## Request and job flow
+
+```mermaid
+flowchart LR
+    Browser --> Nginx
+    Teams --> Nginx
+    Nginx --> API
+    Nginx --> Receiver
+    API --> PgBouncer
+    Receiver --> PgBouncer
+    Receiver --> Redis
+    Redis --> API
+    API -->|WebSocket| Browser
+    Ticker -->|jobs and publication state| PgBouncer
+    Ticker --> JetStream
+    JetStream --> Worker
+    Worker -->|CHECK / PUT / GET| Checkers
+    Worker -->|flags and verdicts| PgBouncer
+    PgBouncer --> PostgreSQL
+```
+
+Flag submissions are handled by the receiver directly, independently of the
+checker queue. A batch contains at most 100 flags. Each has its own result;
+HTTP 200 does not mean every flag was accepted. Each batch uses one transaction:
+read flags together, lock affected team/task rows in a stable order, calculate
+scores in input order, then bulk-write stolen flags and final scores. Unique
+constraints prevent repeat awards. Storage failures roll back the whole batch
+and return 503, never an invalid-flag verdict. Expiry uses the round at receipt
+of the decoded batch, before database waits. Redis charges a shared budget
+in flags per team across receiver replicas.
+
+An NPC target is a checker-scheduled team with a dedicated vulnbox and fresh
+flags on ordinary rounds. Its flags still enter the same per-attacker
+`StolenFlags` uniqueness path, but accepted NPC submissions skip team/task
+score and stolen/lost updates and do not emit public REST/WebSocket capture
+events. Public rankings omit the NPC; the teams page shows its IP separately.
+
+The ticker stores jobs and their publication state in PostgreSQL, then publishes
+job IDs to NATS JetStream with broker confirmation. Workers claim jobs with expiring
+ownership, execute [checker workflows](CHECKERS.md), and persist results before
+acknowledging queue messages. Duplicate delivery is expected and checked against
+the durable job state. An interrupted workflow that may have performed PUT is
+not blindly replayed; expired work is closed as `CHECK_FAILED`.
+
+If a claim, lease renewal or deadline COMMIT response is lost, the repository
+uses one bounded read on a fresh connection. It accepts only the same token and
+current generation, an open job, valid deadlines and the requested committed
+update. This does not retry PUT or extend the original requested lease window.
+The worker also checks its parent cancellation before continuing. An uncertain
+or expired owner stops; normal expiry recovery still closes interrupted PUT work.
+
+Public score cells use completed-round snapshots. Runtime status reports the
+current phase and waiting checks separately. API replicas broadcast public
+updates through Redis. Event delivery is not part of the scoring transaction;
+the browser reloads a REST snapshot when its WebSocket reconnects.
+
+Teams, tasks, flags, log entries, dispatch runs and checker jobs use UUIDv7 IDs.
+The database stores native UUIDs; REST and event payloads expose UUID strings.
+Round numbers and counters remain integers. Configuration and session tables
+each use a fixed singleton key, while schedules use descriptive string keys.
+
+## Concurrency and shutdown
+
+Concurrency is bounded per process. HTTP admission limits requests in flight,
+pgx limits database connections, and worker slots limit checker processes.
+JetStream pull batches follow free worker slots, and the durable consumer's
+`MaxAckPending` bounds outstanding deliveries across replicas. Adding replicas
+multiplies process limits, so their total must fit the database and host capacity.
+
+A checker that remains unreaped after bounded termination keeps its action slot
+until the OS wait actually completes. The worker immediately becomes unready,
+closes action admission and requests a replacement with a nonzero exit after
+bounded drain and resource cleanup. Late reaping releases occupancy but does not
+reopen that worker. Metrics expose outstanding processes, their oldest age,
+lifetime cleanup failures and the latched degraded state. Restart contains the
+worker failure; it does not guarantee that an unhealthy host kernel will recover.
+
+The scoreboard cache combines overlapping loads within one API replica.
+Runtime status uses singleflight without caching completed results. A caller
+can cancel its wait without aborting other callers; shared reads have a timeout
+and stop when the application shuts down. Database reads for a scoreboard share
+one transaction snapshot. Scoring writes keep their transaction locks and
+duplicate checks.
+
+The dispatcher publishes bounded batches before waiting for JetStream publish acknowledgements.
+Only acknowledged IDs are checkpointed in PostgreSQL. Unknown publication
+outcomes remain eligible for retry; SQL job claims prevent duplicate execution.
+
+Drain rejects new HTTP requests, stops scheduling and stops taking checker jobs.
+In-flight work gets the configured shutdown deadline to finish. Unacknowledged
+jobs remain recoverable through JetStream and the stored job state. Drain does
+not empty the shared queue: other worker replicas can continue consuming it.
+On NATS transport loss, readiness and intake stop immediately while existing
+SQL-fenced workflows have up to 30 seconds to settle. Then cancellation gets a
+5-second cleanup window. A handler still stuck after that forces process
+replacement instead of accumulating more sessions. A lost ACK may redeliver a
+completed job; the SQL state prevents replay. Reconnect backoff resets after a
+session stays connected for at least one minute. These windows never override
+job expiry or loss of SQL ownership.
+Public events are best effort; PostgreSQL remains the source of truth when a
+browser reconnects.
+
+## Frontend languages
+
+The public pages and admin panel support Russian and English. Russian is the
+default. The header's RU/EN switch updates the page without reloading and saves
+the choice in browser storage (`forcad-language`). Dates, scores, validation
+messages and accessibility labels follow the selected language. Team/service
+names and checker output remain as supplied by the server.
+
+Translations live in `frontend/src/shared/i18n/`: `shell`, `common`, `public`
+and `admin` namespaces. Keys are checked by TypeScript; tests check both
+languages for matching keys and interpolation variables. Changing language
+does not change API requests, game state or WebSocket subscriptions.
+
+## Backend layout
+
+| Path under `backend/` | Responsibility |
+| --- | --- |
+| `cmd/forcad/main.go` | Command dispatch, logger/config setup and process exit |
+| `config/` | Environment and game YAML validation |
+| `internal/bootstrap/` | Wire assembly, startup and graceful shutdown |
+| `internal/domain/` | Game entities, lifecycle types and scoring rules |
+| `internal/usecase/` | Authentication, game operations and flag submission |
+| `internal/port/outbound/` | Interfaces required from storage and messaging |
+| `internal/adapter/primary/` | HTTP handlers and WebSocket transport |
+| `internal/adapter/primary/http/v1/` | Domain-specific API handlers; routing stays in `http/router.go` |
+| `internal/adapter/primary/http/middleware/` | Request deadlines, body/admission limits, origin checks and request context |
+| `internal/adapter/primary/websocket/` | WebSocket connections and public event delivery |
+| `internal/adapter/secondary/` | PostgreSQL, Redis, NATS JetStream, metrics and checker processes |
+| `internal/worker/` | Scheduler and checker workflow orchestration |
+| `internal/operator/` | Local setup, Compose selection and cleanup |
+| `db/` | Embedded migrations and handwritten queries |
+| `codegen/` | ogen and sqlc configuration |
+| `integration_test/` | Tests using real dependencies, fixtures and runners |
+
+HTTP uses chi and ogen; storage uses pgx and sqlc. Wire assembles dependencies.
+Logging uses `log/slog` with a bounded output queue. Basic HTTP middleware lives
+in the HTTP adapter. wahrwelt-kit provides caching, WebSockets, HTTP metrics,
+readiness checks and trusted-proxy parsing. Generated code lives beside its
+consumer; see [code generation](DEVELOPMENT.md#code-generation).
+
+API, receiver and worker replicas can be adjusted independently. Keep the default
+single ticker. Compose uses soft memory reservations per container, with optional
+hard caps. These settings do not establish measured throughput or guaranteed RAM.
+See [Operations](OPERATIONS.md).

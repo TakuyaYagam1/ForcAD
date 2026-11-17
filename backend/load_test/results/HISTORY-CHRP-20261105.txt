@@ -1,0 +1,139 @@
+Historical source audit,2026-11-05
+
+Reference: October13 five-hour soak, RESTp9911.184ms; current source7f0c3fa.
+The archived source-changes.tar.gz was checked against source-manifest.json.
+565 files matched SHA256, including all backend sources;22 missing manifest
+entries concern frontend/assets only. Base296e59f alone does not describe the
+reference executable because that run included uncommitted source changes.
+Restored source: .cache/load-host/history-20261013-soak/source/ (read-only analysis).
+
+Confirmed workload difference:
+Old backend/load_test/scripts/prepare.py never sets checker_type:pfr.
+Old internal/usecase/game/service.go:189 AttackData returns an empty map when
+there are no PFR tasks, before loading public flag rows. Current final fixtures
+enable PFR and return a substantially larger representation. The same offered
+REST request count therefore does not imply the same SQL/JSON/network work.
+
+Concrete changed HTTP path:
+Commit7f94881 replaced generated JX encoding of AttackData with a raw handler.
+Current internal/adapter/primary/http/v1/attack_data.go:29 calls json.Marshal,
+then SHA256 and ETag construction on every request, including conditional GETs.
+This adds full serialization/allocation/hash work and loses the previous JX
+encoding path for this route. Its contribution to the observed load failure
+has not been isolated by a same-workload A/B test.
+Any replacement must retain service filtering, valid JSON, conditional GET,
+and a strong ETag matching the exact bytes. Unsorted JX map iteration alone
+would make byte order and ETags unstable across equivalent responses.
+
+Preserved optimizations:
+Scoreboard still uses the500ms cached snapshot and pooled JX encoder.
+Runtime lifecycle singleflight remains; current public lifecycle reads share it.
+The normal lifecycle query still omits the large completed-round snapshot.
+PgBouncer transaction pooling/API server budget32 and the short MVCC lifecycle
+read remain. Board retains its consistent read-only repeatable-read transaction.
+The ordinary GET action count remains Task.Gets; no extra GET loop was added.
+
+Added database work:
+Commit7f94881 persists per-action CHECK/PUT/GET logs using individual INSERTs
+inside completion. This is a feature cost, not evidence of a lost old optimization;
+its contribution also requires measurement before changing the write path.
+
+No full rollback or production-code change was made during this audit.
+
+Follow-up13c3ed3: pooled JX encoding for public attack data, preserving exact
+JSON/ETag bytes, service filters and304 responses. Buffers over1MiB are not retained.
+HTTP race tests, linter, layout/error checks and464375 fuzz executions passed.
+Local benchmark (28 teams,3 services,6720 synthetic hints, hashing included):
+encoding/json:423448-441611ns/op,391023-400066B/op,97allocs/op.
+Pooled JX:484662-490333ns/op,2040-2068B/op,5allocs/op.
+This reduces allocation substantially but is slightly slower in the local CPU
+measurement. It does not by itself establish higher throughput or resolve503s.
+Controlled full-load repeat uses the same2x12/5m/10000 REST settings as the
+preceding7f0c3fa run; native HTTP transport, unchanged pools/timeouts/workload.
+
+API profiling follow-up (diagnostic image only, production base13c3ed3):
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k_api_profile-20261105-234115/
+Four parallel30s CPU profiles and before/after allocation snapshots succeeded.
+Merged CPU: WebSocket WritePump34.55% cumulative, predominantly socket writes;
+this is CPU sample attribution, not elapsed latency or proof of the503 cause.
+API1 attack-data endpoint28.54% cumulative CPU; its Game.AttackData call10.09%
+and response encoder12.92% are nested costs and cannot be added to the endpoint.
+API1 sampled allocation delta5.265GB: Game.AttackData flat1.338GB (25.42%),
+attack-data encoder1.545GB cumulative (29.33%). The sequential pooled-encoder
+microbenchmark therefore does not describe buffer allocations under full load.
+The next narrowly scoped change groups rows inside the existing singleflight,
+then copies maps/slices per caller. It requires contract tests, benchmarks and
+an unprofiled full-workload repeat before any capacity claim.
+Artifacts: profile/capture-20261105-204642.json, profile/api-cpu-merged-top.txt,
+profile/api-cpu-merged-cumulative.txt, profile/api-1-allocations-delta-top.txt,
+profile/api-1-allocations-delta-cumulative.txt, profile/api-1-attack-cpu.txt.
+
+Follow-up07a68b0: grouping moved inside the existing shared query. Returned
+maps/slices remain caller-owned; current task names/filter and duplicate-name
+row order are preserved. Flight keys, SQL, timeout/Close handling and no-TTL
+policy are unchanged. Usecase/HTTP/load race tests, lint and style checks passed.
+Component benchmark6720 rows, excluding SQL/scheduling, callers per query:
+1:240 ->241us/caller,383 ->499KB/cohort (memory regression without sharing).
+4:239 ->91us/caller,1531 ->846KB/cohort.
+16:240 ->50us/caller,6124 ->2237KB/cohort.
+This is not end-to-end evidence. An unprofiled4x8/5m/10000 REST repeat was
+started at ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k-20261106-000901/.
+cf3dedc separately adds captured response-body byte totals/means to load reports;
+it changes neither traffic, validation nor the application.
+
+Worker CPU follow-up,2026-11-06:
+The direct-metrics4x8 control onf71bcee still failed (7407.51 actual REST/s,
+95276 REST503s,5 expired jobs). A120.080s steady CPU-counter window measured
+12.186 logical CPUs across worker cgroups versus0.1254 in their persistent
+Go processes. This separates the subprocess cost from the Go worker loop;
+it does not alone distinguish Python imports from fixture HTTP logic.
+
+The exact worker image uses Python3.14.8 Alpine and disables runtime bytecode
+writes. Inventory found0 stdlib .pyc files, with no PYTHONPYCACHEPREFIX.
+An offline --network none comparison ran the fixture's same seven stdlib
+imports in fresh interpreters,2 warmups plus10 samples per case. Median child
+CPU measured via RUSAGE_CHILDREN fell0.211338 ->0.034963s after explicit
+compileall; wall0.211606 ->0.035204s. The pass-only control fell0.013598
+->0.008228s. This excludes fixture I/O and is not a full-load capacity result.
+Compilation produced655 stdlib cache files,13,134,445 bytes, with runtime
+PYTHONDONTWRITEBYTECODE still enabled and native cache paths in both arms.
+
+9bfb7c7 precompiles stdlib during checker-base image build after removing pip.
+The built candidate passed the same diagnostic as UID10001, --read-only and
+--network none: imports0.034701s CPU before an idempotent compileall and
+0.034363s after. Runtime permissions and bytecode-write policy are unchanged.
+Artifacts in the direct-metrics002842 run: python-imports.json,
+python-imports-compiled-readonly.json and python-worker-image-build.log.
+The matched unprofiled4x8/5m repeat starts at
+../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_sizing_workers4_slots8_rest10k_direct_metrics-20261106-004124/.
+
+Generator profiling, same direct2x8/least_conn workload (run014744):
+The complete TestLoad profile covers396.76s and1099.98 CPU-seconds,2.772 cores;
+it includes bootstrap/warmup/steady/recovery and is not a steady-only CPU sample.
+Consumer attack used103.19 cumulative CPU-seconds; validateRead94.05 and
+json.Valid93.95 are nested. measurement.add2.84 and Metrics.Add2.70 are small.
+Even assigning all consumer CPU to steady300s gives about0.34 core, not a
+saturated serial consumer. No validation parallelism or client-limit change made.
+HTTP worker Attacker.hit232.68 cumulative CPU-seconds includes io.ReadAll146.51
+and Client.Do50.81. WS spectator150.49 and background GC151.01 are separate
+stacks; cumulative parents and children must not be added as independent costs.
+Steady9483.79REST/s,all2845149 HTTP200,mean captured body31722.95bytes,
+about90.26GB body over300s. CPU profile alone cannot establish socket/worker waits.
+Vegeta's result channel is unbuffered and Result.Latency ends before its send.
+Line annotations must use the native frozen source, not the subsequently edited
+worktree. Profile is combined/generator.pprof under the014744 run.
+
+69b9b7f adds diagnostic mean hit latency and post-hit-to-consumer mean/max/sample
+count; hit latency includes targeter/request/body work, not just server/network.
+Helper boundaries, full load race,linter,layout/error checks passed. Gates,
+request pool,validation,pacing and application are unchanged.
+Ordinary repeat020324 delivered9442.276REST/s,all2832790 HTTP200,mean hit16.190907ms,
+mean post-hit delay3.287077ms,max161.05367ms. Pacer discarded167205 slots across
+959 events,maxlateness83.864311ms; nearly all missing offered starts are present
+in that discard ledger. This does not prove persistent1024-worker saturation.
+Six correct rounds,worst40.366s,no OOM/restart/expired jobs; strictFAIL on generator.
+
+294ddca buffers each replica's unchanged metric sample in16KiB and flushes it
+before returning; errors retain location/%w. Output/order/UTC/whitelist, every
+replica, polling pause and all gates remain. Race/lint/style/error checks passed.
+The matched control021653 is running; its throughput effect is not yet known.

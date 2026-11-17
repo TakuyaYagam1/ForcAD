@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+role='@@ROLE@@'
+action='@@ACTION@@'
+help_requested=false
+
+fail() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+
+case "$role" in
+    router|vpn) ;;
+    *) fail "Invalid rendered host role: $role" ;;
+esac
+case "$action" in
+    install|test|uninstall) ;;
+    *) fail "Invalid rendered host action: $action" ;;
+esac
+
+for argument in "$@"; do
+    if [[ "$argument" == --help || "$argument" == -h ]]; then
+        help_requested=true
+        break
+    fi
+done
+
+validate_arguments() {
+    local argument
+    while (($#)); do
+        argument="$1"
+        case "$argument" in
+            --files-only)
+                ;;
+            --wireguard-dir)
+                [[ "$role" == vpn && "$action" == install ]] ||
+                    fail "--wireguard-dir is only supported by VPN install.sh"
+                (($# >= 2)) || fail "--wireguard-dir requires a path"
+                shift
+                ;;
+            --wireguard-dir=*)
+                [[ "$role" == vpn && "$action" == install ]] ||
+                    fail "--wireguard-dir is only supported by VPN install.sh"
+                ;;
+            --network-metrics|--game-metrics)
+                [[ "$role" == router && "$action" == install ]] ||
+                    fail "$argument is only supported by router install.sh"
+                ;;
+            --live)
+                [[ "$action" == test ]] ||
+                    fail "--live is only supported by test.sh"
+                ;;
+            --dry-run|--force|--discard-backups|--keep-packages|--purge-packages)
+                [[ "$action" == uninstall ]] ||
+                    fail "$argument is only supported by uninstall.sh"
+                ;;
+            --resume)
+                [[ "$role" == router && "$action" == uninstall ]] ||
+                    fail "--resume is only supported by router uninstall.sh"
+                ;;
+            *)
+                fail "Unknown or unsupported option for $role $action: $argument"
+                ;;
+        esac
+        shift
+    done
+}
+
+if [[ "$help_requested" != true ]]; then
+    validate_arguments "$@"
+fi
+
+if [[ "$EUID" -ne 0 && "$help_requested" != true ]]; then
+    exec sudo -- bash "$0" "$@"
+fi
+
+acquire_dependency_lock() {
+    local lock_dir=/run/lock
+    local lock_file="$lock_dir/forcad-dependencies.lock"
+
+    command -v flock >/dev/null 2>&1 ||
+        fail "Required system command is missing: flock. Install util-linux, then rerun this command."
+    [[ ! -L "$lock_dir" && -d "$lock_dir" && -O "$lock_dir" ]] ||
+        fail "Refusing unsafe or unowned lock directory: $lock_dir"
+
+    if [[ -L "$lock_file" ]]; then
+        fail "Refusing symlinked dependency lock file: $lock_file"
+    elif [[ ! -e "$lock_file" ]]; then
+        if ! (umask 077; set -o noclobber; : > "$lock_file") 2>/dev/null; then
+            [[ -f "$lock_file" && ! -L "$lock_file" && -O "$lock_file" ]] ||
+                fail "Could not create a safe dependency lock file: $lock_file"
+        fi
+    fi
+    [[ -f "$lock_file" && ! -L "$lock_file" && -O "$lock_file" ]] ||
+        fail "Refusing unsafe or unowned dependency lock file: $lock_file"
+    chmod 0600 -- "$lock_file" ||
+        fail "Could not protect dependency lock file: $lock_file"
+    exec 9>>"$lock_file" || fail "Could not open dependency lock file: $lock_file"
+    flock -x 9 || fail "Could not acquire dependency lock: $lock_file"
+}
+
+lock_required=true
+if [[ "$help_requested" == true || "$action" == test ]]; then
+    lock_required=false
+elif [[ "$action" == uninstall ]]; then
+    for argument in "$@"; do
+        if [[ "$argument" == --dry-run ]]; then
+            lock_required=false
+            break
+        fi
+    done
+fi
+if [[ "$lock_required" == true ]]; then
+    acquire_dependency_lock
+fi
+
+bootstrap_python() {
+    local os_release=/etc/os-release
+    local os_id=
+    local os_version=
+    local key value
+    local dependency_root=/var/lib/forcad-dependencies
+    local state_dir="$dependency_root/$role"
+    local owner_file="$state_dir/owner"
+    local before_file="$state_dir/bootstrap-before"
+    local candidates_file="$state_dir/bootstrap-candidates"
+    local temporary_file
+    local merged_file
+    local directory
+
+    [[ -f "$os_release" ]] ||
+        fail "Cannot identify the host OS from $os_release. Install python3 manually, then rerun install.sh."
+    while IFS='=' read -r key value; do
+        case "$key" in
+            ID|VERSION_ID)
+                value="${value#\"}"
+                value="${value%\"}"
+                value="${value#\'}"
+                value="${value%\'}"
+                if [[ "$key" == ID ]]; then
+                    os_id="$value"
+                else
+                    os_version="$value"
+                fi
+                ;;
+        esac
+    done < "$os_release"
+    [[ "$os_id" == debian && "${os_version%%.*}" =~ ^(12|13)$ ]] ||
+        fail "Automatic Python bootstrap supports Debian 12 and 13 only. Install python3 manually, then rerun install.sh."
+
+    for command_name in apt-get dpkg-query cmp awk sort mkdir chmod mktemp ln rm cat mv; do
+        command -v "$command_name" >/dev/null 2>&1 ||
+            fail "Required system command is missing: $command_name. Install python3 manually, then rerun install.sh."
+    done
+
+    for directory in /var /var/lib; do
+        [[ ! -L "$directory" && -d "$directory" && -O "$directory" ]] ||
+            fail "Refusing unsafe or unowned dependency directory: $directory"
+    done
+    if [[ -L "$dependency_root" ]]; then
+        fail "Refusing symlinked dependency directory: $dependency_root"
+    elif [[ -e "$dependency_root" ]]; then
+        [[ -d "$dependency_root" && -O "$dependency_root" ]] ||
+            fail "Refusing unsafe or unowned dependency directory: $dependency_root"
+    else
+        mkdir -m 0755 -- "$dependency_root" ||
+            fail "Could not create dependency directory: $dependency_root"
+    fi
+
+    if [[ -L "$state_dir" ]]; then
+        fail "Refusing symlinked dependency state directory: $state_dir"
+    elif [[ -e "$state_dir" ]]; then
+        [[ -d "$state_dir" && -O "$state_dir" ]] ||
+            fail "Refusing unsafe or unowned dependency state directory: $state_dir"
+        [[ -f "$owner_file" && ! -L "$owner_file" && -O "$owner_file" ]] ||
+            fail "Refusing existing dependency state without an owned owner file: $state_dir"
+        printf 'forcad-dependencies-v1:%s\n' "$role" | cmp -s - "$owner_file" ||
+            fail "Dependency state owner does not match $role: $owner_file"
+        chmod 0600 -- "$owner_file" ||
+            fail "Could not protect dependency state owner file: $owner_file"
+        chmod 0700 -- "$state_dir" ||
+            fail "Could not protect dependency state directory: $state_dir"
+    else
+        mkdir -m 0700 -- "$state_dir" ||
+            fail "Could not create dependency state directory: $state_dir"
+        temporary_file="$(mktemp "$state_dir/.owner.XXXXXX")" ||
+            fail "Could not create dependency state owner file in $state_dir"
+        printf 'forcad-dependencies-v1:%s\n' "$role" > "$temporary_file"
+        chmod 0600 -- "$temporary_file"
+        if ! ln -- "$temporary_file" "$owner_file" 2>/dev/null; then
+            rm -f -- "$temporary_file"
+            fail "Could not create dependency state owner file: $owner_file"
+        fi
+        rm -f -- "$temporary_file"
+    fi
+
+    if [[ -e "$before_file" || -L "$before_file" ]]; then
+        [[ -f "$before_file" && ! -L "$before_file" && -O "$before_file" ]] ||
+            fail "Refusing unsafe pre-bootstrap package record: $before_file"
+        chmod 0600 -- "$before_file" ||
+            fail "Could not protect pre-bootstrap package record: $before_file"
+    else
+        temporary_file="$(mktemp "$state_dir/.bootstrap-before.XXXXXX")" ||
+            fail "Could not create pre-bootstrap package record in $state_dir"
+        if ! dpkg-query -W -f='${db:Status-Status} ${binary:Package}\n' |
+            awk '$1 != "not-installed" { print $2 }' |
+            LC_ALL=C sort -u > "$temporary_file"; then
+            rm -f -- "$temporary_file"
+            fail "Could not record existing packages before Python bootstrap. State retained at $state_dir."
+        fi
+        chmod 0600 -- "$temporary_file"
+        if ! ln -- "$temporary_file" "$before_file" 2>/dev/null; then
+            rm -f -- "$temporary_file"
+            if [[ -f "$before_file" && ! -L "$before_file" && -O "$before_file" ]]; then
+                chmod 0600 -- "$before_file" ||
+                    fail "Could not protect pre-bootstrap package record: $before_file"
+            else
+                fail "Could not preserve pre-bootstrap package record: $before_file"
+            fi
+        else
+            rm -f -- "$temporary_file"
+        fi
+    fi
+
+    export DEBIAN_FRONTEND=noninteractive
+    export NEEDRESTART_MODE=l
+    export LC_ALL=C
+    if ! apt-get update; then
+        fail "Python bootstrap failed during apt-get update. Resolve the apt error and rerun install.sh; package records remain at $state_dir."
+    fi
+    temporary_file="$(mktemp "$state_dir/.bootstrap-candidates.XXXXXX")" ||
+        fail "Could not create Python package candidate record in $state_dir"
+    if ! apt-get -s install -y --no-install-recommends --no-upgrade --no-remove python3 |
+        awk '$1 == "Inst" { print $2 }' |
+        LC_ALL=C sort -u > "$temporary_file"; then
+        rm -f -- "$temporary_file"
+        fail "Could not simulate Python bootstrap. Package records remain at $state_dir."
+    fi
+    chmod 0600 -- "$temporary_file"
+    if [[ -e "$candidates_file" || -L "$candidates_file" ]]; then
+        [[ -f "$candidates_file" && ! -L "$candidates_file" && -O "$candidates_file" ]] ||
+            fail "Refusing unsafe Python package candidate record: $candidates_file"
+        chmod 0600 -- "$candidates_file" ||
+            fail "Could not protect Python package candidate record: $candidates_file"
+        merged_file="$(mktemp "$state_dir/.bootstrap-candidates-merged.XXXXXX")" ||
+            fail "Could not update Python package candidate record in $state_dir"
+        if ! cat -- "$candidates_file" "$temporary_file" |
+            LC_ALL=C sort -u > "$merged_file"; then
+            rm -f -- "$temporary_file" "$merged_file"
+            fail "Could not merge Python package candidate records. State retained at $state_dir."
+        fi
+        chmod 0600 -- "$merged_file"
+        if ! mv -f -- "$merged_file" "$candidates_file"; then
+            rm -f -- "$temporary_file" "$merged_file"
+            fail "Could not preserve Python package candidate record: $candidates_file"
+        fi
+        rm -f -- "$temporary_file"
+    elif ! ln -- "$temporary_file" "$candidates_file" 2>/dev/null; then
+        rm -f -- "$temporary_file"
+        fail "Could not preserve Python package candidate record: $candidates_file"
+    else
+        rm -f -- "$temporary_file"
+    fi
+    if ! apt-get install -y --no-install-recommends --no-upgrade --no-remove python3; then
+        fail "Python bootstrap failed during apt-get install. Resolve the apt error and rerun install.sh; package records remain at $state_dir."
+    fi
+    command -v python3 >/dev/null 2>&1 ||
+        fail "apt-get completed but python3 is still unavailable. Check the apt result and rerun install.sh; package records remain at $state_dir."
+}
+
+has_dependency_receipt() {
+    local dependency_root=/var/lib/forcad-dependencies
+    local state_dir="$dependency_root/$role"
+    local owner_file="$state_dir/owner"
+    local state_file="$state_dir/state.json"
+    local directory
+
+    for directory in /var /var/lib; do
+        [[ ! -L "$directory" && -d "$directory" && -O "$directory" ]] ||
+            fail "Refusing unsafe or unowned dependency directory: $directory"
+    done
+
+    if [[ -L "$dependency_root" ]]; then
+        fail "Refusing symlinked dependency directory: $dependency_root"
+    elif [[ ! -e "$dependency_root" ]]; then
+        return 1
+    fi
+    [[ -d "$dependency_root" && -O "$dependency_root" ]] ||
+        fail "Refusing unsafe or unowned dependency directory: $dependency_root"
+
+    if [[ -L "$state_dir" ]]; then
+        fail "Refusing symlinked dependency state directory: $state_dir"
+    elif [[ ! -e "$state_dir" ]]; then
+        return 1
+    fi
+    [[ -d "$state_dir" && -O "$state_dir" ]] ||
+        fail "Refusing unsafe or unowned dependency state directory: $state_dir"
+
+    [[ -f "$owner_file" && ! -L "$owner_file" && -O "$owner_file" ]] ||
+        fail "Refusing invalid dependency state owner file: $owner_file"
+    command -v cmp >/dev/null 2>&1 ||
+        fail "Required system command is missing: cmp. Restore Python manually, then rerun uninstall.sh."
+    printf 'forcad-dependencies-v1:%s\n' "$role" | cmp -s - "$owner_file" ||
+        fail "Dependency state owner does not match $role: $owner_file"
+
+    [[ -f "$state_file" && ! -L "$state_file" && -O "$state_file" ]] ||
+        fail "Refusing invalid dependency state receipt: $state_file"
+    return 0
+}
+
+if [[ "$help_requested" != true ]] && ! command -v python3 >/dev/null 2>&1; then
+    if [[ "$action" == install ]]; then
+        bootstrap_python
+    elif [[ "$action" == uninstall ]]; then
+        local_dry_run=false
+        for argument in "$@"; do
+            if [[ "$argument" == --dry-run ]]; then
+                local_dry_run=true
+                break
+            fi
+        done
+        if [[ "$local_dry_run" != true ]] && has_dependency_receipt; then
+            printf '%s\n' 'Restoring Python to finish interrupted dependency cleanup.' >&2
+            bootstrap_python
+        fi
+    fi
+fi
+
+exec python3 "$bundle_dir/host.py" "$action" "$@"

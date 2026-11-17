@@ -1,0 +1,57 @@
+x-fixture: &fixture
+  image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-fixture
+  build:
+    context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    dockerfile: backend/load_test/test-data/services/Dockerfile
+  read_only: true
+  tmpfs: ["/data:uid=10001,gid=10001,mode=0700,size=256m"]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  mem_limit: 384m
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+    interval: 2s
+    timeout: 3s
+    retries: 20
+
+services:
+  postgres:
+    cpu_shares: ${LOAD_POSTGRES_CPU_SHARES:-0}
+  api:
+    cpu_shares: ${LOAD_API_CPU_SHARES:-0}
+    environment:
+      FORCAD_API_DATABASE_MAX_CONNS: "${LOAD_API_DATABASE_MAX_CONNS:-16}"
+      DATABASE_MIN_CONNS: "${LOAD_API_DATABASE_MIN_CONNS:-0}"
+      FORCAD_API_HTTP_MAX_INFLIGHT: "${LOAD_API_HTTP_MAX_INFLIGHT:-128}"
+      GOGC: "${LOAD_API_GOGC:-100}"
+  receiver:
+    environment:
+      FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${LOAD_RECEIVER_DATABASE_MAX_CONNS:-${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-32}}"
+  pgbouncer:
+    environment:
+      FORCAD_API_DATABASE_MAX_CONNS: "${LOAD_API_DATABASE_MAX_CONNS:-16}"
+      FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${LOAD_RECEIVER_DATABASE_MAX_CONNS:-${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-32}}"
+      PGBOUNCER_API_CONNECTIONS: "${LOAD_PGBOUNCER_API_CONNECTIONS:-32}"
+      PGBOUNCER_API_MIN_CONNECTIONS: "${LOAD_PGBOUNCER_API_MIN_CONNECTIONS:-0}"
+  notes:
+    <<: *fixture
+    command: [notes]
+  vault:
+    <<: *fixture
+    command: [vault]
+  queue:
+    <<: *fixture
+    command: [jobs]
+  worker:
+    cpus: ${LOAD_WORKER_CPUS:-0}
+    cpu_shares: ${LOAD_WORKER_CPU_SHARES:-0}
+    environment:
+      LOAD_PFR: "${LOAD_PFR:-0}"
+      WORKER_CONCURRENCY: "${LOAD_WORKER_CONCURRENCY:-8}"
+      FORCAD_WORKER_DATABASE_MAX_CONNS: "${LOAD_WORKER_DATABASE_MAX_CONNS:-4}"
+      FORCAD_CHECKER_MEMORY_LIMIT_MB: "${LOAD_CHECKER_MEMORY_LIMIT_MB:-1024}"
+    depends_on:
+      notes: {condition: service_healthy}
+      vault: {condition: service_healthy}
+      queue: {condition: service_healthy}

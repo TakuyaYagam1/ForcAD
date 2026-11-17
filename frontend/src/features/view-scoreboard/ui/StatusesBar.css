@@ -1,0 +1,52 @@
+.round-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 280px;
+  min-width: 208px;
+  max-width: 280px;
+  min-height: 32px;
+  margin-right: auto;
+  color: var(--text-primary);
+}
+
+.round-track {
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+  font-weight: 300;
+  line-height: 24px;
+  text-align: center;
+  user-select: none;
+}
+.round-character { position: relative; color: var(--text-muted); opacity: .65; }
+.round-character--filled, .round-character--tip { color: var(--round-progress-color); opacity: 1; }
+.round-bracket { color: var(--text-muted); }
+.round-cursor-frames { display: none; }
+.round-cursor-frames > span { position: absolute; inset: 0; opacity: 0; }
+.round-track[data-cursor="running"] .round-cursor-rest { opacity: 0; }
+.round-track[data-cursor="running"] .round-cursor-frames { display: inline; }
+/* State indication: a one-second terminal cursor cycle in one fixed cell.
+   Only opacity changes; the elapsed portion and all readable values stay still. */
+.round-track[data-cursor="running"] .round-cursor-frames > span {
+  animation: round-cursor-frame 1000ms linear infinite;
+}
+@keyframes round-cursor-frame {
+  0%, 24.99% { opacity: 1; }
+  25%, 100% { opacity: 0; }
+}
+.round-timer { min-width: 0; text-align: right; }
+.round-timer strong { display: block; font-size: 15px; font-weight: 300; line-height: 28px; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .round-track[data-cursor="running"] .round-cursor-rest { opacity: 1; }
+  .round-track[data-cursor="running"] .round-cursor-frames { display: none; }
+  .round-track[data-cursor="running"] .round-cursor-frames > span { animation: none; }
+}
+
+:root[data-motion="off"] .round-track .round-cursor-rest { opacity: 1; }
+:root[data-motion="off"] .round-track .round-cursor-frames { display: none; }
+:root[data-motion="off"] .round-track .round-cursor-frames > span { animation: none; }

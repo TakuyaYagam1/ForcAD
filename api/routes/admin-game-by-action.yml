@@ -1,0 +1,43 @@
+post:
+  operationId: changeAdminGameState
+  tags:
+  - admin
+  summary: Apply a game lifecycle action.
+  description: start_final and finish require confirm=true. generation is an optional
+    optimistic concurrency check.
+  security:
+  - sessionCookie: []
+  parameters:
+  - name: action
+    in: path
+    required: true
+    schema:
+      type: string
+      enum:
+      - start
+      - start_practice
+      - start_final
+      - pause
+      - resume
+      - finish
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/GameActionRequest"
+  responses:
+    '200':
+      description: Updated game runtime status.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/GameRuntimeStatus"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"

@@ -1,0 +1,23 @@
+get:
+  operationId: openEventStream
+  tags:
+  - events
+  summary: Open the public WebSocket event stream.
+  description: Upgrade this request to WebSocket. Each text message is a RealtimeEvent
+    JSON object. The stream is public and contains only participant-visible scoreboard
+    updates and flag-steal notifications.
+  security: []
+  responses:
+    '101':
+      description: WebSocket connection established.
+      headers:
+        Upgrade:
+          schema:
+            type: string
+            enum:
+            - websocket
+        Connection:
+          schema:
+            type: string
+            enum:
+            - Upgrade

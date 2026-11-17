@@ -1,0 +1,27 @@
+post:
+  operationId: deactivateAdminTasks
+  tags:
+  - admin
+  summary: Atomically deactivate selected services without deleting history.
+  description: All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminBulkDeactivateRequest"
+  responses:
+    '200':
+      description: Number of services that changed from active to inactive.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminBulkDeactivateResult"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"

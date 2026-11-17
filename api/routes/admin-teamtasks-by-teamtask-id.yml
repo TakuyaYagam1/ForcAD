@@ -1,0 +1,41 @@
+parameters:
+- "$ref": "../components/parameters.yml#/TeamTaskId"
+get:
+  operationId: getAdminTeamTask
+  tags:
+  - admin
+  summary: Reserved team task detail method.
+  description: The route is registered but has no retrieve handler and returns 404.
+  security:
+  - sessionCookie: []
+  responses:
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+put:
+  operationId: updateAdminTeamTask
+  tags:
+  - admin
+  summary: Reserved team task detail method.
+  description: The route is registered but has no update handler and returns 404.
+  security:
+  - sessionCookie: []
+  responses:
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+delete:
+  operationId: deleteAdminTeamTask
+  tags:
+  - admin
+  summary: Reserved team task detail method.
+  description: The route is registered but has no delete handler and returns 404.
+  security:
+  - sessionCookie: []
+  responses:
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"

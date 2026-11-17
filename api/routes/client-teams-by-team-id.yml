@@ -1,0 +1,17 @@
+get:
+  operationId: getClientTeamHistory
+  tags:
+  - client
+  summary: Get participant-visible task history for a team.
+  security: []
+  parameters:
+  - "$ref": "../components/parameters.yml#/TeamId"
+  responses:
+    '200':
+      description: Team task history with private fields removed.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/ParticipantTeamTaskHistory"

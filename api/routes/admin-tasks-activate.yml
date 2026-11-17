@@ -1,0 +1,27 @@
+post:
+  operationId: activateAdminTasks
+  tags:
+  - admin
+  summary: Atomically activate selected services without recreating related data.
+  description: All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminBulkActivateRequest"
+  responses:
+    '200':
+      description: Number of services that changed from inactive to active.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminBulkActivateResult"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"

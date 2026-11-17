@@ -1,0 +1,17 @@
+get:
+  operationId: getClientCtftimeScoreboard
+  tags:
+  - client
+  summary: Get the CTFtime standings.
+  security: []
+  responses:
+    '200':
+      description: Current standings.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/CtftimeStanding"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"

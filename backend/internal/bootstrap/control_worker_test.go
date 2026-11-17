@@ -1,0 +1,150 @@
+package bootstrap
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+
+	"github.com/TakuyaYagam1/ForcAD/config"
+	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
+)
+
+func workerCommandProject(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	configPath := filepath.Join(root, "config", "config.yml")
+	for _, path := range []string{filepath.Dir(configPath), filepath.Join(root, "deployment", "docker")} {
+		if err := os.MkdirAll(path, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(configPath, []byte(operatorProjectConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "deployment", "docker", "compose.yml"), []byte("services:\n  config-loader: {}\n  pgbouncer: {}\n  worker: {}\n  postgres: {}\n  redis: {}\n  nats: {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := localoperator.Setup(root, localoperator.SetupOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	return root
+}
+
+func TestWorkerReusesCredentialsAndStagesBeforeStartingNoDependencies(t *testing.T) {
+	root := workerCommandProject(t)
+	configPath := filepath.Join(root, "config", "config.yml")
+	before, err := config.LoadDocument(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TEST", "")
+	t.Setenv("FORCAD_WORKER_REPLICAS", "2")
+	var got [][]string
+	runner := func(
+		_ context.Context,
+		name string,
+		args, environment []string,
+		_ io.Reader,
+		_, _ io.Writer,
+	) error {
+		got = append(got, append([]string{name}, args...))
+		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
+			t.Fatalf("worker child environment = %q", environment)
+		}
+		return nil
+	}
+	args := []string{"--redis", "cache.example:6380", "--database", "db.example:5433", "--nats", "broker.example:4223", "-w", "20", "--fast"}
+	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); err != nil {
+		t.Fatal(err)
+	}
+	prefix := []string{"docker", "compose", "--project-directory", filepath.Join(root, "deployment", "docker"), "-f", filepath.Join(root, "config", "runtime", "compose.external.yml")}
+	want := [][]string{
+		append(append([]string(nil), prefix...), "run", "--rm", "--no-deps", "--build", "config-loader"),
+		append(append([]string(nil), prefix...), "up", "-d", "--build", "--no-deps", "--scale", "worker=20", "pgbouncer", "worker"),
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("worker deployment = %q, want %q", got, want)
+	}
+	after, err := config.LoadDocument(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *after.Admin != *before.Admin || after.Storages.DB.Password != before.Storages.DB.Password ||
+		*after.Storages.DB.Runtime != *before.Storages.DB.Runtime ||
+		after.Storages.Redis.Password != before.Storages.Redis.Password || after.Storages.NATS.Password != before.Storages.NATS.Password {
+		t.Fatal("worker command replaced deployment credentials")
+	}
+	if after.Storages.DB.Host != "db.example" || after.Storages.Redis.Port != 6380 || after.Storages.NATS.Port != 4223 {
+		t.Fatal("worker command did not apply external addresses")
+	}
+	if os.Getenv("FORCAD_WORKER_REPLICAS") != "2" {
+		t.Fatal("worker command changed the caller's environment")
+	}
+}
+
+func TestWorkerConfigStagingFailurePreventsApplications(t *testing.T) {
+	root := workerCommandProject(t)
+	t.Setenv("TEST", "")
+	failure := errors.New("config staging failed")
+	calls := 0
+	runner := func(
+		_ context.Context,
+		_ string,
+		args, environment []string,
+		_ io.Reader,
+		_, _ io.Writer,
+	) error {
+		calls++
+		if calls != 1 || !reflect.DeepEqual(args[len(args)-5:], []string{"run", "--rm", "--no-deps", "--build", "config-loader"}) {
+			t.Fatalf("unexpected command after staging failure: %q", args)
+		}
+		if !reflect.DeepEqual(environment, []string{"FORCAD_WORKER_REPLICAS=20"}) {
+			t.Fatalf("staging child environment = %q", environment)
+		}
+		return failure
+	}
+	args := []string{"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example", "-w", "20"}
+	if err := runWorkerCommand(t.Context(), root, args, io.Discard, runner); !errors.Is(err, failure) {
+		t.Fatalf("staging failure = %v, want %v", err, failure)
+	}
+	if calls != 1 {
+		t.Fatalf("staging called %d commands, want only the config-loader", calls)
+	}
+}
+
+func TestWorkerRejectsIncompleteOptionsBeforeSetup(t *testing.T) {
+	root := t.TempDir()
+	for _, args := range [][]string{nil, {"--redis", "cache.example"}, {"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example", "-w", "-1"}} {
+		if err := runWorkerCommand(t.Context(), root, args, io.Discard, nil); err == nil {
+			t.Fatalf("accepted worker options %q", args)
+		}
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("invalid worker command changed the project: %v", err)
+	}
+}
+
+func TestWorkerRefusesToGenerateNewStorageCredentials(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "config"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "config", "config.yml")
+	if err := os.WriteFile(path, []byte(operatorProjectConfig), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"--redis", "cache.example", "--database", "db.example", "--nats", "broker.example"}
+	if err := runWorkerCommand(t.Context(), root, args, io.Discard, nil); err == nil {
+		t.Fatal("worker accepted a configuration without deployment credentials")
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(after, []byte(operatorProjectConfig)) {
+		t.Fatalf("worker changed configuration: %v", err)
+	}
+}
