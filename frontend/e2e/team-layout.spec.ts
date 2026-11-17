@@ -5,7 +5,7 @@ test("a highlighted team only receives a row background while hovered", async ({
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   try {
-    await page.route("**/api/client/scoreboard/", async (route) => {
+    await page.route("**/api/v1/client/scoreboard/", async (route) => {
       const response = await route.fetch();
       const data = await response.json();
       for (const team of data.teams) {
@@ -47,14 +47,14 @@ test("team round history fits desktop and mobile without horizontal scrolling", 
     await page.goto("/teams");
     // The isolated backend starts between games, so give this layout check
     // completed rounds without starting a game or changing shared server data.
-    const scoreboard = await page.request.get("/api/client/scoreboard/");
+    const scoreboard = await page.request.get("/api/v1/client/scoreboard/");
     const { tasks } = await scoreboard.json() as {
       tasks: Array<{
         id: string
       }>;
     };
-    await page.route(/\/api\/client\/teams\/[^/]+\/$/, async (route) => {
-      const teamId = new URL(route.request().url()).pathname.split("/")[4];
+    await page.route(/\/api\/v1\/client\/teams\/[^/]+\/$/, async (route) => {
+      const teamId = new URL(route.request().url()).pathname.split("/")[5];
       await route.fulfill({
         json: Array.from({
           length: 6
