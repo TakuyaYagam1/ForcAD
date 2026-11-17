@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { RequireAdmin } from "./providers/RequireAdmin";
 import { useTranslation } from "react-i18next";
+import { AdminNotificationProvider } from "@/shared/ui/admin-notification/AdminNotification";
 
 const ScoreboardPage = lazy(() => {
   return import("@/pages/scoreboard/ui/ScoreboardPage")
@@ -48,6 +49,14 @@ const AdminScoreboardPage = lazy(() => {
     .then(({ AdminScoreboardPage }) => {
       return {
         default: AdminScoreboardPage
+      }
+    })
+});
+const AdminEntitiesPage = lazy(() => {
+  return import("@/pages/admin-entities/ui/AdminEntitiesPage")
+    .then(({ AdminEntitiesPage }) => {
+      return {
+        default: AdminEntitiesPage
       }
     })
 });
@@ -134,7 +143,7 @@ class RouteErrorBoundary extends Component<
   }
 }
 
-export default function App() {
+function AppRoutes() {
   const location = useLocation();
 
   return (
@@ -153,6 +162,24 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminScoreboardPage />
+              </RequireAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/teams"
+            element={
+              <RequireAdmin>
+                <AdminEntitiesPage kind="teams" />
+              </RequireAdmin>
+            }
+          />
+
+          <Route
+            path="/admin/services"
+            element={
+              <RequireAdmin>
+                <AdminEntitiesPage kind="services" />
               </RequireAdmin>
             }
           />
@@ -209,5 +236,13 @@ export default function App() {
         </Routes>
       </Suspense>
     </RouteErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <AdminNotificationProvider>
+      <AppRoutes />
+    </AdminNotificationProvider>
   );
 }

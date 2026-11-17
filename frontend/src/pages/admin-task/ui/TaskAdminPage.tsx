@@ -19,6 +19,7 @@ import { TaskForm } from "./TaskForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
+import { useAdminNotification } from "@/shared/ui/admin-notification/useAdminNotification";
 
 type TaskPageError =
   | {
@@ -40,6 +41,7 @@ interface TaskAdminPageProps {
 
 export function TaskAdminPage({ mode }: TaskAdminPageProps) {
   const { t } = useTranslation("admin");
+  const notify = useAdminNotification();
   const { taskId: taskIdParam } = useParams<{
     taskId?: string
   }>();
@@ -49,6 +51,7 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<TaskPageError | null>(null);
+  const persistedActive = useRef<boolean | null>(null);
 
   const isCreate = mode === "create" || !taskIdParam;
   const taskId = !isCreate ? (normalizeUuid(taskIdParam) ?? null) : null;
@@ -70,6 +73,7 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
       setLoadedKey(null);
       setSaving(false);
       setError(null);
+      persistedActive.current = null;
 
       try {
         if (isCreate) {
@@ -94,6 +98,7 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
         } else if (taskId !== null) {
           const loadedTask = await fetchTaskAdmin(taskId);
           if (!cancelled) {
+            persistedActive.current = loadedTask.active;
             setTask({
               ...loadedTask,
               env_path: loadedTask.env_path ?? ""
@@ -171,6 +176,7 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
       if (isCreate) {
         const createdTask = await createTaskAdmin(payload);
         if (routeKey.current === submittedRouteKey) {
+          notify(t("task.created"));
           navigate(`/admin/task/${createdTask.id}`, {
             replace: true
           });
@@ -178,7 +184,13 @@ export function TaskAdminPage({ mode }: TaskAdminPageProps) {
       } else if (taskId != null) {
         const updatedTask = await updateTaskAdmin(taskId, payload);
         if (routeKey.current === submittedRouteKey) {
+          const activeChanged = persistedActive.current !== null
+            && persistedActive.current !== updatedTask.active;
+          persistedActive.current = updatedTask.active;
           setTask(updatedTask);
+          notify(activeChanged
+            ? t(updatedTask.active ? "task.activated" : "task.deactivated")
+            : t("task.saved"));
         }
       }
 

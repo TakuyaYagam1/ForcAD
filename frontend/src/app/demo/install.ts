@@ -9,6 +9,10 @@ import type { TeamTaskStateRaw } from "@/entities/team-scoreboard/api";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import type { GameRuntimeStatus, RawTeamTask } from "@/entities/scoreboard/model/store";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
+import {
+  AdminBulkDeactivateRequest,
+  AdminGameSettingsUpdate,
+} from "@/shared/api/generated/schemas";
 import { api, http } from "@/shared/lib/axios";
 import {
   createDemoTeams,
@@ -34,6 +38,7 @@ const GAME_ACTION_PATH =
   /^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/;
 const UUID_PATH = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 const ADMIN_ENTITY_PATH = new RegExp(`^/admin/(teams|tasks)(?:/(${UUID_PATH}))?$`, "i");
+const ADMIN_BULK_PATH = /^\/admin\/(teams|tasks)\/(activate|deactivate)$/;
 const CLIENT_TEAM_HISTORY_PATH = new RegExp(`^/client/teams/(${UUID_PATH})$`, "i");
 
 interface DemoCaptureSeed {
@@ -82,6 +87,20 @@ const INITIAL_CAPTURE_EVENTS: DemoCaptureSeed[] = [
   },
 ];
 
+const initialDemoGameSettings = (): Omit<AdminGameSettingsUpdate, "generation" | "start_time"> => {
+  return {
+    rounds: 300,
+    flag_lifetime: 3,
+    game_hardness: 2,
+    inflation: false,
+    volga_attacks_mode: false,
+    round_time: DEMO_ROUND_TIME,
+    extra_checks: 0,
+    mode: "classic",
+    timezone: "UTC",
+  }
+};
+
 let teams: Team[] = [];
 let tasks: Task[] = [];
 let rawTeamTasks: RawTeamTask[] = [];
@@ -96,6 +115,8 @@ let generation = 0;
 let scheduledStart = new Date(Date.now() - ONE_HOUR_MS).toISOString();
 let pausedAt: number | null = null;
 let pausedSeconds = 0;
+let demoCsrfToken = "";
+let demoGameSettings = initialDemoGameSettings();
 
 function getRuntime(): GameRuntimeStatus {
   return {
@@ -108,9 +129,9 @@ function getRuntime(): GameRuntimeStatus {
     scheduled_start: scheduledStart,
     paused_at: pausedAt,
     paused_seconds: pausedSeconds,
-    round_time: DEMO_ROUND_TIME,
+    round_time: demoGameSettings.round_time,
     round: phase === "waiting" ? 0 : round + 1,
-    round_start: phase === "waiting" ? null : roundStart + DEMO_ROUND_TIME,
+    round_start: phase === "waiting" ? null : roundStart + demoGameSettings.round_time,
     round_waiting: false,
     results_pending: false,
   };
@@ -119,14 +140,14 @@ function getRuntime(): GameRuntimeStatus {
 function getDemoConfig() {
   return {
     id: 1,
-    flag_lifetime: 3,
-    game_hardness: 2,
-    inflation: false,
-    volga_attacks_mode: false,
-    round_time: DEMO_ROUND_TIME,
-    rounds: null,
-    mode: "demo",
-    timezone: "UTC",
+    flag_lifetime: demoGameSettings.flag_lifetime,
+    game_hardness: demoGameSettings.game_hardness,
+    inflation: demoGameSettings.inflation,
+    volga_attacks_mode: demoGameSettings.volga_attacks_mode,
+    round_time: demoGameSettings.round_time,
+    rounds: demoGameSettings.rounds,
+    mode: demoGameSettings.mode,
+    timezone: demoGameSettings.timezone,
     start_time: scheduledStart,
     real_round: round,
     game_running: phase === "running",
@@ -203,13 +224,16 @@ function publishState() {
     },
     runtime: getRuntime(),
   });
-  scoreboard.setRoundTime(DEMO_ROUND_TIME);
+  scoreboard.setRoundTime(demoGameSettings.round_time);
   scoreboard.setConnected(true);
   refreshGameQueries();
 }
 
 function rememberSession(value: boolean) {
   isLoggedIn = value;
+  demoCsrfToken = value
+    ? crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")
+    : "";
   try {
     if (value) {
       sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, "on");
@@ -225,6 +249,7 @@ export function resetDemoData() {
   practice = false;
   generation += 1;
   scheduledStart = new Date(Date.now() - ONE_HOUR_MS).toISOString();
+  demoGameSettings = initialDemoGameSettings();
   phase = "running";
   pausedAt = null;
   pausedSeconds = 0;
@@ -233,7 +258,7 @@ export function resetDemoData() {
   rawTeamTasks = createDemoTeamTasks(teams, tasks);
   round = DEMO_INITIAL_ROUND;
   const now = Math.floor(Date.now() / 1000);
-  roundStart = now - DEMO_ROUND_TIME - 35;
+  roundStart = now - demoGameSettings.round_time - 35;
   teamTaskHistory = createDemoHistory(rawTeamTasks, round, now);
   demoAdminLogIds.clear();
   publishState();
@@ -360,7 +385,7 @@ export function simulateDemoCapture(promote = false) {
   round += 1;
   pausedSeconds = 0;
   refreshGameQueries();
-  roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
+  roundStart = Math.floor(Date.now() / 1000) - demoGameSettings.round_time;
   recordSnapshot();
   useScoreboardStore.getState().setRuntime(getRuntime());
   useScoreboardStore.getState().handleUpdateScoreboardMessage({
@@ -559,7 +584,8 @@ function handleAdminSessionRequest(
     }
     return makeResponse(config, {
       status: "ok",
-      username: DEMO_ADMIN_USERNAME
+      username: DEMO_ADMIN_USERNAME,
+      csrf_token: demoCsrfToken
     });
   }
   if (requestPath === "/admin/status") {
@@ -572,6 +598,7 @@ function handleAdminSessionRequest(
     return makeResponse(config, {
       username: DEMO_ADMIN_USERNAME,
       status: "ok",
+      csrf_token: demoCsrfToken,
     });
   }
   if (requestPath === "/admin/logout") {
@@ -592,6 +619,146 @@ function requireAdminSession(
   if (requestPath.startsWith("/admin/") && !isLoggedIn) {
     fail(config, 403, "No active demo session");
   }
+}
+
+function handleGameSettingsRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+  method: string,
+  body: Record<string, unknown>,
+): DemoResponse | undefined {
+  if (requestPath !== "/admin/game/config") {
+    return;
+  }
+  if (method === "GET") {
+    return makeResponse(config, {
+      config: getDemoConfig(),
+      runtime: getRuntime(),
+      extra_checks: demoGameSettings.extra_checks,
+    });
+  }
+  if (method !== "PUT") {
+    fail(config, 405, "Game settings require PUT");
+  }
+  const parsed = AdminGameSettingsUpdate.safeParse(body);
+  if (!parsed.success) {
+    fail(config, 400, "Invalid game settings");
+  }
+  const next = parsed.data;
+  if (next.game_hardness <= 1 || (next.mode !== "classic" && next.extra_checks > 0)) {
+    fail(config, 400, "Invalid game settings");
+  }
+  try {
+    if (next.timezone === "Local") {
+      fail(config, 400, "Invalid timezone");
+    }
+    new Intl.DateTimeFormat("en", {
+      timeZone: next.timezone
+    });
+  } catch {
+    fail(config, 400, "Invalid timezone");
+  }
+  if (next.generation !== generation || phase === "finished") {
+    fail(config, 409, "Game session has changed");
+  }
+  const changedRules =
+    next.flag_lifetime !== demoGameSettings.flag_lifetime ||
+    next.game_hardness !== demoGameSettings.game_hardness ||
+    next.inflation !== demoGameSettings.inflation ||
+    next.volga_attacks_mode !== demoGameSettings.volga_attacks_mode ||
+    next.round_time !== demoGameSettings.round_time ||
+    next.extra_checks !== demoGameSettings.extra_checks ||
+    next.mode !== demoGameSettings.mode ||
+    next.timezone !== demoGameSettings.timezone ||
+    Date.parse(next.start_time) !== Date.parse(scheduledStart);
+  if (phase !== "waiting" && changedRules) {
+    fail(config, 409, "Only the round limit can change after game start");
+  }
+  if (phase !== "waiting" && next.rounds !== null && next.rounds <= round) {
+    fail(config, 409, "Round limit must exceed the current round");
+  }
+  demoGameSettings = {
+    rounds: next.rounds,
+    flag_lifetime: next.flag_lifetime,
+    game_hardness: next.game_hardness,
+    inflation: next.inflation,
+    volga_attacks_mode: next.volga_attacks_mode,
+    round_time: next.round_time,
+    extra_checks: next.extra_checks,
+    mode: next.mode,
+    timezone: next.timezone,
+  };
+  scheduledStart = new Date(next.start_time).toISOString();
+  publishState();
+  return makeResponse(config, {
+    config: getDemoConfig(),
+    runtime: getRuntime(),
+    extra_checks: demoGameSettings.extra_checks,
+  });
+}
+
+function handleBulkStateRequest(
+  config: InternalAxiosRequestConfig,
+  requestPath: string,
+  method: string,
+  body: Record<string, unknown>,
+): DemoResponse | undefined {
+  const match = requestPath.match(ADMIN_BULK_PATH);
+  if (!match) {
+    return;
+  }
+  const activate = match[2] === "activate";
+  if (method !== "POST") {
+    fail(
+      config,
+      405,
+      activate
+        ? "Batch activation requires POST"
+        : "Batch deactivation requires POST",
+    );
+  }
+  const parsed = AdminBulkDeactivateRequest.safeParse(body);
+  if (!parsed.success) {
+    fail(config, 400, "Batch must contain 1–100 unique IDs");
+  }
+  const requestedIds = new Set(parsed.data.ids);
+  if (requestedIds.size !== parsed.data.ids.length) {
+    fail(config, 400, "Batch must contain 1–100 unique IDs");
+  }
+  const collection = match[1] === "teams" ? teams : tasks;
+  const collectionIds = new Set(collection.flatMap((record) => {
+    return record.id === null ? [] : [record.id]
+  }));
+  if (parsed.data.ids.some((id) => {
+    return !collectionIds.has(id)
+  })) {
+    fail(config, 404, "Record not found");
+  }
+  let changed = 0;
+  for (const record of collection) {
+    if (
+      record.active !== activate
+      && record.id !== null
+      && requestedIds.has(record.id)
+    ) {
+      record.active = activate;
+      changed += 1;
+    }
+  }
+  if (changed > 0) {
+    addMissingCells();
+    publishState();
+  }
+  return makeResponse(
+    config,
+    activate
+      ? {
+        activated: changed,
+      }
+      : {
+        deactivated: changed,
+      },
+  );
 }
 
 function handleGameActionRequest(
@@ -637,7 +804,7 @@ function handleGameActionRequest(
     practice = gameAction !== "start_final" && scheduledStartIsFuture;
     generation += 1;
     phase = "running";
-    roundStart = Math.floor(Date.now() / 1000) - DEMO_ROUND_TIME;
+    roundStart = Math.floor(Date.now() / 1000) - demoGameSettings.round_time;
   } else if (gameAction === "finish" && practice) {
     const originalStart = scheduledStart;
     prepareDemoGame();
@@ -815,6 +982,26 @@ const demoAdapter: AxiosAdapter = async (config) => {
 
   requireAdminSession(config, requestPath);
 
+  const settingsResponse = handleGameSettingsRequest(
+    config,
+    requestPath,
+    method,
+    body,
+  );
+  if (settingsResponse) {
+    return settingsResponse;
+  }
+
+  const bulkResponse = handleBulkStateRequest(
+    config,
+    requestPath,
+    method,
+    body,
+  );
+  if (bulkResponse) {
+    return bulkResponse;
+  }
+
   const gameResponse = handleGameActionRequest(
     config,
     requestPath,
@@ -849,6 +1036,9 @@ export function installDemoData() {
   } catch {
     isLoggedIn = false;
   }
+  demoCsrfToken = isLoggedIn
+    ? crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")
+    : "";
   api.defaults.adapter = demoAdapter;
   http.defaults.adapter = demoAdapter;
   resetDemoData();

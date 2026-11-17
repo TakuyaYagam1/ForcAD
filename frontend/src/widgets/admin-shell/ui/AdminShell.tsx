@@ -4,7 +4,7 @@ import { AdminAuthErrorMessage } from "@/features/auth-admin/ui/AdminAuthErrorMe
 import { AppShell } from "@/shared/ui/layout/AppShell";
 import { LogOut, LoaderCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "./AdminShell.css";
 
@@ -16,6 +16,13 @@ interface AdminShellProps {
 export function AdminShell({ children, headerProgress }: AdminShellProps) {
   const { t } = useTranslation("admin");
   const navigate = useNavigate();
+  const location = useLocation();
+  const teamsActive = location.pathname === "/admin/teams"
+    || location.pathname.startsWith("/admin/team/");
+  const gameActive = location.pathname === "/admin/scoreboard"
+    || location.pathname.startsWith("/admin/teamtask_log/");
+  const servicesActive = location.pathname === "/admin/services"
+    || location.pathname.startsWith("/admin/task/");
   const logout = useAdminAuthStore((state) => {
     return state.logout
   });
@@ -46,6 +53,31 @@ export function AdminShell({ children, headerProgress }: AdminShellProps) {
     <AppShell
       showNavigation={false}
       headerProgress={headerProgress}
+      headerNavigation={(
+        <nav className="main-nav" aria-label={t("navigation.label")}>
+          <Link
+            to="/admin/teams"
+            className={teamsActive ? "active" : undefined}
+            aria-current={teamsActive ? "page" : undefined}
+          >
+            {t("navigation.teams")}
+          </Link>
+          <Link
+            to="/admin/scoreboard"
+            className={`main-nav__scoreboard${gameActive ? " active" : ""}`}
+            aria-current={gameActive ? "page" : undefined}
+          >
+            {t("navigation.game")}
+          </Link>
+          <Link
+            to="/admin/services"
+            className={servicesActive ? "active" : undefined}
+            aria-current={servicesActive ? "page" : undefined}
+          >
+            {t("navigation.services")}
+          </Link>
+        </nav>
+      )}
       headerActions={(
         <Button
           type="button"

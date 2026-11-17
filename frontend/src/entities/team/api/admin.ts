@@ -1,5 +1,7 @@
 import {
   createAdminTeam as createAdminTeamRequest,
+  activateAdminTeams as activateAdminTeamsRequest,
+  deactivateAdminTeams as deactivateAdminTeamsRequest,
   deleteAdminTeam as deleteAdminTeamRequest,
   getAdminTeam as getAdminTeamRequest,
   getAdminTeams as getAdminTeamsRequest,
@@ -9,6 +11,18 @@ import type { Team } from "@/entities/team/model/types";
 
 export async function fetchTeamsAdmin(signal?: AbortSignal) {
   return getAdminTeamsRequest(signal);
+}
+
+export async function activateTeamsAdmin(ids: string[]) {
+  return activateAdminTeamsRequest({
+    ids
+  });
+}
+
+export async function deactivateTeamsAdmin(ids: string[]) {
+  return deactivateAdminTeamsRequest({
+    ids
+  });
 }
 
 export async function fetchTeamAdmin(id: string, signal?: AbortSignal) {

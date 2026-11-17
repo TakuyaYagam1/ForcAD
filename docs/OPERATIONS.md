@@ -54,6 +54,19 @@ file. `tokens` prints every team's token from the
 database; give each team only its own token. Editing team tokens in the YAML
 does not change an initialized game.
 
+The admin header separates Teams, Game and Services. Teams and Services list
+active and inactive records with links to their editors and create forms. Select
+up to 100 active records to disable or inactive records to enable, then confirm
+the batch. Changes show a success notification and preserve history and tokens.
+Individual records can also be toggled in their editors. Game opens the
+scoreboard, lifecycle controls and game settings.
+In the create form, the `player` API kind is labeled Team/Команда. Choosing NPC
+presets the locked name `NPC`; the organizer enters its IP address.
+
+The public scoreboard fits 20 teams in a normal desktop viewport, including
+when a game-status notice appears above the table. Additional teams scroll
+inside the table; very short windows may need table scrolling sooner.
+
 Control readiness/drain clients and host monitoring checks connect directly to
 their configured HTTP(S) endpoint and refuse redirects. They ignore shell proxy
 settings; drain URLs must not contain userinfo or fragments. Keep these operator
@@ -82,6 +95,28 @@ Lifecycle clients call `POST /api/v1/admin/game/{action}/`, where `action` is
 `start`, `start_practice`, `start_final`, `pause`, `resume` or `finish`.
 `start_final` and `finish` require `{"confirm":true}`. Include the current
 `generation` when the client must reject a stale lifecycle change.
+
+The Game settings editor writes to the initialized PostgreSQL game without
+restarting services. Before the first game or rehearsal, organizers may change
+the mode, round duration, flag lifetime, inflation, Volga attacks mode, scoring
+hardness, extra checks, timezone and scheduled start. During a running or paused
+game, only the round limit can change; a finished game cannot be edited. A stale
+session generation or a concurrent start returns `409` and requires reloading
+the form. The authenticated API is `GET`/`PUT /api/v1/admin/game/config/`.
+Batch soft-activation is `POST /api/v1/admin/teams/activate/` or
+`POST /api/v1/admin/tasks/activate/`; batch soft-deactivation uses the corresponding
+`/deactivate/` paths. Send `{"ids":["<uuid>"]}`. All IDs must exist, the list must
+contain 1-100 unique IDs, and one transaction either applies the entire change
+or none. Already-active IDs are accepted on activation but not counted;
+already-inactive IDs are accepted on deactivation but not counted.
+
+The scheduler visits only active teams and services when creating new checker
+jobs. A job already queued before deactivation may still finish. Re-enabling a
+record in a finished game does not restart rounds or resume checker scheduling.
+
+Game settings and disabled records survive ordinary restarts and `setup` while
+the database remains initialized. Explicit `reset` or `clean` clears game data;
+the next initialization imports initial values from the host `config.yml` again.
 
 ### Database credentials and upgrades
 

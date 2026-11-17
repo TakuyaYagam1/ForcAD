@@ -1,5 +1,7 @@
 import {
   createAdminTask as createAdminTaskRequest,
+  activateAdminTasks as activateAdminTasksRequest,
+  deactivateAdminTasks as deactivateAdminTasksRequest,
   deleteAdminTask as deleteAdminTaskRequest,
   getAdminTask as getAdminTaskRequest,
   getAdminTasks as getAdminTasksRequest,
@@ -9,6 +11,18 @@ import type { Task } from "@/entities/task/model/types";
 
 export async function fetchTasksAdmin(signal?: AbortSignal) {
   return getAdminTasksRequest(signal);
+}
+
+export async function activateTasksAdmin(ids: string[]) {
+  return activateAdminTasksRequest({
+    ids
+  });
+}
+
+export async function deactivateTasksAdmin(ids: string[]) {
+  return deactivateAdminTasksRequest({
+    ids
+  });
 }
 
 export async function fetchTaskAdmin(id: string, signal?: AbortSignal) {

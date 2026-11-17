@@ -182,10 +182,14 @@ export function TaskForm({
               disabled={saving}
               id="env_path"
               value={task.env_path}
+              aria-describedby="env_path-help"
               onChange={(event) => {
                 return onChange("env_path", event.target.value)
               }}
             />
+            <p id="env_path-help" className="text-xs text-muted-foreground">
+              {t("task.environmentPathHelp")}
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-3 md:col-span-2">

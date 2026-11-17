@@ -19,6 +19,7 @@ import { TeamForm } from "./TeamForm";
 import { normalizeUuid } from "@/shared/lib/uuid";
 import { useTranslation } from "react-i18next";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
+import { useAdminNotification } from "@/shared/ui/admin-notification/useAdminNotification";
 
 type TeamPageError =
   | {
@@ -40,6 +41,7 @@ interface TeamAdminPageProps {
 
 export function TeamAdminPage({ mode }: TeamAdminPageProps) {
   const { t } = useTranslation("admin");
+  const notify = useAdminNotification();
   const { teamId: teamIdParam } = useParams<{
     teamId?: string
   }>();
@@ -49,6 +51,8 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<TeamPageError | null>(null);
+  const playerDraft = useRef<Team | null>(null);
+  const persistedActive = useRef<boolean | null>(null);
 
   const isCreate = mode === "create" || !teamIdParam;
   const teamId = !isCreate ? (normalizeUuid(teamIdParam) ?? null) : null;
@@ -70,6 +74,8 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
       setLoadedKey(null);
       setSaving(false);
       setError(null);
+      playerDraft.current = null;
+      persistedActive.current = null;
 
       try {
         if (isCreate) {
@@ -83,6 +89,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
             highlighted: false,
             active: true,
           };
+          playerDraft.current = emptyTeam;
           if (!cancelled) {
             setTeam(emptyTeam);
             setLoadedKey(location.key);
@@ -90,6 +97,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
         } else if (teamId !== null) {
           const loadedTeam = await fetchTeamAdmin(teamId);
           if (!cancelled) {
+            persistedActive.current = loadedTeam.active;
             setTeam({
               ...loadedTeam,
               logo_path: loadedTeam.logo_path ?? ""
@@ -129,12 +137,40 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
     value: Team[Field],
   ) => {
     setTeam((currentTeam) => {
-      return currentTeam ? {
+      if (!currentTeam) {
+        return currentTeam;
+      }
+
+      if (field === "kind") {
+        if (!isCreate || currentTeam.kind === value) {
+          return currentTeam;
+        }
+        if (value === "npc") {
+          playerDraft.current = currentTeam;
+          return {
+            ...currentTeam,
+            name: "NPC",
+            token: "",
+            kind: "npc",
+            logo_path: "",
+            highlighted: false,
+            active: true
+          };
+        }
+        if (value === "player") {
+          return playerDraft.current ?? {
+            ...currentTeam,
+            kind: "player"
+          };
+        }
+        return currentTeam;
+      }
+
+      return {
         ...currentTeam,
         [field]: value
-      } : currentTeam
-    },
-    );
+      };
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -167,6 +203,7 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
       if (isCreate) {
         const createdTeam = await createTeamAdmin(payload);
         if (routeKey.current === submittedRouteKey) {
+          notify(t("team.created"));
           navigate(`/admin/team/${createdTeam.id}`, {
             replace: true
           });
@@ -174,7 +211,13 @@ export function TeamAdminPage({ mode }: TeamAdminPageProps) {
       } else if (teamId != null) {
         const updatedTeam = await updateTeamAdmin(teamId, payload);
         if (routeKey.current === submittedRouteKey) {
+          const activeChanged = persistedActive.current !== null
+            && persistedActive.current !== updatedTeam.active;
+          persistedActive.current = updatedTeam.active;
           setTeam(updatedTeam);
+          notify(activeChanged
+            ? t(updatedTeam.active ? "team.activated" : "team.deactivated")
+            : t("team.saved"));
         }
       }
 

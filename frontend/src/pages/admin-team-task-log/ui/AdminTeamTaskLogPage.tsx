@@ -5,7 +5,6 @@ import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
 import { getLocale } from "@/shared/i18n/index";
 import { formatScore } from "@/shared/lib/formatScore";
 import { normalizeUuid } from "@/shared/lib/uuid";
-import { BrandIcon } from "@/shared/ui/brand/BrandIcon";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
@@ -65,7 +64,6 @@ export function AdminTeamTaskLogPage() {
                 : t("task.invalidId"))}
             </p>
           </div>
-          <BrandIcon name="terminal" />
         </div>
         {logQuery.isError && (
           <div className="notice" role="alert">

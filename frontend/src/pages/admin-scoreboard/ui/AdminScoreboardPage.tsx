@@ -3,6 +3,7 @@ import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import { StatusesBar } from "@/features/view-scoreboard/ui/StatusesBar";
 import { CheckerStatusPanel } from "@/features/view-checker-status/ui/CheckerStatusPanel";
 import { GameControls } from "@/features/manage-game/ui/GameControls";
+import { GameSettings } from "@/features/manage-game/ui/GameSettings";
 import { AdminShell } from "@/widgets/admin-shell/ui/AdminShell";
 import { ScoreboardWidget } from "@/widgets/scoreboard/ui/ScoreboardWidget";
 import { Plus } from "lucide-react";
@@ -47,6 +48,7 @@ export function AdminScoreboardPage() {
               </Button>
             </div>
             <GameControls />
+            <GameSettings />
           </div>
         </div>
         <ScoreboardWidget

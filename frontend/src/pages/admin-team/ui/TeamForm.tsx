@@ -41,6 +41,7 @@ export function TeamForm({
   onCancel,
 }: TeamFormProps) {
   const { t } = useTranslation("admin");
+  const isNpc = team.kind === "npc";
   return (
     <form onSubmit={onSubmit} noValidate>
       <Card className="admin-form max-w-3xl !p-0">
@@ -59,6 +60,26 @@ export function TeamForm({
         </CardHeader>
 
         <CardContent className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="kind">{t("team.kind")}</Label>
+            <select
+              id="kind"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={team.kind}
+              disabled={saving || !isCreate}
+              aria-describedby="kind-help"
+              onChange={(event) => {
+                return onChange("kind", event.target.value as Team["kind"])
+              }}
+            >
+              <option value="player">{t("team.kindPlayer")}</option>
+              <option value="npc">{t("team.kindNpc")}</option>
+            </select>
+            <p id="kind-help" className="text-xs text-slate-400">
+              {t("team.npcDescription")}
+            </p>
+          </div>
+
           <div className="logo-preview md:col-span-2">
             <TeamAvatar
               name={team.name || t("common.team")}
@@ -75,7 +96,7 @@ export function TeamForm({
           <div className="space-y-2">
             <Label htmlFor="name">{t("team.name")}</Label>
             <Input
-              disabled={saving}
+              disabled={saving || isNpc}
               id="name"
               required
               maxLength={MAX_TEAM_NAME_LENGTH}
@@ -104,7 +125,7 @@ export function TeamForm({
               {t("team.token")}{isCreate ? ` ${t("team.serverCreatesToken")}` : ""}
             </Label>
             <Input
-              disabled={saving}
+              disabled={saving || (isNpc && !isCreate)}
               id="token"
               readOnly={isCreate}
               placeholder={isCreate ? t("team.tokenPlaceholder") : ""}
@@ -119,7 +140,7 @@ export function TeamForm({
           <div className="space-y-2">
             <Label htmlFor="logo_path">{t("team.logoUrl")}</Label>
             <Input
-              disabled={saving}
+              disabled={saving || isNpc}
               id="logo_path"
               placeholder={t("team.logoPlaceholder")}
               value={team.logo_path}
@@ -132,7 +153,7 @@ export function TeamForm({
           <div className="flex flex-wrap gap-4 md:col-span-2">
             <label className="flex items-center gap-2 text-xs text-slate-200">
               <Checkbox
-                disabled={saving}
+                disabled={saving || isNpc}
                 checked={team.highlighted}
                 onCheckedChange={(value) => {
                   return onChange("highlighted", Boolean(value))
@@ -144,7 +165,7 @@ export function TeamForm({
 
             <label className="flex items-center gap-2 text-xs text-slate-200">
               <Checkbox
-                disabled={saving}
+                disabled={saving || (isNpc && isCreate)}
                 checked={team.active}
                 onCheckedChange={(value) => {
                   return onChange("active", Boolean(value))

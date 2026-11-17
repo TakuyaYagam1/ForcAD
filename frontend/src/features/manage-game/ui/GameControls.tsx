@@ -114,35 +114,37 @@ export function GameControls() {
       ? t("game.errors.stateChanged")
       : apiErrorMessage(error, t("game.errors.commandFailed"));
   return (
-    <section className="mb-5" aria-label={t("game.sectionLabel")}>
-      <div className="flex flex-wrap items-center justify-end gap-4">
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={disabled || !playing} onClick={() => {
-            return mutation.mutate(action)
+    <section className="admin-game-controls mb-5" aria-label={t("game.sectionLabel")}>
+      <div className="admin-game-controls__actions">
+        <Button variant="outline" disabled={disabled || !playing} onClick={() => {
+          return mutation.mutate(action)
+        }}>
+          {mutation.isPending && (mutation.variables === "pause" || mutation.variables === "resume")
+            ? <LoaderCircle className="animate-spin" />
+            : phase === "paused" ? <Play /> : <Pause />}
+          {phase === "paused" ? t("game.resume") : t("game.pause")}
+        </Button>
+        <Button variant={canStart ? "default" : "destructive"}
+          className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
+          disabled={disabled || (!canStart && !playing)}
+          onClick={() => {
+            return openConfirmation(canStart ? "start_final" : "finish")
           }}>
-            {mutation.isPending && (mutation.variables === "pause" || mutation.variables === "resume")
-              ? <LoaderCircle className="animate-spin" />
-              : phase === "paused" ? <Play /> : <Pause />}
-            {phase === "paused" ? t("game.resume") : t("game.pause")}
-          </Button>
-          {canStart && canStartPractice && (
-            <Button variant="outline" disabled={disabled}
-              onClick={() => {
-                return openConfirmation("start_practice")
-              }}>
-              <Play /> {t("game.startPractice")}
-            </Button>
-          )}
-          <Button variant={canStart ? "default" : "destructive"}
-            className={canStart ? "bg-emerald-700 text-white hover:bg-emerald-600" : undefined}
-            disabled={disabled || (!canStart && !playing)}
+          {canStart ? <Play /> : <Flag />}
+          {canStart ? t("game.startFinal") : finishLabel}
+        </Button>
+        {canStart && canStartPractice && (
+          <Button
+            className="admin-game-controls__full-row"
+            variant="outline"
+            disabled={disabled}
             onClick={() => {
-              return openConfirmation(canStart ? "start_final" : "finish")
-            }}>
-            {canStart ? <Play /> : <Flag />}
-            {canStart ? t("game.startFinal") : finishLabel}
+              return openConfirmation("start_practice")
+            }}
+          >
+            <Play /> {t("game.startPractice")}
           </Button>
-        </div>
+        )}
       </div>
       {errorMessage && !confirmation && <p className="mt-3 text-sm text-red-300" role="alert">{errorMessage}</p>}
       <Dialog open={confirmation !== null} onOpenChange={(open) => {

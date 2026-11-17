@@ -87,8 +87,31 @@
   width: 100%;
 }
 
-.admin-dashboard-actions section {
+.admin-dashboard-actions > section {
+  width: 100%;
+  min-width: 0;
   margin-bottom: 0;
+}
+
+.admin-dashboard-actions > section > button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.admin-game-controls__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-game-controls__actions > button {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-game-controls__full-row {
+  grid-column: 1 / -1;
 }
 
 @media (min-width: 901px) {

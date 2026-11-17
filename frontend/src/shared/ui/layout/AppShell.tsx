@@ -7,15 +7,23 @@ import { gameStatusLabel } from "@/shared/lib/gameStatus";
 import { brand } from "@/app/config/brand";
 import { LanguageSwitch } from "./LanguageSwitch";
 
-export function AppShell({ children, headerActions, headerProgress, showNavigation = true }: {
+export function AppShell({ children, headerActions, headerProgress, headerNavigation, showNavigation = true }: {
   children: ReactNode;
   headerActions?: ReactNode;
   headerProgress?: ReactNode;
+  headerNavigation?: ReactNode;
   showNavigation?: boolean
 }) {
   const { t } = useTranslation("shell");
   const location = useLocation();
   const mainRef = usePageEntrance(location.pathname, location.key);
+  const navigation = headerNavigation ?? (showNavigation ? (
+    <nav className="main-nav" aria-label={t("navigation")}>
+      <NavLink to="/live">{t("events")}</NavLink>
+      <NavLink to="/" end className="main-nav__scoreboard">{t("scoreboard")}</NavLink>
+      <NavLink to="/teams">{t("teams")}</NavLink>
+    </nav>
+  ) : null);
 
   const round = useScoreboardStore(
     (state) => {
@@ -60,15 +68,9 @@ export function AppShell({ children, headerActions, headerProgress, showNavigati
             {headerProgress && <div className="header-progress">{headerProgress}</div>}
           </div>
 
-          {showNavigation && (
-            <nav className="main-nav" aria-label={t("navigation")}>
-              <NavLink to="/live">{t("events")}</NavLink>
-              <NavLink to="/" end className="main-nav__scoreboard">{t("scoreboard")}</NavLink>
-              <NavLink to="/teams">{t("teams")}</NavLink>
-            </nav>
-          )}
+          {navigation}
 
-          <div className={`header-tools${showNavigation ? "" : " header-tools--admin"}`}>
+          <div className={`header-tools${navigation ? "" : " header-tools--admin"}`}>
             <div className="header-status">
               {teams && !error && round > 0 && (
                 <span className="header-round">{t("round", {
