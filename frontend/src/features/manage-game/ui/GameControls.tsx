@@ -150,7 +150,7 @@ export function GameControls() {
           setConfirmation(null);
         }
       }}>
-        <DialogContent onOpenAutoFocus={(event) => {
+        <DialogContent className="admin-dialog" onOpenAutoFocus={(event) => {
           event.preventDefault();
           cancelRef.current?.focus();
         }}>
@@ -174,7 +174,7 @@ export function GameControls() {
             {t("game.staleConfirmation")}
           </p>}
           {errorMessage && <p className="text-sm admin-text-danger" role="alert">{errorMessage}</p>}
-          <DialogFooter>
+          <DialogFooter className="admin-dialog-actions">
             <Button ref={cancelRef} variant="outline" disabled={mutation.isPending}
               onClick={() => {
                 return setConfirmation(null)

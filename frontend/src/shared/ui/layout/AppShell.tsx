@@ -147,7 +147,7 @@ export function AppShell({ children, headerActions, showNavigation = true }: {
         </div>
       </header>
 
-      <main id="main-content" className={`site-main${location.pathname === "/" ? " site-main--scoreboard" : ""}`}>
+      <main id="main-content" className={`site-main${location.pathname === "/" ? " site-main--scoreboard" : ""}${location.pathname.startsWith("/admin/") && location.pathname !== "/admin/login" ? " site-main--admin" : ""}`}>
         {phase === "paused" && (
           <div
             className="notice notice--paused"

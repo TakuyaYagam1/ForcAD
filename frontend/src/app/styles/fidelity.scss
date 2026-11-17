@@ -13,9 +13,66 @@
 .event-names a:hover { text-decoration: underline; }
 .event-details { display: flex; gap: 15px; justify-content: space-between; margin-top: 7px; color: var(--soft); font-size: 13px; }
 .event-gain { color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.history-panel { margin-top: 44px; }
+.history-panel { grid-column: 1 / -1; margin-top: 0; }
 .history-expand { text-align: right; }
-.history-value-cell { min-width: 155px; }
+/* History uses the full profile width; dense rounds reflow into labelled cells. */
+.history-region { overflow: visible; }
+.history-table { table-layout: fixed; min-width: 0; }
+.history-table th { white-space: normal; overflow-wrap: anywhere; }
+.history-table .total-column { width: auto; min-width: 0; overflow-wrap: anywhere; }
+.history-value-cell { min-width: 0; }
+.history-table .service-metric { flex-wrap: wrap; white-space: normal; }
+.history-table .service-metric strong { min-width: 0; overflow-wrap: anywhere; }
+
+@mixin stacked-history {
+  display: block;
+
+  colgroup { display: none; }
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  tbody { display: block; }
+  tbody tr {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 12px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  tbody td { display: block; min-width: 0; padding: 0; border: 0; }
+  .history-round, .total-column {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: right;
+    font-size: 15px;
+  }
+  td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 300;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .history-round::before, .total-column::before { margin-bottom: 0; }
+  .quiet-empty { grid-column: 1 / -1; }
+}
+
+.history-table--stacked { @include stacked-history; }
+@media (max-width: 1099px) {
+  .history-table { @include stacked-history; }
+}
 .flag-count { white-space: nowrap; }
 @media (max-width: 1000px) {
   .team-content-grid { grid-template-columns: minmax(0, 1fr); }

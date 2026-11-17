@@ -133,7 +133,6 @@
 .scoreboard-table th button:hover { text-decoration: underline; }
 .scoreboard-table td { padding: 12px 8px; border-bottom: 1px solid var(--line); }
 .scoreboard-row { background: var(--color-canvas-mist); }
-.scoreboard-row.is-highlighted { background: var(--surface-raised); }
 .place-column { width: 60px; text-align: center; }
 .team-column { width: 240px; min-width: 200px; }
 .total-column { text-align: right; width: 130px; min-width: 100px; }
@@ -224,6 +223,7 @@
 .demo-panel-actions button:hover { text-decoration: underline; }
 .demo-panel-exit { color: var(--soft); }
 @media (hover: hover) and (pointer: fine) {
+  .scoreboard-row:hover { background: var(--surface-raised); }
   .main-nav a:hover { color: var(--text-primary); }
   .team-identity:hover .team-name { text-decoration: underline; }
   .service-cell:hover { outline: 1px solid var(--text-primary); outline-offset: 2px; }
@@ -277,3 +277,5 @@
 @media (min-width: 701px) {
   .site-main--scoreboard { max-width: none; padding: 0 16px 16px; overflow-x: clip; }
 }
+
+.site-main--admin { max-width: none; padding: 0 16px 33px; }
