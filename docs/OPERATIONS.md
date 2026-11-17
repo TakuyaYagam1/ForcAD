@@ -61,8 +61,8 @@ settings trusted. Private management and team addresses remain supported.
 
 ### Administrator HTTP clients
 
-Send JSON to `POST /api/admin/login/` and retain its HttpOnly `session` cookie.
-The response also contains `csrf_token`; `GET /api/admin/status/` returns the same
+Send JSON to `POST /api/v1/admin/login/` and retain its HttpOnly `session` cookie.
+The response also contains `csrf_token`; `GET /api/v1/admin/status/` returns the same
 token for that session. Send it in `X-CSRF-Token` on every authenticated admin
 POST, PUT, PATCH or DELETE, including logout. Login requires `application/json`
 (`415` otherwise); a missing or incorrect mutation token returns `403` before
@@ -78,7 +78,7 @@ an administrative mutation after a network error: its side effects may have comm
 This follows the OWASP
 [synchronizer token pattern](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#synchronizer-token-pattern).
 
-Lifecycle clients call `POST /api/admin/game/{action}/`, where `action` is
+Lifecycle clients call `POST /api/v1/admin/game/{action}/`, where `action` is
 `start`, `start_practice`, `start_final`, `pause`, `resume` or `finish`.
 `start_final` and `finish` require `{"confirm":true}`. Include the current
 `generation` when the client must reject a stale lifecycle change.

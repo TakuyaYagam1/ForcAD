@@ -91,9 +91,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			switch elem[0] {
-			case 'a': // Prefix: "api/"
+			case 'a': // Prefix: "api/v1/"
 
-				if l := len("api/"); len(elem) >= l && elem[0:l] == "api/" {
+				if l := len("api/v1/"); len(elem) >= l && elem[0:l] == "api/v1/" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1226,9 +1226,9 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				break
 			}
 			switch elem[0] {
-			case 'a': // Prefix: "api/"
+			case 'a': // Prefix: "api/v1/"
 
-				if l := len("api/"); len(elem) >= l && elem[0:l] == "api/" {
+				if l := len("api/v1/"); len(elem) >= l && elem[0:l] == "api/v1/" {
 					elem = elem[l:]
 				} else {
 					break
@@ -1266,7 +1266,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Publish an organizer announcement."
 								r.operationID = "createAdminEvent"
 								r.operationGroup = ""
-								r.pathPattern = "/api/admin/events/"
+								r.pathPattern = "/api/v1/admin/events/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1312,7 +1312,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Apply a game lifecycle action."
 									r.operationID = "changeAdminGameState"
 									r.operationGroup = ""
-									r.pathPattern = "/api/admin/game/{action}/"
+									r.pathPattern = "/api/v1/admin/game/{action}/"
 									r.args = args
 									r.count = 1
 									return r, true
@@ -1339,7 +1339,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Check the administration API service."
 								r.operationID = "getAdminHealth"
 								r.operationGroup = ""
-								r.pathPattern = "/api/admin/health/"
+								r.pathPattern = "/api/v1/admin/health/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1376,7 +1376,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Start an administrator session."
 									r.operationID = "adminLogin"
 									r.operationGroup = ""
-									r.pathPattern = "/api/admin/login/"
+									r.pathPattern = "/api/v1/admin/login/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1401,7 +1401,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "End the current administrator session."
 									r.operationID = "adminLogout"
 									r.operationGroup = ""
-									r.pathPattern = "/api/admin/logout/"
+									r.pathPattern = "/api/v1/admin/logout/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1428,7 +1428,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Read administration API Prometheus metrics."
 								r.operationID = "getAdminMetrics"
 								r.operationGroup = ""
-								r.pathPattern = "/api/admin/metrics"
+								r.pathPattern = "/api/v1/admin/metrics"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1453,7 +1453,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Check the current administrator session."
 								r.operationID = "getAdminSessionStatus"
 								r.operationGroup = ""
-								r.pathPattern = "/api/admin/status/"
+								r.pathPattern = "/api/v1/admin/status/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1489,7 +1489,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "List all tasks, including inactive tasks."
 									r.operationID = "getAdminTasks"
 									r.operationGroup = ""
-									r.pathPattern = "/api/admin/tasks/"
+									r.pathPattern = "/api/v1/admin/tasks/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1498,7 +1498,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Create a task."
 									r.operationID = "createAdminTask"
 									r.operationGroup = ""
-									r.pathPattern = "/api/admin/tasks/"
+									r.pathPattern = "/api/v1/admin/tasks/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1535,7 +1535,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Deactivate a task."
 										r.operationID = "deleteAdminTask"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/tasks/{task_id}/"
+										r.pathPattern = "/api/v1/admin/tasks/{task_id}/"
 										r.args = args
 										r.count = 1
 										return r, true
@@ -1544,7 +1544,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Get one task, including administration fields."
 										r.operationID = "getAdminTask"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/tasks/{task_id}/"
+										r.pathPattern = "/api/v1/admin/tasks/{task_id}/"
 										r.args = args
 										r.count = 1
 										return r, true
@@ -1553,7 +1553,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Replace a task's editable fields."
 										r.operationID = "updateAdminTask"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/tasks/{task_id}/"
+										r.pathPattern = "/api/v1/admin/tasks/{task_id}/"
 										r.args = args
 										r.count = 1
 										return r, true
@@ -1591,7 +1591,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "List all teams, including inactive teams."
 										r.operationID = "getAdminTeams"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/teams/"
+										r.pathPattern = "/api/v1/admin/teams/"
 										r.args = args
 										r.count = 0
 										return r, true
@@ -1600,7 +1600,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Create a team."
 										r.operationID = "createAdminTeam"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/teams/"
+										r.pathPattern = "/api/v1/admin/teams/"
 										r.args = args
 										r.count = 0
 										return r, true
@@ -1637,7 +1637,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Deactivate a team."
 											r.operationID = "deleteAdminTeam"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teams/{team_id}/"
+											r.pathPattern = "/api/v1/admin/teams/{team_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1646,7 +1646,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Get one team, including administration fields."
 											r.operationID = "getAdminTeam"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teams/{team_id}/"
+											r.pathPattern = "/api/v1/admin/teams/{team_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1655,7 +1655,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Replace a team's editable fields."
 											r.operationID = "updateAdminTeam"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teams/{team_id}/"
+											r.pathPattern = "/api/v1/admin/teams/{team_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1681,7 +1681,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Get checker history for a team and task pair."
 										r.operationID = "getAdminTeamTaskHistory"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/teamtasks/"
+										r.pathPattern = "/api/v1/admin/teamtasks/"
 										r.args = args
 										r.count = 0
 										return r, true
@@ -1690,7 +1690,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Reserved team task collection method."
 										r.operationID = "createAdminTeamTask"
 										r.operationGroup = ""
-										r.pathPattern = "/api/admin/teamtasks/"
+										r.pathPattern = "/api/v1/admin/teamtasks/"
 										r.args = args
 										r.count = 0
 										return r, true
@@ -1727,7 +1727,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Reserved team task detail method."
 											r.operationID = "deleteAdminTeamTask"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teamtasks/{teamtask_id}/"
+											r.pathPattern = "/api/v1/admin/teamtasks/{teamtask_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1736,7 +1736,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Reserved team task detail method."
 											r.operationID = "getAdminTeamTask"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teamtasks/{teamtask_id}/"
+											r.pathPattern = "/api/v1/admin/teamtasks/{teamtask_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1745,7 +1745,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 											r.summary = "Reserved team task detail method."
 											r.operationID = "updateAdminTeamTask"
 											r.operationGroup = ""
-											r.pathPattern = "/api/admin/teamtasks/{teamtask_id}/"
+											r.pathPattern = "/api/v1/admin/teamtasks/{teamtask_id}/"
 											r.args = args
 											r.count = 1
 											return r, true
@@ -1790,7 +1790,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Get public flag data grouped by task and team address."
 								r.operationID = "getClientAttackData"
 								r.operationGroup = ""
-								r.pathPattern = "/api/client/attack_data/"
+								r.pathPattern = "/api/v1/client/attack_data/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1827,7 +1827,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Get the current game configuration."
 									r.operationID = "getClientConfig"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/config/"
+									r.pathPattern = "/api/v1/client/config/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1852,7 +1852,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Get the CTFtime standings."
 									r.operationID = "getClientCtftimeScoreboard"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/ctftime/"
+									r.pathPattern = "/api/v1/client/ctftime/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1879,7 +1879,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Read recent public events or events after a cursor."
 								r.operationID = "getClientEvents"
 								r.operationGroup = ""
-								r.pathPattern = "/api/client/events/"
+								r.pathPattern = "/api/v1/client/events/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1904,7 +1904,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Check the client API service."
 								r.operationID = "getClientHealth"
 								r.operationGroup = ""
-								r.pathPattern = "/api/client/health/"
+								r.pathPattern = "/api/v1/client/health/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1929,7 +1929,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Read client API Prometheus metrics."
 								r.operationID = "getClientMetrics"
 								r.operationGroup = ""
-								r.pathPattern = "/api/client/metrics"
+								r.pathPattern = "/api/v1/client/metrics"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -1966,7 +1966,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Get the complete participant scoreboard."
 									r.operationID = "getScoreboard"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/scoreboard/"
+									r.pathPattern = "/api/v1/client/scoreboard/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -1991,7 +1991,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "Get the current runtime status."
 									r.operationID = "getClientStatus"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/status/"
+									r.pathPattern = "/api/v1/client/status/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -2030,7 +2030,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "List tasks visible to participants."
 									r.operationID = "getClientTasks"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/tasks/"
+									r.pathPattern = "/api/v1/client/tasks/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -2054,7 +2054,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.summary = "List teams visible to participants."
 									r.operationID = "getClientTeams"
 									r.operationGroup = ""
-									r.pathPattern = "/api/client/teams/"
+									r.pathPattern = "/api/v1/client/teams/"
 									r.args = args
 									r.count = 0
 									return r, true
@@ -2090,7 +2090,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 										r.summary = "Get participant-visible task history for a team."
 										r.operationID = "getClientTeamHistory"
 										r.operationGroup = ""
-										r.pathPattern = "/api/client/teams/{team_id}/"
+										r.pathPattern = "/api/v1/client/teams/{team_id}/"
 										r.args = args
 										r.count = 1
 										return r, true
@@ -2136,7 +2136,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 												r.summary = "Get public checker results for one team and service."
 												r.operationID = "getClientCheckerLogs"
 												r.operationGroup = ""
-												r.pathPattern = "/api/client/teams/{team_id}/tasks/{task_id}/logs/"
+												r.pathPattern = "/api/v1/client/teams/{team_id}/tasks/{task_id}/logs/"
 												r.args = args
 												r.count = 2
 												return r, true
@@ -2183,7 +2183,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Check the event service."
 								r.operationID = "getEventsHealth"
 								r.operationGroup = ""
-								r.pathPattern = "/api/events/health/"
+								r.pathPattern = "/api/v1/events/health/"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -2208,7 +2208,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.summary = "Open the public WebSocket event stream."
 								r.operationID = "openEventStream"
 								r.operationGroup = ""
-								r.pathPattern = "/api/events/ws"
+								r.pathPattern = "/api/v1/events/ws"
 								r.args = args
 								r.count = 0
 								return r, true
@@ -2235,7 +2235,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							r.summary = "Read flag receiver Prometheus metrics."
 							r.operationID = "getReceiverMetrics"
 							r.operationGroup = ""
-							r.pathPattern = "/api/http-receiver/metrics"
+							r.pathPattern = "/api/v1/http-receiver/metrics"
 							r.args = args
 							r.count = 0
 							return r, true

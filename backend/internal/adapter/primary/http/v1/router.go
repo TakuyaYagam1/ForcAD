@@ -41,8 +41,8 @@ func NewRouter(
 		if path == "/flags" {
 			path = "/flags/"
 		}
-		if path == "/api/events/ws" {
-			return "/api/events/ws"
+		if path == "/api/v1/events/ws" {
+			return "/api/v1/events/ws"
 		}
 		if route, ok := server.FindRoute(req.Method, path); ok {
 			return route.PathPattern()
@@ -83,13 +83,13 @@ func registerMetricsRoutes(
 	events, monitor http.Handler,
 ) {
 	if role == "api" || role == "all" {
-		router.Get("/api/events/ws", events.ServeHTTP)
-		for _, path := range []string{"/api/admin/metrics", "/api/client/metrics"} {
+		router.Get("/api/v1/events/ws", events.ServeHTTP)
+		for _, path := range []string{"/api/v1/admin/metrics", "/api/v1/client/metrics"} {
 			router.Get(path, monitor.ServeHTTP)
 		}
 	}
 	if role == "receiver" || role == "all" {
-		router.Get("/api/http-receiver/metrics", monitor.ServeHTTP)
+		router.Get("/api/v1/http-receiver/metrics", monitor.ServeHTTP)
 	}
 }
 
@@ -110,8 +110,8 @@ func requestDispatcher(server http.Handler, role string) http.Handler {
 }
 
 func roleAllowsPath(role, path string) bool {
-	admin := strings.HasPrefix(path, "/api/admin/")
-	client := strings.HasPrefix(path, "/api/client/") || path == "/api/events/health/"
+	admin := strings.HasPrefix(path, "/api/v1/admin/")
+	client := strings.HasPrefix(path, "/api/v1/client/") || path == "/api/v1/events/health/"
 	receiver := path == "/flags" || strings.HasPrefix(path, "/flags/")
 	return role == "all" || role == "api" && (admin || client) || role == "receiver" && receiver
 }

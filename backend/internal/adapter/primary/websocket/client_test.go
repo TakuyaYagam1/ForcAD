@@ -137,7 +137,7 @@ func TestPriorityClientRetainsConnectionCapacity(t *testing.T) {
 		events.slots <- struct{}{}
 	}
 	response := httptest.NewRecorder()
-	events.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://example.test/api/events/ws", nil))
+	events.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "http://example.test/api/v1/events/ws", nil))
 	if response.Code != http.StatusServiceUnavailable || response.Header().Get("Retry-After") != "1" || events.Connections() != 2048 {
 		t.Fatalf("connection capacity response changed: code=%d headers=%v slots=%d", response.Code, response.Header(), events.Connections())
 	}

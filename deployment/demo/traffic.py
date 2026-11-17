@@ -61,7 +61,7 @@ def main():
             print(f"Waiting for demo services: {type(exc).__name__}", flush=True)
         # Game traffic continues even when the board's practice session is idle.
         try:
-            request(BOARD + "/api/client/scoreboard/")
+            request(BOARD + "/api/v1/client/scoreboard/")
             if flags:
                 result = request(BOARD + "/flags/", flags[:100])
                 accepted = sum("Flag accepted!" in item["msg"] for item in result)

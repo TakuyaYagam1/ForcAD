@@ -12,7 +12,7 @@ import yaml
 
 
 def sync_teams(request, configured, output):
-    existing = request("/api/admin/teams/")
+    existing = request("/api/v1/admin/teams/")
     pending_path = output / "teams-pending.json"
     pending = json.loads(pending_path.read_text()) if pending_path.exists() else {}
     by_token = {team["token"]: team for team in existing}
@@ -66,7 +66,7 @@ def sync_teams(request, configured, output):
         pending_path.chmod(0o600)
     for team in additions:
         current = request(
-            "/api/admin/teams/",
+            "/api/v1/admin/teams/",
             {
                 "name": team["name"],
                 "ip": team["ip"],
@@ -78,7 +78,7 @@ def sync_teams(request, configured, output):
         )
         updates.append({**current, "token": team["token"]})
     for team in updates:
-        request(f"/api/admin/teams/{team['id']}/", team, "PUT")
+        request(f"/api/v1/admin/teams/{team['id']}/", team, "PUT")
     pending_path.unlink(missing_ok=True)
     print(
         f"Demo teams synchronized ({len(additions)} added, {len(updates)} updated); existing scores and tokens retained."
@@ -131,7 +131,7 @@ def main():
             ) from None
 
     request(
-        "/api/admin/login/",
+        "/api/v1/admin/login/",
         {
             "username": credentials["ADMIN_USERNAME"],
             "password": credentials["ADMIN_PASSWORD"],

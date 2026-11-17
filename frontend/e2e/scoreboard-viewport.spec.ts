@@ -11,7 +11,7 @@ test("scoreboard shows twenty teams before internal scrolling", async ({ browser
   let teamCount = 20;
 
   try {
-    await page.route("**/api/client/scoreboard/", async (route) => {
+    await page.route("**/api/v1/client/scoreboard/", async (route) => {
       const response = await route.fetch();
       const data = await response.json();
       const template = data.teams[0];

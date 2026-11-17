@@ -169,12 +169,29 @@ func testRouter(
 	return r
 }
 
+func TestVersionedAPIRoutesReplaceLegacyPaths(t *testing.T) {
+	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
+	for _, tc := range []struct {
+		path string
+		want int
+	}{
+		{"/api/v1/client/teams/", http.StatusOK},
+		{"/api/client/teams/", http.StatusNotFound},
+		{"/api/v1/events/ws", http.StatusNoContent},
+		{"/api/events/ws", http.StatusNotFound},
+	} {
+		if got := performRequest(router, http.MethodGet, tc.path, "", nil); got.Code != tc.want {
+			t.Errorf("%s: status = %d, want %d", tc.path, got.Code, tc.want)
+		}
+	}
+}
+
 func TestTeamRoutesUseUUIDs(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
 	headers := map[string]string{
 		"Cookie": "session=valid",
 	}
-	path := "/api/admin/teams/" + httpTeamID.String() + "/"
+	path := "/api/v1/admin/teams/" + httpTeamID.String() + "/"
 	response := performRequest(router, http.MethodGet, path, "", headers)
 	if response.Code != http.StatusOK {
 		t.Fatalf("team response: %d %s", response.Code, response.Body.String())
@@ -186,12 +203,12 @@ func TestTeamRoutesUseUUIDs(t *testing.T) {
 		t.Fatalf("team UUID: %q, decode error: %v", team.ID, err)
 	}
 	for _, id := range []string{"1", "not-a-uuid", "01912345-6789-7000-8000-00000000000z"} {
-		response = performRequest(router, http.MethodGet, "/api/admin/teams/"+id+"/", "", headers)
+		response = performRequest(router, http.MethodGet, "/api/v1/admin/teams/"+id+"/", "", headers)
 		if response.Code != http.StatusBadRequest {
 			t.Errorf("invalid ID %q: %d %s", id, response.Code, response.Body.String())
 		}
 	}
-	response = performRequest(router, http.MethodGet, "/api/admin/teams/"+uuid.NewV7().String()+"/", "", headers)
+	response = performRequest(router, http.MethodGet, "/api/v1/admin/teams/"+uuid.NewV7().String()+"/", "", headers)
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("unknown UUID response: %d %s", response.Code, response.Body.String())
 	}
@@ -203,7 +220,7 @@ func TestAdminHistoryFiltersUseUUIDs(t *testing.T) {
 	headers := map[string]string{
 		"Cookie": "session=valid",
 	}
-	path := "/api/admin/teamtasks/?team_id=" + httpTeamID.String() + "&task_id=" + httpTaskID.String()
+	path := "/api/v1/admin/teamtasks/?team_id=" + httpTeamID.String() + "&task_id=" + httpTaskID.String()
 	response := performRequest(router, http.MethodGet, path, "", headers)
 	if response.Code != http.StatusOK {
 		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
@@ -222,7 +239,7 @@ func TestAdminHistoryFiltersUseUUIDs(t *testing.T) {
 	if len(entries) != 1 || entries[0].ID == uuid.Nil() || entries[0].TeamID != httpTeamID || entries[0].TaskID != httpTaskID {
 		t.Fatalf("history UUIDs: %+v", entries)
 	}
-	response = performRequest(router, http.MethodGet, "/api/admin/teamtasks/?team_id=1&task_id=2", "", headers)
+	response = performRequest(router, http.MethodGet, "/api/v1/admin/teamtasks/?team_id=1&task_id=2", "", headers)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("numeric history filters: %d %s", response.Code, response.Body.String())
 	}
@@ -292,16 +309,16 @@ func TestFlagsAliasesValidateBeforeUsecase(t *testing.T) {
 
 func TestAdminAuthenticationAndOrigin(t *testing.T) {
 	r := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	if w := performRequest(r, "GET", "/api/admin/teams/", "", nil); w.Code != 403 {
+	if w := performRequest(r, "GET", "/api/v1/admin/teams/", "", nil); w.Code != 403 {
 		t.Fatalf("anonymous admin: %d", w.Code)
 	}
-	if w := performRequest(r, "GET", "/api/admin/teams/", "", map[string]string{
+	if w := performRequest(r, "GET", "/api/v1/admin/teams/", "", map[string]string{
 		"Cookie": "session=valid",
 	}); w.Code != 200 {
 		t.Fatalf("authenticated admin: %d", w.Code)
 	}
 	body := `{"username":"admin","password":"password"}`
-	w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+	w := performRequest(r, "POST", "/api/v1/admin/login/", body, map[string]string{
 		"X-Forwarded-Proto": "https",
 	})
 	if w.Code != 200 {
@@ -314,12 +331,12 @@ func TestAdminAuthenticationAndOrigin(t *testing.T) {
 	if w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("admin response is cacheable")
 	}
-	if w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+	if w := performRequest(r, "POST", "/api/v1/admin/login/", body, map[string]string{
 		"Origin": "https://other.example",
 	}); w.Code != 403 {
 		t.Fatalf("cross origin: %d", w.Code)
 	}
-	if w := performRequest(r, "POST", "/api/admin/login/", body, map[string]string{
+	if w := performRequest(r, "POST", "/api/v1/admin/login/", body, map[string]string{
 		"Sec-Fetch-Site": "cross-site",
 	}); w.Code != 403 {
 		t.Fatalf("cross site: %d", w.Code)
@@ -330,7 +347,7 @@ func TestAdminDependencyFailureIsNotInvalidSession(t *testing.T) {
 	r := testRouter(t, "api", &testGame{}, testAuth{
 		err: errors.New("cache-secret-connection-failure"),
 	}, &testFlags{})
-	w := performRequest(r, "GET", "/api/admin/teams/", "", map[string]string{
+	w := performRequest(r, "GET", "/api/v1/admin/teams/", "", map[string]string{
 		"Cookie": "session=valid",
 	})
 	if w.Code != 503 || strings.Contains(w.Body.String(), "secret") {
@@ -390,7 +407,7 @@ func TestErrorHandlerPreservesWrappedPublicErrors(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/api/admin/teams/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/teams/", nil)
 			response := httptest.NewRecorder()
 			handle(req.Context(), response, req, test.err)
 			if response.Code != test.status || !strings.Contains(response.Body.String(), test.message) {
@@ -440,7 +457,7 @@ func TestWrappedFlagSentinelsKeepPublicMessages(t *testing.T) {
 
 func TestPublicResponsesExcludePrivateData(t *testing.T) {
 	r := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	for _, path := range []string{"/api/client/teams/", "/api/client/teams/" + httpTeamID.String() + "/"} {
+	for _, path := range []string{"/api/v1/client/teams/", "/api/v1/client/teams/" + httpTeamID.String() + "/"} {
 		w := performRequest(r, "GET", path, "", nil)
 		if w.Code != 200 {
 			t.Fatalf("public route: %d %s", w.Code, w.Body.String())
@@ -455,7 +472,7 @@ func TestPublicResponsesExcludePrivateData(t *testing.T) {
 
 func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
-	response := performRequest(router, http.MethodGet, "/api/client/teams/"+httpTeamID.String()+"/", "", nil)
+	response := performRequest(router, http.MethodGet, "/api/v1/client/teams/"+httpTeamID.String()+"/", "", nil)
 	if response.Code != http.StatusOK {
 		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
 	}
@@ -478,13 +495,13 @@ func TestGameActionRequiresConfirmation(t *testing.T) {
 		"Cookie":       "session=valid",
 		"X-CSRF-Token": strings.Repeat("c", 64),
 	}
-	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{}`, headers); w.Code != 400 || g.changed != "" {
+	if w := performRequest(r, "POST", "/api/v1/admin/game/finish/", `{}`, headers); w.Code != 400 || g.changed != "" {
 		t.Fatalf("missing confirmation: %d", w.Code)
 	}
-	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{"confirm":true,"generation":1.5}`, headers); w.Code != 400 || g.changed != "" {
+	if w := performRequest(r, "POST", "/api/v1/admin/game/finish/", `{"confirm":true,"generation":1.5}`, headers); w.Code != 400 || g.changed != "" {
 		t.Fatalf("fractional generation: %d", w.Code)
 	}
-	if w := performRequest(r, "POST", "/api/admin/game/finish/", `{"confirm":true}`, headers); w.Code != 200 || g.changed != "finish" {
+	if w := performRequest(r, "POST", "/api/v1/admin/game/finish/", `{"confirm":true}`, headers); w.Code != 200 || g.changed != "finish" {
 		t.Fatalf("confirmed finish: %d %s", w.Code, w.Body.String())
 	}
 }
@@ -513,7 +530,7 @@ func TestCapacityDoesNotQueueRequestsOrBlockHealth(t *testing.T) {
 	if w := performRequest(r, "GET", "/flags/health/", "", nil); w.Code != 200 {
 		t.Fatalf("health blocked: %d", w.Code)
 	}
-	if w := performRequest(r, "GET", "/api/admin/teams/", "", nil); w.Code != 503 && w.Code != 404 {
+	if w := performRequest(r, "GET", "/api/v1/admin/teams/", "", nil); w.Code != 503 && w.Code != 404 {
 		t.Fatalf("receiver exposes admin: %d", w.Code)
 	}
 }
@@ -521,7 +538,7 @@ func TestCapacityDoesNotQueueRequestsOrBlockHealth(t *testing.T) {
 func TestRoleSeparatesReceiverAndAPI(t *testing.T) {
 	for _, tc := range []struct {
 		role, path, method string
-	}{{"receiver", "/api/admin/teams/", "GET"}, {"receiver", "/api/client/teams/", "GET"}, {"api", "/flags", "PUT"}} {
+	}{{"receiver", "/api/v1/admin/teams/", "GET"}, {"receiver", "/api/v1/client/teams/", "GET"}, {"api", "/flags", "PUT"}} {
 		r := testRouter(t, tc.role, &testGame{}, testAuth{}, &testFlags{})
 		if w := performRequest(r, tc.method, tc.path, "", nil); w.Code != 404 {
 			t.Fatalf("%s exposes %s: %d", tc.role, tc.path, w.Code)

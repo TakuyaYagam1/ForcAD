@@ -217,7 +217,7 @@ export class EventSocket {
 }
 
 export function eventStreamUrl(origin: string): string {
-  const url = new URL("/api/events/ws", origin);
+  const url = new URL("/api/v1/events/ws", origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url.toString();
 }

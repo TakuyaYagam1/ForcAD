@@ -55,7 +55,7 @@ type httpTraceEvent struct {
 
 func httpTraceRoute(target string) string {
 	path, _, _ := strings.Cut(target, "?")
-	if path == "/flags" || path == "/api/events/ws" {
+	if path == "/flags" || path == "/api/v1/events/ws" {
 		return path
 	}
 	for _, route := range readPaths {

@@ -12,7 +12,7 @@ import (
 func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/admin/") && unsafeMethod(r.Method) {
+			if strings.HasPrefix(r.URL.Path, "/api/v1/admin/") && unsafeMethod(r.Method) {
 				w.Header().Add("Vary", "Origin, Sec-Fetch-Site, Referer")
 				if !adminRequestOrigin(r, publicOrigin) {
 					WriteError(w, http.StatusForbidden, api.ApiError{
@@ -23,7 +23,7 @@ func AdminOrigin(publicOrigin string) func(http.Handler) http.Handler {
 				// Login has no authenticated session/token yet. JSON excludes
 				// browser simple form submissions; Origin/Fetch Metadata remains
 				// required defense when a browser supplies those headers.
-				if r.URL.Path == "/api/admin/login/" {
+				if r.URL.Path == "/api/v1/admin/login/" {
 					kind, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 					if err != nil || kind != "application/json" {
 						WriteError(w, http.StatusUnsupportedMediaType, api.ApiError{

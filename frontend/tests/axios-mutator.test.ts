@@ -29,7 +29,7 @@ test("generated API requests retain Axios options and use the session API instan
   };
   const result = await mutator(
     {
-      url: "/api/admin/status/",
+      url: "/api/v1/admin/status/",
       method: "GET",
       headers,
       timeout: 1250,
@@ -86,7 +86,7 @@ function sessionClient(respond?: (config: AxiosRequestConfig) => Promise<unknown
   return {
     requests,
     defaults: {
-      baseURL: "https://forcad.invalid/api"
+      baseURL: "https://forcad.invalid/api/v1"
     },
     async request(config: AxiosRequestConfig) {
       requests.push(config);
@@ -108,25 +108,25 @@ test("login token is retained only for admin mutations and logout invalidates it
   const http = sessionClient();
   const mutate = createAxiosMutator(api as never, http as never);
   await mutate({
-    url: "/api/admin/login/",
+    url: "/api/v1/admin/login/",
     method: "POST",
     data: {
       username: "fixture"
     }
   });
   await mutate({
-    url: "/api/admin/teams/1/",
+    url: "/api/v1/admin/teams/1/",
     method: "PATCH",
     data: {
       name: "fixture"
     }
   });
   await mutate({
-    url: "/api/admin/logout/",
+    url: "/api/v1/admin/logout/",
     method: "POST"
   });
   await mutate({
-    url: "/api/admin/game/pause/",
+    url: "/api/v1/admin/game/pause/",
     method: "POST"
   });
   assert.deepEqual(api.requests.map((request) => {
@@ -146,11 +146,11 @@ test("parallel mutations after reload share one status request", async () => {
   const mutate = createAxiosMutator(api as never, sessionClient() as never);
   await Promise.all([
     mutate({
-      url: "/api/admin/tasks/1/",
+      url: "/api/v1/admin/tasks/1/",
       method: "PUT"
     }),
     mutate({
-      url: "/api/admin/teams/1/",
+      url: "/api/v1/admin/teams/1/",
       method: "DELETE"
     }),
   ]);
@@ -171,7 +171,7 @@ test("missing session token prevents mutations from being sent", async () => {
   });
   const mutate = createAxiosMutator(api as never, sessionClient() as never);
   await assert.rejects(mutate({
-    url: "/api/admin/events/",
+    url: "/api/v1/admin/events/",
     method: "POST"
   }), /no CSRF token/);
   assert.deepEqual(api.requests.map(({ url }) => {
@@ -200,13 +200,13 @@ test("403 clears cached token without replaying a mutation", async () => {
   });
   const mutate = createAxiosMutator(api as never, sessionClient() as never);
   await assert.rejects(mutate({
-    url: "/api/admin/game/pause/",
+    url: "/api/v1/admin/game/pause/",
     method: "POST"
   }));
   assert.equal(api.requests.length, 2);
   fail = false;
   await mutate({
-    url: "/api/admin/game/pause/",
+    url: "/api/v1/admin/game/pause/",
     method: "POST"
   });
   assert.equal(api.requests.length, 4);
@@ -218,10 +218,10 @@ test("CSRF headers never accompany public, external, or safe requests", async ()
   const http = sessionClient();
   const mutate = createAxiosMutator(api as never, http as never);
   await mutate({
-    url: "/api/admin/status/",
+    url: "/api/v1/admin/status/",
     method: "GET"
   });
-  for (const url of ["/api/client/events/", "/flags/", "https://example.invalid/api/admin/events/"]) {
+  for (const url of ["/api/v1/client/events/", "/flags/", "https://example.invalid/api/v1/admin/events/"]) {
     await mutate({
       url,
       method: "POST",
@@ -232,7 +232,7 @@ test("CSRF headers never accompany public, external, or safe requests", async ()
     });
   }
   await mutate({
-    url: "/api/admin/status/",
+    url: "/api/v1/admin/status/",
     method: "GET",
     headers: {
       "X-CSRF-Token": firstToken
@@ -243,9 +243,9 @@ test("CSRF headers never accompany public, external, or safe requests", async ()
     assert.ok(!request.url?.includes(firstToken));
   }
   await assert.rejects(mutate({
-    url: "/api/admin/events/",
+    url: "/api/v1/admin/events/",
     method: "POST",
-    baseURL: "https://example.invalid/api",
+    baseURL: "https://example.invalid/api/v1",
   }), /same-origin API/);
 });
 
@@ -262,12 +262,12 @@ test("an old status response cannot overwrite the token from a new login", async
   });
   const mutate = createAxiosMutator(api as never, sessionClient() as never);
   const pending = mutate({
-    url: "/api/admin/events/",
+    url: "/api/v1/admin/events/",
     method: "POST"
   });
   const rejected = assert.rejects(pending, /session changed/);
   await mutate({
-    url: "/api/admin/login/",
+    url: "/api/v1/admin/login/",
     method: "POST"
   });
   resolveStatus({
@@ -275,7 +275,7 @@ test("an old status response cannot overwrite the token from a new login", async
   });
   await rejected;
   await mutate({
-    url: "/api/admin/events/",
+    url: "/api/v1/admin/events/",
     method: "POST"
   });
   assert.equal(api.requests.length, 3);

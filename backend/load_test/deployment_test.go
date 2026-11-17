@@ -136,7 +136,7 @@ func (d *deployment) start(ctx context.Context) error {
 	var session struct {
 		CSRFToken string `json:"csrf_token"`
 	}
-	if err := d.post(ctx, client, "/api/admin/login/", map[string]any{
+	if err := d.post(ctx, client, "/api/v1/admin/login/", map[string]any{
 		"username": credentials["ADMIN_USERNAME"],
 		"password": credentials["ADMIN_PASSWORD"],
 	}, "", &session); err != nil {
@@ -149,7 +149,7 @@ func (d *deployment) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return d.post(ctx, client, "/api/admin/game/start_final/", map[string]any{
+	return d.post(ctx, client, "/api/v1/admin/game/start_final/", map[string]any{
 		"confirm":    true,
 		"generation": generation,
 	}, session.CSRFToken, nil)

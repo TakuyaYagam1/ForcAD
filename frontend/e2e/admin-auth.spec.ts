@@ -31,7 +31,7 @@ test("admin access, login persistence, and logout use the live session", async (
       exact: true
     }).fill(credentials.password);
     const loginResponse = page.waitForResponse((response) => {
-      return new URL(response.url()).pathname === "/api/admin/login/"
+      return new URL(response.url()).pathname === "/api/v1/admin/login/"
       && response.request().method() === "POST"
     });
     await page.getByRole("button", {
@@ -130,7 +130,7 @@ test("admin access, login persistence, and logout use the live session", async (
 
     const sessionAfterReload = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/admin/status/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/admin/status/" && response.request().method() === "GET";
     });
     await page.reload();
     const session = await sessionAfterReload;
@@ -143,7 +143,7 @@ test("admin access, login persistence, and logout use the live session", async (
     })).toBeVisible();
 
     const rejected = await page.evaluate(async () => {
-      const status = await fetch("/api/admin/status/", {
+      const status = await fetch("/api/v1/admin/status/", {
         cache: "no-store"
       });
       const { csrf_token: token } = await status.json() as {
@@ -161,21 +161,21 @@ test("admin access, login persistence, and logout use the live session", async (
         },
       ];
       for (const headers of headerCases) {
-        const response = await fetch("/api/admin/logout/", {
+        const response = await fetch("/api/v1/admin/logout/", {
           method: "POST",
           headers,
           body: "{}",
         });
         statuses.push(response.status);
       }
-      statuses.push((await fetch("/api/admin/status/", {
+      statuses.push((await fetch("/api/v1/admin/status/", {
         cache: "no-store"
       })).status);
       return statuses;
     });
     expect(rejected).toEqual([403, 403, 200]);
     const logoutResponse = page.waitForResponse((response) => {
-      return new URL(response.url()).pathname === "/api/admin/logout/"
+      return new URL(response.url()).pathname === "/api/v1/admin/logout/"
       && response.request().method() === "POST"
     });
     await page.getByRole("button", {
@@ -189,7 +189,7 @@ test("admin access, login persistence, and logout use the live session", async (
 
     const invalidatedSession = page.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/admin/status/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/admin/status/" && response.request().method() === "GET";
     });
     await page.goto("/admin/task/create");
     expect((await invalidatedSession).status()).toBe(403);

@@ -60,7 +60,7 @@ test("proxies the native event stream as a WebSocket", () => {
     isSsrBuild: false,
     isPreview: false,
   });
-  const eventProxy = config.server?.proxy?.["/api/events/ws"];
+  const eventProxy = config.server?.proxy?.["/api/v1/events/ws"];
 
   assert.equal(typeof eventProxy, "object");
   assert.equal(eventProxy && "ws" in eventProxy && eventProxy.ws, true);

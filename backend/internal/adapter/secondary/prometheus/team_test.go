@@ -54,18 +54,18 @@ func newTraffic(t *testing.T) (*TeamTraffic, *prometheus.Registry, *teamReader) 
 func TestTrafficAttributionRejectsUntrustedForwarding(t *testing.T) {
 	metrics, _, _ := newTraffic(t)
 	handler := metrics.Middleware(func(*http.Request) string {
-		return "/api/client/status/"
+		return "/api/v1/client/status/"
 	})(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	for _, peer := range []string{"198.51.100.1:1234", "10.0.0.2:1234"} {
-		request := httptest.NewRequest(http.MethodGet, "/api/client/status/", nil)
+		request := httptest.NewRequest(http.MethodGet, "/api/v1/client/status/", nil)
 		request.RemoteAddr = peer
 		request.Header.Set("X-Forwarded-For", "192.0.2.1")
 		handler.ServeHTTP(httptest.NewRecorder(), request)
 	}
 	for _, id := range []string{unknownTeam, trafficTeamID.String()} {
-		if got := metricValue(metrics.requests.WithLabelValues(id, "/api/client/status/", "200")); got != 1 {
+		if got := metricValue(metrics.requests.WithLabelValues(id, "/api/v1/client/status/", "200")); got != 1 {
 			t.Fatalf("%s requests: %v", id, got)
 		}
 	}
@@ -109,7 +109,7 @@ func TestWebSocketGaugeBalancesAndDoesNotPolluteRESTLatency(t *testing.T) {
 		}
 		closed()
 	}))
-	request := httptest.NewRequest(http.MethodGet, "/api/events/ws", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/events/ws", nil)
 	request.RemoteAddr = "192.0.2.1:1234"
 	handler.ServeHTTP(httptest.NewRecorder(), request)
 	if got := metricValue(metrics.sockets.WithLabelValues(trafficTeamID.String())); got != 0 {
@@ -120,14 +120,14 @@ func TestWebSocketGaugeBalancesAndDoesNotPolluteRESTLatency(t *testing.T) {
 func TestRejectedWebSocketHandshakeIsCounted(t *testing.T) {
 	metrics, _, _ := newTraffic(t)
 	handler := metrics.Middleware(func(*http.Request) string {
-		return "/api/events/ws"
+		return "/api/v1/events/ws"
 	})(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}))
-	request := httptest.NewRequest(http.MethodGet, "/api/events/ws", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/events/ws", nil)
 	request.RemoteAddr = "192.0.2.1:1234"
 	handler.ServeHTTP(httptest.NewRecorder(), request)
-	if got := metricValue(metrics.requests.WithLabelValues(trafficTeamID.String(), "/api/events/ws", "503")); got != 1 {
+	if got := metricValue(metrics.requests.WithLabelValues(trafficTeamID.String(), "/api/v1/events/ws", "503")); got != 1 {
 		t.Fatalf("rejected handshake count: %v", got)
 	}
 }

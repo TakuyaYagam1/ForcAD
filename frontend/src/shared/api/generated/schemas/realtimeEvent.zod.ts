@@ -131,7 +131,7 @@ export const RealtimeEvent = zod.union([zod.object({
     })
   }),
   "timestamp": zod.string()
-})]).describe('Public event sent as a JSON text frame on /api/events/ws. No administration or checker-private data is included.')
+})]).describe('Public event sent as a JSON text frame on /api/v1/events/ws. No administration or checker-private data is included.')
 
 export type RealtimeEvent = zod.input<typeof RealtimeEvent>;
 export type RealtimeEventOutput = zod.output<typeof RealtimeEvent>;

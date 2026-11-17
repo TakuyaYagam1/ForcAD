@@ -18,9 +18,9 @@ func httpTraceFixtureLine(route string, status int, seconds string) string {
 }
 
 func TestHTTPTraceRetainsCorrelatedSlowRequestsWithoutSecrets(t *testing.T) {
-	line := httpTraceFixtureLine("/api/client/attack_data/?token=secret-token", 499, "3.023")
+	line := httpTraceFixtureLine("/api/v1/client/attack_data/?token=secret-token", 499, "3.023")
 	event, parsed, retain := parseHTTPTrace(line)
-	if !parsed || !retain || event.Status != 499 || event.Route != "/api/client/attack_data/" || event.Sequence != "123456" || event.Connection != "789" || event.Upstream != "172.20.0.10:8000" || event.RequestSeconds != 3.023 {
+	if !parsed || !retain || event.Status != 499 || event.Route != "/api/v1/client/attack_data/" || event.Sequence != "123456" || event.Connection != "789" || event.Upstream != "172.20.0.10:8000" || event.RequestSeconds != 3.023 {
 		t.Fatalf("correlation or timing was lost: %+v", event)
 	}
 	if event.LoggedUTC == nil || event.LoggedUTC.Format(time.RFC3339Nano) != "2026-11-05T13:17:07.839981Z" {
@@ -52,7 +52,7 @@ func TestHTTPTraceEpochBounds(t *testing.T) {
 			t.Fatalf("epoch %q: got %s, valid=%t, want %s", test.raw, stamp, ok, test.want)
 		}
 	}
-	line := httpTraceFixtureLine("/api/client/attack_data/?token=secret-token", 499, "3.023")
+	line := httpTraceFixtureLine("/api/v1/client/attack_data/?token=secret-token", 499, "3.023")
 	for _, raw := range []string{
 		"-1.000", "+1.000", "NaN", "Inf", "1e9.000", "1793884627", "1793884627.1",
 		"1793884627.0001", "253402300800.000", "999999999999.999", "1000000000000.000",
@@ -109,9 +109,9 @@ func TestHTTPTraceSelectsOnlySlowOrErrorAccessEvents(t *testing.T) {
 			t.Fatalf("status=%d rt=%s: retained=%t, want=%t", test.status, test.seconds, retained, test.want)
 		}
 	}
-	line := `2026-11-05T13:17:07Z 2026/11/05 13:17:07 [error] 12#12: *789 upstream timed out secret-debug-data, request: "GET /api/client/attack_data/?token=secret HTTP/1.1", upstream: "http://172.20.0.10:8000/secret"`
+	line := `2026-11-05T13:17:07Z 2026/11/05 13:17:07 [error] 12#12: *789 upstream timed out secret-debug-data, request: "GET /api/v1/client/attack_data/?token=secret HTTP/1.1", upstream: "http://172.20.0.10:8000/secret"`
 	event, parsed, retained := parseHTTPTrace(line)
-	if !parsed || !retained || event.Category != "upstream_timed_out" || event.Connection != "789" || event.Route != "/api/client/attack_data/" {
+	if !parsed || !retained || event.Category != "upstream_timed_out" || event.Connection != "789" || event.Route != "/api/v1/client/attack_data/" {
 		t.Fatalf("error was not safely correlated: %+v", event)
 	}
 }
@@ -124,11 +124,11 @@ func TestHTTPTraceProcessFixture(t *testing.T) {
 	}
 	switch mode {
 	case "1":
-		fmt.Println(httpTraceFixtureLine("/api/client/status/", 200, "0.001"))
-		fmt.Println(httpTraceFixtureLine("/api/client/attack_data/?secret=hidden", 499, "3.023"))
+		fmt.Println(httpTraceFixtureLine("/api/v1/client/status/", 200, "0.001"))
+		fmt.Println(httpTraceFixtureLine("/api/v1/client/attack_data/?secret=hidden", 499, "3.023"))
 	case "unrecognized":
-		fmt.Println(strings.Split(httpTraceFixtureLine("/api/client/status/", 200, "0.001"), " rt=")[0])
-		fmt.Println(httpTraceFixtureLine("/api/client/status/", 200, "0.001"))
+		fmt.Println(strings.Split(httpTraceFixtureLine("/api/v1/client/status/", 200, "0.001"), " rt=")[0])
+		fmt.Println(httpTraceFixtureLine("/api/v1/client/status/", 200, "0.001"))
 		fmt.Println(`2026-11-05T13:17:07Z 2026/11/05 13:17:07 [error] 12#12: *789 fixture barrier`)
 	case "empty":
 		fmt.Println(`2026-11-05T13:17:07Z /docker-entrypoint.sh: configuration complete`)

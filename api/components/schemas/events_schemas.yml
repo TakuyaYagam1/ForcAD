@@ -96,7 +96,7 @@ schemas:
       timestamp:
         type: string
   RealtimeEvent:
-    description: Public event sent as a JSON text frame on /api/events/ws. No administration
+    description: Public event sent as a JSON text frame on /api/v1/events/ws. No administration
       or checker-private data is included.
     oneOf:
     - "$ref": "#/schemas/InitScoreboardEvent"

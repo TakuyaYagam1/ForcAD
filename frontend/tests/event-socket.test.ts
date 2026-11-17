@@ -31,18 +31,18 @@ class FakeSocket {
 test("event stream URL uses the native WebSocket scheme and endpoint", () => {
   assert.equal(
     eventStreamUrl("https://game.example"),
-    "wss://game.example/api/events/ws",
+    "wss://game.example/api/v1/events/ws",
   );
   assert.equal(
     eventStreamUrl("http://localhost:5173"),
-    "ws://localhost:5173/api/events/ws",
+    "ws://localhost:5173/api/v1/events/ws",
   );
 });
 
 test("event facade dispatches validated payloads and supports off", () => {
   const sockets: FakeSocket[] = [];
   const socket = new EventSocket({
-    url: "ws://localhost/api/events/ws",
+    url: "ws://localhost/api/v1/events/ws",
     parseMessage: parseRealtimeEvent,
     createSocket: () => {
       const created = new FakeSocket();
@@ -95,7 +95,7 @@ test("event facade dispatches validated payloads and supports off", () => {
 test("event facade dispatches public announcements", () => {
   const sockets: FakeSocket[] = [];
   const socket = new EventSocket({
-    url: "ws://localhost/api/events/ws",
+    url: "ws://localhost/api/v1/events/ws",
     parseMessage: parseRealtimeEvent,
     createSocket: () => {
       const created = new FakeSocket();
@@ -150,7 +150,7 @@ test("reconnect uses jitter and resynchronizes the full scoreboard", async () =>
     },
   };
   const socket = new EventSocket({
-    url: "ws://localhost/api/events/ws",
+    url: "ws://localhost/api/v1/events/ws",
     parseMessage: parseRealtimeEvent,
     resync: async () => {
       return scoreboard

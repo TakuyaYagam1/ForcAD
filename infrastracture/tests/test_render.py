@@ -321,7 +321,7 @@ class RenderTests(unittest.TestCase):
         host = json.loads(files["forcad/host.json"])
         self.assertEqual(
             host["checks"]["forcad_url"],
-            "http://172.25.2.20/api/client/status/",
+            "http://172.25.2.20/api/v1/client/status/",
         )
         self.assertNotIn("10.183.", "\n".join(files["router/interfaces"].splitlines()))
         inventory = json.loads(files["router/network.json"])

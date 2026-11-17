@@ -794,7 +794,7 @@ const demoAdapter: AxiosAdapter = async (config) => {
 
   const requestBase = config.baseURL ?? window.location.origin;
   const requestUrl = new URL(config.url ?? "/", requestBase + "/");
-  const requestPath = requestUrl.pathname.replace(/^\/api/, "").replace(/\/$/, "");
+  const requestPath = requestUrl.pathname.replace(/^\/api\/v1/, "").replace(/\/$/, "");
   const method = config.method?.toUpperCase() ?? "GET";
   const body = readBody(config);
 

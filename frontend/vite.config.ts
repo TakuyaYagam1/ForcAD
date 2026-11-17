@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        "/api/events/ws": createProxy(true),
+        "/api/v1/events/ws": createProxy(true),
         "/api": createProxy(),
       },
     },

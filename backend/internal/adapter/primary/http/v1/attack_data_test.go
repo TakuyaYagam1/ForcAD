@@ -113,20 +113,20 @@ func TestAttackDataEndpointReadsParameters(t *testing.T) {
 	}
 
 	full := httptest.NewRecorder()
-	server.ServeHTTP(full, httptest.NewRequest(http.MethodGet, "/api/client/attack_data/", nil))
+	server.ServeHTTP(full, httptest.NewRequest(http.MethodGet, "/api/v1/client/attack_data/", nil))
 	if full.Code != http.StatusOK || full.Body.String() != `{"service-one":{"192.0.2.1":["flag"]},"service-two":{"192.0.2.2":["other-flag"]}}` {
 		t.Fatalf("full endpoint response status=%d body=%s", full.Code, full.Body.String())
 	}
 
 	filtered := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodGet, "/api/client/attack_data/?service=service-one", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/client/attack_data/?service=service-one", nil)
 	server.ServeHTTP(filtered, request)
 	if filtered.Code != http.StatusOK || filtered.Body.String() != `{"service-one":{"192.0.2.1":["flag"]}}` {
 		t.Fatalf("filtered endpoint response status=%d body=%s", filtered.Code, filtered.Body.String())
 	}
 
 	conditional := httptest.NewRecorder()
-	request = httptest.NewRequest(http.MethodGet, "/api/client/attack_data/?service=service-one", nil)
+	request = httptest.NewRequest(http.MethodGet, "/api/v1/client/attack_data/?service=service-one", nil)
 	request.Header.Set("If-None-Match", filtered.Header().Get("ETag"))
 	server.ServeHTTP(conditional, request)
 	if conditional.Code != http.StatusNotModified || conditional.Body.Len() != 0 {
@@ -137,12 +137,12 @@ func TestAttackDataEndpointReadsParameters(t *testing.T) {
 	}
 
 	unknown := httptest.NewRecorder()
-	server.ServeHTTP(unknown, httptest.NewRequest(http.MethodGet, "/api/client/attack_data/?service=missing", nil))
+	server.ServeHTTP(unknown, httptest.NewRequest(http.MethodGet, "/api/v1/client/attack_data/?service=missing", nil))
 	if unknown.Code != http.StatusOK || unknown.Body.String() != `{}` {
 		t.Fatalf("unknown endpoint response status=%d body=%s", unknown.Code, unknown.Body.String())
 	}
 	empty := httptest.NewRecorder()
-	server.ServeHTTP(empty, httptest.NewRequest(http.MethodGet, "/api/client/attack_data/?service=", nil))
+	server.ServeHTTP(empty, httptest.NewRequest(http.MethodGet, "/api/v1/client/attack_data/?service=", nil))
 	if empty.Code != http.StatusOK || empty.Body.String() != `{}` {
 		t.Fatalf("empty service response status=%d body=%s", empty.Code, empty.Body.String())
 	}

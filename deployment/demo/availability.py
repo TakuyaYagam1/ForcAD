@@ -56,7 +56,7 @@ def api_client():
             return json.loads(body) if body else None
 
     request(
-        "/api/admin/login/",
+        "/api/v1/admin/login/",
         {
             "username": credentials["ADMIN_USERNAME"],
             "password": credentials["ADMIN_PASSWORD"],
@@ -263,7 +263,7 @@ def pause_restart():
         raise RuntimeError("No fresh round with pending CHECKs")
     resumed = False
     try:
-        request("/api/admin/game/pause/", {"generation": state()["generation"]})
+        request("/api/v1/admin/game/pause/", {"generation": state()["generation"]})
         before = pending_jobs()
         assert before and all(not job["sent"] for job in before)
         time.sleep(10)
@@ -275,7 +275,7 @@ def pause_restart():
         time.sleep(10)
         assert state()["paused"]
         assert before == pending_jobs(), "Pending jobs changed during paused restart"
-        request("/api/admin/game/resume/", {"generation": state()["generation"]})
+        request("/api/v1/admin/game/resume/", {"generation": state()["generation"]})
         resumed = True
         after = pending_jobs()
         assert [job["id"] for job in before] == [job["id"] for job in after]
@@ -304,7 +304,7 @@ def pause_restart():
         raise RuntimeError("Pending jobs did not finish after resume")
     finally:
         if not resumed and state()["paused"]:
-            request("/api/admin/game/resume/", {"generation": state()["generation"]})
+            request("/api/v1/admin/game/resume/", {"generation": state()["generation"]})
 
 
 def main():

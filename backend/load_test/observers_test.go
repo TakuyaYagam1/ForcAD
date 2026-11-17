@@ -149,7 +149,7 @@ func (o *observers) spectator(ctx context.Context, origin string) {
 			dialTimeout = 20 * time.Second
 		}
 		dial, cancelDial := context.WithTimeout(cycle, dialTimeout)
-		conn, response, err := websocket.Dial(dial, "ws"+strings.TrimPrefix(origin, "http")+"/api/events/ws", &websocket.DialOptions{
+		conn, response, err := websocket.Dial(dial, "ws"+strings.TrimPrefix(origin, "http")+"/api/v1/events/ws", &websocket.DialOptions{
 			HTTPHeader: http.Header{
 				"Origin": {origin},
 			},

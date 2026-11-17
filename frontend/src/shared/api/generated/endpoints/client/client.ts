@@ -80,7 +80,7 @@ export const getClientTeams = (
 
   return axiosMutator<ParticipantTeam[]>(
     {
-      url: `/api/client/teams/`,
+      url: `/api/v1/client/teams/`,
       method: 'GET',
       signal
     },
@@ -92,7 +92,7 @@ export const getClientTeams = (
 
 export const getGetClientTeamsQueryKey = () => {
   return [
-    `/api/client/teams/`
+    `/api/v1/client/teams/`
   ] as const;
 }
 
@@ -203,7 +203,7 @@ export const getClientTasks = (
 
   return axiosMutator<ParticipantTask[]>(
     {
-      url: `/api/client/tasks/`,
+      url: `/api/v1/client/tasks/`,
       method: 'GET',
       signal
     },
@@ -215,7 +215,7 @@ export const getClientTasks = (
 
 export const getGetClientTasksQueryKey = () => {
   return [
-    `/api/client/tasks/`
+    `/api/v1/client/tasks/`
   ] as const;
 }
 
@@ -326,7 +326,7 @@ export const getClientConfig = (
 
   return axiosMutator<GameConfig>(
     {
-      url: `/api/client/config/`,
+      url: `/api/v1/client/config/`,
       method: 'GET',
       signal
     },
@@ -338,7 +338,7 @@ export const getClientConfig = (
 
 export const getGetClientConfigQueryKey = () => {
   return [
-    `/api/client/config/`
+    `/api/v1/client/config/`
   ] as const;
 }
 
@@ -450,7 +450,7 @@ export const getClientAttackData = (
 
   return axiosMutator<AttackData | null>(
     {
-      url: `/api/client/attack_data/`,
+      url: `/api/v1/client/attack_data/`,
       method: 'GET',
       headers,
       params,
@@ -464,7 +464,7 @@ export const getClientAttackData = (
 
 export const getGetClientAttackDataQueryKey = (params?: GetClientAttackDataParams,) => {
   return [
-    `/api/client/attack_data/`, ...(params ? [params] : [])
+    `/api/v1/client/attack_data/`, ...(params ? [params] : [])
   ] as const;
 }
 
@@ -580,7 +580,7 @@ export const getClientTeamHistory = (
 
   return axiosMutator<ParticipantTeamTaskHistory[]>(
     {
-      url: `/api/client/teams/${teamId}/`,
+      url: `/api/v1/client/teams/${teamId}/`,
       method: 'GET',
       signal
     },
@@ -592,7 +592,7 @@ export const getClientTeamHistory = (
 
 export const getGetClientTeamHistoryQueryKey = (teamId: string,) => {
   return [
-    `/api/client/teams/${teamId}/`
+    `/api/v1/client/teams/${teamId}/`
   ] as const;
 }
 
@@ -706,7 +706,7 @@ export const getClientCheckerLogs = (
 
   return axiosMutator<CheckerLogPage>(
     {
-      url: `/api/client/teams/${teamId}/tasks/${taskId}/logs/`,
+      url: `/api/v1/client/teams/${teamId}/tasks/${taskId}/logs/`,
       method: 'GET',
       params,
       signal
@@ -721,7 +721,7 @@ export const getGetClientCheckerLogsQueryKey = (teamId: string,
   taskId: string,
   params?: GetClientCheckerLogsParams,) => {
   return [
-    `/api/client/teams/${teamId}/tasks/${taskId}/logs/`, ...(params ? [params] : [])
+    `/api/v1/client/teams/${teamId}/tasks/${taskId}/logs/`, ...(params ? [params] : [])
   ] as const;
 }
 
@@ -843,7 +843,7 @@ export const getClientEvents = (
 
   return axiosMutator<PublicEvent[]>(
     {
-      url: `/api/client/events/`,
+      url: `/api/v1/client/events/`,
       method: 'GET',
       params,
       signal
@@ -856,7 +856,7 @@ export const getClientEvents = (
 
 export const getGetClientEventsQueryKey = (params?: GetClientEventsParams,) => {
   return [
-    `/api/client/events/`, ...(params ? [params] : [])
+    `/api/v1/client/events/`, ...(params ? [params] : [])
   ] as const;
 }
 
@@ -967,7 +967,7 @@ export const getClientCtftimeScoreboard = (
 
   return axiosMutator<CtftimeStanding[]>(
     {
-      url: `/api/client/ctftime/`,
+      url: `/api/v1/client/ctftime/`,
       method: 'GET',
       signal
     },
@@ -979,7 +979,7 @@ export const getClientCtftimeScoreboard = (
 
 export const getGetClientCtftimeScoreboardQueryKey = () => {
   return [
-    `/api/client/ctftime/`
+    `/api/v1/client/ctftime/`
   ] as const;
 }
 
@@ -1090,7 +1090,7 @@ export const getClientHealth = (
 
   return axiosMutator<StatusResponse>(
     {
-      url: `/api/client/health/`,
+      url: `/api/v1/client/health/`,
       method: 'GET',
       signal
     },
@@ -1102,7 +1102,7 @@ export const getClientHealth = (
 
 export const getGetClientHealthQueryKey = () => {
   return [
-    `/api/client/health/`
+    `/api/v1/client/health/`
   ] as const;
 }
 
@@ -1213,7 +1213,7 @@ export const getClientStatus = (
 
   return axiosMutator<GameRuntimeStatus>(
     {
-      url: `/api/client/status/`,
+      url: `/api/v1/client/status/`,
       method: 'GET',
       signal
     },
@@ -1225,7 +1225,7 @@ export const getClientStatus = (
 
 export const getGetClientStatusQueryKey = () => {
   return [
-    `/api/client/status/`
+    `/api/v1/client/status/`
   ] as const;
 }
 
@@ -1337,7 +1337,7 @@ export const getScoreboard = (
 
   return axiosMutator<Scoreboard>(
     {
-      url: `/api/client/scoreboard/`,
+      url: `/api/v1/client/scoreboard/`,
       method: 'GET',
       signal
     },
@@ -1349,7 +1349,7 @@ export const getScoreboard = (
 
 export const getGetScoreboardQueryKey = () => {
   return [
-    `/api/client/scoreboard/`
+    `/api/v1/client/scoreboard/`
   ] as const;
 }
 

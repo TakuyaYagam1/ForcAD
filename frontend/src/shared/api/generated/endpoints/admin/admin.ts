@@ -85,7 +85,7 @@ export const getAdminTeams = (
 
   return axiosMutator<AdminTeam[]>(
     {
-      url: `/api/admin/teams/`,
+      url: `/api/v1/admin/teams/`,
       method: 'GET',
       signal
     },
@@ -97,7 +97,7 @@ export const getAdminTeams = (
 
 export const getGetAdminTeamsQueryKey = () => {
   return [
-    `/api/admin/teams/`
+    `/api/v1/admin/teams/`
   ] as const;
 }
 
@@ -209,7 +209,7 @@ export const createAdminTeam = (
 
   return axiosMutator<AdminTeam>(
     {
-      url: `/api/admin/teams/`,
+      url: `/api/v1/admin/teams/`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ export const getAdminTeam = (
 
   return axiosMutator<AdminTeam>(
     {
-      url: `/api/admin/teams/${teamId}/`,
+      url: `/api/v1/admin/teams/${teamId}/`,
       method: 'GET',
       signal
     },
@@ -316,7 +316,7 @@ export const getAdminTeam = (
 
 export const getGetAdminTeamQueryKey = (teamId: string,) => {
   return [
-    `/api/admin/teams/${teamId}/`
+    `/api/v1/admin/teams/${teamId}/`
   ] as const;
 }
 
@@ -429,7 +429,7 @@ export const updateAdminTeam = (
 
   return axiosMutator<AdminTeam>(
     {
-      url: `/api/admin/teams/${teamId}/`,
+      url: `/api/v1/admin/teams/${teamId}/`,
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -522,7 +522,7 @@ export const deleteAdminTeam = (
 
   return axiosMutator<DeleteAdminTeam200>(
     {
-      url: `/api/admin/teams/${teamId}/`,
+      url: `/api/v1/admin/teams/${teamId}/`,
       method: 'DELETE',
       signal
     },
@@ -610,7 +610,7 @@ export const getAdminTasks = (
 
   return axiosMutator<AdminTask[]>(
     {
-      url: `/api/admin/tasks/`,
+      url: `/api/v1/admin/tasks/`,
       method: 'GET',
       signal
     },
@@ -622,7 +622,7 @@ export const getAdminTasks = (
 
 export const getGetAdminTasksQueryKey = () => {
   return [
-    `/api/admin/tasks/`
+    `/api/v1/admin/tasks/`
   ] as const;
 }
 
@@ -733,7 +733,7 @@ export const createAdminTask = (
 
   return axiosMutator<AdminTask>(
     {
-      url: `/api/admin/tasks/`,
+      url: `/api/v1/admin/tasks/`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -825,7 +825,7 @@ export const getAdminTask = (
 
   return axiosMutator<AdminTask>(
     {
-      url: `/api/admin/tasks/${taskId}/`,
+      url: `/api/v1/admin/tasks/${taskId}/`,
       method: 'GET',
       signal
     },
@@ -837,7 +837,7 @@ export const getAdminTask = (
 
 export const getGetAdminTaskQueryKey = (taskId: string,) => {
   return [
-    `/api/admin/tasks/${taskId}/`
+    `/api/v1/admin/tasks/${taskId}/`
   ] as const;
 }
 
@@ -950,7 +950,7 @@ export const updateAdminTask = (
 
   return axiosMutator<AdminTask>(
     {
-      url: `/api/admin/tasks/${taskId}/`,
+      url: `/api/v1/admin/tasks/${taskId}/`,
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -1043,7 +1043,7 @@ export const deleteAdminTask = (
 
   return axiosMutator<DeleteAdminTask200>(
     {
-      url: `/api/admin/tasks/${taskId}/`,
+      url: `/api/v1/admin/tasks/${taskId}/`,
       method: 'DELETE',
       signal
     },
@@ -1131,7 +1131,7 @@ export const getAdminTeamTaskHistory = (
 
   return axiosMutator<AdminTeamTaskLogEntry[]>(
     {
-      url: `/api/admin/teamtasks/`,
+      url: `/api/v1/admin/teamtasks/`,
       method: 'GET',
       params,
       signal
@@ -1144,7 +1144,7 @@ export const getAdminTeamTaskHistory = (
 
 export const getGetAdminTeamTaskHistoryQueryKey = (params?: GetAdminTeamTaskHistoryParams,) => {
   return [
-    `/api/admin/teamtasks/`, ...(params ? [params] : [])
+    `/api/v1/admin/teamtasks/`, ...(params ? [params] : [])
   ] as const;
 }
 
@@ -1256,7 +1256,7 @@ export const createAdminTeamTask = (
 
   return axiosMutator<unknown>(
     {
-      url: `/api/admin/teamtasks/`,
+      url: `/api/v1/admin/teamtasks/`,
       method: 'POST',
       signal
     },
@@ -1346,7 +1346,7 @@ export const getAdminTeamTask = (
 
   return axiosMutator<unknown>(
     {
-      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      url: `/api/v1/admin/teamtasks/${teamtaskId}/`,
       method: 'GET',
       signal
     },
@@ -1358,7 +1358,7 @@ export const getAdminTeamTask = (
 
 export const getGetAdminTeamTaskQueryKey = (teamtaskId: string,) => {
   return [
-    `/api/admin/teamtasks/${teamtaskId}/`
+    `/api/v1/admin/teamtasks/${teamtaskId}/`
   ] as const;
 }
 
@@ -1483,7 +1483,7 @@ export const updateAdminTeamTask = (
 
   return axiosMutator<unknown>(
     {
-      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      url: `/api/v1/admin/teamtasks/${teamtaskId}/`,
       method: 'PUT',
       signal
     },
@@ -1575,7 +1575,7 @@ export const deleteAdminTeamTask = (
 
   return axiosMutator<unknown>(
     {
-      url: `/api/admin/teamtasks/${teamtaskId}/`,
+      url: `/api/v1/admin/teamtasks/${teamtaskId}/`,
       method: 'DELETE',
       signal
     },
@@ -1668,7 +1668,7 @@ export const changeAdminGameState = (
 
   return axiosMutator<GameRuntimeStatus>(
     {
-      url: `/api/admin/game/${action}/`,
+      url: `/api/v1/admin/game/${action}/`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1765,7 +1765,7 @@ export const adminLogin = (
 
   return axiosMutator<AdminSession>(
     {
-      url: `/api/admin/login/`,
+      url: `/api/v1/admin/login/`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1861,7 +1861,7 @@ export const getAdminSessionStatus = (
 
   return axiosMutator<AdminSession>(
     {
-      url: `/api/admin/status/`,
+      url: `/api/v1/admin/status/`,
       method: 'GET',
       signal
     },
@@ -1873,7 +1873,7 @@ export const getAdminSessionStatus = (
 
 export const getGetAdminSessionStatusQueryKey = () => {
   return [
-    `/api/admin/status/`
+    `/api/v1/admin/status/`
   ] as const;
 }
 
@@ -1997,7 +1997,7 @@ export const adminLogout = (
 
   return axiosMutator<StatusResponse>(
     {
-      url: `/api/admin/logout/`,
+      url: `/api/v1/admin/logout/`,
       method: 'POST',
       signal
     },
@@ -2086,7 +2086,7 @@ export const createAdminEvent = (
 
   return axiosMutator<PublicEvent>(
     {
-      url: `/api/admin/events/`,
+      url: `/api/v1/admin/events/`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2178,7 +2178,7 @@ export const getAdminHealth = (
 
   return axiosMutator<StatusResponse>(
     {
-      url: `/api/admin/health/`,
+      url: `/api/v1/admin/health/`,
       method: 'GET',
       signal
     },
@@ -2190,7 +2190,7 @@ export const getAdminHealth = (
 
 export const getGetAdminHealthQueryKey = () => {
   return [
-    `/api/admin/health/`
+    `/api/v1/admin/health/`
   ] as const;
 }
 

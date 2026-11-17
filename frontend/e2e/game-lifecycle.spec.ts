@@ -47,11 +47,11 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
   try {
     const initialScoreboard = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/scoreboard/" && response.request().method() === "GET";
     });
     const initialRuntime = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/status/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/status/" && response.request().method() === "GET";
     });
     await publicPage.goto("/");
     await expect(publicPage.getByRole("heading", {
@@ -155,13 +155,13 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
 
     const resynchronized = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/scoreboard/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/scoreboard/" && response.request().method() === "GET";
     }, {
       timeout: 60_000
     });
     const resynchronizedRuntime = publicPage.waitForResponse((response) => {
       const url = new URL(response.url());
-      return url.pathname === "/api/client/status/" && response.request().method() === "GET";
+      return url.pathname === "/api/v1/client/status/" && response.request().method() === "GET";
     });
     const pausedRound = publicPage.getByRole("region", {
       name: "Текущий раунд"
@@ -171,7 +171,7 @@ test("public stream resynchronizes after a missed practice pause", async ({ brow
       });
     // Another API replica can return its pre-pause, 500 ms cached scoreboard.
     // Deliver that snapshot after the authoritative status has reached the UI.
-    await publicPage.route("**/api/client/scoreboard/", async (route) => {
+    await publicPage.route("**/api/v1/client/scoreboard/", async (route) => {
       const response = await route.fetch();
       const body = await response.json() as ScoreboardResponse;
       await resynchronizedRuntime;

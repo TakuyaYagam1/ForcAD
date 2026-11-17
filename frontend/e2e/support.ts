@@ -215,7 +215,7 @@ export async function observePublicStream(page: Page): Promise<PublicStreamObser
       disconnected = false;
     },
   };
-  await page.routeWebSocket("**/api/events/ws", async (socket) => {
+  await page.routeWebSocket("**/api/v1/events/ws", async (socket) => {
     if (disconnected) {
       await socket.close({
         code: 4001,
@@ -275,7 +275,7 @@ export async function expectNewPhase(
 
 export async function currentRuntime(page: Page): Promise<RuntimeStatus> {
   return page.evaluate(async () => {
-    const response = await fetch("/api/client/status/", {
+    const response = await fetch("/api/v1/client/status/", {
       cache: "no-store"
     });
     if (!response.ok) {

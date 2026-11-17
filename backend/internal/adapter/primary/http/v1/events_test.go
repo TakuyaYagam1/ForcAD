@@ -78,7 +78,7 @@ func TestPublicEventsAndAdminAnnouncementRoute(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	feed := performRequest(router, http.MethodGet, "/api/client/events/", "", nil)
+	feed := performRequest(router, http.MethodGet, "/api/v1/client/events/", "", nil)
 	if feed.Code != http.StatusOK || events.after != "" {
 		t.Fatalf("public event feed: status=%d after=%q body=%s", feed.Code, events.after, feed.Body.String())
 	}
@@ -92,16 +92,16 @@ func TestPublicEventsAndAdminAnnouncementRoute(t *testing.T) {
 			t.Errorf("public event response contains private field %q: %s", privateField, feed.Body.String())
 		}
 	}
-	page := performRequest(router, http.MethodGet, "/api/client/events/?after=cursor-id", "", nil)
+	page := performRequest(router, http.MethodGet, "/api/v1/client/events/?after=cursor-id", "", nil)
 	if page.Code != http.StatusOK || events.after != "cursor-id" {
 		t.Fatalf("event cursor: status=%d after=%q body=%s", page.Code, events.after, page.Body.String())
 	}
 
 	body := `{"title":"Round update","markdown":"Starts soon."}`
-	if response := performRequest(router, http.MethodPost, "/api/admin/events/", body, nil); response.Code != http.StatusForbidden {
+	if response := performRequest(router, http.MethodPost, "/api/v1/admin/events/", body, nil); response.Code != http.StatusForbidden {
 		t.Fatalf("anonymous announcement: %d %s", response.Code, response.Body.String())
 	}
-	created := performRequest(router, http.MethodPost, "/api/admin/events/", body, map[string]string{
+	created := performRequest(router, http.MethodPost, "/api/v1/admin/events/", body, map[string]string{
 		"Cookie":       "session=valid",
 		"X-CSRF-Token": strings.Repeat("c", 64),
 	})

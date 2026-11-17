@@ -149,7 +149,7 @@ teams:
 		req.Header.Set("Content-Type", "application/json")
 		if cookie != nil {
 			req.AddCookie(cookie)
-			if method != http.MethodGet && strings.HasPrefix(path, "/api/admin/") {
+			if method != http.MethodGet && strings.HasPrefix(path, "/api/v1/admin/") {
 				req.Header.Set("X-CSRF-Token", csrfToken)
 			}
 		}
@@ -167,7 +167,7 @@ teams:
 		}
 		return resp.StatusCode, data, resp.Cookies()
 	}
-	status, body, cookies := request("POST", "/api/admin/login/", []byte(`{"username":"organizer","password":"local-integration-password"}`), nil, "")
+	status, body, cookies := request("POST", "/api/v1/admin/login/", []byte(`{"username":"organizer","password":"local-integration-password"}`), nil, "")
 	if status != 200 || len(cookies) == 0 {
 		t.Fatalf("login: %d %s", status, body)
 	}
@@ -178,7 +178,7 @@ teams:
 		t.Fatal("login did not return a CSRF token")
 	}
 	csrfToken = session.CSRFToken
-	status, body, _ = request("POST", "/api/admin/game/start_final/", []byte(`{"confirm":true,"generation":0}`), cookies[0], "")
+	status, body, _ = request("POST", "/api/v1/admin/game/start_final/", []byte(`{"confirm":true,"generation":0}`), cookies[0], "")
 	if status != 200 {
 		t.Fatalf("start final: %d %s", status, body)
 	}
@@ -252,13 +252,13 @@ teams:
 	if confirmed, err := broker.Publish(t.Context(), ids); err != nil || len(confirmed) != 2 {
 		t.Fatalf("duplicate delivery: %v %v", confirmed, err)
 	}
-	status, body, _ = request("POST", "/api/admin/game/finish/", []byte(`{"confirm":true,"generation":1}`), cookies[0], "")
+	status, body, _ = request("POST", "/api/v1/admin/game/finish/", []byte(`{"confirm":true,"generation":1}`), cookies[0], "")
 	if status != 200 {
 		t.Fatalf("finish: %d %s", status, body)
 	}
 	readBoard := func() domain.Scoreboard {
 		t.Helper()
-		status, data, _ := request("GET", "/api/client/scoreboard/", nil, nil, "")
+		status, data, _ := request("GET", "/api/v1/client/scoreboard/", nil, nil, "")
 		if status != http.StatusOK {
 			t.Fatalf("read scoreboard: HTTP %d", status)
 		}
@@ -288,7 +288,7 @@ teams:
 		t.Fatalf("duplicate delivery repeated checkers: flags=%d checks=%d", flags, checks)
 	}
 	app.drain(t)
-	statusRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, app.URL+"/api/client/status/", nil)
+	statusRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, app.URL+"/api/v1/client/status/", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

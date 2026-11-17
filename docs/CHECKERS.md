@@ -50,7 +50,7 @@ A successful PUT has a different output contract:
 
 Tags are separated with underscores. If both `nfr` and `pfr` are present,
 `nfr` takes precedence for stored data. Public hints for `pfr` tasks are exposed
-through `GET /api/client/attack_data/`. Keep successful PUT output free of debug
+through `GET /api/v1/client/attack_data/`. Keep successful PUT output free of debug
 lines that would become retrieval data.
 
 | Exit code | Meaning |
