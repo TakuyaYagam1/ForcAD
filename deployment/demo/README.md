@@ -1,9 +1,9 @@
 # Local network demo
 
-The Docker Compose demo runs ten notes services, flag farms, participant and
+The Docker Compose demo runs twenty notes services, flag farms, participant and
 admin WireGuard, generated router rules, Zeek, ForcAD, Prometheus, and Grafana.
 Published ports bind to localhost. Demo services intentionally expose
-`/demo/flags` to their farms. The diagram shows two of the ten team segments.
+`/demo/flags` to their farms. The diagram shows two of the twenty team segments.
 
 The board has five service columns. Only `example_service` writes flags. The
 other four services return fixed CORRUPT, CHECK FAILED, MUMBLE, and DOWN
@@ -110,7 +110,7 @@ earlier failure. The board receives the aggregate result after all three jobs
 finish.
 
 Normal installations default to `0`, so extra checks are opt-in. They add
-checker load and make the round SLA stricter. The ten-team demo does not show
+checker load and make the round SLA stricter. The twenty-team demo does not show
 that `2` is a suitable general default; test real checkers at the expected
 team and service count before enabling them. See
 [configuration](../../docs/CONFIGURATION.md#game) for limits and setup.

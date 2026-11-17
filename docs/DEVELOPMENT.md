@@ -109,7 +109,7 @@ checks generated nftables rules and the exporter in a disposable container.
 
 Network firewalls, the Zeek sensor and dashboard queries have separate
 [infrastructure checks](../infrastracture/COMMANDS.md#workstation). The
-[network demo](../deployment/demo/README.md) exercises ten team segments by
+[network demo](../deployment/demo/README.md) exercises twenty team segments by
 default and supports 2 to 32 teams. It is separate from Vite's in-memory demo
 and the backend load suite.
 

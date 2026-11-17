@@ -86,6 +86,56 @@ name = "FR13NDS"
 logo = ""
 highlighted = false
 
+[[teams.entries]]
+name = "Northstar"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Byteforge"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Signal Works"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Blue Circuit"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Stackline"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Null Route"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Data Harbor"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Kernel Club"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Vector Team"
+logo = ""
+highlighted = false
+
+[[teams.entries]]
+name = "Packet Garden"
+logo = ""
+highlighted = false
+
 [env]
 public_host = "10.183.2.10"
 public_scheme = "http"
