@@ -184,6 +184,15 @@ proxy's source CIDR so ForcAD can recognize HTTPS requests. Keep the proxy list
 limited to trusted proxies. `PUBLIC_ORIGIN` may also be exported in the
 environment before running Compose.
 
+The default Compose Nginx limits `POST /api/v1/admin/login/` by the client IP
+seen at ingress (1 request/second, burst 5). Compose sets
+`FORCAD_LOGIN_RATE_LIMIT_AT_PROXY=true` on API replicas to avoid a single
+backend bucket shared by every client behind Nginx. Do not enable that setting
+when running the API without an ingress login limiter: direct API deployments
+keep the application's per-IP limiter by default. Only list actual upstream
+proxies in `TRUSTED_PROXY_CIDRS`; never add player VPN ranges to trust
+unverified `X-Forwarded-For` values.
+
 Set `GRAFANA_ADMIN_PASSWORD` before starting the monitoring overlay. Grafana
 uses it only when initializing an empty Grafana data volume; changing it does
 not change an existing account password. See [Monitoring](MONITORING.md#start).

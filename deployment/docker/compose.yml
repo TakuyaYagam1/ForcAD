@@ -85,6 +85,7 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: api
+      FORCAD_LOGIN_RATE_LIMIT_AT_PROXY: "true"
       DATABASE_MIN_CONNS: "${FORCAD_API_DATABASE_MIN_CONNS:-0}"
       GOGC: "${FORCAD_API_GOGC:-100}"
       GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-off}"

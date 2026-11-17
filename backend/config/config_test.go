@@ -99,6 +99,39 @@ func TestHTTPInflightLimitsByRole(t *testing.T) {
 	}
 }
 
+func TestLoginLimitAtProxyRequiresExplicitValidSetting(t *testing.T) {
+	for _, test := range []struct {
+		name, value string
+		want        bool
+		wantErr     bool
+	}{
+		{name: "direct by default"},
+		{name: "proxy enabled", value: "true", want: true},
+		{name: "invalid setting", value: "garbage", wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			values := map[string]string{
+				"FORCAD_ROLE":    "api",
+				"ADMIN_USERNAME": "operator",
+				"ADMIN_PASSWORD": strings.Repeat("a", 16),
+			}
+			if test.value != "" {
+				values["FORCAD_LOGIN_RATE_LIMIT_AT_PROXY"] = test.value
+			}
+			cfg, err := loadTest(values)
+			if test.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "FORCAD_LOGIN_RATE_LIMIT_AT_PROXY") {
+					t.Fatalf("invalid proxy setting accepted: %v", err)
+				}
+				return
+			}
+			if err != nil || cfg.LoginRateLimitAtProxy != test.want {
+				t.Fatalf("proxy limiter = %t, want %t; error: %v", cfg.LoginRateLimitAtProxy, test.want, err)
+			}
+		})
+	}
+}
+
 func TestDatabasePoolerKeepsCredentialsAndSeparatesRoles(t *testing.T) {
 	for role, limit := range map[string]int32{
 		"receiver": 32,

@@ -69,7 +69,7 @@ func NewRouter(
 		r.Use(middleware.ContextTimeout(cfg.RequestTimeout))
 		r.Use(middleware.RequestContext(cfg.PublicOrigin, trusted))
 		r.Use(middleware.AdminOrigin(cfg.PublicOrigin))
-		r.Use(middleware.LoginLimit(limiter, trusted, errorHandler(logger)))
+		r.Use(middleware.LoginLimit(limiter, trusted, errorHandler(logger), cfg.LoginRateLimitAtProxy))
 		r.Use(middleware.BodyLimit)
 		r.Use(middleware.Admission(cfg.HTTPMaxInflight))
 		r.Handle("/*", requestDispatcher(server, cfg.Role))
