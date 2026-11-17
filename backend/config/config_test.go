@@ -105,9 +105,19 @@ func TestLoginLimitAtProxyRequiresExplicitValidSetting(t *testing.T) {
 		want        bool
 		wantErr     bool
 	}{
-		{name: "direct by default"},
-		{name: "proxy enabled", value: "true", want: true},
-		{name: "invalid setting", value: "garbage", wantErr: true},
+		{
+			name: "direct by default",
+		},
+		{
+			name:  "proxy enabled",
+			value: "true",
+			want:  true,
+		},
+		{
+			name:    "invalid setting",
+			value:   "garbage",
+			wantErr: true,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			values := map[string]string{
