@@ -61,11 +61,14 @@ Set `LOAD_SPECTATORS` to choose the number of WebSocket observers independently
 of the team count. `LOAD_CHECKER_AUDIT=1` enables round and workflow auditing for
 any load profile; the `checker` profile always enables it.
 
-`LOAD_CLIENT_BUCKETS=1` enables a loopback-only test adapter that models separate
-client rate buckets using `X-Forcad-Load-Client`. It is off by default. Production
-keeps the source-IP limiter; results with client buckets describe a different
-workload from requests sharing one source IP. Each bucket uses the production
-per-client rate, burst and rejection code.
+`make -C backend test-load` enables `LOAD_CLIENT_BUCKETS=1` by default: the
+isolated loopback-only adapter models separate client rate buckets using
+`X-Forcad-Load-Client`. Each bucket retains the production 150 requests/s
+per-IP rate, burst and rejection code; production still limits by source IP.
+Every run first probes one source without the synthetic header at 120 requests/s
+(all accepted) and 300 requests/s (HTTP 429 with `Retry-After`). Set
+`LOAD_CLIENT_BUCKETS=0` to disable the adapter; the default 500 requests/s
+from one IP will then exceed the production quota and fail the capacity gate.
 
 From the repository root:
 
