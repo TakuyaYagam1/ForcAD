@@ -1,0 +1,28 @@
+package v1
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
+
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
+)
+
+type flagsHandler struct {
+	flags FlagService
+}
+
+func (h *flagsHandler) HandleTeamToken(ctx context.Context, _ api.OperationName, token api.TeamToken) (context.Context, error) {
+	return context.WithValue(ctx, teamTokenKey, token.APIKey), nil
+}
+
+func (h *flagsHandler) SubmitFlags(ctx context.Context, req []string) (api.SubmitFlagsRes, error) {
+	const location = "httpv1.flagsHandler.SubmitFlags"
+	token, _ := ctx.Value(teamTokenKey).(string)
+	rows, err := h.flags.Submit(ctx, token, req)
+	if err != nil {
+		return nil, fmt.Errorf("%s - submit flags: %w", location, err)
+	}
+	return response.FlagSubmissions(rows), nil
+}

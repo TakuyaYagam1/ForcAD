@@ -1,0 +1,303 @@
+schemas:
+  TeamKind:
+    type: string
+    enum:
+    - player
+    - npc
+  ParticipantTeam:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    - ip
+    - kind
+    - highlighted
+    - active
+    - logo_path
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+      ip:
+        type: string
+      kind:
+        "$ref": "#/schemas/TeamKind"
+      highlighted:
+        type: boolean
+      active:
+        type: boolean
+      logo_path:
+        type: string
+  ParticipantTask:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - name
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+  AttackData:
+    description: Task name to team IP to public flag values.
+    type:
+    - object
+    - 'null'
+    additionalProperties:
+      type: object
+      additionalProperties:
+        type: array
+        items:
+          type: string
+  ScoreboardTeamTask:
+    type: object
+    additionalProperties: true
+    required:
+    - team_id
+    - task_id
+    - status
+    - stolen
+    - lost
+    - score
+    - checks
+    - checks_passed
+    - message
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      status:
+        type: integer
+        format: int32
+      stolen:
+        type: integer
+        format: int32
+      lost:
+        type: integer
+        format: int32
+      score:
+        type: number
+      checks:
+        type: integer
+        format: int32
+      checks_passed:
+        type: integer
+        format: int32
+      message:
+        type:
+        - string
+        - 'null'
+  GameState:
+    type: object
+    additionalProperties: false
+    required:
+    - round_start
+    - round
+    - team_tasks
+    properties:
+      round_start:
+        type: integer
+        format: int64
+      round:
+        type: integer
+        format: int32
+      team_tasks:
+        type: array
+        items:
+          "$ref": "#/schemas/ScoreboardTeamTask"
+  Scoreboard:
+    type: object
+    additionalProperties: false
+    required:
+    - state
+    - teams
+    - tasks
+    - config
+    - runtime
+    properties:
+      state:
+        "$ref": "#/schemas/GameState"
+      teams:
+        type: array
+        items:
+          "$ref": "#/schemas/ParticipantTeam"
+      tasks:
+        type: array
+        items:
+          "$ref": "#/schemas/ParticipantTask"
+      config:
+        "$ref": "#/schemas/GameConfig"
+      runtime:
+        "$ref": "#/schemas/GameRuntimeStatus"
+  ParticipantTeamTaskHistory:
+    type: object
+    additionalProperties: true
+    required:
+    - team_id
+    - task_id
+    - round
+    - status
+    - stolen
+    - lost
+    - score
+    - checks
+    - checks_passed
+    - timestamp
+    - message
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      round:
+        type: integer
+        format: int32
+      status:
+        type: integer
+        format: int32
+      stolen:
+        type: integer
+        format: int32
+      lost:
+        type: integer
+        format: int32
+      score:
+        type: number
+      checks:
+        type: integer
+        format: int32
+      checks_passed:
+        type: integer
+        format: int32
+      timestamp:
+        type: string
+      message:
+        type:
+        - string
+        - 'null'
+  CheckerLog:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - round
+    - action
+    - stage
+    - started_at
+    - finished_at
+    - duration_ms
+    - timed_out
+    - status
+    - public_message
+    properties:
+      id:
+        "$ref": "#/schemas/Uuid"
+      round:
+        type: integer
+        format: int32
+      action:
+        type: string
+      stage:
+        type: string
+      started_at:
+        type: string
+        format: date-time
+      finished_at:
+        type: string
+        format: date-time
+      duration_ms:
+        type: integer
+        format: int64
+        minimum: 0
+      timed_out:
+        type: boolean
+      status:
+        type: integer
+        format: int32
+      public_message:
+        type: string
+  CheckerLogPage:
+    type: object
+    additionalProperties: false
+    required:
+    - team_id
+    - task_id
+    - limit
+    - has_more
+    - logs
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      limit:
+        type: integer
+        format: int32
+      has_more:
+        type: boolean
+      next_before_id:
+        "$ref": "#/schemas/Uuid"
+      logs:
+        type: array
+        items:
+          "$ref": "#/schemas/CheckerLog"
+  PublicEvent:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - kind
+    - created_at
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+        enum:
+        - flag_stolen
+        - admin_message
+      created_at:
+        type: string
+        format: date-time
+      attacker_id:
+        "$ref": "#/schemas/Uuid"
+      attacker_name:
+        type: string
+      victim_id:
+        "$ref": "#/schemas/Uuid"
+      victim_name:
+        type: string
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      task_name:
+        type: string
+      round:
+        type: integer
+        format: int32
+      attacker_delta:
+        type: number
+      title:
+        type: string
+      markdown:
+        type: string
+      author:
+        type: string
+  CtftimeStanding:
+    type: object
+    additionalProperties: false
+    required:
+    - pos
+    - team
+    - score
+    properties:
+      pos:
+        type: integer
+        format: int32
+      team:
+        type: string
+      score:
+        type: number

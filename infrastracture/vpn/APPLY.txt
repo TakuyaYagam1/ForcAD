@@ -1,0 +1,19 @@
+VPN application
+
+From the extracted vpn bundle, with console access:
+
+  sudo bash install.sh
+  sudo bash test.sh
+  sudo wg show
+
+The bundle includes wg-attack and wg-admin server configs. The installer
+supports Debian 12/13, adds missing prerequisites, applies networking, sysctl
+and firewall, then starts both tunnels. Use --wireguard-dir /path/to/server to
+reuse server configs for the same deployment; their peer addresses must match
+the bundle.
+
+The Router must forward the configured VPN UDP ports and route both VPN ranges
+through this host. Verify a client handshake and access isolation separately.
+Use --files-only to stage files without applying network settings or managed
+services. It may still install prerequisites. Manual live changes made after
+staging are not recorded for automatic removal. See COMMANDS.md for options.

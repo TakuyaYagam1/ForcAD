@@ -1,0 +1,159 @@
+# Чемпионат России. Скопируйте в config.yml и замените TEST-NET адреса на адреса vulnbox.
+# Выдайте командам приватные токены и впишите их вместо null только в локальный config.yml.
+game:
+    mode: classic
+    round_time: 60
+    extra_checks: 0
+    rounds: 240
+    start_time: "2027-12-31 23:59:59"
+    timezone: Europe/Moscow
+    default_score: 2500
+    flag_lifetime: 5
+    game_hardness: 10
+    inflation: true
+    volga_attacks_mode: false
+    checkers_path: /checkers/
+    env_path: /opt/checkers/bin
+    get_period: null
+tasks:
+    - name: kincare
+      checker: /checkers/kincare/checker.py
+      checker_type: pfr
+      checker_timeout: 15
+      puts: 5
+      gets: 3
+      places: 5
+      env_path: /opt/checkers/bin
+      default_score: 2500
+      get_period: 60
+    - name: wahrwelt
+      checker: /checkers/wahrwelt/checker.py
+      checker_type: pfr
+      checker_timeout: 20
+      puts: 10
+      gets: 1
+      places: 10
+      env_path: /opt/checkers/bin
+      default_score: 2500
+      get_period: 60
+    - name: sentinel
+      checker: /checkers/sentinel/checker.py
+      checker_type: pfr
+      checker_timeout: 15
+      puts: 3
+      gets: 3
+      places: 3
+      env_path: /opt/checkers/bin
+      default_score: 2500
+      get_period: 60
+teams:
+    - ip: 192.0.2.101
+      name: RGB+SqWD
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.102
+      name: Ox20
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.103
+      name: ПАУК
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.104
+      name: Prima
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.105
+      name: (っ◔◡◔)っ ♥️ Университет ИТМО ♥️
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.106
+      name: Capybaras
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.107
+      name: SHA-272
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.108
+      name: -=B0SS_1337=-
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.109
+      name: Legacy
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.110
+      name: SIGAN
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.111
+      name: N31M4RK_TE4M
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.112
+      name: meow
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.113
+      name: smd
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.114
+      name: 42TEAM VSU
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.115
+      name: DUCKERZ
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.116
+      name: daywave.
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.117
+      name: CUT
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.118
+      name: Caplag
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.119
+      name: Сборная г. Москва
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.120
+      name: Сборная Пермского края
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.121
+      name: N0N@me13
+      kind: player
+      highlighted: false
+      token: null
+    - ip: 192.0.2.201
+      name: NPC
+      kind: npc
+      highlighted: false
+      token: null

@@ -1,0 +1,133 @@
+schemas:
+  Uuid:
+    type: string
+    format: uuid
+  ApiError:
+    type: object
+    additionalProperties: false
+    required:
+    - error
+    properties:
+      error:
+        type: string
+  StatusResponse:
+    type: object
+    additionalProperties: false
+    required:
+    - status
+    properties:
+      status:
+        type: string
+        enum:
+        - ok
+  GameConfig:
+    type: object
+    additionalProperties: false
+    required:
+    - id
+    - flag_lifetime
+    - game_hardness
+    - inflation
+    - volga_attacks_mode
+    - round_time
+    - rounds
+    - mode
+    - timezone
+    - start_time
+    - real_round
+    - game_running
+    properties:
+      id:
+        type: integer
+        format: int32
+      flag_lifetime:
+        type: integer
+        format: int32
+      game_hardness:
+        type: number
+      inflation:
+        type: boolean
+      volga_attacks_mode:
+        type: boolean
+      round_time:
+        type: integer
+        format: int32
+      rounds:
+        type:
+        - integer
+        - 'null'
+        format: int32
+      mode:
+        type: string
+      timezone:
+        type: string
+      start_time:
+        type: string
+      real_round:
+        type:
+        - integer
+        - 'null'
+        format: int32
+      game_running:
+        type:
+        - boolean
+        - 'null'
+  GameRuntimeStatus:
+    type: object
+    additionalProperties: false
+    required:
+    - phase
+    - practice
+    - reset_pending
+    - generation
+    - scheduled_start
+    - can_start
+    - can_start_practice
+    - round
+    - round_start
+    - paused_at
+    - paused_seconds
+    - round_time
+    - round_waiting
+    - results_pending
+    properties:
+      phase:
+        type: string
+        enum:
+        - waiting
+        - running
+        - paused
+        - finished
+      practice:
+        type: boolean
+      reset_pending:
+        type: boolean
+      generation:
+        type: integer
+        format: int64
+      scheduled_start:
+        type: string
+      can_start:
+        type: boolean
+      can_start_practice:
+        type: boolean
+      round:
+        type: integer
+        format: int32
+      round_start:
+        type:
+        - number
+        - 'null'
+      paused_at:
+        type:
+        - number
+        - 'null'
+      paused_seconds:
+        type: number
+      round_time:
+        type: integer
+        format: int32
+      round_waiting:
+        type: boolean
+      results_pending:
+        type: boolean

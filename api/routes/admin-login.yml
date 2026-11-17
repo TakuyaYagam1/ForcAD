@@ -1,0 +1,32 @@
+post:
+  operationId: adminLogin
+  tags:
+  - admin
+  summary: Start an administrator session.
+  description: Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.
+  security: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminLoginRequest"
+  responses:
+    '200':
+      description: Session created.
+      headers:
+        Set-Cookie:
+          description: HttpOnly session cookie with SameSite=Lax and an eight hour
+            lifetime.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminSession"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '415':
+      "$ref": "../components/responses.yml#/ApiError"

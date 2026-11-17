@@ -1,0 +1,32 @@
+get:
+  operationId: getClientCheckerLogs
+  tags:
+  - client
+  summary: Get public checker results for one team and service.
+  security: []
+  parameters:
+  - "$ref": "../components/parameters.yml#/TeamId"
+  - "$ref": "../components/parameters.yml#/TaskId"
+  - name: limit
+    in: query
+    schema:
+      type: integer
+      format: int32
+      minimum: 1
+      maximum: 500
+      default: 100
+  - name: before_id
+    in: query
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Newest public checker results first.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/CheckerLogPage"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"

@@ -1,0 +1,37 @@
+.admin-shell__logout {
+  flex-shrink: 0;
+  min-height: 44px;
+  height: auto;
+  font-size: 15px;
+}
+
+.admin-shell__logout-error {
+  margin: 0 0 1rem;
+}
+
+.admin-page,
+.admin-page :is(section, form, .ui-card, .ui-card-content, .ui-card-header) {
+  min-width: 0;
+}
+
+.admin-page :is(h1, h2, h3, p),
+.admin-dialog :is(h2, p) {
+  overflow-wrap: anywhere;
+}
+
+.admin-page .ui-button,
+.admin-dialog .ui-button {
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  padding: 11px 16px;
+  font-size: 15px;
+  line-height: 24px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.admin-dialog-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}

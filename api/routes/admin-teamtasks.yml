@@ -1,0 +1,44 @@
+get:
+  operationId: getAdminTeamTaskHistory
+  tags:
+  - admin
+  summary: Get checker history for a team and task pair.
+  security:
+  - sessionCookie: []
+  parameters:
+  - name: team_id
+    in: query
+    required: true
+    schema:
+      "$ref": "../components/schemas.yml#/Uuid"
+  - name: task_id
+    in: query
+    required: true
+    schema:
+      "$ref": "../components/schemas.yml#/Uuid"
+  responses:
+    '200':
+      description: Checker history, including fields hidden from participants.
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              "$ref": "../components/schemas.yml#/AdminTeamTaskLogEntry"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+post:
+  operationId: createAdminTeamTask
+  tags:
+  - admin
+  summary: Reserved team task collection method.
+  description: The route is registered but has no create handler and returns 404.
+  security:
+  - sessionCookie: []
+  responses:
+    '404':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"

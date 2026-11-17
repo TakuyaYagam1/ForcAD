@@ -1,0 +1,117 @@
+/* Shared controls: rectilinear instrument panels, with status color reserved for meaning. */
+.ui-button,
+.ui-input,
+.ui-card,
+.ui-badge,
+.ui-checkbox,
+.ui-tabs-list,
+.ui-tabs-trigger,
+.ui-dialog-content,
+.ui-dialog-close {
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--font-te-20, "Inter", sans-serif);
+}
+.ui-button {
+  min-height: 38px;
+  font-size: 13px;
+  border: 1px solid transparent;
+  font-weight: 300;
+  letter-spacing: -.015em;
+}
+.ui-button[data-variant="default"] {
+  background: var(--control-background);
+  color: var(--control-foreground);
+  border-color: var(--control-background);
+}
+.ui-button[data-variant="default"]:hover { background: var(--surface-raised); }
+.ui-button[data-variant="outline"],
+.ui-button[data-variant="secondary"] {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+.ui-button[data-variant="outline"]:hover,
+.ui-button[data-variant="secondary"]:hover,
+.ui-button[data-variant="ghost"]:hover {
+  color: var(--text-primary);
+  background: var(--surface-raised);
+}
+.ui-button[data-variant="ghost"],
+.ui-button[data-variant="link"] { color: var(--text-primary); }
+.ui-button[data-variant="destructive"] { background: var(--surface-raised); color: var(--state-error-text); border-color: var(--state-error-text); }
+.ui-button[data-variant="destructive"]:hover { background: var(--surface-strong); }
+.ui-button:focus-visible,
+.ui-input:focus-visible,
+.ui-checkbox:focus-visible,
+.ui-tabs-trigger:focus-visible,
+.ui-dialog-close:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+.ui-input {
+  min-height: 42px;
+  border: 1px solid var(--border-default);
+  background: var(--surface-panel);
+  color: var(--text-primary);
+  font-weight: 300;
+}
+.ui-input::placeholder { color: var(--text-muted); }
+.ui-input[readonly] { background: var(--surface-raised); color: var(--text-muted); }
+.ui-input[aria-invalid="true"] { border-color: var(--state-error-text); }
+.ui-card { background: var(--surface-panel); border-color: var(--border-default); color: var(--text-primary); }
+.ui-card-title { font-weight: 300; }
+.ui-card-description { color: var(--text-muted); line-height: 1.6; }
+.ui-checkbox { border-color: var(--text-primary); background: transparent; }
+.ui-checkbox[data-state="checked"] { background: var(--control-background); color: var(--control-foreground); }
+.ui-badge { border-color: var(--border-default); font-weight: 300; }
+.ui-dialog-overlay { background: color-mix(in srgb, var(--surface-strong) 80%, transparent); backdrop-filter: none; }
+.ui-dialog-content { max-width: min(32rem, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid var(--border-default); background: var(--surface-panel); color: var(--text-primary); padding: 32px; }
+.ui-dialog-title { padding-right: 20px; font-size: 26px; font-weight: 300; line-height: 1.15; letter-spacing: -.04em; }
+.ui-dialog-description { color: var(--text-muted); font-weight: 300; line-height: 1.65; }
+.ui-dialog-close { color: var(--text-primary); opacity: 1; }
+.ui-dialog-content .text-red-300 { color: var(--state-error-text); }
+.ui-dialog-content .text-amber-200 { color: var(--state-warning-text); }
+.ui-tabs-list { background: transparent; border-bottom: 1px solid var(--border-default); padding: 0; height: auto; justify-content: flex-start; }
+.ui-tabs-trigger { background: transparent; padding: 12px 18px; color: var(--text-muted); border-bottom: 2px solid transparent; font-weight: 300; }
+.ui-tabs-trigger[data-state="active"] { background: transparent; color: var(--text-primary); border-bottom-color: var(--text-primary); box-shadow: none; }
+.ui-table { color: var(--text-primary); font-weight: 300; }
+.ui-table th { color: var(--text-muted); font-size: 13px; font-weight: 300; letter-spacing: .03em; }
+.ui-table tr { border-color: var(--border-default); }
+.ui-table tbody tr:hover { background: var(--surface-raised); }
+/* Radix Presence holds the closed surface until this short fade finishes. */
+.ui-dialog-overlay[data-state="open"] { animation: dialog-overlay-in 180ms var(--ease-out); }
+.ui-dialog-overlay[data-state="closed"] { animation: dialog-overlay-out 140ms var(--ease-out); }
+.ui-dialog-content[data-state="open"] { animation: dialog-content-in 180ms var(--ease-out); }
+.ui-dialog-content[data-state="closed"] { animation: dialog-content-out 140ms var(--ease-out); }
+@keyframes dialog-overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialog-overlay-out { from { opacity: 1; } to { opacity: 0; } }
+/* Animate transform separately from Tailwind's translate-based centering. */
+@keyframes dialog-content-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes dialog-content-out { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(4px); } }
+:root[data-motion="off"] :is(.ui-dialog-overlay, .ui-dialog-content),
+:root[data-input-modality="keyboard"] :is(.ui-dialog-overlay, .ui-dialog-content),
+:root[data-page-visibility="hidden"] :is(.ui-dialog-overlay, .ui-dialog-content) {
+  /* Presence needs the named exit's animationend, including when a preference
+     changes after closing starts. Removing the animation can strand its portal. */
+  animation-duration: 1ms;
+  animation-delay: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-dialog-overlay[data-state], .ui-dialog-content[data-state] {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+    transition: none;
+  }
+}
+
+.ui-badge, .ui-card-description, .ui-dialog-description { font-size: 13px; }
+.admin-page [class*="text-xs"], .login-layout [class*="text-xs"], .ui-dialog-content [class*="text-xs"] { font-size: 13px; }
+
+/* Busy indicators retain their readable labels when motion is disabled. */
+:root[data-motion="off"] .animate-spin,
+:root[data-page-visibility="hidden"] .animate-spin { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin { animation: none; }
+}

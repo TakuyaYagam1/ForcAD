@@ -1,0 +1,250 @@
+CHRP NATS validation, 2026-11-05
+
+Scope: synthetic checkers and fixtures, not final competition services.
+Host: i9-13900KF, Windows/WSL2; Docker sees 32 logical CPUs and 27.4 GiB RAM.
+The generator shares the application host. These runs do not certify EPYC capacity.
+Initial baseline source: 65036bb (NATS, transport refactor and formatting changes).
+Later entries identify their own source. These 1000 REST RPS runs are diagnostic
+controls. The final guide requires 10000 REST RPS for 15 minutes, then a continuous
+five-hour run; neither target is certified by these controls.
+
+Before load: Go race tests, lint/format checks, frontend/API tests and frontend
+build passed. Full isolated PostgreSQL/PgBouncer/Redis/NATS integration passed,
+including durable delivery, draining and reconnect after broker restart.
+
+Matched workload: 28 teams, 3 services, 40 PUT/team/60-second round (14/13/13),
+84 checker jobs and 1120 PUT per complete round, API4/RX4, 224 WebSocket observers,
+1000 offered REST RPS and 40 batches/s of 100 flag values. Admission and pools unchanged.
+
+15 workers x 3 slots: native PASS, exit 0; audit_report PASS with minimum 10 rounds.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers15_slots3-20261105-142046/
+Report: combined/20261105-112152-load-858767981/report.json
+Steady: 586124 REST requests, all HTTP200, reported rate 976.9 RPS, REST p99 301.34ms.
+Flags: 23959 batches, all HTTP200; p95 175.66ms, p99 579.56ms;
+accepted=committed=318809. Steady generator delivery was valid.
+Twelve complete rounds: each 84 UP results and 1120 stored flags, no mismatches.
+Worst round 48.28s; maximum publish-to-action wait 31.77s.
+No expired/overdue jobs or action timeouts. Round 13 was partial at shutdown.
+Burst: 274 HTTP200, 33 HTTP429, no transport errors, accepted=committed=14262.
+IMPORTANT: burst delivery was only 24.17%, generator_valid=false. This PASS does
+not demonstrate delivery or successful processing at the offered 400 batches/s.
+WSL sampled CPU peak 95.58%; minimum available RAM 22.76 GiB; swap unused.
+NATS sampled broker peaks: 0.07 CPU cores, 0.015 GiB RAM.
+Restart/OOM state and Windows physical memory were not sampled; their absence
+cannot be certified. The isolated project's containers were removed after the run.
+
+Against the earlier RabbitMQ 15x3 phase-instrumented control, steady flag p99
+rose from 424.55ms to 579.56ms. Burst admission mean fell from 1486ms to 233ms,
+but both burst generators were invalid. Intervening backend changes also mean
+this is not an isolated broker benchmark or proof that NATS fixed the original failure.
+
+10 workers x 8 slots: FAIL, exit 2; cleanup confirmed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers10_slots8-20261105-143736/
+Report: combined/20261105-113823-load-323658843/report.json
+Steady: 583776 REST HTTP200, no REST503; flags 23869 HTTP200 and 9 client deadlines.
+Flag p95 657.07ms, p99 1692.98ms; accepted=committed=320829.
+Steady flag delivery 99.49%, generator valid. Burst was skipped after steady failed.
+Twelve complete correct rounds; worst round 46.50s, publish-to-action wait 41.84s.
+Aggregate API pgx acquisition wait 3958s versus 207s at 15x3 (whole-run snapshots).
+Receiver pgx wait was only 0.57s; admission mean 65.64ms, with 591 waits over 1s.
+Worker sampled CPU peak 29.37 cores versus 22.90 at 15x3. WSL CPU peak 97.61%,
+minimum available RAM 22.50 GiB, swap unused. Restart/OOM state was not sampled.
+This reproduces flag deadlines with NATS and does not establish a broker-only fix.
+
+10x8 with coalesced attack-data reads: steady PASS, overall FAIL, exit 2.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers10_slots8_coalesced-20261105-145534/
+Report: combined/20261105-115624-load-1924196526/report.json
+Same application budgets and offered traffic as the unmodified NATS 10x8 control.
+Only production differences: an in-flight query group and moving AttackData into
+its own file. Concurrent callers still read lifecycle/tasks separately, receive
+independent maps, and never reuse a completed query. There is no TTL cache.
+The tested production change is now committed as 70afe05.
+Steady: 586439 REST HTTP200, reported rate 977.4 RPS, p99 243.34ms;
+23959 flag batches, all HTTP200, p95 116.50ms, p99 321.25ms, no transport errors,
+accepted=committed=316997. API pgx wait fell from 3958s to 16.59s in whole-run samples.
+Receiver admission mean fell from 65.64ms to 2.13ms, storage from 21.05ms to 10.27ms.
+All 13 complete rounds were correct. The legacy checker_results field is a delta
+after the initial catalog wait; 1008 therefore does not mean 84 missing results.
+New reports record that counter's baseline and absolute total explicitly.
+Burst: 268 flag HTTP200, no HTTP429; generator failed to exercise the limiter.
+REST burst p99 1556ms and invalid delivery also failed the native stage.
+Sampled restart/OOM counts 0; PgBouncer had no sampled role queue; WSL CPU peak
+92.18%, Windows CPU peak 82.53%, minimum physical Windows RAM 6.16 GiB.
+Windows commit headroom fell to 0.677 GiB despite more than 22 GiB available in WSL.
+The source manifests and settings were compared: application budgets, pools and
+workload settings matched; only the report directory and passive observers differed.
+
+Timing limitation: the original 15x3 and coalesced 10x8 steady stages declare 600s,
+but their UTC intervals span approximately 633s. Historical reports do not
+separate attack start/drain, monotonic time and metric postprocessing. Reported
+RPS must not be silently interpreted as verified wall-clock throughput. New
+per-attack timing fields and passive host clock samples will distinguish these.
+
+Investigation: GetAttackData occupied 85.7% of active API DB-session samples in
+the earlier 10x8 control and 87.5% in 15x3. These are occupancy samples, not a
+request percentage. At approximately 167 requests/s, each query returns up to
+6720 rows. The 10x8 API pgx wait aggregate was approximately 10816s versus 122s
+at 15x3; multi-second SQL blocking was not observed in those snapshots.
+Next validation: 20x8 with the coalesced reads, unchanged steady traffic and a
+1024-worker diagnostic burst generator, to verify the offered overload separately.
+
+First coalesced 20x8 run (f065695): FAIL, exit 2, cleanup confirmed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-152451/
+Report: combined/20261105-122547-load-369858005/report.json
+Steady flags: 23969 HTTP200, no flag transport errors, p99 331.86ms;
+accepted=committed=325999. REST: 586772 HTTP200 and four transport deadlines.
+Only the first error retained its route (/status/); the other routes are unknown.
+The burst was skipped after the REST failure. Explicit checker counts: baseline 84,
+total 1092, delta 1008, consistent with 13 complete rounds of 84 results each.
+
+The new timings resolved the duration discrepancy: reads drained after 600.142s
+monotonic but 633.334s UTC, with less than 1ms postprocessing. Strict clock audit
+rejects these measurements for physical throughput (5.53% skew).
+Independent paired measurements found Linux RAW agreeing with Windows QPC, while
+Linux disciplined MONOTONIC/BOOTTIME ran at approximately 0.947x Windows time.
+Read-only native C and Python timex snapshots agreed; tick was approximately 9468us
+instead of nominal 10000us (USER_HZ 100). The historical tick writer is unproven.
+
+Environment remediation, only in the isolated Ubuntu 24.04 ForcAD-Load distro:
+stop systemd-timesyncd, wait for clock discipline to settle, then disable its
+autostart. Hyper-V implicit synchronization was already enabled. No ADJ_TICK,
+clocksource or explicit epoch write was performed. Docker Desktop was stopped.
+This follows Canonical's WSL time-sync guidance:
+https://ubuntu.com/wsl/docs/stable/explanation/time-sync/
+The immediate 65s probe still showed drift; the later 65s probe had tick 10000 in
+all 66 samples and MONOTONIC/QPC ratio bounds [0.99999175,1.00000695]. No realtime
+steps were observed in that later window. Full-load clock stability remains to
+be verified with continuous external calibration, not inferred from this idle probe.
+
+Calibrated coalesced 20x8 repeat (a2bc46c): FAIL, exit 2; cleanup confirmed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-161154/
+Report: combined/20261105-131248-load-3611539096/report.json
+Steady REST: 582424 HTTP200 and one transport deadline, p99 316.88ms.
+The failed attack-data request was sequence 201503, started at
+2026-11-05T13:17:07.839981074Z, and waited 3023.16ms for response headers.
+Steady flags: 23942 HTTP200, no transport errors, p99 413.15ms;
+accepted=committed=307624. Recovery passed; the final burst was skipped.
+Twelve complete rounds were correct, each with 84 UP results and 1120 PUT.
+Worst round 43.94s; worst publish-to-action wait 11.59s.
+The steady read interval was 600.01173s UTC and 600.011729446s monotonic.
+All 149 external clock samples qualified: tick 10000 throughout, clock coverage
+complete, MONOTONIC/QPC bounds [0.999999684,1.000000301].
+WSL CPU peak 98.89%, minimum available RAM 21.33 GiB, no swap use.
+Windows CPU peak 83.55%, minimum physical RAM 8.83 GiB and commit headroom 2.73 GiB.
+Sampled container restarts/OOM were zero; no sampled PgBouncer role queues.
+Strict audit additionally rejects a container-sampler CalledProcessError at
+13:24:41 during teardown; historical artifacts are retained unchanged.
+The timeout window showed CPU pressure but no sampled multi-second SQL query
+or row lock. Existing logs cannot identify its Nginx/API timing; the next matched
+repeat adds continuous sequence-correlated Nginx diagnostics and Go runtime
+metrics without changing offered traffic, application limits or client deadlines.
+
+Traced coalesced 20x8 repeat (d8490a2): native PASS, not full-load qualification.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-172217/
+Report: combined/20261105-142310-load-4033174162/report.json
+Steady: 583747 REST HTTP200, p99 296.54ms; 23935 flag batches HTTP200,
+p99 346.89ms, accepted=committed=304495. No transport errors in any stage.
+Twelve correct complete rounds; worst 43.41s, publish-to-action wait 10.63s.
+No sampled restarts/OOM, swap use or PgBouncer client queues. Clock calibration
+qualified throughout. WSL CPU peak 98.77%; Windows commit headroom minimum 1.39 GiB.
+All 620813 access records were parsed: REST 587539 + flags 25658 + WS 7616.
+There were 505 retained slow REST responses, all HTTP200, no HTTP499/5xx.
+Worst attack-data request (seq482597/API4) took 2.435s, with connect 0s and
+upstream headers 1.104s: another 1.331s occurred while transferring the response.
+SQL samples showed no query over 100ms in that window; sampled API4 GC pauses
+peaked at 141ms. CPU pressure coincided with delays across several simple routes.
+This supports a CPU-contention experiment; it does not localize all delay to SQL.
+Final burst: 923 batches (252 HTTP200, 671 HTTP429), no transport failures,
+p99 718.87ms, but only 76.91% of the offered rate and 277 skipped start slots.
+The native overload check and artifact auditor incorrectly allowed invalid
+generator delivery in this stage. Their PASS therefore does not qualify this
+run for the five-hour test; the guards must reject this exact report.
+
+20x8 with one CPU per worker (806dd15): FAIL, exit 2; cleanup confirmed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced_cpu1-20261105-174056/
+Report: combined/20261105-144149-load-4090394919/report.json
+Source/settings manifests confirmed identical production code and offered load;
+the only application budget change was LOAD_WORKER_CPUS=1. Docker inspect and
+cgroup cpu.max confirmed 20 workers with 100000us quota per 100000us period;
+all 160 checker slots remained configured. CPU shares stayed at 256.
+Steady: 573358 REST HTTP200, p99 425.25ms; 23920 flag batches HTTP200,
+p99 568.15ms, accepted=committed=315719. No transport errors; recovery passed.
+Round 11 took 65.053s, exceeding the 60s requirement; round 5 took 59.995s.
+The final burst was skipped after the checker timing failure. No sampled
+restarts/OOM, swap or PgBouncer queues; clock calibration passed.
+Development-side generator tests/lint also ran during this experiment, so it
+is not a clean CPU-only attribution benchmark. This run does not qualify the
+quota configuration for five hours; no quota default was changed.
+
+Generator follow-up: batch selection scanned the full 3360-row catalog and
+allocated own/foreign flag slices under its target/validation mutex on every
+request. Ordered integer indexes now build once per catalog refresh instead.
+Reference and race tests preserve ordering, team/turn selection, 70 foreign /
+10 own / 20 invalid positions, pending ownership and validation across refresh.
+A 100-iteration local selection benchmark measured reference 552397 B/op,
+65 allocs/op versus indexed 5888 B/op, 2 allocs/op. This is a local allocation
+measurement, not proof of end-to-end capacity. Offered rates, pacing, payloads,
+server limits and correctness budgets are unchanged; the next control removes
+the worker quota and tests the indexed generator against the full workload.
+
+Unlimited 20x8 with indexed generator (d09f1c3): FAIL, exit 2; cleanup confirmed.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-175814/
+Report: combined/20261105-145909-load-3072316378/report.json
+Source comparison confirmed no production changes and identical application
+budgets versus the earlier traced unlimited run. No background builds/tests
+ran during measured traffic. Actual worker CPU quotas were unlimited again.
+Steady: 583689 REST HTTP200, p99 338.02ms; 23946 flag batches HTTP200,
+p99 408.97ms, accepted=committed=306363. All stages had no transport errors.
+Twelve correct complete rounds; worst 45.315s. No sampled restarts/OOM, swap
+or PgBouncer queues; independent clocks qualified. Windows minimum commit
+headroom was 0.904 GiB, distinct from 21.16 GiB available inside WSL.
+Burst: 1008 requests (252 HTTP200, 756 HTTP429), accepted=committed=5220,
+delivery 83.97%, 192 skipped slots, scheduled lateness p99 38.69ms.
+The 1024 worker ceiling was not exhausted (pending schedule peak 103).
+The strict native/auditor failure is generator delivery, not an application
+HTTP or checker error. Indexing alone did not qualify the burst.
+Next controlled change: burst-only bounded catchup 2.5ms -> 10ms, matching the
+existing REST timer-jitter allowance. Ordinary flag stages, offered rates and
+the 95% delivery / 100ms scheduled-lateness gates remain unchanged. Tests bound
+short jitter catchup and ensure a 100ms stall discards stale start slots.
+New reports retain the actual catchup budget, discard event count and maximum
+pacer lateness. This is an explicit pacing change, not a historical reclassification.
+
+Indexed 20x8, burst catchup 10ms (b1f741f): FAIL only generator delivery.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-181751/
+Report: combined/20261105-151845-load-106412280/report.json
+Steady: 581982 REST HTTP200, p99 311.44ms; 23931 flag batches HTTP200,
+p99 409.33ms, accepted=committed=301896. No transport or HTTP failures.
+Twelve correct complete rounds, worst 44.920s; no sampled restarts/OOM, swap
+or PgBouncer queues. Clock calibration qualified; cleanup removed all containers.
+Burst: 1103 requests (252 HTTP200, 851 HTTP429), p99 567.6ms,
+accepted=committed=4090. Delivery 91.8849% remains below the unchanged 95% gate.
+Actual catchup allowance 10ms, 13 discard events, 97 skipped slots;
+maximum pacer lateness 38.742ms, scheduled lateness p99 33.99ms.
+Observed start-density peaks were 12/1ms and 15/10ms. Ordinary stages were unchanged.
+The next explicit burst-only allowance is 50ms, half the existing 100ms
+scheduled-lateness budget, based on the measured wake pauses exceeding 10ms.
+It can replay up to 20 catchup starts after the delayed original at 400/s,
+while a 100ms stall still discards its backlog. This changes temporal shape;
+it is not evidence of constant wire arrivals or 400 successful batches/s.
+Offered rate, duration, batch contents and 95%/100ms qualification are unchanged.
+
+20x8, configured burst catchup 50ms (b97b184): FAIL, one REST client deadline.
+Run: ../reports/20261101-191458-chrp-final-wsl/ingress-control-nats_workers20_slots8_coalesced-20261105-183638/
+Report: combined/20261105-153732-load-2620099719/report.json
+Steady: 582927 REST HTTP200 and one transport deadline; p99 334.76ms.
+Flags: 23945 batches HTTP200, p99 423.16ms, accepted=committed=308558.
+Twelve correct full rounds, worst 43.939s. The burst was skipped after the
+REST failure, so this run does not validate the new 50ms burst policy.
+Failed seq537431 started at 15:47:36.899484Z, duration 3000.20ms. Nginx recorded
+the same sequence as HTTP200: rt1.672s, connect0.505s, headers/response1.672s;
+Docker logged the line at 15:47:39.953741Z. Subtracting rt from that timestamp
+suggests about 1.38s before Nginx's request clock, but Docker receipt delay and
+Nginx clock caching prevent attributing that interval precisely to the client.
+No sampled API query exceeded 100ms in the failure window; no multi-second
+GC pause was observed. This is not proof of a single SQL or handler stall.
+Next diagnostics add Nginx's own cached log-phase epoch and opt-in client
+connection/write/first-byte/body timing. The observer adds overhead and Go's
+legacy cancellation path; final qualification will retain native transport.
+The next 5000 RPS / three-minute probe amplifies the fault for diagnosis only;
+it does not replace the final 15-minute and five-hour 10000 RPS requirements.

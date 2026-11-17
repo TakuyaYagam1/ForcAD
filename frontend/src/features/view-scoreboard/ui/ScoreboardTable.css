@@ -1,0 +1,54 @@
+.table-frame {
+  position: relative;
+}
+
+.scoreboard-table .scoreboard-row {
+  position: relative;
+}
+
+.score-total {
+  display: inline-grid;
+  grid-template-columns: max-content 7ch;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.score-delta {
+  display: inline-block;
+  min-height: 1em;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0;
+  text-align: right;
+  opacity: 0;
+}
+
+.score-delta[data-direction="up"] {
+  color: var(--state-success-text);
+}
+
+.score-delta[data-direction="down"] {
+  color: var(--state-error-text);
+}
+
+.scoreboard-leader-outline {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid var(--state-success-text);
+  pointer-events: none;
+  opacity: 0;
+}
+
+@media (max-width: 760px) {
+  .score-total {
+    grid-template-columns: max-content;
+    gap: 0;
+  }
+
+  .score-delta {
+    line-height: 1.2;
+    min-width: 7ch;
+  }
+}

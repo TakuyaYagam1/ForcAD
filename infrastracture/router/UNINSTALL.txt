@@ -1,0 +1,25 @@
+Router removal
+
+From the extracted router bundle:
+
+  sudo bash uninstall.sh --dry-run
+  sudo bash uninstall.sh
+
+The live uninstall restores recorded network, route, firewall, sysctl, service
+and file state. Files created by install are removed during normal uninstall,
+including edited copies. If a pre-existing shared file changed after
+installation, uninstall stops. Review it, then use --force to save the current
+copy and restore the recorded original. Use --discard-backups only after
+successful removal.
+
+For an interrupted live uninstall, use --resume only when the journal and
+installed file manifest are valid:
+
+  sudo bash uninstall.sh --resume --dry-run
+  sudo bash uninstall.sh --resume
+
+Use --files-only only for a staged install without a live journal. It does not
+revert manually applied network changes. Keep
+/var/backups/forcad/router/live.json and dependency records until cleanup
+succeeds. Package removal is optional; the default keeps packages. Pre-existing
+packages are preserved. See COMMANDS.md for options.

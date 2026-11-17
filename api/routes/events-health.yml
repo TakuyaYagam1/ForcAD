@@ -1,0 +1,9 @@
+get:
+  operationId: getEventsHealth
+  tags:
+  - events
+  summary: Check the event service.
+  security: []
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/Health"

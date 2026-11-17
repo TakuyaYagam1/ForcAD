@@ -1,0 +1,20 @@
+game:
+  mode: classic
+  start_time: "2050-01-01 00:00:00"
+  timezone: Europe/Moscow
+  round_time: 60
+  rounds: 2
+  flag_lifetime: 5
+tasks:
+  - name: example
+    checker: fixture.py
+    checker_timeout: 3
+    puts: 1
+    gets: 1
+teams:
+  - name: first
+    ip: 192.0.2.1
+    token: "0000000000000001"
+  - name: second
+    ip: 192.0.2.2
+    token: "0000000000000002"

@@ -1,0 +1,12 @@
+exit-code: 1
+format: json
+ignorefile: security/trivy/ignore.yml
+severity: [HIGH, CRITICAL]
+timeout: 10m
+scan:
+  disable-telemetry: true
+  skip-version-check: true
+  show-suppressed: true
+  scanners: [vuln, misconfig]
+vulnerability:
+  ignore-unfixed: false

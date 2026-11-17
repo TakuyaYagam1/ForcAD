@@ -1,0 +1,22 @@
+post:
+  operationId: adminLogout
+  tags:
+  - admin
+  summary: End the current administrator session.
+  description: Ends the authenticated session. Requires its X-CSRF-Token header.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: Session ended.
+      headers:
+        Set-Cookie:
+          description: Expired session cookie.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/StatusResponse"
+    default:
+      "$ref": "../components/responses.yml#/ApiError"
