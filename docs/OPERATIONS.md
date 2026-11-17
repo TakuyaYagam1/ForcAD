@@ -193,6 +193,11 @@ The WebSocket endpoint and `/flags` have separate admission rules; this REST
 limit does not apply to them. Configure trusted proxies correctly so the limit
 uses the client's IP rather than the proxy's IP.
 
+Admin login has a separate Nginx limit of 1 request/second per client IP with
+a burst of 5. Requests over this limit return `429` with `Retry-After: 2`.
+Compose disables the backend login limiter only while this ingress limit is
+active; direct API deployments still enforce the backend per-IP budget.
+
 The Compose defaults are four API, two receiver and two worker replicas, plus one
 ticker. Scale services with Compose, for example:
 

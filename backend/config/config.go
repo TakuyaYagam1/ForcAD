@@ -20,6 +20,7 @@ type Config struct {
 	HTTPMaxInflight         int
 	PublicOrigin            string
 	TrustedProxyCIDRs       []string
+	LoginRateLimitAtProxy   bool
 	MetricsAddr             string
 	DatabaseURL             string
 	DatabasePoolerAddr      string
@@ -112,6 +113,11 @@ func Load(lookup LookupEnv) (Config, error) {
 		c.NATSURL = u.String()
 	}
 	var errs []error
+	limitedAtProxy, err := strconv.ParseBool(value("FORCAD_LOGIN_RATE_LIMIT_AT_PROXY", "false"))
+	if err != nil {
+		errs = append(errs, fmt.Errorf("%s - FORCAD_LOGIN_RATE_LIMIT_AT_PROXY must be a boolean: %w", location, err))
+	}
+	c.LoginRateLimitAtProxy = limitedAtProxy
 	for _, cidr := range strings.Split(value("TRUSTED_PROXY_CIDRS", ""), ",") {
 		if cidr = strings.TrimSpace(cidr); cidr != "" {
 			c.TrustedProxyCIDRs = append(c.TrustedProxyCIDRs, cidr)
