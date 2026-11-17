@@ -11,31 +11,46 @@ import (
 )
 
 var (
-	rn8AllowedHeaders = map[string]string{
+	rn11AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn7AllowedHeaders = map[string]string{
+	rn24AllowedHeaders = map[string]string{
+		"PUT": "Content-Type",
+	}
+	rn10AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn5AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn12AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn1AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn9AllowedHeaders = map[string]string{
+	rn16AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn15AllowedHeaders = map[string]string{
+	rn19AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn11AllowedHeaders = map[string]string{
+	rn13AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn3AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn17AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn21AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn24AllowedHeaders = map[string]string{
+	rn29AllowedHeaders = map[string]string{
 		"GET": "If-None-Match",
 	}
-	rn49AllowedHeaders = map[string]string{
+	rn54AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,X-Team-Token",
 	}
 )
@@ -131,7 +146,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn8AllowedHeaders,
+									allowedHeaders: rn11AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -148,6 +163,39 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							break
 						}
 
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'c': // Prefix: "config/"
+							origElem := elem
+							if l := len("config/"); len(elem) >= l && elem[0:l] == "config/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGetAdminGameSettingsRequest([0]string{}, elemIsEscaped, w, r)
+								case "PUT":
+									s.handleUpdateAdminGameSettingsRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET,PUT",
+										allowedHeaders: rn24AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+							elem = origElem
+						}
 						// Param: "action"
 						// Match until "/"
 						idx := strings.IndexByte(elem, '/')
@@ -179,7 +227,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn7AllowedHeaders,
+										allowedHeaders: rn10AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -243,7 +291,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn1AllowedHeaders,
+										allowedHeaders: rn5AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -358,13 +406,67 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,POST",
-										allowedHeaders: rn9AllowedHeaders,
+										allowedHeaders: rn12AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
 								}
 
 								return
+							}
+							switch elem[0] {
+							case 'a': // Prefix: "activate/"
+								origElem := elem
+								if l := len("activate/"); len(elem) >= l && elem[0:l] == "activate/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch r.Method {
+									case "POST":
+										s.handleActivateAdminTasksRequest([0]string{}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, notAllowedParams{
+											allowedMethods: "POST",
+											allowedHeaders: rn1AllowedHeaders,
+											acceptPost:     "application/json",
+											acceptPatch:    "",
+										})
+									}
+
+									return
+								}
+
+								elem = origElem
+							case 'd': // Prefix: "deactivate/"
+								origElem := elem
+								if l := len("deactivate/"); len(elem) >= l && elem[0:l] == "deactivate/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch r.Method {
+									case "POST":
+										s.handleDeactivateAdminTasksRequest([0]string{}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, notAllowedParams{
+											allowedMethods: "POST",
+											allowedHeaders: rn16AllowedHeaders,
+											acceptPost:     "application/json",
+											acceptPatch:    "",
+										})
+									}
+
+									return
+								}
+
+								elem = origElem
 							}
 							// Param: "task_id"
 							// Match until "/"
@@ -405,7 +507,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "DELETE,GET,PUT",
-											allowedHeaders: rn15AllowedHeaders,
+											allowedHeaders: rn19AllowedHeaders,
 											acceptPost:     "",
 											acceptPatch:    "",
 										})
@@ -445,13 +547,67 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 									default:
 										s.notAllowed(w, r, notAllowedParams{
 											allowedMethods: "GET,POST",
-											allowedHeaders: rn11AllowedHeaders,
+											allowedHeaders: rn13AllowedHeaders,
 											acceptPost:     "application/json",
 											acceptPatch:    "",
 										})
 									}
 
 									return
+								}
+								switch elem[0] {
+								case 'a': // Prefix: "activate/"
+									origElem := elem
+									if l := len("activate/"); len(elem) >= l && elem[0:l] == "activate/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleActivateAdminTeamsRequest([0]string{}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, notAllowedParams{
+												allowedMethods: "POST",
+												allowedHeaders: rn3AllowedHeaders,
+												acceptPost:     "application/json",
+												acceptPatch:    "",
+											})
+										}
+
+										return
+									}
+
+									elem = origElem
+								case 'd': // Prefix: "deactivate/"
+									origElem := elem
+									if l := len("deactivate/"); len(elem) >= l && elem[0:l] == "deactivate/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch r.Method {
+										case "POST":
+											s.handleDeactivateAdminTeamsRequest([0]string{}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, notAllowedParams{
+												allowedMethods: "POST",
+												allowedHeaders: rn17AllowedHeaders,
+												acceptPost:     "application/json",
+												acceptPatch:    "",
+											})
+										}
+
+										return
+									}
+
+									elem = origElem
 								}
 								// Param: "team_id"
 								// Match until "/"
@@ -492,7 +648,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 										default:
 											s.notAllowed(w, r, notAllowedParams{
 												allowedMethods: "DELETE,GET,PUT",
-												allowedHeaders: rn17AllowedHeaders,
+												allowedHeaders: rn21AllowedHeaders,
 												acceptPost:     "",
 												acceptPatch:    "",
 											})
@@ -612,7 +768,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn24AllowedHeaders,
+									allowedHeaders: rn29AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -1088,7 +1244,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "PUT",
-							allowedHeaders: rn49AllowedHeaders,
+							allowedHeaders: rn54AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -1283,6 +1439,46 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							break
 						}
 
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'c': // Prefix: "config/"
+							origElem := elem
+							if l := len("config/"); len(elem) >= l && elem[0:l] == "config/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = GetAdminGameSettingsOperation
+									r.summary = "Read editable game settings and current lifecycle."
+									r.operationID = "getAdminGameSettings"
+									r.operationGroup = ""
+									r.pathPattern = "/api/v1/admin/game/config/"
+									r.args = args
+									r.count = 0
+									return r, true
+								case "PUT":
+									r.name = UpdateAdminGameSettingsOperation
+									r.summary = "Update game settings without restarting the competition."
+									r.operationID = "updateAdminGameSettings"
+									r.operationGroup = ""
+									r.pathPattern = "/api/v1/admin/game/config/"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+							elem = origElem
+						}
 						// Param: "action"
 						// Match until "/"
 						idx := strings.IndexByte(elem, '/')
@@ -1506,6 +1702,60 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									return
 								}
 							}
+							switch elem[0] {
+							case 'a': // Prefix: "activate/"
+								origElem := elem
+								if l := len("activate/"); len(elem) >= l && elem[0:l] == "activate/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "POST":
+										r.name = ActivateAdminTasksOperation
+										r.summary = "Atomically activate selected services without recreating related data."
+										r.operationID = "activateAdminTasks"
+										r.operationGroup = ""
+										r.pathPattern = "/api/v1/admin/tasks/activate/"
+										r.args = args
+										r.count = 0
+										return r, true
+									default:
+										return
+									}
+								}
+
+								elem = origElem
+							case 'd': // Prefix: "deactivate/"
+								origElem := elem
+								if l := len("deactivate/"); len(elem) >= l && elem[0:l] == "deactivate/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "POST":
+										r.name = DeactivateAdminTasksOperation
+										r.summary = "Atomically deactivate selected services without deleting history."
+										r.operationID = "deactivateAdminTasks"
+										r.operationGroup = ""
+										r.pathPattern = "/api/v1/admin/tasks/deactivate/"
+										r.args = args
+										r.count = 0
+										return r, true
+									default:
+										return
+									}
+								}
+
+								elem = origElem
+							}
 							// Param: "task_id"
 							// Match until "/"
 							idx := strings.IndexByte(elem, '/')
@@ -1607,6 +1857,60 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									default:
 										return
 									}
+								}
+								switch elem[0] {
+								case 'a': // Prefix: "activate/"
+									origElem := elem
+									if l := len("activate/"); len(elem) >= l && elem[0:l] == "activate/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = ActivateAdminTeamsOperation
+											r.summary = "Atomically activate selected teams without recreating related data."
+											r.operationID = "activateAdminTeams"
+											r.operationGroup = ""
+											r.pathPattern = "/api/v1/admin/teams/activate/"
+											r.args = args
+											r.count = 0
+											return r, true
+										default:
+											return
+										}
+									}
+
+									elem = origElem
+								case 'd': // Prefix: "deactivate/"
+									origElem := elem
+									if l := len("deactivate/"); len(elem) >= l && elem[0:l] == "deactivate/" {
+										elem = elem[l:]
+									} else {
+										break
+									}
+
+									if len(elem) == 0 {
+										// Leaf node.
+										switch method {
+										case "POST":
+											r.name = DeactivateAdminTeamsOperation
+											r.summary = "Atomically deactivate selected teams without deleting history."
+											r.operationID = "deactivateAdminTeams"
+											r.operationGroup = ""
+											r.pathPattern = "/api/v1/admin/teams/deactivate/"
+											r.args = args
+											r.count = 0
+											return r, true
+										default:
+											return
+										}
+									}
+
+									elem = origElem
 								}
 								// Param: "team_id"
 								// Match until "/"

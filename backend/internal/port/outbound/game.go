@@ -14,6 +14,7 @@ type GameRepository interface {
 	CheckerLogRepository
 
 	Lifecycle(ctx context.Context) (domain.Lifecycle, error)
+	UpdateGameSettings(ctx context.Context, input domain.GameSettingsUpdate) (domain.Lifecycle, error)
 	ChangeState(
 		ctx context.Context,
 		action string,

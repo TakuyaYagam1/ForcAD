@@ -6,6 +6,8 @@ package api
 type OperationName = string
 
 const (
+	ActivateAdminTasksOperation         OperationName = "ActivateAdminTasks"
+	ActivateAdminTeamsOperation         OperationName = "ActivateAdminTeams"
 	AdminLoginOperation                 OperationName = "AdminLogin"
 	AdminLogoutOperation                OperationName = "AdminLogout"
 	ChangeAdminGameStateOperation       OperationName = "ChangeAdminGameState"
@@ -13,9 +15,12 @@ const (
 	CreateAdminTaskOperation            OperationName = "CreateAdminTask"
 	CreateAdminTeamOperation            OperationName = "CreateAdminTeam"
 	CreateAdminTeamTaskOperation        OperationName = "CreateAdminTeamTask"
+	DeactivateAdminTasksOperation       OperationName = "DeactivateAdminTasks"
+	DeactivateAdminTeamsOperation       OperationName = "DeactivateAdminTeams"
 	DeleteAdminTaskOperation            OperationName = "DeleteAdminTask"
 	DeleteAdminTeamOperation            OperationName = "DeleteAdminTeam"
 	DeleteAdminTeamTaskOperation        OperationName = "DeleteAdminTeamTask"
+	GetAdminGameSettingsOperation       OperationName = "GetAdminGameSettings"
 	GetAdminHealthOperation             OperationName = "GetAdminHealth"
 	GetAdminMetricsOperation            OperationName = "GetAdminMetrics"
 	GetAdminSessionStatusOperation      OperationName = "GetAdminSessionStatus"
@@ -42,6 +47,7 @@ const (
 	GetScoreboardOperation              OperationName = "GetScoreboard"
 	OpenEventStreamOperation            OperationName = "OpenEventStream"
 	SubmitFlagsOperation                OperationName = "SubmitFlags"
+	UpdateAdminGameSettingsOperation    OperationName = "UpdateAdminGameSettings"
 	UpdateAdminTaskOperation            OperationName = "UpdateAdminTask"
 	UpdateAdminTeamOperation            OperationName = "UpdateAdminTeam"
 	UpdateAdminTeamTaskOperation        OperationName = "UpdateAdminTeamTask"

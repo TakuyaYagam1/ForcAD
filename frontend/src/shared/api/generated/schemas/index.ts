@@ -13,6 +13,7 @@ export * from './apiErrorResponse.zod';
 export * from './flagNotification.zod';
 export * from './flagStolenEvent.zod';
 export * from './flagStolenEventPayload.zod';
+export * from './gameConfig.zod';
 export * from './gameRuntimeStatus.zod';
 export * from './healthResponse.zod';
 export * from './initScoreboardEvent.zod';

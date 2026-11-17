@@ -13,6 +13,1079 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// Encode encodes ActivateAdminTasksBadRequest as json.
+func (s *ActivateAdminTasksBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTasksBadRequest from json.
+func (s *ActivateAdminTasksBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTasksBadRequest to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTasksBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTasksBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTasksBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivateAdminTasksForbidden as json.
+func (s *ActivateAdminTasksForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTasksForbidden from json.
+func (s *ActivateAdminTasksForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTasksForbidden to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTasksForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTasksForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTasksForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivateAdminTasksNotFound as json.
+func (s *ActivateAdminTasksNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTasksNotFound from json.
+func (s *ActivateAdminTasksNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTasksNotFound to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTasksNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTasksNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTasksNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivateAdminTeamsBadRequest as json.
+func (s *ActivateAdminTeamsBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTeamsBadRequest from json.
+func (s *ActivateAdminTeamsBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTeamsBadRequest to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTeamsBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTeamsBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTeamsBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivateAdminTeamsForbidden as json.
+func (s *ActivateAdminTeamsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTeamsForbidden from json.
+func (s *ActivateAdminTeamsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTeamsForbidden to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTeamsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTeamsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTeamsForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActivateAdminTeamsNotFound as json.
+func (s *ActivateAdminTeamsNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes ActivateAdminTeamsNotFound from json.
+func (s *ActivateAdminTeamsNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActivateAdminTeamsNotFound to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = ActivateAdminTeamsNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActivateAdminTeamsNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActivateAdminTeamsNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminBulkActivateRequest) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminBulkActivateRequest) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("ids")
+		e.ArrStart()
+		for _, elem := range s.Ids {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfAdminBulkActivateRequest = [1]string{
+	0: "ids",
+}
+
+// Decode decodes AdminBulkActivateRequest from json.
+func (s *AdminBulkActivateRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminBulkActivateRequest to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "ids":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.Ids = make([]UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem UUID
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Ids = append(s.Ids, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ids\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminBulkActivateRequest")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminBulkActivateRequest) {
+					name = jsonFieldsNameOfAdminBulkActivateRequest[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminBulkActivateRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminBulkActivateRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminBulkActivateResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminBulkActivateResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("activated")
+		e.Int32(s.Activated)
+	}
+}
+
+var jsonFieldsNameOfAdminBulkActivateResult = [1]string{
+	0: "activated",
+}
+
+// Decode decodes AdminBulkActivateResult from json.
+func (s *AdminBulkActivateResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminBulkActivateResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "activated":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int32()
+				s.Activated = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"activated\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminBulkActivateResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminBulkActivateResult) {
+					name = jsonFieldsNameOfAdminBulkActivateResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminBulkActivateResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminBulkActivateResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminBulkDeactivateRequest) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminBulkDeactivateRequest) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("ids")
+		e.ArrStart()
+		for _, elem := range s.Ids {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfAdminBulkDeactivateRequest = [1]string{
+	0: "ids",
+}
+
+// Decode decodes AdminBulkDeactivateRequest from json.
+func (s *AdminBulkDeactivateRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminBulkDeactivateRequest to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "ids":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.Ids = make([]UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem UUID
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Ids = append(s.Ids, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"ids\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminBulkDeactivateRequest")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminBulkDeactivateRequest) {
+					name = jsonFieldsNameOfAdminBulkDeactivateRequest[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminBulkDeactivateRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminBulkDeactivateRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminBulkDeactivateResult) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminBulkDeactivateResult) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("deactivated")
+		e.Int32(s.Deactivated)
+	}
+}
+
+var jsonFieldsNameOfAdminBulkDeactivateResult = [1]string{
+	0: "deactivated",
+}
+
+// Decode decodes AdminBulkDeactivateResult from json.
+func (s *AdminBulkDeactivateResult) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminBulkDeactivateResult to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "deactivated":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int32()
+				s.Deactivated = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"deactivated\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminBulkDeactivateResult")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminBulkDeactivateResult) {
+					name = jsonFieldsNameOfAdminBulkDeactivateResult[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminBulkDeactivateResult) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminBulkDeactivateResult) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminGameSettings) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminGameSettings) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("config")
+		s.Config.Encode(e)
+	}
+	{
+		e.FieldStart("runtime")
+		s.Runtime.Encode(e)
+	}
+	{
+		e.FieldStart("extra_checks")
+		e.Int32(s.ExtraChecks)
+	}
+}
+
+var jsonFieldsNameOfAdminGameSettings = [3]string{
+	0: "config",
+	1: "runtime",
+	2: "extra_checks",
+}
+
+// Decode decodes AdminGameSettings from json.
+func (s *AdminGameSettings) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminGameSettings to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "config":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				if err := s.Config.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"config\"")
+			}
+		case "runtime":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Runtime.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"runtime\"")
+			}
+		case "extra_checks":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int32()
+				s.ExtraChecks = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"extra_checks\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminGameSettings")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminGameSettings) {
+					name = jsonFieldsNameOfAdminGameSettings[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminGameSettings) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminGameSettings) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *AdminGameSettingsUpdate) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *AdminGameSettingsUpdate) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("generation")
+		e.Int64(s.Generation)
+	}
+	{
+		e.FieldStart("rounds")
+		s.Rounds.Encode(e)
+	}
+	{
+		e.FieldStart("flag_lifetime")
+		e.Int32(s.FlagLifetime)
+	}
+	{
+		e.FieldStart("game_hardness")
+		e.Float64(s.GameHardness)
+	}
+	{
+		e.FieldStart("inflation")
+		e.Bool(s.Inflation)
+	}
+	{
+		e.FieldStart("volga_attacks_mode")
+		e.Bool(s.VolgaAttacksMode)
+	}
+	{
+		e.FieldStart("round_time")
+		e.Int32(s.RoundTime)
+	}
+	{
+		e.FieldStart("extra_checks")
+		e.Int32(s.ExtraChecks)
+	}
+	{
+		e.FieldStart("mode")
+		s.Mode.Encode(e)
+	}
+	{
+		e.FieldStart("timezone")
+		e.Str(s.Timezone)
+	}
+	{
+		e.FieldStart("start_time")
+		json.EncodeDateTime(e, s.StartTime)
+	}
+}
+
+var jsonFieldsNameOfAdminGameSettingsUpdate = [11]string{
+	0:  "generation",
+	1:  "rounds",
+	2:  "flag_lifetime",
+	3:  "game_hardness",
+	4:  "inflation",
+	5:  "volga_attacks_mode",
+	6:  "round_time",
+	7:  "extra_checks",
+	8:  "mode",
+	9:  "timezone",
+	10: "start_time",
+}
+
+// Decode decodes AdminGameSettingsUpdate from json.
+func (s *AdminGameSettingsUpdate) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminGameSettingsUpdate to nil")
+	}
+	var requiredBitSet [2]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "generation":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Int64()
+				s.Generation = int64(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"generation\"")
+			}
+		case "rounds":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				if err := s.Rounds.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rounds\"")
+			}
+		case "flag_lifetime":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Int32()
+				s.FlagLifetime = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"flag_lifetime\"")
+			}
+		case "game_hardness":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Float64()
+				s.GameHardness = float64(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_hardness\"")
+			}
+		case "inflation":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := d.Bool()
+				s.Inflation = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"inflation\"")
+			}
+		case "volga_attacks_mode":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := d.Bool()
+				s.VolgaAttacksMode = bool(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"volga_attacks_mode\"")
+			}
+		case "round_time":
+			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				v, err := d.Int32()
+				s.RoundTime = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"round_time\"")
+			}
+		case "extra_checks":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				v, err := d.Int32()
+				s.ExtraChecks = int32(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"extra_checks\"")
+			}
+		case "mode":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				if err := s.Mode.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"mode\"")
+			}
+		case "timezone":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Timezone = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"timezone\"")
+			}
+		case "start_time":
+			requiredBitSet[1] |= 1 << 2
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.StartTime = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"start_time\"")
+			}
+		default:
+			return errors.Errorf("unexpected field %q", k)
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode AdminGameSettingsUpdate")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [2]uint8{
+		0b11111111,
+		0b00000111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfAdminGameSettingsUpdate) {
+					name = jsonFieldsNameOfAdminGameSettingsUpdate[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{
+			Fields: failures,
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *AdminGameSettingsUpdate) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminGameSettingsUpdate) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes AdminGameSettingsUpdateMode as json.
+func (s AdminGameSettingsUpdateMode) Encode(e *jx.Encoder) {
+	e.Str(string(s))
+}
+
+// Decode decodes AdminGameSettingsUpdateMode from json.
+func (s *AdminGameSettingsUpdateMode) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode AdminGameSettingsUpdateMode to nil")
+	}
+	v, err := d.StrBytes()
+	if err != nil {
+		return err
+	}
+	// Try to use constant string.
+	switch AdminGameSettingsUpdateMode(v) {
+	case AdminGameSettingsUpdateModeClassic:
+		*s = AdminGameSettingsUpdateModeClassic
+	case AdminGameSettingsUpdateModeBlitz:
+		*s = AdminGameSettingsUpdateModeBlitz
+	default:
+		*s = AdminGameSettingsUpdateMode(v)
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s AdminGameSettingsUpdateMode) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *AdminGameSettingsUpdateMode) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes AdminLoginBadRequest as json.
 func (s *AdminLoginBadRequest) Encode(e *jx.Encoder) {
 	unwrapped := (*ApiError)(s)
@@ -1101,7 +2174,6 @@ func (s *AdminTeam) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode AdminTeam to nil")
 	}
 	var requiredBitSet [1]uint8
-	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -3630,6 +4702,234 @@ func (s *CtftimeStanding) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *CtftimeStanding) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTasksBadRequest as json.
+func (s *DeactivateAdminTasksBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTasksBadRequest from json.
+func (s *DeactivateAdminTasksBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTasksBadRequest to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTasksBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTasksBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTasksBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTasksForbidden as json.
+func (s *DeactivateAdminTasksForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTasksForbidden from json.
+func (s *DeactivateAdminTasksForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTasksForbidden to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTasksForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTasksForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTasksForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTasksNotFound as json.
+func (s *DeactivateAdminTasksNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTasksNotFound from json.
+func (s *DeactivateAdminTasksNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTasksNotFound to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTasksNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTasksNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTasksNotFound) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTeamsBadRequest as json.
+func (s *DeactivateAdminTeamsBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTeamsBadRequest from json.
+func (s *DeactivateAdminTeamsBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTeamsBadRequest to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTeamsBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTeamsBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTeamsBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTeamsForbidden as json.
+func (s *DeactivateAdminTeamsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTeamsForbidden from json.
+func (s *DeactivateAdminTeamsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTeamsForbidden to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTeamsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTeamsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTeamsForbidden) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes DeactivateAdminTeamsNotFound as json.
+func (s *DeactivateAdminTeamsNotFound) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes DeactivateAdminTeamsNotFound from json.
+func (s *DeactivateAdminTeamsNotFound) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode DeactivateAdminTeamsNotFound to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = DeactivateAdminTeamsNotFound(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *DeactivateAdminTeamsNotFound) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *DeactivateAdminTeamsNotFound) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -6291,7 +7591,6 @@ func (s *ParticipantTeam) Decode(d *jx.Decoder) error {
 		return errors.New("invalid: unable to decode ParticipantTeam to nil")
 	}
 	var requiredBitSet [1]uint8
-	s.setDefaults()
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
@@ -8113,6 +9412,120 @@ func (s UUID) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *UUID) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateAdminGameSettingsBadRequest as json.
+func (s *UpdateAdminGameSettingsBadRequest) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateAdminGameSettingsBadRequest from json.
+func (s *UpdateAdminGameSettingsBadRequest) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateAdminGameSettingsBadRequest to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateAdminGameSettingsBadRequest(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateAdminGameSettingsBadRequest) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateAdminGameSettingsBadRequest) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateAdminGameSettingsConflict as json.
+func (s *UpdateAdminGameSettingsConflict) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateAdminGameSettingsConflict from json.
+func (s *UpdateAdminGameSettingsConflict) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateAdminGameSettingsConflict to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateAdminGameSettingsConflict(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateAdminGameSettingsConflict) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateAdminGameSettingsConflict) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes UpdateAdminGameSettingsForbidden as json.
+func (s *UpdateAdminGameSettingsForbidden) Encode(e *jx.Encoder) {
+	unwrapped := (*ApiError)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes UpdateAdminGameSettingsForbidden from json.
+func (s *UpdateAdminGameSettingsForbidden) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode UpdateAdminGameSettingsForbidden to nil")
+	}
+	var unwrapped ApiError
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = UpdateAdminGameSettingsForbidden(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *UpdateAdminGameSettingsForbidden) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *UpdateAdminGameSettingsForbidden) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

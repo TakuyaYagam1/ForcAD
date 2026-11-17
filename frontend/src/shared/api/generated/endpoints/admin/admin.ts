@@ -25,6 +25,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminBulkActivateRequest,
+  AdminBulkActivateResult,
+  AdminBulkDeactivateRequest,
+  AdminBulkDeactivateResult,
+  AdminGameSettings,
+  AdminGameSettingsUpdate,
   AdminLoginRequest,
   AdminSession,
   AdminTask,
@@ -292,6 +298,198 @@ export const useCreateAdminTeam = <TError = ApiError,
         TContext
       > => {
   return useMutation(getCreateAdminTeamMutationOptions(options), queryClient);
+}
+/**
+ * All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically activate selected teams without recreating related data.
+ */
+export const activateAdminTeams = (
+  adminBulkActivateRequest: AdminBulkActivateRequest,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminBulkActivateResult>(
+    {
+      url: `/api/v1/admin/teams/activate/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminBulkActivateRequest,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getActivateAdminTeamsMutationKey = () => {
+  return ['activateAdminTeams'] as const
+};
+
+export const getActivateAdminTeamsMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAdminTeams>>, TError,ActivateAdminTeamsMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof activateAdminTeams>>, TError,ActivateAdminTeamsMutationVariables, TContext> => {
+
+  const mutationKey = getActivateAdminTeamsMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateAdminTeams>>, ActivateAdminTeamsMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  activateAdminTeams(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type ActivateAdminTeamsMutationResult = NonNullable<Awaited<ReturnType<typeof activateAdminTeams>>>
+export type ActivateAdminTeamsMutationBody = AdminBulkActivateRequest
+export type ActivateAdminTeamsMutationError = ApiError
+export type ActivateAdminTeamsMutationVariables = {
+  data: AdminBulkActivateRequest
+}
+
+/**
+ * All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically activate selected teams without recreating related data.
+ */
+export const useActivateAdminTeams = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAdminTeams>>, TError,ActivateAdminTeamsMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof activateAdminTeams>>,
+        TError,
+        ActivateAdminTeamsMutationVariables,
+        TContext
+      > => {
+  return useMutation(getActivateAdminTeamsMutationOptions(options), queryClient);
+}
+/**
+ * All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically deactivate selected teams without deleting history.
+ */
+export const deactivateAdminTeams = (
+  adminBulkDeactivateRequest: AdminBulkDeactivateRequest,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminBulkDeactivateResult>(
+    {
+      url: `/api/v1/admin/teams/deactivate/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminBulkDeactivateRequest,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getDeactivateAdminTeamsMutationKey = () => {
+  return ['deactivateAdminTeams'] as const
+};
+
+export const getDeactivateAdminTeamsMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTeams>>, TError,DeactivateAdminTeamsMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTeams>>, TError,DeactivateAdminTeamsMutationVariables, TContext> => {
+
+  const mutationKey = getDeactivateAdminTeamsMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateAdminTeams>>, DeactivateAdminTeamsMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  deactivateAdminTeams(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type DeactivateAdminTeamsMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateAdminTeams>>>
+export type DeactivateAdminTeamsMutationBody = AdminBulkDeactivateRequest
+export type DeactivateAdminTeamsMutationError = ApiError
+export type DeactivateAdminTeamsMutationVariables = {
+  data: AdminBulkDeactivateRequest
+}
+
+/**
+ * All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically deactivate selected teams without deleting history.
+ */
+export const useDeactivateAdminTeams = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTeams>>, TError,DeactivateAdminTeamsMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateAdminTeams>>,
+        TError,
+        DeactivateAdminTeamsMutationVariables,
+        TContext
+      > => {
+  return useMutation(getDeactivateAdminTeamsMutationOptions(options), queryClient);
 }
 /**
  * @summary Get one team, including administration fields.
@@ -813,6 +1011,198 @@ export const useCreateAdminTask = <TError = ApiError,
         TContext
       > => {
   return useMutation(getCreateAdminTaskMutationOptions(options), queryClient);
+}
+/**
+ * All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically activate selected services without recreating related data.
+ */
+export const activateAdminTasks = (
+  adminBulkActivateRequest: AdminBulkActivateRequest,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminBulkActivateResult>(
+    {
+      url: `/api/v1/admin/tasks/activate/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminBulkActivateRequest,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getActivateAdminTasksMutationKey = () => {
+  return ['activateAdminTasks'] as const
+};
+
+export const getActivateAdminTasksMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAdminTasks>>, TError,ActivateAdminTasksMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof activateAdminTasks>>, TError,ActivateAdminTasksMutationVariables, TContext> => {
+
+  const mutationKey = getActivateAdminTasksMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof activateAdminTasks>>, ActivateAdminTasksMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  activateAdminTasks(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type ActivateAdminTasksMutationResult = NonNullable<Awaited<ReturnType<typeof activateAdminTasks>>>
+export type ActivateAdminTasksMutationBody = AdminBulkActivateRequest
+export type ActivateAdminTasksMutationError = ApiError
+export type ActivateAdminTasksMutationVariables = {
+  data: AdminBulkActivateRequest
+}
+
+/**
+ * All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically activate selected services without recreating related data.
+ */
+export const useActivateAdminTasks = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof activateAdminTasks>>, TError,ActivateAdminTasksMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof activateAdminTasks>>,
+        TError,
+        ActivateAdminTasksMutationVariables,
+        TContext
+      > => {
+  return useMutation(getActivateAdminTasksMutationOptions(options), queryClient);
+}
+/**
+ * All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically deactivate selected services without deleting history.
+ */
+export const deactivateAdminTasks = (
+  adminBulkDeactivateRequest: AdminBulkDeactivateRequest,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminBulkDeactivateResult>(
+    {
+      url: `/api/v1/admin/tasks/deactivate/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminBulkDeactivateRequest,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getDeactivateAdminTasksMutationKey = () => {
+  return ['deactivateAdminTasks'] as const
+};
+
+export const getDeactivateAdminTasksMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTasks>>, TError,DeactivateAdminTasksMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTasks>>, TError,DeactivateAdminTasksMutationVariables, TContext> => {
+
+  const mutationKey = getDeactivateAdminTasksMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateAdminTasks>>, DeactivateAdminTasksMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  deactivateAdminTasks(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type DeactivateAdminTasksMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateAdminTasks>>>
+export type DeactivateAdminTasksMutationBody = AdminBulkDeactivateRequest
+export type DeactivateAdminTasksMutationError = ApiError
+export type DeactivateAdminTasksMutationVariables = {
+  data: AdminBulkDeactivateRequest
+}
+
+/**
+ * All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+ * @summary Atomically deactivate selected services without deleting history.
+ */
+export const useDeactivateAdminTasks = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminTasks>>, TError,DeactivateAdminTasksMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateAdminTasks>>,
+        TError,
+        DeactivateAdminTasksMutationVariables,
+        TContext
+      > => {
+  return useMutation(getDeactivateAdminTasksMutationOptions(options), queryClient);
 }
 /**
  * @summary Get one task, including administration fields.
@@ -1654,6 +2044,225 @@ export const useDeleteAdminTeamTask = <TError = ApiError,
         TContext
       > => {
   return useMutation(getDeleteAdminTeamTaskMutationOptions(options), queryClient);
+}
+/**
+ * @summary Read editable game settings and current lifecycle.
+ */
+export const getAdminGameSettings = (
+
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminGameSettings>(
+    {
+      url: `/api/v1/admin/game/config/`,
+      method: 'GET',
+      signal
+    },
+  );
+}
+
+
+
+
+export const getGetAdminGameSettingsQueryKey = () => {
+  return [
+    `/api/v1/admin/game/config/`
+  ] as const;
+}
+
+
+export const getGetAdminGameSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminGameSettings>>, TError = ApiError>( options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData>>,
+}
+) => {
+
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminGameSettingsQueryKey();
+
+
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminGameSettings>>> = ({ signal }) => {
+    return getAdminGameSettings(signal)
+  };
+
+
+
+
+
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+}
+
+export type GetAdminGameSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminGameSettings>>>
+export type GetAdminGameSettingsQueryError = ApiError
+
+
+/** @summary Read editable game settings and current lifecycle. */
+export function useGetAdminGameSettings<TData = Awaited<ReturnType<typeof getAdminGameSettings>>, TError = ApiError>(
+  options: {
+    query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminGameSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminGameSettings>>
+        > , 'initialData'
+      >,
+  }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Read editable game settings and current lifecycle. */
+export function useGetAdminGameSettings<TData = Awaited<ReturnType<typeof getAdminGameSettings>>, TError = ApiError>(
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminGameSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminGameSettings>>
+        > , 'initialData'
+      >,
+  }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Read editable game settings and current lifecycle. */
+export function useGetAdminGameSettings<TData = Awaited<ReturnType<typeof getAdminGameSettings>>, TError = ApiError>(
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData>>,
+  }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Read editable game settings and current lifecycle. */
+export function useGetAdminGameSettings<TData = Awaited<ReturnType<typeof getAdminGameSettings>>, TError = ApiError>(
+  options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminGameSettings>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+
+  const queryOptions = getGetAdminGameSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Only the round limit may change once a game has started. Other settings require a waiting game that has never started. The supplied generation must match the locked session.
+ * @summary Update game settings without restarting the competition.
+ */
+export const updateAdminGameSettings = (
+  adminGameSettingsUpdate: AdminGameSettingsUpdate,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminGameSettings>(
+    {
+      url: `/api/v1/admin/game/config/`,
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: adminGameSettingsUpdate,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getUpdateAdminGameSettingsMutationKey = () => {
+  return ['updateAdminGameSettings'] as const
+};
+
+export const getUpdateAdminGameSettingsMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGameSettings>>, TError,UpdateAdminGameSettingsMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof updateAdminGameSettings>>, TError,UpdateAdminGameSettingsMutationVariables, TContext> => {
+
+  const mutationKey = getUpdateAdminGameSettingsMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminGameSettings>>, UpdateAdminGameSettingsMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  updateAdminGameSettings(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type UpdateAdminGameSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminGameSettings>>>
+export type UpdateAdminGameSettingsMutationBody = AdminGameSettingsUpdate
+export type UpdateAdminGameSettingsMutationError = ApiError
+export type UpdateAdminGameSettingsMutationVariables = {
+  data: AdminGameSettingsUpdate
+}
+
+/**
+ * Only the round limit may change once a game has started. Other settings require a waiting game that has never started. The supplied generation must match the locked session.
+ * @summary Update game settings without restarting the competition.
+ */
+export const useUpdateAdminGameSettings = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGameSettings>>, TError,UpdateAdminGameSettingsMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminGameSettings>>,
+        TError,
+        UpdateAdminGameSettingsMutationVariables,
+        TContext
+      > => {
+  return useMutation(getUpdateAdminGameSettingsMutationOptions(options), queryClient);
 }
 /**
  * start_final and finish require confirm=true. generation is an optional optimistic concurrency check.

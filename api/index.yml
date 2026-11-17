@@ -31,16 +31,26 @@ paths:
     "$ref": "./routes/client-scoreboard.yml"
   "/api/v1/admin/teams/":
     "$ref": "./routes/admin-teams.yml"
+  "/api/v1/admin/teams/activate/":
+    "$ref": "./routes/admin-teams-activate.yml"
+  "/api/v1/admin/teams/deactivate/":
+    "$ref": "./routes/admin-teams-deactivate.yml"
   "/api/v1/admin/teams/{team_id}/":
     "$ref": "./routes/admin-teams-by-team-id.yml"
   "/api/v1/admin/tasks/":
     "$ref": "./routes/admin-tasks.yml"
+  "/api/v1/admin/tasks/activate/":
+    "$ref": "./routes/admin-tasks-activate.yml"
+  "/api/v1/admin/tasks/deactivate/":
+    "$ref": "./routes/admin-tasks-deactivate.yml"
   "/api/v1/admin/tasks/{task_id}/":
     "$ref": "./routes/admin-tasks-by-task-id.yml"
   "/api/v1/admin/teamtasks/":
     "$ref": "./routes/admin-teamtasks.yml"
   "/api/v1/admin/teamtasks/{teamtask_id}/":
     "$ref": "./routes/admin-teamtasks-by-teamtask-id.yml"
+  "/api/v1/admin/game/config/":
+    "$ref": "./routes/admin-game-config.yml"
   "/api/v1/admin/game/{action}/":
     "$ref": "./routes/admin-game-by-action.yml"
   "/api/v1/admin/login/":

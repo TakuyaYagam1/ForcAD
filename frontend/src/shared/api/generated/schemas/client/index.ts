@@ -10,7 +10,6 @@ export * from './attackData.zod';
 export * from './checkerLog.zod';
 export * from './checkerLogPage.zod';
 export * from './ctftimeStanding.zod';
-export * from './gameConfig.zod';
 export * from './gameState.zod';
 export * from './getClientAttackDataHeaders.zod';
 export * from './getClientAttackDataParams.zod';

@@ -1,0 +1,43 @@
+get:
+  operationId: getAdminGameSettings
+  tags:
+  - admin
+  summary: Read editable game settings and current lifecycle.
+  security:
+  - sessionCookie: []
+  responses:
+    '200':
+      description: Persisted settings and the current game state.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminGameSettings"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+put:
+  operationId: updateAdminGameSettings
+  tags:
+  - admin
+  summary: Update game settings without restarting the competition.
+  description: Only the round limit may change once a game has started. Other settings require a waiting game that has never started. The supplied generation must match the locked session.
+  security:
+  - sessionCookie: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          "$ref": "../components/schemas.yml#/AdminGameSettingsUpdate"
+  responses:
+    '200':
+      description: Persisted settings and current lifecycle after the update.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminGameSettings"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"

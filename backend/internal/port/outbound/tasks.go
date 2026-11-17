@@ -12,4 +12,6 @@ type TaskRepository interface {
 	CreateTask(ctx context.Context, task domain.Task) (domain.Task, error)
 	UpdateTask(ctx context.Context, task domain.Task) (domain.Task, error)
 	DeactivateTask(ctx context.Context, taskID uuid.UUID) error
+	DeactivateTasks(ctx context.Context, taskIDs []uuid.UUID) (int32, error)
+	ActivateTasks(ctx context.Context, taskIDs []uuid.UUID) (int32, error)
 }

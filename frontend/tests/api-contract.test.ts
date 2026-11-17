@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AdminTeam } from "../src/shared/api/generated/schemas/admin/adminTeam.zod.ts";
 import { AdminTeamTaskLogEntry } from "../src/shared/api/generated/schemas/admin/adminTeamTaskLogEntry.zod.ts";
-import { GameConfig } from "../src/shared/api/generated/schemas/client/gameConfig.zod.ts";
+import { GameConfig } from "../src/shared/api/generated/schemas/gameConfig.zod.ts";
 import { ParticipantTask } from "../src/shared/api/generated/schemas/client/participantTask.zod.ts";
 import { ParticipantTeamTaskHistory } from "../src/shared/api/generated/schemas/client/participantTeamTaskHistory.zod.ts";
 import { RealtimeEvent } from "../src/shared/api/generated/schemas/realtimeEvent.zod.ts";

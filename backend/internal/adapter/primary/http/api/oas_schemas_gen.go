@@ -12,6 +12,314 @@ import (
 	"github.com/go-faster/jx"
 )
 
+type ActivateAdminTasksBadRequest ApiError
+
+func (*ActivateAdminTasksBadRequest) activateAdminTasksRes() {
+}
+
+type ActivateAdminTasksForbidden ApiError
+
+func (*ActivateAdminTasksForbidden) activateAdminTasksRes() {
+}
+
+type ActivateAdminTasksNotFound ApiError
+
+func (*ActivateAdminTasksNotFound) activateAdminTasksRes() {
+}
+
+type ActivateAdminTeamsBadRequest ApiError
+
+func (*ActivateAdminTeamsBadRequest) activateAdminTeamsRes() {
+}
+
+type ActivateAdminTeamsForbidden ApiError
+
+func (*ActivateAdminTeamsForbidden) activateAdminTeamsRes() {
+}
+
+type ActivateAdminTeamsNotFound ApiError
+
+func (*ActivateAdminTeamsNotFound) activateAdminTeamsRes() {
+}
+
+// Ref: #/components/schemas/AdminBulkActivateRequest
+type AdminBulkActivateRequest struct {
+	Ids []UUID `json:"ids"`
+}
+
+// GetIds returns the value of Ids.
+func (s *AdminBulkActivateRequest) GetIds() []UUID {
+	return s.Ids
+}
+
+// SetIds sets the value of Ids.
+func (s *AdminBulkActivateRequest) SetIds(val []UUID) {
+	s.Ids = val
+}
+
+// Ref: #/components/schemas/AdminBulkActivateResult
+type AdminBulkActivateResult struct {
+	Activated int32 `json:"activated"`
+}
+
+// GetActivated returns the value of Activated.
+func (s *AdminBulkActivateResult) GetActivated() int32 {
+	return s.Activated
+}
+
+// SetActivated sets the value of Activated.
+func (s *AdminBulkActivateResult) SetActivated(val int32) {
+	s.Activated = val
+}
+
+func (*AdminBulkActivateResult) activateAdminTasksRes() {
+}
+func (*AdminBulkActivateResult) activateAdminTeamsRes() {
+}
+
+// Ref: #/components/schemas/AdminBulkDeactivateRequest
+type AdminBulkDeactivateRequest struct {
+	Ids []UUID `json:"ids"`
+}
+
+// GetIds returns the value of Ids.
+func (s *AdminBulkDeactivateRequest) GetIds() []UUID {
+	return s.Ids
+}
+
+// SetIds sets the value of Ids.
+func (s *AdminBulkDeactivateRequest) SetIds(val []UUID) {
+	s.Ids = val
+}
+
+// Ref: #/components/schemas/AdminBulkDeactivateResult
+type AdminBulkDeactivateResult struct {
+	Deactivated int32 `json:"deactivated"`
+}
+
+// GetDeactivated returns the value of Deactivated.
+func (s *AdminBulkDeactivateResult) GetDeactivated() int32 {
+	return s.Deactivated
+}
+
+// SetDeactivated sets the value of Deactivated.
+func (s *AdminBulkDeactivateResult) SetDeactivated(val int32) {
+	s.Deactivated = val
+}
+
+func (*AdminBulkDeactivateResult) deactivateAdminTasksRes() {
+}
+func (*AdminBulkDeactivateResult) deactivateAdminTeamsRes() {
+}
+
+// Ref: #/components/schemas/AdminGameSettings
+type AdminGameSettings struct {
+	Config      GameConfig        `json:"config"`
+	Runtime     GameRuntimeStatus `json:"runtime"`
+	ExtraChecks int32             `json:"extra_checks"`
+}
+
+// GetConfig returns the value of Config.
+func (s *AdminGameSettings) GetConfig() GameConfig {
+	return s.Config
+}
+
+// GetRuntime returns the value of Runtime.
+func (s *AdminGameSettings) GetRuntime() GameRuntimeStatus {
+	return s.Runtime
+}
+
+// GetExtraChecks returns the value of ExtraChecks.
+func (s *AdminGameSettings) GetExtraChecks() int32 {
+	return s.ExtraChecks
+}
+
+// SetConfig sets the value of Config.
+func (s *AdminGameSettings) SetConfig(val GameConfig) {
+	s.Config = val
+}
+
+// SetRuntime sets the value of Runtime.
+func (s *AdminGameSettings) SetRuntime(val GameRuntimeStatus) {
+	s.Runtime = val
+}
+
+// SetExtraChecks sets the value of ExtraChecks.
+func (s *AdminGameSettings) SetExtraChecks(val int32) {
+	s.ExtraChecks = val
+}
+
+func (*AdminGameSettings) getAdminGameSettingsRes() {
+}
+func (*AdminGameSettings) updateAdminGameSettingsRes() {
+}
+
+// Ref: #/components/schemas/AdminGameSettingsUpdate
+type AdminGameSettingsUpdate struct {
+	Generation       int64                       `json:"generation"`
+	Rounds           NilInt32                    `json:"rounds"`
+	FlagLifetime     int32                       `json:"flag_lifetime"`
+	GameHardness     float64                     `json:"game_hardness"`
+	Inflation        bool                        `json:"inflation"`
+	VolgaAttacksMode bool                        `json:"volga_attacks_mode"`
+	RoundTime        int32                       `json:"round_time"`
+	ExtraChecks      int32                       `json:"extra_checks"`
+	Mode             AdminGameSettingsUpdateMode `json:"mode"`
+	Timezone         string                      `json:"timezone"`
+	StartTime        time.Time                   `json:"start_time"`
+}
+
+// GetGeneration returns the value of Generation.
+func (s *AdminGameSettingsUpdate) GetGeneration() int64 {
+	return s.Generation
+}
+
+// GetRounds returns the value of Rounds.
+func (s *AdminGameSettingsUpdate) GetRounds() NilInt32 {
+	return s.Rounds
+}
+
+// GetFlagLifetime returns the value of FlagLifetime.
+func (s *AdminGameSettingsUpdate) GetFlagLifetime() int32 {
+	return s.FlagLifetime
+}
+
+// GetGameHardness returns the value of GameHardness.
+func (s *AdminGameSettingsUpdate) GetGameHardness() float64 {
+	return s.GameHardness
+}
+
+// GetInflation returns the value of Inflation.
+func (s *AdminGameSettingsUpdate) GetInflation() bool {
+	return s.Inflation
+}
+
+// GetVolgaAttacksMode returns the value of VolgaAttacksMode.
+func (s *AdminGameSettingsUpdate) GetVolgaAttacksMode() bool {
+	return s.VolgaAttacksMode
+}
+
+// GetRoundTime returns the value of RoundTime.
+func (s *AdminGameSettingsUpdate) GetRoundTime() int32 {
+	return s.RoundTime
+}
+
+// GetExtraChecks returns the value of ExtraChecks.
+func (s *AdminGameSettingsUpdate) GetExtraChecks() int32 {
+	return s.ExtraChecks
+}
+
+// GetMode returns the value of Mode.
+func (s *AdminGameSettingsUpdate) GetMode() AdminGameSettingsUpdateMode {
+	return s.Mode
+}
+
+// GetTimezone returns the value of Timezone.
+func (s *AdminGameSettingsUpdate) GetTimezone() string {
+	return s.Timezone
+}
+
+// GetStartTime returns the value of StartTime.
+func (s *AdminGameSettingsUpdate) GetStartTime() time.Time {
+	return s.StartTime
+}
+
+// SetGeneration sets the value of Generation.
+func (s *AdminGameSettingsUpdate) SetGeneration(val int64) {
+	s.Generation = val
+}
+
+// SetRounds sets the value of Rounds.
+func (s *AdminGameSettingsUpdate) SetRounds(val NilInt32) {
+	s.Rounds = val
+}
+
+// SetFlagLifetime sets the value of FlagLifetime.
+func (s *AdminGameSettingsUpdate) SetFlagLifetime(val int32) {
+	s.FlagLifetime = val
+}
+
+// SetGameHardness sets the value of GameHardness.
+func (s *AdminGameSettingsUpdate) SetGameHardness(val float64) {
+	s.GameHardness = val
+}
+
+// SetInflation sets the value of Inflation.
+func (s *AdminGameSettingsUpdate) SetInflation(val bool) {
+	s.Inflation = val
+}
+
+// SetVolgaAttacksMode sets the value of VolgaAttacksMode.
+func (s *AdminGameSettingsUpdate) SetVolgaAttacksMode(val bool) {
+	s.VolgaAttacksMode = val
+}
+
+// SetRoundTime sets the value of RoundTime.
+func (s *AdminGameSettingsUpdate) SetRoundTime(val int32) {
+	s.RoundTime = val
+}
+
+// SetExtraChecks sets the value of ExtraChecks.
+func (s *AdminGameSettingsUpdate) SetExtraChecks(val int32) {
+	s.ExtraChecks = val
+}
+
+// SetMode sets the value of Mode.
+func (s *AdminGameSettingsUpdate) SetMode(val AdminGameSettingsUpdateMode) {
+	s.Mode = val
+}
+
+// SetTimezone sets the value of Timezone.
+func (s *AdminGameSettingsUpdate) SetTimezone(val string) {
+	s.Timezone = val
+}
+
+// SetStartTime sets the value of StartTime.
+func (s *AdminGameSettingsUpdate) SetStartTime(val time.Time) {
+	s.StartTime = val
+}
+
+type AdminGameSettingsUpdateMode string
+
+const (
+	AdminGameSettingsUpdateModeClassic AdminGameSettingsUpdateMode = "classic"
+	AdminGameSettingsUpdateModeBlitz   AdminGameSettingsUpdateMode = "blitz"
+)
+
+// AllValues returns all AdminGameSettingsUpdateMode values.
+func (AdminGameSettingsUpdateMode) AllValues() []AdminGameSettingsUpdateMode {
+	return []AdminGameSettingsUpdateMode{
+		AdminGameSettingsUpdateModeClassic,
+		AdminGameSettingsUpdateModeBlitz,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AdminGameSettingsUpdateMode) MarshalText() ([]byte, error) {
+	switch s {
+	case AdminGameSettingsUpdateModeClassic:
+		return []byte(s), nil
+	case AdminGameSettingsUpdateModeBlitz:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AdminGameSettingsUpdateMode) UnmarshalText(data []byte) error {
+	switch AdminGameSettingsUpdateMode(data) {
+	case AdminGameSettingsUpdateModeClassic:
+		*s = AdminGameSettingsUpdateModeClassic
+		return nil
+	case AdminGameSettingsUpdateModeBlitz:
+		*s = AdminGameSettingsUpdateModeBlitz
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type AdminLoginBadRequest ApiError
 
 func (*AdminLoginBadRequest) adminLoginRes() {
@@ -976,6 +1284,8 @@ func (s *ApiError) SetError(val string) {
 
 func (*ApiError) adminLogoutRes() {
 }
+func (*ApiError) getAdminGameSettingsRes() {
+}
 func (*ApiError) getAdminSessionStatusRes() {
 }
 func (*ApiError) getAdminTasksRes() {
@@ -1372,6 +1682,36 @@ func (s *CtftimeStanding) SetTeam(val string) {
 // SetScore sets the value of Score.
 func (s *CtftimeStanding) SetScore(val float64) {
 	s.Score = val
+}
+
+type DeactivateAdminTasksBadRequest ApiError
+
+func (*DeactivateAdminTasksBadRequest) deactivateAdminTasksRes() {
+}
+
+type DeactivateAdminTasksForbidden ApiError
+
+func (*DeactivateAdminTasksForbidden) deactivateAdminTasksRes() {
+}
+
+type DeactivateAdminTasksNotFound ApiError
+
+func (*DeactivateAdminTasksNotFound) deactivateAdminTasksRes() {
+}
+
+type DeactivateAdminTeamsBadRequest ApiError
+
+func (*DeactivateAdminTeamsBadRequest) deactivateAdminTeamsRes() {
+}
+
+type DeactivateAdminTeamsForbidden ApiError
+
+func (*DeactivateAdminTeamsForbidden) deactivateAdminTeamsRes() {
+}
+
+type DeactivateAdminTeamsNotFound ApiError
+
+func (*DeactivateAdminTeamsNotFound) deactivateAdminTeamsRes() {
 }
 
 type DeleteAdminTaskForbidden ApiError
@@ -3787,6 +4127,21 @@ func (s *TeamToken) SetRoles(val []string) {
 }
 
 type UUID uuid.UUID
+
+type UpdateAdminGameSettingsBadRequest ApiError
+
+func (*UpdateAdminGameSettingsBadRequest) updateAdminGameSettingsRes() {
+}
+
+type UpdateAdminGameSettingsConflict ApiError
+
+func (*UpdateAdminGameSettingsConflict) updateAdminGameSettingsRes() {
+}
+
+type UpdateAdminGameSettingsForbidden ApiError
+
+func (*UpdateAdminGameSettingsForbidden) updateAdminGameSettingsRes() {
+}
 
 type UpdateAdminTaskBadRequest ApiError
 

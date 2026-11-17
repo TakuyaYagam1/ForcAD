@@ -15,6 +15,24 @@ type UnimplementedHandler struct{}
 var _ Handler = UnimplementedHandler{}
 var _ RawHandler = UnimplementedHandler{}
 
+// ActivateAdminTasks implements activateAdminTasks operation.
+//
+// All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+//
+// POST /api/v1/admin/tasks/activate/
+func (UnimplementedHandler) ActivateAdminTasks(ctx context.Context, req *AdminBulkActivateRequest) (r ActivateAdminTasksRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ActivateAdminTeams implements activateAdminTeams operation.
+//
+// All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+//
+// POST /api/v1/admin/teams/activate/
+func (UnimplementedHandler) ActivateAdminTeams(ctx context.Context, req *AdminBulkActivateRequest) (r ActivateAdminTeamsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AdminLogin implements adminLogin operation.
 //
 // Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
@@ -79,6 +97,24 @@ func (UnimplementedHandler) CreateAdminTeamTask(ctx context.Context) (r CreateAd
 	return r, ht.ErrNotImplemented
 }
 
+// DeactivateAdminTasks implements deactivateAdminTasks operation.
+//
+// All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+//
+// POST /api/v1/admin/tasks/deactivate/
+func (UnimplementedHandler) DeactivateAdminTasks(ctx context.Context, req *AdminBulkDeactivateRequest) (r DeactivateAdminTasksRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// DeactivateAdminTeams implements deactivateAdminTeams operation.
+//
+// All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+//
+// POST /api/v1/admin/teams/deactivate/
+func (UnimplementedHandler) DeactivateAdminTeams(ctx context.Context, req *AdminBulkDeactivateRequest) (r DeactivateAdminTeamsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // DeleteAdminTask implements deleteAdminTask operation.
 //
 // Deactivate a task.
@@ -103,6 +139,15 @@ func (UnimplementedHandler) DeleteAdminTeam(ctx context.Context, params DeleteAd
 //
 // DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 func (UnimplementedHandler) DeleteAdminTeamTask(ctx context.Context, params DeleteAdminTeamTaskParams) (r DeleteAdminTeamTaskRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// GetAdminGameSettings implements getAdminGameSettings operation.
+//
+// Read editable game settings and current lifecycle.
+//
+// GET /api/v1/admin/game/config/
+func (UnimplementedHandler) GetAdminGameSettings(ctx context.Context) (r GetAdminGameSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -339,6 +384,16 @@ func (UnimplementedHandler) OpenEventStream(ctx context.Context) (r *OpenEventSt
 //
 // PUT /flags/
 func (UnimplementedHandler) SubmitFlags(ctx context.Context, req []string) (r SubmitFlagsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// UpdateAdminGameSettings implements updateAdminGameSettings operation.
+//
+// Only the round limit may change once a game has started. Other settings require a waiting game that
+// has never started. The supplied generation must match the locked session.
+//
+// PUT /api/v1/admin/game/config/
+func (UnimplementedHandler) UpdateAdminGameSettings(ctx context.Context, req *AdminGameSettingsUpdate) (r UpdateAdminGameSettingsRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

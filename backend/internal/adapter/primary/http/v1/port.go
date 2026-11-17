@@ -25,10 +25,15 @@ type GameService interface {
 	Standings(ctx context.Context) ([]usecase.Standing, error)
 	AttackData(ctx context.Context, service *string) (map[string]map[string][]string, error)
 	ChangeState(ctx context.Context, action string, generation *int64) error
+	UpdateGameSettings(ctx context.Context, input domain.GameSettingsUpdate) (domain.Lifecycle, error)
 	SaveTeam(ctx context.Context, team domain.Team, create bool) (domain.Team, error)
 	SaveTask(ctx context.Context, task domain.Task, create bool) (domain.Task, error)
 	DeleteTeam(ctx context.Context, teamID uuid.UUID) error
 	DeleteTask(ctx context.Context, taskID uuid.UUID) error
+	DeactivateTeams(ctx context.Context, ids []uuid.UUID) (int32, error)
+	DeactivateTasks(ctx context.Context, ids []uuid.UUID) (int32, error)
+	ActivateTeams(ctx context.Context, ids []uuid.UUID) (int32, error)
+	ActivateTasks(ctx context.Context, ids []uuid.UUID) (int32, error)
 }
 
 type AuthService interface {

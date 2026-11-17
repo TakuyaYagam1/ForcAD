@@ -9,6 +9,18 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// ActivateAdminTasks implements activateAdminTasks operation.
+	//
+	// All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+	//
+	// POST /api/v1/admin/tasks/activate/
+	ActivateAdminTasks(ctx context.Context, req *AdminBulkActivateRequest) (ActivateAdminTasksRes, error)
+	// ActivateAdminTeams implements activateAdminTeams operation.
+	//
+	// All IDs must exist; active IDs are accepted and not counted. Maximum 100 unique IDs per request.
+	//
+	// POST /api/v1/admin/teams/activate/
+	ActivateAdminTeams(ctx context.Context, req *AdminBulkActivateRequest) (ActivateAdminTeamsRes, error)
 	// AdminLogin implements adminLogin operation.
 	//
 	// Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects
@@ -52,6 +64,18 @@ type Handler interface {
 	//
 	// POST /api/v1/admin/teamtasks/
 	CreateAdminTeamTask(ctx context.Context) (CreateAdminTeamTaskRes, error)
+	// DeactivateAdminTasks implements deactivateAdminTasks operation.
+	//
+	// All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+	//
+	// POST /api/v1/admin/tasks/deactivate/
+	DeactivateAdminTasks(ctx context.Context, req *AdminBulkDeactivateRequest) (DeactivateAdminTasksRes, error)
+	// DeactivateAdminTeams implements deactivateAdminTeams operation.
+	//
+	// All IDs must exist; inactive IDs are accepted and not counted. Maximum 100 unique IDs per request.
+	//
+	// POST /api/v1/admin/teams/deactivate/
+	DeactivateAdminTeams(ctx context.Context, req *AdminBulkDeactivateRequest) (DeactivateAdminTeamsRes, error)
 	// DeleteAdminTask implements deleteAdminTask operation.
 	//
 	// Deactivate a task.
@@ -70,6 +94,12 @@ type Handler interface {
 	//
 	// DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 	DeleteAdminTeamTask(ctx context.Context, params DeleteAdminTeamTaskParams) (DeleteAdminTeamTaskRes, error)
+	// GetAdminGameSettings implements getAdminGameSettings operation.
+	//
+	// Read editable game settings and current lifecycle.
+	//
+	// GET /api/v1/admin/game/config/
+	GetAdminGameSettings(ctx context.Context) (GetAdminGameSettingsRes, error)
 	// GetAdminHealth implements getAdminHealth operation.
 	//
 	// Check the administration API service.
@@ -216,6 +246,13 @@ type Handler interface {
 	//
 	// PUT /flags/
 	SubmitFlags(ctx context.Context, req []string) (SubmitFlagsRes, error)
+	// UpdateAdminGameSettings implements updateAdminGameSettings operation.
+	//
+	// Only the round limit may change once a game has started. Other settings require a waiting game that
+	// has never started. The supplied generation must match the locked session.
+	//
+	// PUT /api/v1/admin/game/config/
+	UpdateAdminGameSettings(ctx context.Context, req *AdminGameSettingsUpdate) (UpdateAdminGameSettingsRes, error)
 	// UpdateAdminTask implements updateAdminTask operation.
 	//
 	// Replace a task's editable fields.

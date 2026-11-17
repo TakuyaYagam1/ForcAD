@@ -501,6 +501,9 @@ func (g *GameStore) ChangeState(
 ) error {
 	const location = "postgres.GameStore.ChangeState"
 	err := g.transaction(ctx, func(q *sqlc.Queries) error {
+		if _, err := q.LockSessionForUpdate(ctx); err != nil {
+			return fmt.Errorf("%s - lock session for state change: %w", location, err)
+		}
 		life, err := readLifecycle(ctx, q, false)
 		if err != nil {
 			return fmt.Errorf("%s - load current game state: %w", location, err)

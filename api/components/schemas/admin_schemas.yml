@@ -279,6 +279,124 @@ schemas:
         type:
         - string
         - 'null'
+  AdminBulkActivateRequest:
+    type: object
+    additionalProperties: false
+    required:
+    - ids
+    properties:
+      ids:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items:
+          "$ref": "#/schemas/Uuid"
+  AdminBulkActivateResult:
+    type: object
+    additionalProperties: false
+    required:
+    - activated
+    properties:
+      activated:
+        type: integer
+        format: int32
+        minimum: 0
+  AdminBulkDeactivateRequest:
+    type: object
+    additionalProperties: false
+    required:
+    - ids
+    properties:
+      ids:
+        type: array
+        minItems: 1
+        maxItems: 100
+        uniqueItems: true
+        items:
+          "$ref": "#/schemas/Uuid"
+  AdminBulkDeactivateResult:
+    type: object
+    additionalProperties: false
+    required:
+    - deactivated
+    properties:
+      deactivated:
+        type: integer
+        format: int32
+        minimum: 0
+  AdminGameSettings:
+    type: object
+    additionalProperties: false
+    required:
+    - config
+    - runtime
+    - extra_checks
+    properties:
+      config:
+        "$ref": "#/schemas/GameConfig"
+      runtime:
+        "$ref": "#/schemas/GameRuntimeStatus"
+      extra_checks:
+        type: integer
+        format: int32
+  AdminGameSettingsUpdate:
+    type: object
+    additionalProperties: false
+    required:
+    - generation
+    - rounds
+    - flag_lifetime
+    - game_hardness
+    - inflation
+    - volga_attacks_mode
+    - round_time
+    - extra_checks
+    - mode
+    - timezone
+    - start_time
+    properties:
+      generation:
+        type: integer
+        format: int64
+      rounds:
+        type:
+        - integer
+        - 'null'
+        format: int32
+        minimum: 1
+      flag_lifetime:
+        type: integer
+        format: int32
+        minimum: 1
+      game_hardness:
+        type: number
+        minimum: 1
+      inflation:
+        type: boolean
+      volga_attacks_mode:
+        type: boolean
+      round_time:
+        type: integer
+        format: int32
+        minimum: 1
+      extra_checks:
+        type: integer
+        format: int32
+        minimum: 0
+        maximum: 8
+      mode:
+        type: string
+        enum:
+        - classic
+        - blitz
+      timezone:
+        type: string
+        minLength: 1
+        maxLength: 128
+      start_time:
+        type: string
+        format: date-time
   GameActionRequest:
     type: object
     additionalProperties: true

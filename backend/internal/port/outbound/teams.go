@@ -17,4 +17,6 @@ type TeamCatalogRepository interface {
 	CreateTeam(ctx context.Context, team domain.Team) (domain.Team, error)
 	UpdateTeam(ctx context.Context, team domain.Team) (domain.Team, error)
 	DeactivateTeam(ctx context.Context, teamID uuid.UUID) error
+	DeactivateTeams(ctx context.Context, teamIDs []uuid.UUID) (int32, error)
+	ActivateTeams(ctx context.Context, teamIDs []uuid.UUID) (int32, error)
 }

@@ -6,6 +6,14 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './activateAdminTasksBody.zod';
+export * from './activateAdminTeamsBody.zod';
+export * from './adminBulkActivateRequest.zod';
+export * from './adminBulkActivateResult.zod';
+export * from './adminBulkDeactivateRequest.zod';
+export * from './adminBulkDeactivateResult.zod';
+export * from './adminGameSettings.zod';
+export * from './adminGameSettingsUpdate.zod';
 export * from './adminLoginBody.zod';
 export * from './adminLoginRequest.zod';
 export * from './adminSession.zod';
@@ -20,9 +28,12 @@ export * from './changeAdminGameStateBody.zod';
 export * from './createAdminEventBody.zod';
 export * from './createAdminTaskBody.zod';
 export * from './createAdminTeamBody.zod';
+export * from './deactivateAdminTasksBody.zod';
+export * from './deactivateAdminTeamsBody.zod';
 export * from './deleteAdminTask200.zod';
 export * from './deleteAdminTeam200.zod';
 export * from './gameActionRequest.zod';
 export * from './getAdminTeamTaskHistoryParams.zod';
+export * from './updateAdminGameSettingsBody.zod';
 export * from './updateAdminTaskBody.zod';
 export * from './updateAdminTeamBody.zod';

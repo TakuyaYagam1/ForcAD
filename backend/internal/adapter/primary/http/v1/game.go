@@ -32,6 +32,24 @@ func (h *gameHandler) ChangeAdminGameState(ctx context.Context, req api.OptGameA
 	return response.RuntimeStatus(runtime), nil
 }
 
+func (h *gameHandler) GetAdminGameSettings(ctx context.Context) (api.GetAdminGameSettingsRes, error) {
+	const location = "httpv1.gameHandler.GetAdminGameSettings"
+	life, err := h.game.Lifecycle(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%s - read game settings: %w", location, err)
+	}
+	return response.AdminGameSettings(life), nil
+}
+
+func (h *gameHandler) UpdateAdminGameSettings(ctx context.Context, req *api.AdminGameSettingsUpdate) (api.UpdateAdminGameSettingsRes, error) {
+	const location = "httpv1.gameHandler.UpdateAdminGameSettings"
+	life, err := h.game.UpdateGameSettings(ctx, request.GameSettings(req))
+	if err != nil {
+		return nil, fmt.Errorf("%s - update game settings: %w", location, err)
+	}
+	return response.AdminGameSettings(life), nil
+}
+
 func (h *gameHandler) GetClientConfig(ctx context.Context) (*api.GameConfig, error) {
 	const location = "httpv1.gameHandler.GetClientConfig"
 	life, err := h.game.Lifecycle(ctx)
