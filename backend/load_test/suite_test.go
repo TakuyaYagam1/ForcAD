@@ -82,6 +82,9 @@ func runSuite(
 	if err := d.start(ctx); err != nil {
 		return err
 	}
+	if err := checkSingleIPRateLimit(ctx, d.origin, ingress, logf); err != nil {
+		return err
+	}
 	flags := &catalog{}
 	// Keep startup diagnostics too: the first round can exhaust capacity before
 	// the flag catalog is ready and before the measured request stages begin.
