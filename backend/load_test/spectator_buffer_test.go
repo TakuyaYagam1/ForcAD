@@ -175,6 +175,9 @@ func TestSpectatorBufferedPartialMessageStopsOnCancellation(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal("partial message was not written")
 	}
+	waitForObserver(ctx, t, func() bool {
+		return o.connections.Load() == 1
+	})
 	stopped := make(chan streamReport, 1)
 	go func() {
 		report, _ := o.stop()
