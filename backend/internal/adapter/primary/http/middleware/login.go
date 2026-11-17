@@ -18,11 +18,11 @@ type RateLimiter interface {
 	) (bool, error)
 }
 
-func LoginLimit(limiter RateLimiter, trusted []*net.IPNet, onError api.ErrorHandler) func(http.Handler) http.Handler {
+func LoginLimit(limiter RateLimiter, trusted []*net.IPNet, onError api.ErrorHandler, limitedAtProxy bool) func(http.Handler) http.Handler {
 	const location = "middleware.LoginLimit"
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/api/v1/admin/login/" && r.Method == http.MethodPost {
+			if r.URL.Path == "/api/v1/admin/login/" && r.Method == http.MethodPost && !limitedAtProxy {
 				ip := httputil.GetClientIPWithNets(r, trusted)
 				ok, err := limiter.Allow(r.Context(), "login:"+ip, 1, 1, 5)
 				if err != nil {
