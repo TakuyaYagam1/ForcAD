@@ -14,6 +14,11 @@ function verticalChrome(element: HTMLElement): number {
   );
 }
 
+function bottomChrome(element: HTMLElement): number {
+  const style = window.getComputedStyle(element);
+  return pixels(style.paddingBottom) + pixels(style.borderBottomWidth);
+}
+
 function outerHeight(element: HTMLElement): number {
   const style = window.getComputedStyle(element);
   if (style.display === "none") {
@@ -91,10 +96,9 @@ export function useScoreboardViewport(
 
       const available =
         window.innerHeight -
-        offset -
-        outerHeight(header) -
-        verticalChrome(shell) -
-        verticalChrome(main) -
+        (page.getBoundingClientRect().top + window.scrollY) -
+        bottomChrome(shell) -
+        bottomChrome(main) -
         verticalChrome(page) -
         fixedHeight -
         (reveal ? verticalChrome(reveal) : 0) -

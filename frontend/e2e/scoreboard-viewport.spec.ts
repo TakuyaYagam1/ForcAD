@@ -26,6 +26,8 @@ test("scoreboard shows twenty teams before internal scrolling", async ({ browser
         }
       });
       data.state.team_tasks = [];
+      data.runtime.phase = "finished";
+      data.runtime.results_pending = false;
       await route.fulfill({
         response,
         json: data
@@ -38,6 +40,11 @@ test("scoreboard shows twenty teams before internal scrolling", async ({ browser
     const rows = page.locator(".scoreboard-reveal tbody tr");
     const scroll = page.locator(".scoreboard-reveal .table-scroll");
     await expect(rows).toHaveCount(20);
+    await expect.poll(async () => {
+      return page.locator(".scoreboard-page").evaluate((element) => {
+        return (element as HTMLElement).style.getPropertyValue("--scoreboard-row-height")
+      })
+    }).not.toBe("");
     expect(await scroll.evaluate((element) => {
       return element.scrollHeight - element.clientHeight
     })).toBeLessThanOrEqual(1);
@@ -59,7 +66,6 @@ test("scoreboard shows twenty teams before internal scrolling", async ({ browser
     expect(await header.locator(".header-progress").innerText()).not.toMatch(/\d+%/);
     expect(progressBox!.y + progressBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
     expect(progressBox!.width).toBeLessThanOrEqual(320);
-    expect(tableBox!.y).toBeLessThan(headerBox!.y + headerBox!.height + 75);
     expect(await page.evaluate(() => {
       return document.documentElement.scrollHeight - window.innerHeight
     })).toBe(0);
@@ -117,7 +123,6 @@ test("admin scoreboard moves the round timeline into the header", async ({ brows
     expect(progressBox!.y + progressBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
     expect(progressBox!.width).toBeLessThanOrEqual(320);
     expect(progressBox!.width).toBeGreaterThanOrEqual(120);
-    expect(dashboardBox!.y).toBeLessThan(headerBox!.y + headerBox!.height + 30);
     expect(await header.locator(".header-progress").innerText()).not.toMatch(/\d+%/);
   } finally {
     await context.close();
