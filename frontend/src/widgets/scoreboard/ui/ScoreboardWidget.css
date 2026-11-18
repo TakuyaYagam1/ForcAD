@@ -345,10 +345,6 @@
     min-height: 82px;
   }
 
-  .scoreboard-page--compact .service-state {
-    font-size: 13px;
-  }
-
   .scoreboard-page--compact .service-metric {
     font-size: 17px;
   }
@@ -504,7 +500,7 @@
   }
 
   .scoreboard-page--compact.scoreboard-page--dense .service-metrics {
-    grid-template-columns: minmax(0, 0.65fr) minmax(0, 0.95fr) minmax(0, 1.8fr);
+    grid-template-columns: 2.75rem minmax(0, 1fr) max-content;
     gap: 3px;
   }
 
@@ -526,18 +522,27 @@
     font-size: clamp(11px, calc(var(--scoreboard-row-height) * 0.34), 15px);
     text-overflow: ellipsis;
   }
+}
 
-  .scoreboard-page--compact.scoreboard-page--dense .service-state {
-    position: absolute;
-    top: 2px;
-    left: 5px;
-    font-size: 9px;
+@container (max-width: 225px) {
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metrics {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 
-  .scoreboard-page--compact.scoreboard-page--dense
-    .service-cell:not(.service-cell--active)
-    .service-metric--sla > span {
-    visibility: hidden;
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric,
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric:last-child {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 3px;
+  }
+
+  .scoreboard-page--compact.scoreboard-page--dense .service-cell .service-metric strong {
+    max-width: none;
+    overflow: visible;
+    font-size: clamp(10px, calc(var(--scoreboard-row-height) * 0.28), 14px);
+    text-overflow: clip;
   }
 }
 

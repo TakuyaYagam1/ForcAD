@@ -56,9 +56,6 @@ export function ServiceCell({
         description: meta?.description ?? t("service.waitingData"),
       })}
     >
-      {!meta && (
-        <span className="service-state">{t("service.noDataShort")}</span>
-      )}
       <span className="service-metrics">
         <span className="service-metric service-metric--sla">
           <span>SLA</span>

@@ -73,7 +73,7 @@ export function ScoreboardWidget({
       className={
         admin
           ? "scoreboard-page scoreboard-page--admin"
-          : `scoreboard-page scoreboard-page--compact${teams.length > 10 ? " scoreboard-page--dense" : ""}`
+          : `scoreboard-page scoreboard-page--compact${teams.length >= 10 ? " scoreboard-page--dense" : ""}`
       }
     >
       {!admin && <h1 className="sr-only">{t("scoreboard.title")}</h1>}

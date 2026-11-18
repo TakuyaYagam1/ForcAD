@@ -705,14 +705,6 @@
   outline: 2px solid var(--brand-primary);
   outline-offset: 3px;
 }
-.service-state {
-  display: block;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-  white-space: nowrap;
-}
 .service-metrics {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) minmax(0, 1.5fr);
@@ -734,6 +726,9 @@
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.03em;
+}
+.service-cell:not(.service-cell--active) .service-metric > span {
+  color: var(--soft);
 }
 .service-metric strong {
   overflow: hidden;
