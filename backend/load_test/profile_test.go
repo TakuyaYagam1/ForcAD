@@ -19,12 +19,12 @@ var teamCount = defaultTeamCount
 
 func checkerAuditEnabled(profile string) bool {
 	return profile == "checker" ||
-		os.Getenv("LOAD_CAPACITY") == "chrp-final" ||
+		os.Getenv("LOAD_CAPACITY") == "pr-final" ||
 		os.Getenv("LOAD_CHECKER_AUDIT") == "1"
 }
 
 func clientBucketsEnabled() bool {
-	return os.Getenv("LOAD_CAPACITY") == "chrp-final" ||
+	return os.Getenv("LOAD_CAPACITY") == "pr-final" ||
 		os.Getenv("LOAD_CLIENT_BUCKETS") == "1"
 }
 

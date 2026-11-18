@@ -26,7 +26,7 @@ func TestSpectatorCount(t *testing.T) {
 }
 
 func TestFinalReadTargetCyclesClientBuckets(t *testing.T) {
-	t.Setenv("LOAD_CAPACITY", "chrp-final")
+	t.Setenv("LOAD_CAPACITY", "pr-final")
 	t.Setenv("LOAD_CLIENT_BUCKETS", "0")
 	t.Setenv("LOAD_SPECTATORS", "2")
 	assertReadTargetCyclesClientBuckets(t)
@@ -79,7 +79,7 @@ func TestCheckerAuditEnabled(t *testing.T) {
 		{"ordinary explicit off", "load", "0", "", false},
 		{"explicit audit", "load", "1", "", true},
 		{"soak audit", "soak", "1", "", true},
-		{"final capacity", "load", "0", "chrp-final", true},
+		{"final capacity", "load", "0", "pr-final", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv("LOAD_CHECKER_AUDIT", tc.audit)

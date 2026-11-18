@@ -97,7 +97,7 @@ measurements remain explicit limitations. These checks do not change workload or
 
 Set `LOAD_SPECTATORS` to choose the number of WebSocket observers independently
 of the team count. `LOAD_CHECKER_AUDIT=1` enables round and workflow auditing for
-any load profile; the `checker` profile and `LOAD_CAPACITY=chrp-final` always
+any load profile; the `checker` profile and `LOAD_CAPACITY=pr-final` always
 enable it.
 
 `make -C backend test-load` enables `LOAD_CLIENT_BUCKETS=1` by default: the isolated

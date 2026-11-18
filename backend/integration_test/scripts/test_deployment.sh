@@ -44,8 +44,8 @@ if (( run_load )); then
         *) echo 'LOAD_MONITORING must be 0 or 1.' >&2; exit 2 ;;
     esac
     case "${LOAD_CAPACITY:-}" in
-        ''|chrp-final) ;;
-        *) echo 'LOAD_CAPACITY must be chrp-final or empty.' >&2; exit 2 ;;
+        ''|pr-final) ;;
+        *) echo 'LOAD_CAPACITY must be pr-final or empty.' >&2; exit 2 ;;
     esac
     case "${LOAD_CLIENT_BUCKETS:-0}" in
         0|1) ;;
@@ -177,7 +177,7 @@ compose=(docker compose --env-file "$compose_env" --project-name "$test_project"
 image_tags=("$image_prefix-runtime" "$image_prefix-worker" "$image_prefix-nginx" "$image_prefix-postgres" "$image_prefix-pgbouncer" "$image_prefix-nats")
 if (( run_load )); then
     compose+=(-f "$repo_root/backend/load_test/compose.yml")
-    if [[ "${LOAD_CAPACITY:-}" == chrp-final ]]; then
+    if [[ "${LOAD_CAPACITY:-}" == pr-final ]]; then
         compose+=(-f "$repo_root/backend/load_test/compose.final.yml")
     fi
     if [[ "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
@@ -277,14 +277,14 @@ unset COMPOSE_PROFILES COMPOSE_ENV_FILES COMPOSE_FILE COMPOSE_PROJECT_NAME COMPO
 
 # PgBouncer's client admission budget must describe the same replica counts as
 # the explicit --scale arguments below, including the checker load profile.
-if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == chrp-final ]]; then
+if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == pr-final ]]; then
     install -m 0600 "$repo_root/deployment/final/limits.env.example" "$compose_env"
     while IFS='=' read -r key _; do
         [[ "$key" =~ ^[A-Z][A-Z0-9_]*$ ]] || continue
         unset "$key"
     done < "$compose_env"
 fi
-if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == chrp-final || "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
+if (( run_load )) && [[ "${LOAD_CAPACITY:-}" == pr-final || "${LOAD_CLIENT_BUCKETS:-0}" == 1 ]]; then
     install -d -m 0755 "$test_root/deployment/nginx"
     python3 - "$repo_root" "$test_root" <<'PY'
 from pathlib import Path

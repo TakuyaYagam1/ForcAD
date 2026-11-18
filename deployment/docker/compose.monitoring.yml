@@ -21,10 +21,10 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=${FORCAD_PROMETHEUS_RETENTION_TIME:-15d}
-      - --storage.tsdb.retention.size=${FORCAD_PROMETHEUS_RETENTION_SIZE:-4GB}
-      - --query.max-concurrency=${FORCAD_PROMETHEUS_QUERY_CONCURRENCY:-20}
-      - --query.max-samples=${FORCAD_PROMETHEUS_QUERY_SAMPLES:-50000000}
+      - --storage.tsdb.retention.time=${FORCAD_PROMETHEUS_RETENTION_TIME:-3d}
+      - --storage.tsdb.retention.size=${FORCAD_PROMETHEUS_RETENTION_SIZE:-2GB}
+      - --query.max-concurrency=${FORCAD_PROMETHEUS_QUERY_CONCURRENCY:-4}
+      - --query.max-samples=${FORCAD_PROMETHEUS_QUERY_SAMPLES:-1000000}
     ports:
       - "127.0.0.1:${FORCAD_PROMETHEUS_PORT-9090}:9090"
     volumes:
@@ -38,8 +38,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
-    mem_reservation: "${FORCAD_PROMETHEUS_MEMORY_RESERVATION:-1g}"
-    mem_limit: "${FORCAD_PROMETHEUS_MEMORY:-0}"
+    mem_reservation: "${FORCAD_PROMETHEUS_MEMORY_RESERVATION:-512m}"
+    mem_limit: "${FORCAD_PROMETHEUS_MEMORY:-1g}"
     logging:
       driver: local
       options: {max-size: "10m", max-file: "3"}
@@ -75,8 +75,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
-    mem_reservation: "${FORCAD_GRAFANA_MEMORY_RESERVATION:-1g}"
-    mem_limit: "${FORCAD_GRAFANA_MEMORY:-0}"
+    mem_reservation: "${FORCAD_GRAFANA_MEMORY_RESERVATION:-256m}"
+    mem_limit: "${FORCAD_GRAFANA_MEMORY:-512m}"
     logging:
       driver: local
       options: {max-size: "10m", max-file: "3"}
@@ -103,6 +103,8 @@ services:
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     pids_limit: 64
+    mem_reservation: "${FORCAD_CHECKER_DB_ACCESS_MEMORY_RESERVATION:-64m}"
+    mem_limit: "${FORCAD_CHECKER_DB_ACCESS_MEMORY:-256m}"
     depends_on:
       postgres:
         condition: service_healthy

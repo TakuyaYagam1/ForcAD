@@ -46,7 +46,7 @@ func openDeployment() (*deployment, error) {
 			"-f", filepath.Join(repo, "deployment/docker/compose.e2e.yml"),
 			"-f", filepath.Join(repo, "backend/load_test/compose.yml")},
 	}
-	if os.Getenv("LOAD_CAPACITY") == "chrp-final" {
+	if os.Getenv("LOAD_CAPACITY") == "pr-final" {
 		d.compose = append(d.compose, "-f", filepath.Join(repo, "backend/load_test/compose.final.yml"))
 	} else if clientBucketsEnabled() {
 		d.compose = append(d.compose, "-f", filepath.Join(repo, "backend/load_test/compose.clients.yml"))

@@ -310,9 +310,9 @@ def load_config(path):
     env = config["env"]
     if not isinstance(env["capacity"], str) or env["capacity"] not in {
         "default",
-        "chrp-final",
+        "pr-final",
     }:
-        raise ValueError("env.capacity must be default or chrp-final")
+        raise ValueError("env.capacity must be default or pr-final")
     for field in (
         "public_host",
         "brand_name",
@@ -792,9 +792,6 @@ def game_metrics(config):
         INTERFACE=config["router"]["vpn_interface"],
         FILTER=capture_filter,
     )
-    if config["env"]["capacity"] == "chrp-final":
-        service = service.replace("MemoryMax=1G", "MemoryHigh=4G\nMemoryMax=infinity")
-        service = service.replace("CPUQuota=100%", "CPUWeight=10")
     return {
         "router/game-metrics.zeek": (ROOT / "router/game-metrics.zeek").read_text(),
         "router/game-inventory.zeek": (
@@ -860,7 +857,7 @@ def forcad_environment(config):
         "VITE_BRAND_ACCENT": env["brand_accent"],
     }
     result = "".join(f'{key}="{value}"\n' for key, value in values.items())
-    if env["capacity"] == "chrp-final":
+    if env["capacity"] == "pr-final":
         result += (ROOT.parent / "deployment/final/limits.env.example").read_text()
     return result
 
