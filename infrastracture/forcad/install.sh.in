@@ -31,6 +31,7 @@ if [[ $# -ne 0 ]]; then
     echo "Usage: bash install.sh" >&2
     exit 2
 fi
+export COMPOSE_PROJECT_NAME=@@COMPOSE_PROJECT_NAME@@
 if [[ -e "$target" || -L "$target" ]]; then
     echo "Refusing to overwrite existing path: $target" >&2
     exit 1
@@ -112,7 +113,9 @@ install_dependencies() {
     fi
     systemctl enable --now docker
 
-    if [[ -n "$(docker ps -aq --filter label=com.docker.compose.project=forcad)" || -n "$(docker volume ls -q --filter label=com.docker.compose.project=forcad)" ]]; then
+    if [[ -n "$(docker ps -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ||
+          -n "$(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ||
+          -n "$(docker network ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")" ]]; then
         echo "Docker already has a ForcAD project or volume; refusing to reuse it." >&2
         exit 1
     fi
@@ -182,7 +185,7 @@ rollback() {
         if [[ "$created" == true && -f "$target/control.sh" ]]; then
             run_control_down || true
             mapfile -t project_volumes < <(
-                docker volume ls -q --filter label=com.docker.compose.project=forcad
+                docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME"
             )
             if ((${#project_volumes[@]})); then
                 docker volume rm "${project_volumes[@]}" || true

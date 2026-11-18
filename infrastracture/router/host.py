@@ -72,8 +72,8 @@ class Bundle(BundleBase):
         else:
             self.copy("active.nft", f"{base}/active.nft")
         if network_metrics:
-            for name in ("network.json", "network.nft"):
-                self.copy(name, f"/etc/forcad/monitoring/{name}")
+            self.copy("network.json", "/etc/forcad/monitoring/network.json", 0o644)
+            self.copy("network.nft", "/etc/forcad/monitoring/network.nft")
             json.loads((self.directory / "network.json").read_text())
             self.copy("forcad", "/usr/local/bin/forcad", 0o755)
             for name in ("network-rules.service", "network-metrics.service"):

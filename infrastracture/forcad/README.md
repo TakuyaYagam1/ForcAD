@@ -10,6 +10,9 @@ The install path must be unused, and Docker must not contain an existing ForcAD
 project or volumes. This installer creates a new game; it does not update an
 existing deployment.
 
+For PR, the rendered Compose project is `forcad-pr-final`; install, test and
+uninstall use that identity for container and volume ownership.
+
 ## Install and test
 
 The top-level `install.sh` takes no options. It installs prerequisites, clones

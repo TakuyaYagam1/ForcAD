@@ -15,6 +15,30 @@ from forcad import host as forcad_host
 from hostlib import base as host_base
 
 
+class RouterMetricPermissionsTests(unittest.TestCase):
+    def test_inventory_is_readable_without_dac_capabilities(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            bundle = Path(scratch) / "bundle"
+            bundle.mkdir()
+            for name in (
+                "sysctl.conf", "forcad-router-firewall.service", "networking.conf",
+                "common.nft", "game.nft", "pre-game.nft", "active.nft",
+                "network-rules.service", "network-metrics.service",
+            ):
+                (bundle / name).write_text("")
+            (bundle / "network.json").write_text('{"teams":[]}')
+            (bundle / "network.nft").write_text("")
+            (bundle / "host.json").write_text('{"role":"router"}')
+            (bundle / "forcad").write_bytes(b"exporter")
+            installer = source_bundle("router", bundle, Path(scratch) / "host")
+            installer.plan_role(None, None, True, False)
+            inventory = installer.changes[installer.path("/etc/forcad/monitoring/network.json")]
+            rules = installer.changes[installer.path("/etc/forcad/monitoring/network.nft")]
+            self.assertEqual(inventory[1], 0o644)
+            self.assertEqual(rules[1], 0o600)
+            self.assertEqual(json.loads(inventory[0]), {"teams": []})
+
+
 class HostTests(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory()
