@@ -653,6 +653,49 @@ class RenderTests(unittest.TestCase):
             self.assertFalse(output.exists())
             self.assertEqual(archive.read_bytes(), b"existing archive\n")
 
+    def test_extending_admins_preserves_existing_wireguard_peers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "runtime"
+            original_settings = (ROOT / "settings.example.toml").read_text()
+            original = Path(directory) / "old.toml"
+            updated = Path(directory) / "new.toml"
+            original.write_text(original_settings)
+            updated.write_text(original_settings.replace("admins = 1", "admins = 10"))
+            old_config = render.load_config(original)
+            files = render.render(old_config)
+            files["settings.toml"] = original_settings
+            render.write_bundle(output, files)
+            render.generate_wireguard(old_config, output)
+            attack = (output / "vpn/server/wg-attack.conf").read_bytes()
+            existing_admin = (output / "wireguard/admins/admin-01.conf").read_bytes()
+            existing_server = (output / "vpn/server/wg-admin.conf").read_bytes()
+
+            render.extend_admins(render.load_config(updated), updated, output)
+
+            self.assertEqual((output / "vpn/server/wg-attack.conf").read_bytes(), attack)
+            self.assertEqual(
+                (output / "wireguard/admins/admin-01.conf").read_bytes(),
+                existing_admin,
+            )
+            self.assertTrue(
+                (output / "vpn/server/wg-admin.conf")
+                .read_bytes()
+                .startswith(existing_server)
+            )
+            self.assertEqual(
+                (output / "vpn/server/wg-admin.conf").read_bytes(),
+                (output / "wireguard/server/wg-admin.conf").read_bytes(),
+            )
+            self.assertEqual(
+                len(list((output / "wireguard/admins").glob("*.conf"))), 10
+            )
+            self.assertEqual(
+                (output / "vpn/host.json").read_text(),
+                render.render(render.load_config(updated))["vpn/host.json"],
+            )
+            with self.assertRaisesRegex(ValueError, "increase"):
+                render.extend_admins(render.load_config(updated), updated, output)
+
     def test_render_cli_writes_three_archives(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "runtime"

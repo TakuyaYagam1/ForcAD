@@ -89,7 +89,7 @@ def merge_teams(document, expected):
         if not isinstance(cidrs, list):
             raise TypeError("traffic_cidrs must be a list")
         for cidr in (team["ip"] + "/32", wanted[team["ip"]]["vpn_cidr"]):
-            if cidr not in cidrs:
+            if cidr is not None and cidr not in cidrs:
                 cidrs.append(cidr)
     networks = []
     for team in current:

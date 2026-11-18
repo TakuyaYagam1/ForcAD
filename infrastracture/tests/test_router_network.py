@@ -342,6 +342,17 @@ class RouterNetworkTests(unittest.TestCase):
             any(args[:3] == ["ip", "link", "add"] for args, _ in self.commands.commands)
         )
 
+    def test_preflight_accepts_installer_ipv6_auto_on_managed_wan(self):
+        current = self.root / "etc/network/interfaces"
+        current.write_text(current.read_text() + "iface wan0 inet6 auto\n")
+        self._preflight()
+
+    def test_preflight_rejects_installer_ipv6_auto_on_unmanaged_interface(self):
+        current = self.root / "etc/network/interfaces"
+        current.write_text(current.read_text() + "iface rogue0 inet6 auto\n")
+        with self.assertRaisesRegex(ValueError, "managed"):
+            self._preflight()
+
     def test_preflight_rejects_global_ipv6(self):
         self.commands.ipv6_global = True
         self.commands.ipv6[1]["addr_info"].append(
