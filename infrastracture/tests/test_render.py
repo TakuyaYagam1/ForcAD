@@ -51,6 +51,79 @@ class RenderTests(unittest.TestCase):
     def setUp(self):
         self.config = render.load_config(ROOT / "settings.example.toml")
 
+    def test_router_wan_ssh_is_limited_to_listed_hosts(self):
+        self.config["router"]["wan_ssh_sources"] = ["45.135.94.122"]
+        rules = render.router_rules(self.config)
+        self.assertIn(
+            "iifname $wan_if ip saddr 45.135.94.122 ip daddr $wan_ip "
+            "tcp dport 22 ct state new counter accept",
+            rules,
+        )
+        self.config["router"]["wan_ssh_sources"] = []
+        self.assertNotIn(
+            "tcp dport 22 ct state new counter accept", render.router_rules(self.config)
+        )
+
+    def test_router_wan_ssh_rejects_broad_or_invalid_sources(self):
+        example = (ROOT / "settings.example.toml").read_text()
+        for source in ("0.0.0.0/0", "0.0.0.0", "45.135.94.122; accept"):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "settings.toml"
+                path.write_text(
+                    example.replace(
+                        "wan_ssh_sources = []",
+                        f'wan_ssh_sources = ["{source}"]',
+                    )
+                )
+                with self.assertRaisesRegex(ValueError, "router.wan_ssh_sources"):
+                    render.load_config(path)
+
+    def test_refresh_router_preserves_wireguard_and_other_archives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            output = base / "runtime"
+            router = output / "router"
+            router.mkdir(parents=True)
+            (router / "common.nft").write_text("old firewall\n")
+            (router / "other.conf").write_text("keep\n")
+            wireguard = output / "wireguard"
+            wireguard.mkdir()
+            (wireguard / "secret").write_text("fixed identity\n")
+            (output / "vpn.tar.gz").write_bytes(b"fixed vpn bundle\n")
+            (output / "forcad.tar.gz").write_bytes(b"fixed forcad bundle\n")
+            old_settings = (ROOT / "settings.example.toml").read_text()
+            (output / "settings.toml").write_text(old_settings)
+            config = base / "settings.toml"
+            config.write_text(
+                old_settings.replace(
+                    "wan_ssh_sources = []", 'wan_ssh_sources = ["45.135.94.122"]'
+                )
+            )
+            command = [
+                sys.executable,
+                str(ROOT / "render.py"),
+                "--config",
+                str(config),
+                "--output",
+                str(output),
+                "--refresh-router",
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, check=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("ip saddr 45.135.94.122", (router / "common.nft").read_text())
+            with tarfile.open(output / "router.tar.gz") as archive:
+                self.assertIn(
+                    b"ip saddr 45.135.94.122",
+                    archive.extractfile("router/common.nft").read(),
+                )
+            self.assertEqual((router / "other.conf").read_text(), "keep\n")
+            self.assertEqual((wireguard / "secret").read_text(), "fixed identity\n")
+            self.assertEqual((output / "vpn.tar.gz").read_bytes(), b"fixed vpn bundle\n")
+            self.assertEqual(
+                (output / "forcad.tar.gz").read_bytes(), b"fixed forcad bundle\n"
+            )
+            self.assertEqual((output / "settings.toml").read_text(), config.read_text())
+
     def test_allocations_are_unique_and_do_not_use_server_addresses(self):
         self.config["teams"]["entries"] = [
             {"name": f"team-{number:02}", "logo": None, "highlighted": False}
