@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createE2EContext, loginAsAdmin, observePublicStream, readAdminCredentials } from "./support";
 
-test("scoreboard shows twenty teams before internal scrolling", async ({ browser }) => {
+test("scoreboard fits twenty teams and stacks metrics for smaller divisions", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   await page.setViewportSize({
@@ -108,6 +108,26 @@ test("scoreboard shows twenty teams before internal scrolling", async ({ browser
     expect(await scroll.evaluate((element) => {
       return element.scrollHeight - element.clientHeight
     })).toBeGreaterThan(1);
+    teamCount = 6;
+    await page.reload();
+    await expect(rows).toHaveCount(6);
+    await page.setViewportSize({
+      width: 1568,
+      height: 980
+    });
+    const metrics = rows.first().locator(".service-column").first().locator(".service-metric");
+    await expect(metrics).toHaveCount(3);
+    for (const metric of await metrics.all()) {
+      expect(await metric.evaluate((element) => getComputedStyle(element).flexDirection)).toBe("column");
+      expect(await metric.locator(":scope > span").evaluate((element) => getComputedStyle(element).position)).toBe("static");
+      const [label, value] = await Promise.all([
+        metric.locator(":scope > span").boundingBox(),
+        metric.locator(":scope > strong").boundingBox(),
+      ]);
+      expect(label).not.toBeNull();
+      expect(value).not.toBeNull();
+      expect(value!.y).toBeGreaterThanOrEqual(label!.y + label!.height - 1);
+    }
   } finally {
     await context.close();
   }
