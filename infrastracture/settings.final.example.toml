@@ -51,7 +51,7 @@ admin_port = 56768
 interface = "ens19"
 # The first-install script clones this repository revision.
 repository_url = "https://github.com/TakuyaYagam1/ForcAD.git"
-revision = "chrp-final"
+revision = "pr-final"
 install_path = "/opt/forcad"
 
 # These entries are the teams created in ForcAD. Their order determines team

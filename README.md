@@ -1,10 +1,11 @@
 # ForcAD
 
-This directory is the independent Первенство России deployment. The sibling
-`../ch-final/` is Чемпионат России; give each its own Compose project, ports,
-runtime configuration and database. `config/config.yml.example` contains the
-three PFR checkers and participating teams, but uses placeholder TEST-NET IPs
-and no tokens. Replace them in the private `config/config.yml` before game day.
+This branch is the independent Первенство России deployment. Чемпионат России
+is published from the separate `ch-final` branch. Give each division its own
+Compose project, ports, runtime configuration and database.
+`config/config.yml.example` contains the three PFR checkers and participating
+teams, but uses placeholder TEST-NET IPs and no tokens. Replace them in the
+private `config/config.yml` before game day.
 
 ![ForcAD](public/ForcAD.png)
 
@@ -37,6 +38,12 @@ If players will use a public hostname or reverse proxy, set `PUBLIC_ORIGIN` in
 when present, with no path. Admin mutations reject a different origin. See
 [Configuration](docs/CONFIGURATION.md#compose-environment) for proxy settings.
 
+For a manual deployment on the 8 vCPU / 16 GiB final host, merge the matching
+non-secret sizing values from `deployment/final/limits.env.example` into the
+private `deployment/docker/.env`; do not replace that file or its secrets. The
+full infrastructure example selects the same profile with
+`env.capacity = "pr-final"` and includes it in the generated environment.
+
 Run setup and start the containers:
 
 ```sh
@@ -57,17 +64,22 @@ commands so external storage settings are included. See
 
 ## Monitoring
 
-Set `GRAFANA_ADMIN_PASSWORD` and a separate
-`GRAFANA_CHECKER_DB_PASSWORD` of at least 32 lowercase hexadecimal characters
-in `deployment/docker/.env`, then run from the repository root:
+`deployment/docker/.env` is the private, Git-ignored Compose environment for
+this division. Grafana uses username `admin` and the
+`GRAFANA_ADMIN_PASSWORD` in that file, not the ForcAD admin password.
+`GRAFANA_CHECKER_DB_PASSWORD` is only for its PostgreSQL reader. Keep separate
+credentials and host ports for the two divisions. If either password is absent
+in a fresh checkout, generate a separate 32-byte hexadecimal secret for each
+before starting the overlay. After setup, run:
 
 ```sh
 ./control.sh monitoring up -d
 ```
 
-Grafana and Prometheus listen on localhost on the ForcAD host. See
-[Monitoring](docs/MONITORING.md) for the SSH tunnel, dashboards and the separate
-Router exporter setup for game traffic metrics.
+Grafana and Prometheus listen on loopback on ports 3001/9091 for this division.
+The full infrastructure installer generates a new Grafana password on the
+ForcAD host. See [Monitoring](docs/MONITORING.md) for SSH tunneling and how to
+install Zeek on the Router; Grafana alone does not start a traffic sensor.
 
 ![Grafana game traffic dashboard](public/grafana.png)
 

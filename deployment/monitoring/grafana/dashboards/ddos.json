@@ -440,6 +440,130 @@
       },
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "links": [
+            {
+              "title": "Inspect pair in Traffic",
+              "url": "/d/forcad-traffic?var-source=${__field.labels.source_team_ip}&var-target=${__field.labels.team_ip}&${__url_time_range}",
+              "targetBlank": false
+            }
+          ],
+          "mappings": [],
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "2m minimum HTTP requests/s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "large requests / 5m"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 9
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((min_over_time((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total[1m]) and on (job, instance) forcad:game_sensor_ready))[2m15s:15s]) > 100) and on (source_team_ip, team_ip) (count_over_time((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total[1m]) and on (job, instance) forcad:game_sensor_ready))[2m15s:15s]) == 9)) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info * on (team_ip) group_left (target_team_name) forcad:game_target_info",
+          "legendFormat": "{{source_team_name}} [{{source_team_ip}}] -> {{target_team_name}} [{{team_ip}}] - sustained RPS (2m min)",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (source_team_ip, team_ip) (increase(forcad_game_http_large_request_bodies_total[5m]) and on (job, instance) forcad:game_sensor_ready) >= 1) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info * on (team_ip) group_left (target_team_name) forcad:game_target_info",
+          "legendFormat": "{{source_team_name}} [{{source_team_ip}}] -> {{target_team_name}} [{{team_ip}}] - large bodies (requests/5m)",
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Suspicious HTTP directions - review only",
+      "description": "Candidate directions only: the 1-minute mean HTTP rate stayed above 100 requests/s for 2 minutes, or at least one parsed HTTP request body of 10,000,000 bytes or more was observed in the trailing 5 minutes. Lines require a healthy sensor and unique team attribution. No lines is not a clean bill when Sensor ready is unavailable. Review in Traffic; this panel never blocks or sanctions a team."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
           "custom": {
             "align": "right",
             "cellOptions": {
@@ -518,7 +642,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 3,
+        "y": 12,
         "w": 12,
         "h": 10
       },
@@ -650,7 +774,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 3,
+        "y": 12,
         "w": 12,
         "h": 10
       },
@@ -827,7 +951,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 13,
+        "y": 22,
         "w": 24,
         "h": 18
       },
@@ -897,7 +1021,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 40,
         "w": 24,
         "h": 1
       }
@@ -940,7 +1064,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 41,
         "w": 12,
         "h": 9
       },
@@ -1014,7 +1138,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 32,
+        "y": 41,
         "w": 12,
         "h": 9
       },
@@ -1088,7 +1212,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 41,
+        "y": 50,
         "w": 12,
         "h": 9
       },
@@ -1175,7 +1299,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 41,
+        "y": 50,
         "w": 12,
         "h": 9
       },

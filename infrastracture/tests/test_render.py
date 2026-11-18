@@ -145,6 +145,57 @@ class RenderTests(unittest.TestCase):
             self.assertEqual((output / "forcad.tar.gz").read_bytes(), b"fixed forcad bundle\n")
             self.assertEqual((output / "settings.toml").read_text(), config.read_text())
 
+    def test_refresh_forcad_tokens_preserves_network_and_vpn_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            output = base / "runtime"
+            bundle = output / "forcad"
+            bundle.mkdir(parents=True)
+            config = self.config
+            (output / "settings.toml").write_text(
+                (ROOT / "settings.example.toml").read_text()
+            )
+            (bundle / "config.yml").write_text(render.forcad_config(config))
+            (output / "wireguard").mkdir()
+            (output / "wireguard/secret").write_bytes(b"original identity")
+            (output / "vpn.tar.gz").write_bytes(b"original vpn")
+            (output / "router.tar.gz").write_bytes(b"original router")
+            names = [team["name"] for team in render.teams(config)]
+            source = base / "settings.toml"
+            original_settings = (ROOT / "settings.example.toml").read_text()
+            sections = original_settings.split("[[teams.entries]]")
+            source.write_text(
+                sections[0]
+                + "".join(
+                    "[[teams.entries]]"
+                    + section.replace(
+                        "highlighted = ",
+                        f'token = "{index + 1:016x}"\nhighlighted = ',
+                        1,
+                    )
+                    for index, section in enumerate(sections[1:])
+                )
+            )
+            config = render.load_config(source)
+            render.refresh_forcad_tokens(config, source, output)
+            rendered = (bundle / "config.yml").read_text()
+            for index, name in enumerate(names):
+                self.assertIn(f'  - name: {render.yaml_value(name)}\n', rendered)
+                self.assertIn(f'    token: "{index + 1:016x}"\n', rendered)
+            self.assertEqual((output / "settings.toml").read_text(), source.read_text())
+            self.assertEqual((output / "wireguard/secret").read_bytes(), b"original identity")
+            self.assertEqual((output / "vpn.tar.gz").read_bytes(), b"original vpn")
+            self.assertEqual((output / "router.tar.gz").read_bytes(), b"original router")
+            with tarfile.open(output / "forcad.tar.gz") as archive:
+                self.assertEqual(
+                    archive.extractfile("forcad/config.yml").read(),
+                    rendered.encode(),
+                )
+            config["game"]["round_time"] += 1
+            with self.assertRaisesRegex(ValueError, "Only complete pinned"):
+                render.refresh_forcad_tokens(config, source, output)
+            self.assertEqual((bundle / "config.yml").read_text(), rendered)
+
     def test_allocations_are_unique_and_do_not_use_server_addresses(self):
         self.config["teams"]["entries"] = [
             {"name": f"team-{number:02}", "logo": None, "highlighted": False}
@@ -163,7 +214,12 @@ class RenderTests(unittest.TestCase):
 
     def test_npc_gets_target_network_without_participant_identity(self):
         entries = [
-            {"name": f"team-{number:02}", "logo": None, "highlighted": False}
+            {
+                "name": f"team-{number:02}",
+                "logo": None,
+                "highlighted": False,
+                "token": None,
+            }
             for number in range(1, 19)
         ]
         entries.append(
@@ -172,6 +228,7 @@ class RenderTests(unittest.TestCase):
                 "logo": None,
                 "highlighted": False,
                 "kind": "npc",
+                "token": None,
             }
         )
         self.config["teams"]["entries"] = entries
@@ -549,7 +606,12 @@ class RenderTests(unittest.TestCase):
         for count in (1, 5, 32):
             with self.subTest(teams=count):
                 self.config["teams"]["entries"] = [
-                    {"name": f"team-{number}", "logo": "", "highlighted": False}
+                    {
+                        "name": f"team-{number}",
+                        "logo": "",
+                        "highlighted": False,
+                        "token": None,
+                    }
                     for number in range(count)
                 ]
                 files = render.render(self.config)

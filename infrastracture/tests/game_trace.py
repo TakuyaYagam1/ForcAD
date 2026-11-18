@@ -121,6 +121,14 @@ class TCP:
             self.seq += len(data)
         self.send(reply=not reply, flags=16)
 
+    def body(self, length, reply=False):
+        chunk = b"x" * 60000
+        while length >= len(chunk):
+            self.data(chunk, reply)
+            length -= len(chunk)
+        if length:
+            self.data(chunk[:length], reply)
+
     def close(self, reset=False):
         if reset:
             self.send(reply=True, flags=20)
@@ -164,6 +172,51 @@ def fixture():
     )
     first.data(response * 2, reply=True)
     first.close()
+
+    threshold = 10_000_000
+
+    def body_request(length):
+        return (
+            b"POST /upload HTTP/1.1\r\nHost: game\r\nContent-Length: "
+            + str(length).encode()
+            + b"\r\n\r\n"
+        )
+
+    exact = TCP(trace)
+    exact.data(body_request(threshold))
+    exact.body(threshold)
+    exact.close()
+
+    below = TCP(trace)
+    below.data(body_request(threshold - 1))
+    below.body(threshold - 1)
+    below.close()
+
+    large_response = TCP(trace)
+    large_response.data(request)
+    large_response.data(
+        b"HTTP/1.1 200 OK\r\nContent-Length: "
+        + str(threshold).encode()
+        + b"\r\n\r\n",
+        reply=True,
+    )
+    large_response.body(threshold, reply=True)
+    large_response.close()
+
+    incomplete = TCP(trace)
+    incomplete.data(body_request(threshold + 1))
+    incomplete.body(threshold)
+    incomplete.close()
+
+    gap_length = 60000
+    gapped = TCP(trace)
+    gapped.data(body_request(threshold))
+    gapped.data(b"x")
+    gapped.send(b"x", offset=gap_length - 1)
+    gapped.seq += gap_length
+    gapped.send(reply=True, flags=16)
+    gapped.body(threshold - gap_length - 1)
+    gapped.close()
 
     upgrade = b"GET /ws HTTP/1.1\r\nHost: game\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n"
     switched = b"HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: websocket\r\nSec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"

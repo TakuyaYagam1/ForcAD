@@ -113,12 +113,13 @@ event zeek_done() {
             raise AssertionError(f"Missing metric {name}: {snapshots[phase]}")
 
         expected = {
-            "http_requests_total": 9,
+            "http_requests_total": 14,
+            "http_large_request_bodies_total": 1,
             "websocket_upgrades_total": 2,
-            "tcp_flows_total": 6,
-            "tcp_established_total": 5,
+            "tcp_flows_total": 11,
+            "tcp_established_total": 10,
             "udp_flows_total": 1,
-            "stream_gaps_total": 0,
+            "stream_gaps_total": 1,
             "websocket_connections": 1,
             "tcp_connections": 1,
             "udp_flows_active": 1,
@@ -131,6 +132,15 @@ event zeek_done() {
             )
         assert (
             metric("FINAL", "http_requests_total", "10.183.102.2", "10.183.101.2") == 1
+        )
+        assert (
+            metric(
+                "FINAL",
+                "http_large_request_bodies_total",
+                "10.183.102.2",
+                "10.183.101.2",
+            )
+            == 0
         )
         for name in ("websocket_connections", "tcp_connections", "udp_flows_active"):
             assert metric("FINAL", name) == 0, (name, metric("FINAL", name))
@@ -162,7 +172,7 @@ event zeek_done() {
         assert metric("AGED", "http_requests_total") == expected["http_requests_total"]
         assert not aged.stderr, aged.stderr
         print(
-            "Game metrics passed: HTTP reassembly/retransmission/pipelining, WS upgrade/reset/expiry, TCP/UDP, team direction and excluded sources."
+            "Game metrics passed: HTTP reassembly/retransmission/pipelining and large-body completion, WS upgrade/reset/expiry, TCP/UDP, team direction and excluded sources."
         )
         (work / "check_endpoint.py").write_text(
             (ROOT / "tests/check_game_endpoint.py").read_text()

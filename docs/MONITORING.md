@@ -20,6 +20,13 @@ The monitoring overlay also provisions a PostgreSQL reader for the Checker log
 tables. It can select only the public checker views, not team tokens or flags.
 The local demo generates its own reader password in `config/runtime/demo.env`.
 
+Each final division has its own private `deployment/docker/.env` (not
+`frontend/.env`). Sign in to Grafana as `admin` with that file's
+`GRAFANA_ADMIN_PASSWORD`; `GRAFANA_CHECKER_DB_PASSWORD` belongs only to the
+read-only Checker database account. A fresh infrastructure installation creates
+another Grafana password on the ForcAD host in
+`<install_path>/deployment/docker/.env`. Do not commit or publish these files.
+
 Keep the overlay when recreating or scaling services:
 
 ```sh
@@ -35,6 +42,9 @@ whose metrics are unreachable. For the network demo, always use its `demo.sh` wr
 | Grafana | <http://127.0.0.1:3000/> |
 | Prometheus targets | <http://127.0.0.1:9090/targets> |
 | Prometheus alerts | <http://127.0.0.1:9090/alerts> |
+
+For the two local final deployments, `ch-final` uses Grafana/Prometheus ports
+`3000`/`9090`; `pr-final` uses `3001`/`9091`. Both remain bound to loopback.
 
 Both services bind to `127.0.0.1` on the ForcAD host. Run a tunnel from your
 workstation, replacing the example SSH destination with your ForcAD account and
@@ -166,6 +176,16 @@ not install Zeek. For a manual setup, add the private TCP/9911 endpoint to
 `deployment/monitoring/file_sd/game-sensors.yml`. Restart existing Prometheus
 when adding jobs or rules; target-file updates are discovered automatically.
 
+Both `infrastracture/settings.final.example.toml` files already enable
+`monitoring`, `router_metrics` and `game_metrics`, with service TCP ports 8080,
+8081 and 8082. Before rendering the host bundles, replace example network,
+team, service and Router settings in a private `settings.toml`. The Router installer
+must run with `--network-metrics --game-metrics`; the ForcAD host install then
+adds that Router's actual `:9109` and `:9911` scrape targets. Manual deployments
+must fill `deployment/monitoring/file_sd/routers.yml` and `game-sensors.yml`
+with the real Router address after its exporters are installed. An empty target
+list means no Router/Zeek traffic data, even when Grafana is running.
+
 Zeek passively captures both directions on the router's VPN interface before
 filtering and SNAT. Exact participant IPs identify source teams; vulnbox IPs
 identify targets. Board, checker and admin traffic are excluded. No proxy or
@@ -179,24 +199,32 @@ clears both. Graphs show selection totals. Inactive directions disappear;
 unavailable measurements stay N/A. A team accessing its own box appears on
 both sides and is not evidence of an attack. **DDoS** summarizes router rates
 by victim and by source; attribution of source peers needs healthy game-sensor
-metadata. High rates guide investigation rather than proving a violation.
+metadata. **Suspicious HTTP directions - review only** is one graph of
+source -> target pairs: a one-minute HTTP rate above 100 requests/s throughout
+two minutes, or at least one complete HTTP/1 request body of 10,000,000 bytes
+or more within five minutes. The graph shows minimum sustained RPS on the left
+axis and large-body requests per five minutes on the right. Click a series to
+inspect the pair in **Traffic**. These are leads to investigate, not proof of
+malice; no automatic blocking or disqualification occurs.
 
 | Metric | Counts |
 | --- | --- |
 | HTTP RPS | Parsed plaintext HTTP/1 requests, including upgrades |
+| Large request bodies | Complete plaintext HTTP/1 request bodies >=10,000,000 bytes without interruption or stream gaps; no content retained |
 | Open WS | Observed HTTP 101 upgrades until TCP close/reset or five idle minutes |
 | New TCP flows | Observed flows, including incomplete handshakes |
 | Established TCP | Observed established connections |
 | New UDP flows | Flows with a 60-second idle timeout, not application requests |
 
-TLS, HTTP/2 and WS message counts are not covered. Captured traffic may be
-blocked later. Restarts reset counters and lose existing session state; packet
-loss, stream gaps, offloads or asymmetric routing can undercount. No traffic
-logs, URLs, headers or bodies are stored.
+TLS, HTTP/2, oversized headers and WS message bodies are not covered. Captured
+traffic may be blocked later. Restarts reset counters and lose existing session
+state; packet loss, stream gaps, offloads or asymmetric routing can undercount.
+No traffic logs, URLs, headers or bodies are stored.
 
 Failed/stale sensors are omitted from game panels, so multiple sensors can yield
-partial totals. Check capture status, heartbeat, drops and gaps before interpreting
-traffic. High rates guide investigation; they do not prove a rules violation.
+partial totals. The suspicious-load graph requires a healthy sensor and a unique
+source/target name mapping; no lines do not establish a clean bill. Check capture
+status, heartbeat, drops and gaps before interpreting traffic.
 
 ## Direct relay attempts
 

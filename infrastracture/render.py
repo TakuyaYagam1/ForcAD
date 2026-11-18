@@ -286,11 +286,15 @@ def load_config(path):
         raise ValueError("teams.entries must contain 1 to 32 teams")
     names = set()
     npc_count = 0
+    tokens = set()
     for index, team in enumerate(entries, 1):
         if isinstance(team, dict):
             team.setdefault("kind", "player")
+            team.setdefault("token", None)
         exact_keys(
-            team, ("name", "logo", "highlighted", "kind"), f"teams.entries[{index}]"
+            team,
+            ("name", "logo", "highlighted", "kind", "token"),
+            f"teams.entries[{index}]",
         )
         validate_team_name(team["name"], f"teams.entries[{index}].name")
         if team["name"] in names:
@@ -304,6 +308,15 @@ def load_config(path):
         npc_count += team["kind"] == "npc"
         if type(team["highlighted"]) is not bool:
             raise ValueError(f"teams.entries[{index}].highlighted must be a boolean")
+        token = team["token"]
+        if token is not None:
+            if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{16}", token):
+                raise ValueError(
+                    f"teams.entries[{index}].token must be 16 lowercase hex characters"
+                )
+            if token in tokens:
+                raise ValueError("Team tokens must be unique")
+            tokens.add(token)
         if team["logo"] == "":
             team["logo"] = None
         elif team["logo"] is not None:
@@ -866,7 +879,7 @@ def forcad_config(config):
                 continue
             lines.append(f"    {key}: {yaml_value(value)}")
     lines.append("teams:")
-    for team in teams(config):
+    for team, entry in zip(teams(config), config["teams"]["entries"], strict=True):
         lines.append("  - name: " + yaml_value(team["name"]))
         lines.append(f"    ip: {team['vulnbox']}")
         if team["kind"] == "npc":
@@ -874,7 +887,7 @@ def forcad_config(config):
         lines.append(f"    highlighted: {str(team['highlighted']).lower()}")
         if team["logo"]:
             lines.append("    logo_path: " + yaml_value("/team-logos/" + team["logo"]))
-        lines.append("    token: null")
+        lines.append("    token: " + yaml_value(entry["token"]))
         lines.append("    traffic_cidrs:")
         lines.append(f"      - {team['vulnbox']}/32")
         if team["vpn_cidr"] is not None:
@@ -1382,6 +1395,56 @@ def refresh_router(config, settings, output):
     create_archives(output, roles=("router",))
 
 
+
+
+def refresh_forcad_tokens(config, settings, output):
+    output = Path(output)
+    snapshot = output / "settings.toml"
+    target = output / "forcad/config.yml"
+    if (
+        output.is_symlink()
+        or not output.is_dir()
+        or any(path.is_symlink() or not path.is_file() for path in (snapshot, target))
+    ):
+        raise ValueError(
+            "ForcAD token refresh requires an existing regular runtime bundle"
+        )
+    original = load_config(snapshot)
+    for before, after in zip(
+        original["teams"]["entries"], config["teams"]["entries"], strict=True
+    ):
+        before["token"] = after["token"]
+    if original != config or any(
+        team["token"] is None for team in config["teams"]["entries"]
+    ):
+        raise ValueError(
+            "Only complete pinned team tokens may change in a ForcAD refresh"
+        )
+    previous = load_config(snapshot)
+    current = target.read_text(encoding="utf-8")
+    updated = forcad_config(config)
+    unquoted = re.sub(r'(?m)^    token: "([0-9a-f]{16})"$', r"    token: \1", updated)
+    if current not in (forcad_config(previous), updated, unquoted):
+        raise ValueError(
+            "ForcAD bundle differs from rendered settings beyond team tokens"
+        )
+    for path, content in (
+        (target, updated),
+        (snapshot, Path(settings).read_text()),
+    ):
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix=".forcad-tokens.", dir=path.parent
+        )
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                stream.write(content)
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    create_archives(output, roles=("forcad",))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "settings.toml")
@@ -1397,10 +1460,19 @@ def main():
         action="store_true",
         help="refresh WAN SSH rules and router archive in an existing runtime, preserving VPN keys",
     )
+    parser.add_argument(
+        "--refresh-forcad-tokens",
+        action="store_true",
+        help="refresh pinned team tokens and ForcAD archive from private settings",
+    )
     args = parser.parse_args()
     output_created = False
     try:
         config = load_config(args.config)
+        if args.refresh_forcad_tokens:
+            refresh_forcad_tokens(config, args.config, args.output)
+            print(f"Refreshed ForcAD team tokens in {args.output}; VPN keys unchanged.")
+            return
         if args.refresh_router:
             refresh_router(config, args.config, args.output)
             print(f"Refreshed router bundle in {args.output}; WireGuard keys unchanged.")

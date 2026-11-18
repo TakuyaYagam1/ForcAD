@@ -1,9 +1,9 @@
 name: tests
 on:
   push:
-    branches: [main]
+    branches: [pr-final]
   pull_request:
-    branches: [main]
+    branches: [pr-final]
   workflow_dispatch:
 
 permissions:
