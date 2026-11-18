@@ -23,7 +23,7 @@
   .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 17px; letter-spacing: -.5px; }
   .scoreboard-page--compact .service-cell { container-type: inline-size; min-height: 26px; height: calc(var(--scoreboard-row-height, 31px) - 5px); padding: 4px 7px; }
   .scoreboard-page--compact .service-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: baseline; gap: 5px; }
-  .scoreboard-page--compact .service-metric { flex: 0 0 auto; gap: 3px; line-height: 18px; }
+  .scoreboard-page--compact .service-metric { flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 0; line-height: 18px; }
   .scoreboard-page--compact .service-metric strong { font-size: 13px; }
   .scoreboard-page--compact .service-metric > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .scoreboard-page--compact .service-state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
@@ -52,6 +52,11 @@
 }
 
 @media (min-width: 701px) {
+  @container (min-width: 240px) {
+    .scoreboard-page--compact:not(.scoreboard-page--dense) .service-cell:not(.service-cell--wide-values) .service-metric > span {
+      position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
+    }
+  }
   @container (min-width: 300px) {
     .scoreboard-page--compact .service-cell:not(.service-cell--wide-values) .service-metric > span {
       position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
