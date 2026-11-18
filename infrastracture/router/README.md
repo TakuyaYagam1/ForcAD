@@ -46,7 +46,10 @@ Participant VPN clients have no general WAN egress.
 
 Router SSH on WAN is disabled by default. List specific management host IPv4
 addresses in `router.wan_ssh_sources` to allow TCP/22 only from those sources
-to the Router's WAN IP. Do not use a network range or expose SSH to all clients.
+to the Router's WAN IP. To allow direct SSH from arbitrary public IPs, set
+`router.wan_ssh_public = true` instead. This opens only TCP/22 to the WAN IP;
+other input stays drop. Use key-only SSH and disable password authentication
+before enabling this public option.
 
 Owned rules live under `/etc/forcad/router/` in nftables tables `inet
 forcad_router` and `ip forcad_nat`. See [commands and

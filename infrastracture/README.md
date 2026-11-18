@@ -39,9 +39,9 @@ does not change a host.
 The output directory must not exist. The renderer creates fresh WireGuard keys
 each time, so render to a new directory for a new deployment.
 
-For an existing deployment, add exact management IPs to
-`router.wan_ssh_sources` in `settings.toml` (for example, the Proxmox jump
-host), then run `python3 render.py --refresh-router`. Only WAN SSH sources may
+For an existing deployment, set `router.wan_ssh_sources` to exact management
+IPs or enable `router.wan_ssh_public` for direct public SSH in `settings.toml`,
+then run `python3 render.py --refresh-router`. Only these WAN SSH settings may
 change: this updates `runtime/router/common.nft`, `runtime/router.tar.gz` and
 the input snapshot without regenerating WireGuard keys or other archives.
 
