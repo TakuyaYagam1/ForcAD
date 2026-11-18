@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from helpers import ROOT
 
@@ -220,6 +221,25 @@ class ForcadCacheTests(unittest.TestCase):
         )
         self.assert_global_go_is_intact()
         self.assertTrue((self.bin / "go").is_file())
+
+    def test_install_refuses_existing_division_project(self):
+        with patch.object(render, "safe_asset", return_value=Path(__file__)):
+            self.install_fixture()
+        self.write_fake_commands()
+        self.write_executable(
+            self.bin / "docker",
+            "#!/usr/bin/env bash\n"
+            'printf "docker %s\\n" "$*" >> "$CALL_LOG"\n'
+            'if [[ "$1" == compose && "$2" == version ]]; then printf "Docker Compose version v2\\n"; fi\n'
+            'if [[ "$*" == "volume ls -q --filter label=com.docker.compose.project=forcad-ch-final" ]]; then printf "existing-volume\\n"; fi\n',
+        )
+        result = self.run_script()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("already has a ForcAD project", result.stderr)
+        self.assertIn(
+            "docker volume ls -q --filter label=com.docker.compose.project=forcad-ch-final",
+            self.log.read_text(),
+        )
 
     def test_monitoring_install_uses_generated_private_dotenv(self):
         self.install_fixture(monitoring=True)

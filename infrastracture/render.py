@@ -16,6 +16,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+FORCAD_COMPOSE_PROJECT = "forcad-ch-final"
 NON_PUBLIC = (
     "0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, "
     "172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, "
@@ -901,6 +902,7 @@ def forcad_config(config):
 def forcad_environment(config):
     env = config["env"]
     values = {
+        "COMPOSE_PROJECT_NAME": FORCAD_COMPOSE_PROJECT,
         "FORCAD_NGINX_BIND": env["public_host"],
         "PUBLIC_ORIGIN": f"{env['public_scheme']}://{env['public_host']}",
         "PUBLIC_SCHEME": env["public_scheme"],
@@ -1094,6 +1096,7 @@ def fresh_forcad_bundle(config):
     replacements = {
         "INSTALL_PATH": shlex.quote(settings["install_path"]),
         "REPOSITORY_URL": shlex.quote(settings["repository_url"]),
+        "COMPOSE_PROJECT_NAME": shlex.quote(FORCAD_COMPOSE_PROJECT),
         "REVISION": shlex.quote(settings["revision"]),
         "INSTALL_MARKER": shlex.quote(
             settings["repository_url"] + " " + settings["revision"]
