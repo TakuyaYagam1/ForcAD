@@ -46,7 +46,7 @@ class Bundle(BundleBase):
         env = project / "deployment/docker/.env"
         updates = dict(
             line.split("=", 1)
-            for line in (self.directory / "environment.env").read_text().splitlines()
+            for line in (self.directory / ".env").read_text().splitlines()
             if line and not line.startswith("#")
         )
         self.put(
