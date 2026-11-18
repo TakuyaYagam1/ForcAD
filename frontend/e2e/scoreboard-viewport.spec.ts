@@ -27,14 +27,14 @@ test("scoreboard shows ten and twenty teams before internal scrolling", async ({
       });
       data.state.team_tasks = teamCount === 10
         ? [{
-            ...data.state.team_tasks[0],
-            team_id: data.teams[1].id,
-            task_id: data.tasks[0].id,
-            status: 101,
-            score: 112_500,
-            checks: 1,
-            checks_passed: 1,
-          }]
+          ...data.state.team_tasks[0],
+          team_id: data.teams[1].id,
+          task_id: data.tasks[0].id,
+          status: 101,
+          score: 112_500,
+          checks: 1,
+          checks_passed: 1,
+        }]
         : [];
       data.runtime.phase = "finished";
       data.runtime.results_pending = false;
@@ -136,7 +136,10 @@ test("scoreboard shows ten and twenty teams before internal scrolling", async ({
     for (const contrast of contrasts) {
       expect(contrast).toBeGreaterThanOrEqual(4.5);
     }
-    await page.setViewportSize({ width: 1215, height: 980 });
+    await page.setViewportSize({
+      width: 1215,
+      height: 980
+    });
     const fp = page.locator(".scoreboard-reveal .service-cell--wide-values").first().locator(".service-metric").nth(1).locator("strong");
     await expect(fp).toHaveText(/112\s500/);
     await expect.poll(async () => {
@@ -170,7 +173,10 @@ test("scoreboard shows ten and twenty teams before internal scrolling", async ({
 test("large flag counts fit inside narrow desktop service cells without an unknown badge", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
-  await page.setViewportSize({ width: 911, height: 980 });
+  await page.setViewportSize({
+    width: 911,
+    height: 980
+  });
 
   try {
     await page.route("**/api/v1/client/scoreboard/", async (route) => {
@@ -189,7 +195,10 @@ test("large flag counts fit inside narrow desktop service cells without an unkno
       }];
       data.runtime.phase = "finished";
       data.runtime.results_pending = false;
-      await route.fulfill({ response, json: data });
+      await route.fulfill({
+        response,
+        json: data
+      });
     });
     const stream = await observePublicStream(page);
     stream.suppressInits(true);
