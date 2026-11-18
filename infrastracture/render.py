@@ -200,6 +200,7 @@ def load_config(path):
         raise ValueError("settings: unexpected or missing top-level keys")
     if isinstance(config["router"], dict):
         config["router"].setdefault("wan_ssh_sources", [])
+        config["router"].setdefault("wan_ssh_public", False)
     exact_keys(
         config["network"],
         (
@@ -222,6 +223,7 @@ def load_config(path):
             "forcad_interface",
             "team_trunk",
             "wan_ssh_sources",
+            "wan_ssh_public",
         ),
         "router",
     )
@@ -532,6 +534,8 @@ def load_config(path):
             raise ValueError("router.wan_ssh_sources must contain usable IPv4 hosts")
     if len(sources) != len(set(sources)):
         raise ValueError("router.wan_ssh_sources must not repeat addresses")
+    if not isinstance(router["wan_ssh_public"], bool):
+        raise ValueError("router.wan_ssh_public must be a boolean")
     endpoint = config["vpn"]["endpoint"]
     if not isinstance(endpoint, str) or len(endpoint) > 253:
         raise ValueError(
@@ -694,10 +698,15 @@ def router_rules(config):
             f'        iifname "{team["interface"]}" ip saddr != {team["vulnbox"]} counter drop'
             for team in team_list
         ),
-        WAN_SSH_RULES="\n".join(
-            f"        iifname $wan_if ip saddr {source} ip daddr $wan_ip "
+        WAN_SSH_RULES=(
+            "        iifname $wan_if ip daddr $wan_ip "
             "tcp dport 22 ct state new counter accept"
-            for source in router["wan_ssh_sources"]
+            if router["wan_ssh_public"]
+            else "\n".join(
+                f"        iifname $wan_if ip saddr {source} ip daddr $wan_ip "
+                "tcp dport 22 ct state new counter accept"
+                for source in router["wan_ssh_sources"]
+            )
         ),
         GAME_PORTS="\n".join(game_rules),
         OWN_MANAGEMENT=ownership_rules(config, "jump allowed_flow"),
@@ -1355,8 +1364,9 @@ def refresh_router(config, settings, output):
         raise ValueError("Router refresh requires an existing, regular runtime bundle")
     original = load_config(snapshot)
     original["router"]["wan_ssh_sources"] = config["router"]["wan_ssh_sources"]
+    original["router"]["wan_ssh_public"] = config["router"]["wan_ssh_public"]
     if original != config:
-        raise ValueError("Only router.wan_ssh_sources may change in a router refresh")
+        raise ValueError("Only router WAN SSH settings may change in a router refresh")
     for path, content in (
         (firewall, router_rules(config)),
         (snapshot, Path(settings).read_text()),

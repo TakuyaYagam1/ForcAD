@@ -64,6 +64,26 @@ class RenderTests(unittest.TestCase):
             "tcp dport 22 ct state new counter accept", render.router_rules(self.config)
         )
 
+    def test_public_wan_ssh_does_not_open_other_router_ports(self):
+        self.config["router"]["wan_ssh_public"] = True
+        rules = render.router_rules(self.config)
+        self.assertIn(
+            "iifname $wan_if ip daddr $wan_ip tcp dport 22 ct state new counter accept",
+            rules,
+        )
+        self.assertIn("type filter hook input priority -10; policy drop;", rules)
+        self.assertNotIn("iifname $wan_if ip daddr $wan_ip tcp dport 80", rules)
+
+    def test_public_wan_ssh_requires_boolean(self):
+        example = (ROOT / "settings.example.toml").read_text().replace(
+            "wan_ssh_public = false", 'wan_ssh_public = "true"'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "settings.toml"
+            path.write_text(example)
+            with self.assertRaisesRegex(ValueError, "router.wan_ssh_public"):
+                render.load_config(path)
+
     def test_router_wan_ssh_rejects_broad_or_invalid_sources(self):
         example = (ROOT / "settings.example.toml").read_text()
         for source in ("0.0.0.0/0", "0.0.0.0", "45.135.94.122; accept"):
@@ -97,7 +117,7 @@ class RenderTests(unittest.TestCase):
             config.write_text(
                 old_settings.replace(
                     "wan_ssh_sources = []", 'wan_ssh_sources = ["45.135.94.122"]'
-                )
+                ).replace("wan_ssh_public = false", "wan_ssh_public = true")
             )
             command = [
                 sys.executable,
@@ -110,10 +130,13 @@ class RenderTests(unittest.TestCase):
             ]
             result = subprocess.run(command, capture_output=True, text=True, check=False)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("ip saddr 45.135.94.122", (router / "common.nft").read_text())
+            self.assertIn(
+                "iifname $wan_if ip daddr $wan_ip tcp dport 22",
+                (router / "common.nft").read_text(),
+            )
             with tarfile.open(output / "router.tar.gz") as archive:
                 self.assertIn(
-                    b"ip saddr 45.135.94.122",
+                    b"iifname $wan_if ip daddr $wan_ip tcp dport 22",
                     archive.extractfile("router/common.nft").read(),
                 )
             self.assertEqual((router / "other.conf").read_text(), "keep\n")
