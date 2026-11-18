@@ -224,7 +224,7 @@ install -d -m 0700 "$target/.forcad-buildx"
 export BUILDX_CONFIG="$target/.forcad-buildx" BUILDX_BUILDER=default
 (cd "$bundle_dir" && python3 -m hostlib.docker_resources capture) > "$target/.forcad-resources-before"
 install -m 0600 "$bundle_dir/config.yml" "$target/config/config.yml"
-install -m 0600 "$bundle_dir/environment.env" "$target/deployment/docker/.env"
+install -m 0600 "$bundle_dir/.env" "$target/deployment/docker/.env"
 if [[ -d "$bundle_dir/public" ]]; then
     cp -a "$bundle_dir/public/." "$target/public/"
     # Bundles are private; published assets must be readable by nginx workers.
@@ -237,6 +237,7 @@ fi
 if [[ @@MONITORING@@ == true ]]; then
     command -v openssl >/dev/null || { echo "openssl is required to create the Grafana password" >&2; exit 1; }
     printf 'GRAFANA_ADMIN_PASSWORD="%s"\n' "$(openssl rand -hex 32)" >> "$target/deployment/docker/.env"
+    printf 'GRAFANA_CHECKER_DB_PASSWORD="%s"\n' "$(openssl rand -hex 32)" >> "$target/deployment/docker/.env"
 fi
 chmod 0600 "$target/config/config.yml" "$target/deployment/docker/.env"
 package_sha="$(sha256sum "$target/.forcad-managed-packages" | cut -d ' ' -f 1)"

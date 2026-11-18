@@ -198,6 +198,16 @@ class HostTests(unittest.TestCase):
                 "PUBLIC_SCHEME=http\nPUBLIC_SCHEME=https\n", {"PUBLIC_SCHEME": "http"}
             )
 
+    def test_npc_without_vpn_does_not_gain_invalid_traffic_cidr(self):
+        config = render.load_config(ROOT / "settings.example.toml")
+        npc = next(team for team in render.teams(config) if team["kind"] == "npc")
+        cidr = npc["vulnbox"] + "/32"
+        document = {"teams": [{"ip": npc["vulnbox"], "traffic_cidrs": [cidr]}]}
+        self.assertEqual(
+            common.merge_teams(document, [npc])["teams"][0]["traffic_cidrs"],
+            [cidr],
+        )
+
     def test_forcad_applies_monitoring_targets_and_restores_them_on_uninstall(self):
         repo = "/srv/ForcAD"
         self.write(repo + "/control.sh", "#!/bin/sh\n")

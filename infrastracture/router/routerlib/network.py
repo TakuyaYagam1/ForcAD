@@ -426,16 +426,21 @@ class Network(NetworkState):
                 current = None
                 continue
             if key == "iface":
-                if len(fields) != 4 or fields[2] != "inet" or fields[1] not in managed:
+                if len(fields) != 4 or fields[1] not in managed:
                     raise ValueError(
-                        "ifupdown must use only managed static IPv4, manual or loopback stanzas"
+                        "ifupdown must use only managed interface stanzas"
                     )
+                family = fields[2]
                 method = fields[3]
-                if method not in {"static", "manual"} and not (
-                    fields[1] == "lo" and method == "loopback"
+                if family == "inet6" and method == "auto":
+                    current = None
+                    continue
+                if family != "inet" or (
+                    method not in {"static", "manual"}
+                    and not (fields[1] == "lo" and method == "loopback")
                 ):
                     raise ValueError(
-                        "DHCP and non-IPv4 ifupdown methods are unsupported"
+                        "DHCP and unsupported ifupdown address methods are rejected"
                     )
                 current = fields[1]
                 continue

@@ -342,6 +342,33 @@ class RouterNetworkTests(unittest.TestCase):
             any(args[:3] == ["ip", "link", "add"] for args, _ in self.commands.commands)
         )
 
+    def test_preflight_allows_managed_ipv6_auto_without_settings(self):
+        current = self.root / "etc/network/interfaces"
+        current.write_text(current.read_text() + "iface wan0 inet6 auto\n")
+
+        self._preflight()
+
+    def test_preflight_rejects_unmanaged_ipv6_auto(self):
+        current = self.root / "etc/network/interfaces"
+        current.write_text("iface other0 inet6 auto\n")
+
+        snapshot = self.manager.snapshot()
+        with self.assertRaisesRegex(ValueError, "managed"):
+            self.manager.preflight(snapshot)
+
+    def test_preflight_rejects_other_ipv6_stanzas(self):
+        current = self.root / "etc/network/interfaces"
+        stanzas = {
+            "static": "iface wan0 inet6 static\n",
+            "auto with setting": "iface wan0 inet6 auto\n    accept_ra 1\n",
+        }
+        for name, stanza in stanzas.items():
+            with self.subTest(name=name):
+                current.write_text(stanza)
+                snapshot = self.manager.snapshot()
+                with self.assertRaises(ValueError):
+                    self.manager.preflight(snapshot)
+
     def test_preflight_rejects_global_ipv6(self):
         self.commands.ipv6_global = True
         self.commands.ipv6[1]["addr_info"].append(

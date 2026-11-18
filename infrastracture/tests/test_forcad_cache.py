@@ -59,6 +59,8 @@ class ForcadCacheTests(unittest.TestCase):
                 "#!/usr/bin/env bash\n"
                 'printf "control %s\\n" "$*" >> "$CALL_LOG"\n'
                 'printf "goenv %s|%s|%s\\n" "$GOCACHE" "$GOMODCACHE" "$GOPATH" >> "$CALL_LOG"\n'
+                'if [[ "$1" == setup && -n "${CAPTURED_ENV:-}" ]]; then '
+                'cp "$(dirname "$0")/deployment/docker/.env" "$CAPTURED_ENV"; fi\n'
                 'if [[ "$1" == setup ]]; then exit 43; fi\n'
                 "CONTROL\n"
                 '    chmod 0755 "$target/control.sh"\n'
@@ -94,14 +96,14 @@ class ForcadCacheTests(unittest.TestCase):
         for name, content in scripts.items():
             self.write_executable(self.bin / name, content)
 
-    def install_fixture(self):
+    def install_fixture(self, monitoring=False):
         config = render.load_config(ROOT / "settings.example.toml")
         config["forcad"]["install_path"] = str(self.target)
-        config["env"]["monitoring"] = False
+        config["env"]["monitoring"] = monitoring
         bundle = self.root / "install-bundle"
         bundle.mkdir()
         (bundle / "config.yml").write_text(render.forcad_config(config))
-        (bundle / "environment.env").write_text(render.forcad_environment(config))
+        (bundle / ".env").write_text(render.forcad_environment(config))
         source = render.fresh_forcad_bundle(config)["forcad/install.sh"]
         source = source.replace(
             'if [[ "$EUID" -ne 0 ]]; then\n    exec sudo -- bash "$0" "$@"\nfi\n',
@@ -218,6 +220,28 @@ class ForcadCacheTests(unittest.TestCase):
         )
         self.assert_global_go_is_intact()
         self.assertTrue((self.bin / "go").is_file())
+
+    def test_monitoring_install_uses_generated_private_dotenv(self):
+        self.install_fixture(monitoring=True)
+        self.write_fake_commands()
+        captured = self.root / "captured-env"
+        self.env["CAPTURED_ENV"] = str(captured)
+        result = self.run_script()
+        self.assertNotEqual(result.returncode, 0)
+        values = dict(
+            line.split("=", 1)
+            for line in captured.read_text().splitlines()
+            if line.startswith("GRAFANA_")
+        )
+        admin = values["GRAFANA_ADMIN_PASSWORD"].strip('"')
+        checker = values["GRAFANA_CHECKER_DB_PASSWORD"].strip('"')
+        self.assertIn('FORCAD_NGINX_BIND="10.183.2.10"', captured.read_text())
+        self.assertRegex(admin, r"^[0-9a-f]{64}$")
+        self.assertRegex(checker, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(admin, checker)
+        self.assertEqual(captured.stat().st_mode & 0o777, 0o600)
+        self.assertNotIn(admin, result.stdout + result.stderr)
+        self.assertNotIn(checker, result.stdout + result.stderr)
 
     def test_failed_go_download_removes_its_temporary_directory(self):
         self.install_fixture()

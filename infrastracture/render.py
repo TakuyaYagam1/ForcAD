@@ -1114,7 +1114,7 @@ def fresh_forcad_bundle(config):
 def fresh_forcad_files(config):
     files = {
         "forcad/config.yml": forcad_config(config),
-        "forcad/environment.env": forcad_environment(config),
+        "forcad/.env": forcad_environment(config),
         "forcad/host/environment.env": (
             'FORCAD_NGINX_BIND="'
             + config["env"]["public_host"]
@@ -1445,6 +1445,84 @@ def refresh_forcad_tokens(config, settings, output):
     create_archives(output, roles=("forcad",))
 
 
+def extend_admins(config, settings, output):
+    """Add administrator peers without rotating deployed WireGuard keys."""
+    from vpn.generate import client, keypair, wg
+
+    output = Path(output)
+    snapshot = output / "settings.toml"
+    existing = load_config(snapshot)
+    previous_count = existing["admins"]
+    existing["admins"] = config["admins"]
+    if existing != config or config["admins"] <= previous_count:
+        raise ValueError("Only an increase in administrator peers is supported")
+
+    server_path = output / "wireguard/server/wg-admin.conf"
+    bundled_path = output / "vpn/server/wg-admin.conf"
+    host_path = output / "vpn/host.json"
+    admin_dir = output / "wireguard/admins"
+    for path in (snapshot, server_path, bundled_path, host_path, admin_dir):
+        if path.is_symlink() or not path.exists():
+            raise ValueError(f"Missing or unsafe existing runtime path: {path}")
+    original = server_path.read_text()
+    if bundled_path.read_text() != original:
+        raise ValueError("Bundled admin server differs from WireGuard server")
+    if original.count("\n# admin-") != previous_count:
+        raise ValueError("Existing admin peer count does not match settings")
+    private_match = re.search(r"(?m)^PrivateKey = ([A-Za-z0-9+/=]+)$", original)
+    if private_match is None:
+        raise ValueError("Existing admin server has no private key")
+    server_public = wg("pubkey", private_match[1] + "\n")
+    layout = network_layout(config)
+    allowed_ips = ", ".join(str(network) for network in layout["allowed_networks"])
+    updated = original
+    added = {}
+    for number in range(1, config["admins"] + 1):
+        name = f"admin-{number:02}"
+        address = layout["admin_vpn"].network_address + number + 1
+        path = admin_dir / f"{name}.conf"
+        if number <= previous_count:
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(f"Missing existing administrator peer: {name}")
+            continue
+        if path.exists() or path.is_symlink():
+            raise ValueError(f"Refusing to replace administrator peer: {name}")
+        private, public = keypair()
+        psk = wg("genpsk")
+        added[path] = client(
+            private,
+            address,
+            server_public,
+            psk,
+            config["vpn"]["endpoint"],
+            config["vpn"]["admin_port"],
+            allowed_ips,
+        )
+        updated += (
+            f"\n# {name}\n[Peer]\nPublicKey = {public}\n"
+            f"PresharedKey = {psk}\nAllowedIPs = {address}/32\n"
+        )
+    generated = render(config)
+    new_host = generated["vpn/host.json"]
+    if host_path.read_text() != render(load_config(snapshot))["vpn/host.json"]:
+        raise ValueError("Existing VPN host settings differ from rendered settings")
+    for path, content in added.items():
+        descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(content)
+    for path, content in (
+        (server_path, updated),
+        (bundled_path, updated),
+        (host_path, new_host),
+        (snapshot, Path(settings).read_text()),
+    ):
+        descriptor, name = tempfile.mkstemp(prefix=".admins.", dir=path.parent)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            stream.write(content)
+        os.chmod(name, 0o600)
+        os.replace(name, path)
+    create_archives(output, roles=("vpn",), wireguard_server=output / "wireguard/server")
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "settings.toml")
@@ -1465,6 +1543,11 @@ def main():
         action="store_true",
         help="refresh pinned team tokens and ForcAD archive from private settings",
     )
+    parser.add_argument(
+        "--extend-admins",
+        action="store_true",
+        help="add admin VPN peers in an existing runtime without rotating keys",
+    )
     args = parser.parse_args()
     output_created = False
     try:
@@ -1476,6 +1559,10 @@ def main():
         if args.refresh_router:
             refresh_router(config, args.config, args.output)
             print(f"Refreshed router bundle in {args.output}; WireGuard keys unchanged.")
+            return
+        if args.extend_admins:
+            extend_admins(config, args.config, args.output)
+            print(f"Extended admin VPN peers in {args.output}; existing keys unchanged.")
             return
         files = render(config)
         files["settings.toml"] = args.config.read_text()
