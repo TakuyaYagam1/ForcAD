@@ -198,6 +198,8 @@ def load_config(path):
     }
     if set(config) != required:
         raise ValueError("settings: unexpected or missing top-level keys")
+    if isinstance(config["router"], dict):
+        config["router"].setdefault("wan_ssh_sources", [])
     exact_keys(
         config["network"],
         (
@@ -219,6 +221,7 @@ def load_config(path):
             "vpn_interface",
             "forcad_interface",
             "team_trunk",
+            "wan_ssh_sources",
         ),
         "router",
     )
@@ -509,6 +512,26 @@ def load_config(path):
         raise ValueError(
             "WAN must not overlap an internal network or use a special host address"
         )
+    sources = router["wan_ssh_sources"]
+    if not isinstance(sources, list) or len(sources) > 16:
+        raise ValueError("router.wan_ssh_sources must be a list of up to 16 IPv4 hosts")
+    for source in sources:
+        try:
+            address = ipaddress.IPv4Address(source) if isinstance(source, str) else None
+        except ipaddress.AddressValueError as error:
+            raise ValueError("router.wan_ssh_sources must contain IPv4 hosts") from error
+        if (
+            address is None
+            or address.is_unspecified
+            or address.is_loopback
+            or address.is_multicast
+            or address.is_link_local
+            or address.is_reserved
+            or address == wan.ip
+        ):
+            raise ValueError("router.wan_ssh_sources must contain usable IPv4 hosts")
+    if len(sources) != len(set(sources)):
+        raise ValueError("router.wan_ssh_sources must not repeat addresses")
     endpoint = config["vpn"]["endpoint"]
     if not isinstance(endpoint, str) or len(endpoint) > 253:
         raise ValueError(
@@ -670,6 +693,11 @@ def router_rules(config):
         SOURCE_CHECKS="\n".join(
             f'        iifname "{team["interface"]}" ip saddr != {team["vulnbox"]} counter drop'
             for team in team_list
+        ),
+        WAN_SSH_RULES="\n".join(
+            f"        iifname $wan_if ip saddr {source} ip daddr $wan_ip "
+            "tcp dport 22 ct state new counter accept"
+            for source in router["wan_ssh_sources"]
         ),
         GAME_PORTS="\n".join(game_rules),
         OWN_MANAGEMENT=ownership_rules(config, "jump allowed_flow"),
@@ -1315,6 +1343,35 @@ def generate_wireguard(config, output):
     )
 
 
+def refresh_router(config, settings, output):
+    output = Path(output)
+    snapshot = output / "settings.toml"
+    firewall = output / "router/common.nft"
+    if (
+        output.is_symlink()
+        or not output.is_dir()
+        or any(path.is_symlink() or not path.is_file() for path in (snapshot, firewall))
+    ):
+        raise ValueError("Router refresh requires an existing, regular runtime bundle")
+    original = load_config(snapshot)
+    original["router"]["wan_ssh_sources"] = config["router"]["wan_ssh_sources"]
+    if original != config:
+        raise ValueError("Only router.wan_ssh_sources may change in a router refresh")
+    for path, content in (
+        (firewall, router_rules(config)),
+        (snapshot, Path(settings).read_text()),
+    ):
+        descriptor, temporary_name = tempfile.mkstemp(prefix=".refresh.", dir=path.parent)
+        temporary = Path(temporary_name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                stream.write(content)
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+    create_archives(output, roles=("router",))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=ROOT / "settings.toml")
@@ -1325,10 +1382,19 @@ def main():
         default="amd64",
         help="router CPU architecture (Linux; default: amd64)",
     )
+    parser.add_argument(
+        "--refresh-router",
+        action="store_true",
+        help="refresh WAN SSH rules and router archive in an existing runtime, preserving VPN keys",
+    )
     args = parser.parse_args()
     output_created = False
     try:
         config = load_config(args.config)
+        if args.refresh_router:
+            refresh_router(config, args.config, args.output)
+            print(f"Refreshed router bundle in {args.output}; WireGuard keys unchanged.")
+            return
         files = render(config)
         files["settings.toml"] = args.config.read_text()
         write_bundle(args.output, files)
