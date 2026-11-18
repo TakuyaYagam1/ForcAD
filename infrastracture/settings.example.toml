@@ -35,6 +35,8 @@ vpn_interface = "ens20"
 forcad_interface = "ens22"
 # VLAN trunk carrying team networks.
 team_trunk = "ens21"
+# Router SSH on WAN is disabled unless exact management host IPs are listed.
+wan_ssh_sources = []
 
 # Endpoint must be the public DNS name or IP forwarded by the router to the VPN
 # host; do not add a port. The two ports below are UDP server listen ports.

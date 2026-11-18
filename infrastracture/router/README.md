@@ -44,6 +44,10 @@ WAN destinations and are masqueraded; their forwarded traffic to non-public
 ranges is blocked. Admin VPN clients have unrestricted Router forwarding.
 Participant VPN clients have no general WAN egress.
 
+Router SSH on WAN is disabled by default. List specific management host IPv4
+addresses in `router.wan_ssh_sources` to allow TCP/22 only from those sources
+to the Router's WAN IP. Do not use a network range or expose SSH to all clients.
+
 Owned rules live under `/etc/forcad/router/` in nftables tables `inet
 forcad_router` and `ip forcad_nat`. See [commands and
 options](../COMMANDS.md#router) to switch modes and uninstall.

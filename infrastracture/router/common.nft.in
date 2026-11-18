@@ -31,6 +31,7 @@ table inet forcad_router {
         iifname "lo" accept
         jump check_source
         ct state invalid counter drop
+@@WAN_SSH_RULES@@
         iifname $vpn_if ip saddr $admin_net counter accept
         iifname $forcad_if ip saddr $forcad_ip tcp dport { 9109, 9911 } counter accept
         iifname $vpn_if ip saddr $attack_net icmp type echo-request counter accept
