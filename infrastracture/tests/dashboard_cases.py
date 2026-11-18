@@ -232,3 +232,118 @@ def build_cases(dashboard):
             },
         ],
     }
+
+
+def build_ddos_cases(dashboard):
+    panel = next(
+        panel
+        for panel in dashboard["panels"]
+        if panel["title"] == "Suspicious HTTP directions - review only"
+    )
+    queries = {target["refId"]: target["expr"] for target in panel["targets"]}
+
+    sensor = {"job": "forcad_game_sensor", "instance": "router"}
+    pair = {
+        "source_team_ip": "10.183.101.2",
+        "team_ip": "10.183.102.2",
+    }
+
+    def series(name, labels, values="1x21"):
+        labels = ",".join(f"{key}={json.dumps(value)}" for key, value in labels.items())
+        return {"series": f"{name}{{{labels}}}", "values": values}
+
+    identity = [
+        series(
+            "forcad:game_source_info",
+            {"source_team_ip": pair["source_team_ip"], "source_team_name": "Alpha"},
+        ),
+        series(
+            "forcad:game_target_info",
+            {"team_ip": pair["team_ip"], "target_team_name": "Beta"},
+        ),
+    ]
+    ready = series("forcad:game_sensor_ready", sensor)
+    interrupted_ready = series(
+        "forcad:game_sensor_ready",
+        sensor,
+        "1x11 stale 1x7",
+    )
+
+    def traffic(request_step, large_values):
+        labels = sensor | pair
+        return [
+            series(
+                "forcad_game_http_requests_total",
+                labels,
+                f"0+{request_step}x21",
+            ),
+            series(
+                "forcad_game_http_large_request_bodies_total",
+                labels,
+                large_values,
+            ),
+        ]
+
+    expected_labels = (
+        '{source_team_ip="10.183.101.2",source_team_name="Alpha",'
+        'team_ip="10.183.102.2",target_team_name="Beta"}'
+    )
+
+    def check(expression, samples):
+        return {
+            "expr": expression,
+            "eval_time": "5m",
+            "exp_samples": samples,
+        }
+
+    empty = [check(queries["A"], []), check(queries["B"], [])]
+    return {
+        "rule_files": [],
+        "evaluation_interval": "15s",
+        "fuzzy_compare": True,
+        "tests": [
+            {
+                "name": "sustained HTTP rate and large body produce review candidates",
+                "interval": "15s",
+                "input_series": identity
+                + [ready]
+                + traffic(1800, "0x10 1x11"),
+                "promql_expr_test": [
+                    check(
+                        queries["A"],
+                        [{"labels": expected_labels, "value": 120}],
+                    ),
+                    check(
+                        queries["B"],
+                        [{"labels": expected_labels, "value": 1}],
+                    ),
+                ],
+            },
+            {
+                "name": "HTTP rate at threshold is not a review candidate",
+                "interval": "15s",
+                "input_series": identity + [ready] + traffic(1500, "0x21"),
+                "promql_expr_test": empty,
+            },
+            {
+                "name": "two-minute RPS window requires uninterrupted sensor readiness",
+                "interval": "15s",
+                "input_series": identity
+                + [interrupted_ready]
+                + traffic(1800, "0x21"),
+                "promql_expr_test": empty,
+            },
+            {
+                "name": "stale sensor suppresses review candidates",
+                "interval": "15s",
+                "input_series": identity + traffic(1800, "0x10 1x11"),
+                "promql_expr_test": empty,
+            },
+            {
+                "name": "empty observation windows produce no review candidates",
+                "interval": "15s",
+                "input_series": identity + [ready],
+                "promql_expr_test": empty,
+            },
+        ],
+    }

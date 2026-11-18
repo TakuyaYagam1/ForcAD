@@ -31,7 +31,10 @@ function gauge(name: string, help: string): Telemetry::GaugeFamily
         $label_names=vector("source_team_ip", "team_ip")]);
     }
 
+const large_request_body_threshold = 10000000;
+
 global http_requests = counter("http_requests", "Observed HTTP/1 request lines, including upgrade requests.");
+global http_large_request_bodies = counter("http_large_request_bodies", "Observed complete HTTP/1 request bodies of at least 10,000,000 bytes without stream gaps.");
 global ws_upgrades = counter("websocket_upgrades", "Observed HTTP 101 upgrades to WebSocket.");
 global tcp_flows = counter("tcp_flows", "New observed TCP flows, including incomplete handshakes.");
 global tcp_established = counter("tcp_established", "Observed established TCP connections.");
@@ -82,7 +85,7 @@ event zeek_init()
         for ( target in vulnboxes )
             {
             local labels = vector(cat(source), cat(target));
-            local counters = vector(http_requests, ws_upgrades, tcp_flows, tcp_established, udp_flows, gaps);
+            local counters = vector(http_requests, http_large_request_bodies, ws_upgrades, tcp_flows, tcp_established, udp_flows, gaps);
             for ( i in counters )
                 Telemetry::counter_family_inc(counters[i], labels, 0.0);
             local gauges = vector(tcp_active, ws_active, udp_active);
@@ -119,6 +122,16 @@ event http_request(c: connection, method: string, original_URI: string, unescape
     {
     if ( c?$forcad )
         Telemetry::counter_family_inc(http_requests, c$forcad$labels);
+    }
+
+event http_message_done(c: connection, is_orig: bool, stat: http_message_stat)
+    {
+    # Endpoint EOF is not "interrupted" even when a declared body is short.
+    if ( ! c?$forcad || ! is_orig || stat$interrupted ||
+         stat$finish_msg != "message ends normally" || stat$content_gap_length > 0 ||
+         stat$body_length < large_request_body_threshold )
+        return;
+    Telemetry::counter_family_inc(http_large_request_bodies, c$forcad$labels);
     }
 
 event http_connection_upgrade(c: connection, protocol: string)

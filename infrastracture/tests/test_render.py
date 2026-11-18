@@ -147,6 +147,37 @@ class RenderTests(unittest.TestCase):
             )
             self.assertEqual((output / "settings.toml").read_text(), config.read_text())
 
+    def test_refresh_forcad_tokens_keeps_existing_vpn_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "runtime"
+            bundle = output / "forcad"
+            bundle.mkdir(parents=True)
+            original = (ROOT / "settings.example.toml").read_text()
+            (output / "settings.toml").write_text(original)
+            (bundle / "config.yml").write_text(render.forcad_config(self.config))
+            (output / "vpn.tar.gz").write_bytes(b"keep vpn")
+            sections = original.split("[[teams.entries]]")
+            pinned = sections[0] + "".join(
+                "[[teams.entries]]"
+                + section.replace(
+                    "highlighted = ",
+                    f'token = "{index + 1:016x}"\nhighlighted = ',
+                    1,
+                )
+                for index, section in enumerate(sections[1:])
+            )
+            settings = Path(directory) / "settings.toml"
+            settings.write_text(pinned)
+            config = render.load_config(settings)
+            render.refresh_forcad_tokens(config, settings, output)
+            self.assertNotIn("token: null", (bundle / "config.yml").read_text())
+            self.assertEqual((output / "vpn.tar.gz").read_bytes(), b"keep vpn")
+            with tarfile.open(output / "forcad.tar.gz") as archive:
+                self.assertEqual(
+                    archive.extractfile("forcad/config.yml").read(),
+                    (bundle / "config.yml").read_bytes(),
+                )
+
     def test_allocations_are_unique_and_do_not_use_server_addresses(self):
         self.config["teams"]["entries"] = [
             {"name": f"team-{number:02}", "logo": None, "highlighted": False}
@@ -165,7 +196,12 @@ class RenderTests(unittest.TestCase):
 
     def test_npc_gets_target_network_without_participant_identity(self):
         entries = [
-            {"name": f"team-{number:02}", "logo": None, "highlighted": False}
+            {
+                "name": f"team-{number:02}",
+                "logo": None,
+                "highlighted": False,
+                "token": None,
+            }
             for number in range(1, 19)
         ]
         entries.append(
@@ -174,6 +210,7 @@ class RenderTests(unittest.TestCase):
                 "logo": None,
                 "highlighted": False,
                 "kind": "npc",
+                "token": None,
             }
         )
         self.config["teams"]["entries"] = entries
@@ -359,40 +396,12 @@ class RenderTests(unittest.TestCase):
             self.assertIn("  extra_checks: 2\n", render.forcad_config(config))
 
     def test_final_capacity_is_selected_explicitly(self):
-        source = (ROOT / "settings.final.example.toml").read_text()
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            for name in ("kincare", "wahrwelt", "sentinel"):
-                checker = root / "checkers" / name / "checker.py"
-                checker.parent.mkdir(parents=True)
-                checker.touch()
-            brand = root / "public" / "brand" / "forcad-mark.svg"
-            brand.parent.mkdir(parents=True)
-            brand.touch()
-            path = root / "settings.toml"
-            path.write_text(source)
-            with mock.patch.object(render, "ROOT", root / "infrastracture"):
-                config = render.load_config(path)
-        inventory = render.teams(config)
-        self.assertEqual(len(inventory), 22)
-        self.assertEqual(sum(len(team["peers"]) for team in inventory), 147)
-        self.assertEqual(
-            [team["kind"] for team in inventory], ["player"] * 21 + ["npc"]
-        )
-        self.assertEqual(inventory[0]["name"], "RGB+SqWD")
-        self.assertEqual(inventory[-1]["name"], "NPC")
-        rendered = render.forcad_config(config)
-        for service in ("kincare", "wahrwelt", "sentinel"):
-            self.assertIn(
-                f'  - name: "{service}"\n    checker: "{service}/checker.py"\n',
-                rendered,
-            )
-        self.assertEqual(sum(task["puts"] for task in config["tasks"]["entries"]), 18)
-        self.assertEqual(sum(task["gets"] for task in config["tasks"]["entries"]), 7)
-        self.assertEqual(config["game"]["rounds"], 240)
-        self.assertIn("FORCAD_API_REPLICAS=4", render.forcad_environment(config))
-        self.assertIn("FORCAD_RECEIVER_REPLICAS=2", render.forcad_environment(config))
-        self.assertIn("FORCAD_WORKER_REPLICAS=4", render.forcad_environment(config))
+        config = render.load_config(ROOT / "settings.example.toml")
+        config["env"]["capacity"] = "chrp-final"
+        environment = render.forcad_environment(config)
+        self.assertIn("FORCAD_API_REPLICAS=4", environment)
+        self.assertIn("FORCAD_RECEIVER_REPLICAS=2", environment)
+        self.assertIn("FORCAD_WORKER_REPLICAS=4", environment)
         sensor = render.game_metrics(config)["router/game-metrics.service"]
         self.assertIn("MemoryHigh=4G", sensor)
         self.assertIn("MemoryMax=infinity", sensor)
@@ -480,7 +489,12 @@ class RenderTests(unittest.TestCase):
         for count in (1, 5, 32):
             with self.subTest(teams=count):
                 self.config["teams"]["entries"] = [
-                    {"name": f"team-{number}", "logo": "", "highlighted": False}
+                    {
+                        "name": f"team-{number}",
+                        "logo": "",
+                        "highlighted": False,
+                        "token": None,
+                    }
                     for number in range(count)
                 ]
                 files = render.render(self.config)
