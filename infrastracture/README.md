@@ -76,6 +76,9 @@ WireGuard keys, to `SUDO_USER`. Reinstalls retain the recorded owner; a direct
 root install remains root-owned. Secret files use mode `0600`, and
 `/etc/wireguard` uses `0700`. Database/container storage and recovery records
 retain service or root ownership.
+The Router network metrics inventory (`/etc/forcad/monitoring/network.json`)
+contains team addresses, not credentials, and uses mode `0644` so its
+capability-restricted exporter can read it.
 
 Router and VPN install missing host prerequisites automatically. If Python is
 absent, their shell wrappers bootstrap it. `--files-only` still installs

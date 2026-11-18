@@ -19,6 +19,12 @@ from hostlib.common import (
 
 HEALTH_CHECK_TIMEOUT = 120
 HEALTH_CHECK_INTERVAL = 5
+ONE_SHOT_SERVICES = {
+    "initializer",
+    "config-loader",
+    "postgres-data",
+    "checker-db-access",
+}
 
 
 class Bundle(BundleBase):
@@ -141,7 +147,7 @@ class Bundle(BundleBase):
                 state = container.get("State")
                 health = container.get("Health")
                 if (
-                    service in {"initializer", "config-loader", "postgres-data"}
+                    service in ONE_SHOT_SERVICES
                     and state == "exited"
                     and container.get("ExitCode") == 0
                 ):

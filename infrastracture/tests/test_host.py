@@ -37,6 +37,21 @@ class HostTests(unittest.TestCase):
         target.chmod(mode)
         return target
 
+    def test_network_metrics_inventory_is_readable_without_dac_capabilities(self):
+        (self.bundle / "router/network.nft").write_text(
+            "create table inet forcad_monitoring\n"
+        )
+        (self.bundle / "router/forcad").write_bytes(b"exporter")
+        installer = self.make("router")
+        installer.plan(network_metrics=True)
+        installer.install()
+
+        inventory = self.root / "etc/forcad/monitoring/network.json"
+        rules = self.root / "etc/forcad/monitoring/network.nft"
+        self.assertEqual(stat.S_IMODE(inventory.stat().st_mode), 0o644)
+        self.assertEqual(stat.S_IMODE(rules.stat().st_mode), 0o600)
+        self.assertIn("teams", json.loads(inventory.read_text()))
+
     def test_install_is_idempotent_and_keeps_a_private_backup(self):
         old = self.write("/etc/network/interfaces", "auto lo\niface lo inet loopback\n")
         installer = self.make("router")
@@ -318,6 +333,22 @@ class HostTests(unittest.TestCase):
                 {"grafana"},
             )
         self.assertEqual(run.call_count, 2)
+
+    def test_forcad_live_check_accepts_completed_checker_db_setup(self):
+        bundle = self.make("forcad")
+        output = json.dumps(
+            [
+                {"Service": "grafana", "State": "running", "Health": "healthy"},
+                {"Service": "checker-db-access", "State": "exited", "ExitCode": 0},
+            ]
+        )
+        with patch.object(forcad_host, "run", return_value=output):
+            bundle.wait_for_containers(
+                "/opt/forcad/backend/bin/forcad",
+                Path("/opt/forcad"),
+                "monitoring",
+                {"grafana"},
+            )
 
     def test_forcad_live_check_includes_logs_when_container_is_unhealthy(self):
         bundle = self.make("forcad")

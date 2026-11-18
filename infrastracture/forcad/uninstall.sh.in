@@ -10,6 +10,7 @@ if [[ $# -lt 1 || $# -gt 2 || "$1" != "--confirm" ]]; then
     echo "This permanently removes the deployment, database and Compose volumes." >&2
     exit 2
 fi
+export COMPOSE_PROJECT_NAME=@@COMPOSE_PROJECT_NAME@@
 package_choice="${2:-ask}"
 case "$package_choice" in ask|--purge-packages|--keep-packages) ;; *) echo "Unknown package option" >&2; exit 2 ;; esac
 if [[ ! -e "$target" && ! -L "$target" ]]; then
@@ -265,7 +266,7 @@ else
     systemctl start docker.service
     run_control_down
     # Include volumes left by older, incomplete monitoring rollbacks.
-    volume_output="$(docker volume ls -q --filter label=com.docker.compose.project=forcad)"
+    volume_output="$(docker volume ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")"
     project_volumes=()
     if [[ -n "$volume_output" ]]; then mapfile -t project_volumes <<< "$volume_output"; fi
     if ((${#project_volumes[@]})); then docker volume rm "${project_volumes[@]}"; fi

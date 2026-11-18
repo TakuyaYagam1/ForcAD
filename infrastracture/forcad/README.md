@@ -6,9 +6,9 @@ options](../COMMANDS.md#forcad).
 ## Host requirements
 
 Use Debian 12 or 13. Its live address and gateway must match `settings.toml`.
-The install path must be unused, and Docker must not contain an existing ForcAD
-project or volumes. This installer creates a new game; it does not update an
-existing deployment.
+The install path must be unused, and Docker must not contain containers,
+volumes or networks for the `forcad` Compose project. This installer creates a
+new game; it does not update an existing deployment.
 
 ## Install and test
 

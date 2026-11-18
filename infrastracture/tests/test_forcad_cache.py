@@ -58,6 +58,7 @@ class ForcadCacheTests(unittest.TestCase):
                 "    cat > \"$target/control.sh\" <<'CONTROL'\n"
                 "#!/usr/bin/env bash\n"
                 'printf "control %s\\n" "$*" >> "$CALL_LOG"\n'
+                'printf "project %s\\n" "${COMPOSE_PROJECT_NAME:-}" >> "$CALL_LOG"\n'
                 'printf "goenv %s|%s|%s\\n" "$GOCACHE" "$GOMODCACHE" "$GOPATH" >> "$CALL_LOG"\n'
                 'if [[ "$1" == setup && -n "${CAPTURED_ENV:-}" ]]; then '
                 'cp "$(dirname "$0")/deployment/docker/.env" "$CAPTURED_ENV"; fi\n'
@@ -225,9 +226,12 @@ class ForcadCacheTests(unittest.TestCase):
         self.install_fixture(monitoring=True)
         self.write_fake_commands()
         captured = self.root / "captured-env"
+        self.env["COMPOSE_PROJECT_NAME"] = "unrelated-project"
         self.env["CAPTURED_ENV"] = str(captured)
         result = self.run_script()
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("project forcad\n", self.log.read_text())
+        self.assertIn('COMPOSE_PROJECT_NAME="forcad"\n', captured.read_text())
         values = dict(
             line.split("=", 1)
             for line in captured.read_text().splitlines()

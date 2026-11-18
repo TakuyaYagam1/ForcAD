@@ -1060,9 +1060,6 @@ class RenderTests(unittest.TestCase):
         self.assertIn(
             "./control.sh down -v --remove-orphans", files["forcad/install.sh"]
         )
-        self.assertIn(
-            "label=com.docker.compose.project=forcad", files["forcad/install.sh"]
-        )
         self.assertIn("docker volume rm", files["forcad/install.sh"])
         self.assertIn(".forcad-managed-packages", files["forcad/install.sh"])
         self.assertIn("down -v --remove-orphans", files["forcad/uninstall.sh"])
