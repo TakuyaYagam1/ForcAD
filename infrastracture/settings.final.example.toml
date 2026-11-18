@@ -2,7 +2,7 @@
 # Use 1-32 teams and 1-7 members per team. admins sets the wg-admin peer count.
 admins = 1
 # Public game ports allowed through the router to team networks.
-game_tcp_ports = [8080, 8081]
+game_tcp_ports = [8080, 8081, 8082]
 game_udp_ports = []
 # SSH and other management ports allowed from team networks to vulnboxes.
 management_tcp_ports = [22]
@@ -61,143 +61,114 @@ install_path = "/opt/forcad"
 members_per_team = 7
 
 [[teams.entries]]
-name = "team-01"
+name = "RGB+SqWD"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-02"
+name = "Ox20"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-03"
+name = "ПАУК"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-04"
+name = "Prima"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-05"
+name = "(っ◔◡◔)っ ♥️ Университет ИТМО ♥️"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-06"
+name = "Capybaras"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-07"
+name = "SHA-272"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-08"
+name = "-=B0SS_1337=-"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-09"
+name = "Legacy"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-10"
+name = "SIGAN"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-11"
+name = "N31M4RK_TE4M"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-12"
+name = "meow"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-13"
+name = "smd"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-14"
+name = "42TEAM VSU"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-15"
+name = "DUCKERZ"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-16"
+name = "daywave."
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-17"
+name = "CUT"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-18"
+name = "Caplag"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-19"
+name = "Сборная г. Москва"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-20"
+name = "Сборная Пермского края"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-21"
+name = "N0N@me13"
 logo = ""
 highlighted = false
 
 [[teams.entries]]
-name = "team-22"
+name = "NPC"
 logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-23"
-logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-24"
-logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-25"
-logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-26"
-logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-27"
-logo = ""
-highlighted = false
-
-[[teams.entries]]
-name = "team-28"
-logo = ""
+kind = "npc"
 highlighted = false
 
 # Branding assets are relative to public/brand/. public_host is the address
@@ -218,7 +189,7 @@ monitoring = true
 # Enable only when the corresponding router exporter or Zeek sensor is set up.
 router_metrics = true
 game_metrics = true
-# chrp-final adds the 64 GiB final host limits to the generated environment.
+# Apply the 24 vCPU / 32 GiB CH host profile to the generated environment.
 capacity = "chrp-final"
 
 # Values written to the generated ForcAD config.yml.
@@ -228,8 +199,8 @@ mode = "classic"
 round_time = 60
 # Experimental extra CHECKs per round, classic only; 0 disables them.
 extra_checks = 0
-rounds = 300
-start_time = "2027-01-01 12:00:00"
+rounds = 240
+start_time = "2027-12-31 23:59:59"
 timezone = "Europe/Moscow"
 default_score = 2500
 flag_lifetime = 5
@@ -241,45 +212,42 @@ env_path = "/opt/checkers/bin"
 get_period = 60
 
 # Task entries are added to config.yml. checker is relative to the repository's
-# checkers/ directory; checker assets are copied into the fresh installation.
+# checkers/ directory; provision the private checker assets before rendering.
 [tasks]
 # checker_timeout is seconds per action. puts/gets are action counts;
 # places is the number of flag locations. Periods are in seconds.
-# Placeholder checker: replace with the final service and executable path.
 [[tasks.entries]]
-name = "service-1"
-checker = "service-1/checker.py"
-checker_timeout = 20
+name = "kincare"
+checker = "kincare/checker.py"
 checker_type = "pfr"
-puts = 14
-gets = 1
-places = 14
+checker_timeout = 15
+places = 5
+puts = 5
+gets = 3
 default_score = 2500
 env_path = "/opt/checkers/bin"
 get_period = 60
 
-# Placeholder checker: replace with the final service and executable path.
 [[tasks.entries]]
-name = "service-2"
-checker = "service-2/checker.py"
-checker_timeout = 20
+name = "wahrwelt"
+checker = "wahrwelt/checker.py"
 checker_type = "pfr"
-puts = 13
+checker_timeout = 20
+places = 10
+puts = 10
 gets = 1
-places = 13
 default_score = 2500
 env_path = "/opt/checkers/bin"
 get_period = 60
 
-# Placeholder checker: replace with the final service and executable path.
 [[tasks.entries]]
-name = "service-3"
-checker = "service-3/checker.py"
-checker_timeout = 20
+name = "sentinel"
+checker = "sentinel/checker.py"
 checker_type = "pfr"
-puts = 13
-gets = 1
-places = 13
+checker_timeout = 15
+places = 3
+puts = 3
+gets = 3
 default_score = 2500
 env_path = "/opt/checkers/bin"
 get_period = 60

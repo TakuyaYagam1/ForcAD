@@ -106,7 +106,7 @@ class RenderTests(unittest.TestCase):
         self.assertEqual(rendered_inventory[-1]["kind"], "npc")
         self.assertIn("10.183.119.2", files["router/common.nft"])
         self.assertIn(
-            "oifname \"ens21.119\" ip daddr 10.183.119.2 "
+            'oifname "ens21.119" ip daddr 10.183.119.2 '
             "ip saddr { $forcad_ip, $attack_net, $admin_net } snat to 10.183.119.1",
             files["router/common.nft"],
         )
@@ -150,8 +150,8 @@ class RenderTests(unittest.TestCase):
             path.write_text(
                 first_npc.replace(
                     '[[teams.entries]]\nname = "pod egidoy"\n'
-                    "# Logo path relative to public/teams/.\n"
-                    'logo = "egida.png"\nhighlighted = true\n\n',
+                    "# Logo path relative to public/teams/; leave empty if unavailable.\n"
+                    'logo = ""\nhighlighted = true\n\n',
                     "",
                 )
             )
@@ -205,7 +205,6 @@ class RenderTests(unittest.TestCase):
             example.replace(
                 'public_host = "10.183.2.10"', 'public_host = "10.183.3.11"'
             ),
-            example.replace('logo = "danosito.jpg"', 'logo = "../danosito.jpg"'),
             example.replace('name = "danosito\'s ai farm"', 'name = "../outside"'),
             example.replace('name = "danosito\'s ai farm"', 'name = "team\\n[Peer]"'),
         ]
@@ -216,14 +215,15 @@ class RenderTests(unittest.TestCase):
                     path.write_text(text)
                     with self.assertRaises(ValueError):
                         render.load_config(path)
+        with self.assertRaises(ValueError):
+            render.safe_asset("../danosito.jpg", "public/teams", "team logo")
 
     def test_seven_members_have_unique_routed_addresses(self):
         example = (ROOT / "settings.example.toml").read_text()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "settings.toml"
             path.write_text(
-                example.replace("members_per_team = 5", "members_per_team = 7")
-                .replace(
+                example.replace("members_per_team = 5", "members_per_team = 7").replace(
                     'participant_vpn = "10.183.200.0/24"',
                     'participant_vpn = "10.183.200.0/27"',
                 )
@@ -264,20 +264,39 @@ class RenderTests(unittest.TestCase):
 
     def test_final_capacity_is_selected_explicitly(self):
         source = (ROOT / "settings.final.example.toml").read_text()
-        # The final template deliberately requires the actual event checkers.
-        for number in range(1, 4):
-            source = source.replace(
-                f"service-{number}/checker.py", "examples/note/checker.py"
-            )
         with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "settings.toml"
+            root = Path(directory)
+            for name in ("kincare", "wahrwelt", "sentinel"):
+                checker = root / "checkers" / name / "checker.py"
+                checker.parent.mkdir(parents=True)
+                checker.touch()
+            brand = root / "public" / "brand" / "forcad-mark.svg"
+            brand.parent.mkdir(parents=True)
+            brand.touch()
+            path = root / "settings.toml"
             path.write_text(source)
-            config = render.load_config(path)
+            with mock.patch.object(render, "ROOT", root / "infrastracture"):
+                config = render.load_config(path)
         inventory = render.teams(config)
-        self.assertEqual(len(inventory), 28)
-        self.assertEqual(sum(len(team["peers"]) for team in inventory), 196)
-        self.assertEqual(sum(task["puts"] for task in config["tasks"]["entries"]), 40)
-        self.assertIn("FORCAD_WORKER_REPLICAS=20", render.forcad_environment(config))
+        self.assertEqual(len(inventory), 22)
+        self.assertEqual(sum(len(team["peers"]) for team in inventory), 147)
+        self.assertEqual(
+            [team["kind"] for team in inventory], ["player"] * 21 + ["npc"]
+        )
+        self.assertEqual(inventory[0]["name"], "RGB+SqWD")
+        self.assertEqual(inventory[-1]["name"], "NPC")
+        rendered = render.forcad_config(config)
+        for service in ("kincare", "wahrwelt", "sentinel"):
+            self.assertIn(
+                f'  - name: "{service}"\n    checker: "{service}/checker.py"\n',
+                rendered,
+            )
+        self.assertEqual(sum(task["puts"] for task in config["tasks"]["entries"]), 18)
+        self.assertEqual(sum(task["gets"] for task in config["tasks"]["entries"]), 7)
+        self.assertEqual(config["game"]["rounds"], 240)
+        self.assertIn("FORCAD_API_REPLICAS=4", render.forcad_environment(config))
+        self.assertIn("FORCAD_RECEIVER_REPLICAS=2", render.forcad_environment(config))
+        self.assertIn("FORCAD_WORKER_REPLICAS=4", render.forcad_environment(config))
         sensor = render.game_metrics(config)["router/game-metrics.service"]
         self.assertIn("MemoryHigh=4G", sensor)
         self.assertIn("MemoryMax=infinity", sensor)
@@ -929,11 +948,9 @@ class RenderTests(unittest.TestCase):
         self.assertIn("meta l4proto udp ct original proto-dst { 31337 }", content)
         self.assertIn("10.183.200.0/29", files["forcad/config.yml"])
         self.assertIn("10.183.101.2/32", files["forcad/config.yml"])
-        self.assertIn(
-            'logo_path: "/team-logos/danosito.jpg"', files["forcad/config.yml"]
-        )
-        self.assertIn("forcad/checkers/examples/note/checker.py", files)
-        self.assertIn("forcad/public/teams/danosito.jpg", files)
+        self.assertNotIn("logo_path:", files["forcad/config.yml"])
+        self.assertIn("forcad/checkers/kincare/checker.py", files)
+        self.assertNotIn("forcad/public/teams/danosito.jpg", files)
         self.assertIn("Fresh installation", files["forcad/install.sh"])
         self.assertLess(
             files["forcad/install.sh"].index("apt-get update"),

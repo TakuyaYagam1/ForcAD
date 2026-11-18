@@ -65,14 +65,14 @@ members_per_team = 5
 
 [[teams.entries]]
 name = "danosito's ai farm"
-# Logo path relative to public/teams/.
-logo = "danosito.jpg"
+# Logo path relative to public/teams/; leave empty if unavailable.
+logo = ""
 highlighted = false
 
 [[teams.entries]]
 name = "pod egidoy"
-# Logo path relative to public/teams/.
-logo = "egida.png"
+# Logo path relative to public/teams/; leave empty if unavailable.
+logo = ""
 highlighted = true
 
 [[teams.entries]]
@@ -99,7 +99,7 @@ monitoring = true
 # Enable only when the corresponding router exporter or Zeek sensor is set up.
 router_metrics = false
 game_metrics = false
-# chrp-final adds the 64 GiB final host limits to the generated environment.
+# Generic example; use settings.final.example.toml for the CH 24 vCPU / 32 GiB profile.
 capacity = "default"
 
 # Values written to the generated ForcAD config.yml.
@@ -127,13 +127,13 @@ get_period = 60
 # checker_timeout is seconds per action. puts/gets are action counts;
 # places is the number of flag locations. Periods are in seconds.
 [[tasks.entries]]
-name = "example_service"
-checker = "examples/note/checker.py"
-checker_timeout = 10
-checker_type = "hackerdom"
-puts = 2
-gets = 2
-places = 2
+name = "kincare"
+checker = "kincare/checker.py"
+checker_timeout = 15
+checker_type = "pfr"
+puts = 5
+gets = 3
+places = 5
 default_score = 2500
 env_path = "/opt/checkers/bin"
 get_period = 60

@@ -10,6 +10,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 ROLES = ("api", "receiver", "worker", "ticker")
 ONESHOT = {"initializer", "config-loader", "postgres-data", "checker-db-access"}
+TEAMS = 22  # 21 players and one NPC
+PUTS_PER_TEAM = 18  # kincare 5, wahrwelt 10, sentinel 3
+GETS_PER_TEAM = 7  # kincare 3, wahrwelt 1, sentinel 3
+ROUNDS = 240
+HOST_MEMORY_GIB = 32
+SOFT_MEMORY_BUDGET_GIB = 28
 
 
 def budget(config):
@@ -60,8 +66,8 @@ def budget(config):
     )
     if sum(servers.values()) + 16 > postgres_limit:
         errors.append("PostgreSQL has fewer than 16 spare connections")
-    if sum(reservations.values()) > 56:
-        errors.append("Soft memory reservations exceed the 56 GiB planning budget")
+    if sum(reservations.values()) > SOFT_MEMORY_BUDGET_GIB:
+        errors.append("Soft memory reservations exceed the 28 GiB planning budget")
     ceiling = (
         round(sum(hard_limits.values()), 3)
         if all(limit is not None for limit in hard_limits.values())
@@ -72,17 +78,19 @@ def budget(config):
     )
     if slots <= 0:
         raise ValueError("At least one checker action slot is required")
-    actions = 28 * (3 + 40 + 3)
+    actions = TEAMS * (3 + PUTS_PER_TEAM + GETS_PER_TEAM)
     return {
         "assumptions": {
-            "teams": 28,
-            "members": 196,
+            "teams": TEAMS,
+            "members": 21 * 7,
             "services": 3,
-            "puts_per_team": 40,
-            "gets_per_service": 1,
+            "puts_per_team": PUTS_PER_TEAM,
+            "gets_per_team": GETS_PER_TEAM,
             "round_seconds": 60,
-            "rounds": 300,
+            "rounds": ROUNDS,
             "flag_lifetime": 5,
+            "host_vcpus": 24,
+            "host_memory_gib": HOST_MEMORY_GIB,
         },
         "replicas": replicas,
         "database_clients_by_role": clients,
@@ -115,10 +123,12 @@ def budget(config):
         "memory_reservation_total_gib": round(sum(reservations.values()), 3),
         "hard_memory_gib_by_service": hard_limits,
         "hard_memory_total_gib": ceiling,
-        "host_headroom_gib": round(64 - ceiling, 3) if ceiling is not None else None,
-        "flags_created": 28 * 40 * 300,
-        "flags_live": 28 * 40 * 5,
-        "max_unique_steals": 28 * 40 * 300 * 27,
+        "host_headroom_gib": (
+            round(HOST_MEMORY_GIB - ceiling, 3) if ceiling is not None else None
+        ),
+        "flags_created": TEAMS * PUTS_PER_TEAM * ROUNDS,
+        "flags_live": TEAMS * PUTS_PER_TEAM * 6,
+        "max_unique_steals": TEAMS * PUTS_PER_TEAM * ROUNDS * (TEAMS - 1),
         "errors": errors,
         "note": "Soft reservations are not preallocated or guaranteed RAM. Null hard limits mean unlimited memory, not zero usage; host headroom requires measurement. Slot work is a lower bound, not measured round duration.",
     }

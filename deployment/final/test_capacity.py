@@ -15,17 +15,25 @@ class CapacityTests(unittest.TestCase):
             self.assertEqual(int(service.get("mem_limit", 0)), 0, name)
         report = capacity.budget(self.config)
         self.assertEqual(report["errors"], [])
-        self.assertEqual(report["checker_action_slots"], 160)
-        self.assertEqual(report["database_clients_total"], 216)
+        self.assertEqual(
+            report["replicas"], {"api": 4, "receiver": 2, "worker": 4, "ticker": 1}
+        )
+        self.assertEqual(report["assumptions"]["teams"], 22)
+        self.assertEqual(report["assumptions"]["puts_per_team"], 18)
+        self.assertEqual(report["assumptions"]["gets_per_team"], 7)
+        self.assertEqual(report["assumptions"]["rounds"], 240)
+        self.assertEqual(report["checker_action_slots"], 32)
+        self.assertEqual(report["actions_per_round_upper_bound"], 616)
+        self.assertEqual(report["database_clients_total"], 120)
         self.assertEqual(report["pooler_servers_total"], 136)
         self.assertIsNone(report["hard_memory_total_gib"])
         self.assertIsNone(report["host_headroom_gib"])
-        self.assertEqual(report["memory_reservation_total_gib"], 26.875)
-        self.assertEqual(report["slot_work_seconds_by_mean_action_seconds"]["20"], 161)
+        self.assertEqual(report["memory_reservation_total_gib"], 13.875)
+        self.assertEqual(report["slot_work_seconds_by_mean_action_seconds"]["20"], 385)
 
     def test_worker_reservations_cannot_silently_exceed_planning_budget(self):
         config = copy.deepcopy(self.config)
-        config["services"]["worker"]["mem_reservation"] = 4 * 2**30
+        config["services"]["worker"]["mem_reservation"] = 8 * 2**30
         self.assertTrue(
             any("memory" in error for error in capacity.budget(config)["errors"])
         )
@@ -36,7 +44,7 @@ class CapacityTests(unittest.TestCase):
             "FORCAD_WORKER_DATABASE_MAX_CONNS"
         ] = "16"
         config["services"]["pgbouncer"]["environment"]["PGBOUNCER_WORKER_CLIENTS"] = (
-            "256"
+            "64"
         )
         self.assertTrue(
             any("alias" in error for error in capacity.budget(config)["errors"])
