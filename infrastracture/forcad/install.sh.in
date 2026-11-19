@@ -283,10 +283,9 @@ printf '%s\n' "$host_install_output"
 host_backup="$(sed -n 's/^Installed [0-9][0-9]* files\. Backup: \/var\/backups\/forcad\/forcad\/install-//p' <<< "$host_install_output")"
 [[ -n "$host_backup" && "$host_backup" != */* ]] || { echo "Could not identify the host backup created during install" >&2; exit 1; }
 printf '%s\n' "$host_backup" > "$target/.forcad-host-backup"
+./control.sh start
 if [[ @@MONITORING@@ == true ]]; then
     ./control.sh monitoring up -d
-else
-    ./control.sh start
 fi
 bash "$bundle_dir/test.sh"
 (cd "$bundle_dir" && python3 -m hostlib.docker_state capture) > "$target/.forcad-firewall-applied"
