@@ -7,7 +7,7 @@ import { ScoreValue } from "@/shared/ui/brand/ScoreValue";
 import { ServiceCell } from "@/shared/ui/brand/ServiceCell";
 import { TeamAvatar } from "@/shared/ui/brand/TeamAvatar";
 import { useTranslation } from "react-i18next";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, type CSSProperties } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./ScoreboardTable.css";
 
@@ -91,6 +91,7 @@ export function ScoreboardTable({
     },
     [teamTasks],
   );
+  const teamColumnWidth = Math.max(400, 900 - tasks.length * 100);
 
   if (!teams.length) {
     return (
@@ -113,29 +114,16 @@ export function ScoreboardTable({
         aria-label={t("scoreboard.table.regionLabel")}
         tabIndex={0}
       >
-        <table className="scoreboard-table">
+        <table className="scoreboard-table" style={{ "--scoreboard-min-width": `${150 + teamColumnWidth + tasks.length * 215}px` } as CSSProperties}>
           <caption className="sr-only">
             {t("scoreboard.table.caption")}
           </caption>
           <colgroup>
-            <col style={{
-              width: "60px"
-            }} />
-            <col style={{
-              width: "340px"
-            }} />
-            <col style={{
-              width: "180px"
-            }} />
+            <col style={{ width: "50px" }} />
+            <col style={{ width: `${teamColumnWidth}px` }} />
+            <col style={{ width: "100px" }} />
             {tasks.map((task) => {
-              return (
-                <col
-                  key={task.id}
-                  style={{
-                    width: `calc((100% - 580px) / ${tasks.length})`,
-                  }}
-                />
-              )
+              return <col key={task.id} style={{ width: "215px" }} />
             })}
           </colgroup>
 
