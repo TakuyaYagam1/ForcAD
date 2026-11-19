@@ -91,7 +91,8 @@ export function ScoreboardTable({
     },
     [teamTasks],
   );
-  const teamColumnWidth = Math.max(400, 900 - tasks.length * 100);
+  const teamColumnWidth = 450;
+  const serviceColumnWidth = 270;
 
   if (!teams.length) {
     return (
@@ -114,7 +115,7 @@ export function ScoreboardTable({
         aria-label={t("scoreboard.table.regionLabel")}
         tabIndex={0}
       >
-        <table className="scoreboard-table" style={{ "--scoreboard-min-width": `${150 + teamColumnWidth + tasks.length * 215}px` } as CSSProperties}>
+        <table className="scoreboard-table" style={{ "--scoreboard-min-width": `${150 + teamColumnWidth + tasks.length * serviceColumnWidth}px` } as CSSProperties}>
           <caption className="sr-only">
             {t("scoreboard.table.caption")}
           </caption>
@@ -123,7 +124,7 @@ export function ScoreboardTable({
             <col style={{ width: `${teamColumnWidth}px` }} />
             <col style={{ width: "100px" }} />
             {tasks.map((task) => {
-              return <col key={task.id} style={{ width: "215px" }} />
+              return <col key={task.id} style={{ width: `${serviceColumnWidth}px` }} />
             })}
           </colgroup>
 
