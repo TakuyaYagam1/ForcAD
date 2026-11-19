@@ -245,6 +245,9 @@ DELETE FROM Flags;
 -- name: DeletePracticeHistory :exec
 DELETE FROM TeamTasksLog;
 
+-- name: DeletePracticeCheckerLogs :exec
+DELETE FROM CheckerActionLogs;
+
 -- name: DeletePracticeScheduleHistory :exec
 DELETE FROM ScheduleHistory;
 

@@ -109,6 +109,15 @@ func (q *Queries) DeletePracticeAnnouncements(ctx context.Context) error {
 	return err
 }
 
+const deletePracticeCheckerLogs = `-- name: DeletePracticeCheckerLogs :exec
+DELETE FROM CheckerActionLogs
+`
+
+func (q *Queries) DeletePracticeCheckerLogs(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deletePracticeCheckerLogs)
+	return err
+}
+
 const deletePracticeFlags = `-- name: DeletePracticeFlags :exec
 DELETE FROM Flags
 `
