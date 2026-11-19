@@ -196,6 +196,8 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 		 VALUES('PRACTICE1',$1,$2,1,'practice-public','practice-private')`, []any{teamIDs[0], taskIDs[0]}},
 		{`INSERT INTO TeamTasksLog(round,team_id,task_id,status,public_message,private_message,command)
 		 VALUES(1,$1,$2,101,'practice-log','practice-private-log','practice-command')`, []any{teamIDs[0], taskIDs[0]}},
+		{`INSERT INTO CheckerActionLogs(team_id,task_id,round,action,stage,started_at,finished_at,duration_ms,status,public_message)
+		 VALUES($1,$2,1,'put','classic',now(),now(),0,101,'practice PUT')`, []any{teamIDs[0], taskIDs[0]}},
 		{`INSERT INTO GameRoundSnapshots(round,round_start,snapshot)
 		 VALUES(1,0,'{"team_tasks":[]}'::JSONB)`, nil},
 		{`INSERT INTO ScheduleHistory(id,last_run) VALUES('practice_test',now())`, nil},
@@ -224,6 +226,13 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 	if practiceFlags != 0 || practiceLogs != 0 || practiceSnapshots != 0 || practiceSchedules != 0 || practiceAnnouncements != 0 || teamCount != 1 || taskCount != 1 {
 		t.Fatalf("practice cleanup kept flags/logs/snapshots/schedules/announcements=%d/%d/%d/%d/%d, teams/tasks=%d/%d",
 			practiceFlags, practiceLogs, practiceSnapshots, practiceSchedules, practiceAnnouncements, teamCount, taskCount)
+	}
+	checkerLogs, err := game.CheckerLogs(ctx, teamIDs[0], taskIDs[0], nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(checkerLogs) != 0 {
+		t.Fatalf("practice checker journal remains after reset: %+v", checkerLogs)
 	}
 	started, err := repository.StartScheduled(ctx, start)
 	if err != nil || !started {
@@ -260,6 +269,11 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 			args: []any{teamIDs[0], taskIDs[0]},
 		},
 		{
+			statement: `INSERT INTO CheckerActionLogs(team_id,task_id,round,action,stage,started_at,finished_at,duration_ms,status,public_message)
+			VALUES($1,$2,1,'put','classic',now(),now(),0,101,'final PUT')`,
+			args: []any{teamIDs[0], taskIDs[0]},
+		},
+		{
 			statement: `INSERT INTO GameRoundSnapshots(round,round_start,snapshot)
 			VALUES(1,1,'{"team_tasks":[]}'::JSONB)`,
 			args: nil,
@@ -287,6 +301,13 @@ func TestPracticeResetAutomaticallyStartsScheduledFinal(t *testing.T) {
 	if finalFlags != 1 || finalLogs != 1 || finalSnapshots != 1 || finalFlag != "FINALFLAG" {
 		t.Fatalf("finished final data was not preserved: flags/logs/snapshots=%d/%d/%d flag=%q",
 			finalFlags, finalLogs, finalSnapshots, finalFlag)
+	}
+	checkerLogs, err = game.CheckerLogs(ctx, teamIDs[0], taskIDs[0], nil, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(checkerLogs) != 1 || checkerLogs[0].Action != "put" || checkerLogs[0].PublicMessage != "PUT completed" {
+		t.Fatalf("finished final checker journal was not preserved: %+v", checkerLogs)
 	}
 }
 

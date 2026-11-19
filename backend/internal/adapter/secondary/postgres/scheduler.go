@@ -568,6 +568,7 @@ func maintainPracticeSession(
 		{"delete rehearsal announcements", queries.DeletePracticeAnnouncements},
 		{"delete rehearsal flags", queries.DeletePracticeFlags},
 		{"delete rehearsal history", queries.DeletePracticeHistory},
+		{"delete rehearsal checker journal", queries.DeletePracticeCheckerLogs},
 		{"delete rehearsal runtime", queries.DeletePracticeRuntime},
 		{"delete rehearsal schedule history", queries.DeletePracticeScheduleHistory},
 		{"reset rehearsal team tasks", queries.ResetPracticeTeamTasks},
