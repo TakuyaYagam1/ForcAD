@@ -1,5 +1,5 @@
 .scoreboard-page { min-width: 0; }
-.scoreboard-page .scoreboard-table { table-layout: fixed; min-width: 1050px; }
+.scoreboard-page .scoreboard-table { table-layout: fixed; min-width: var(--scoreboard-min-width, 1050px); }
 .scoreboard-page .scoreboard-table th { text-align: left; }
 .scoreboard-page .scoreboard-table th.place-column { text-align: center; }
 .scoreboard-page .scoreboard-table th.total-column { text-align: right; }
@@ -7,6 +7,7 @@
 .scoreboard-page .scoreboard-table .service-column { width: auto; }
 .scoreboard-page .scoreboard-table th.team-column { padding-left: 8px; }
 .scoreboard-page .scoreboard-table td.total-column .score-value { font-size: 24px; }
+.scoreboard-page--compact .team-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 @media (min-width: 701px) {
   .scoreboard-page--compact .scoreboard-toolbar { gap: 8px; padding: 8px 0; min-height: 42px; }
   .scoreboard-page--compact .table-scroll { max-height: var(--scoreboard-table-max-height, none); }
@@ -17,7 +18,7 @@
   .scoreboard-page--compact .rank-number.rank-badge { font-size: 15px; }
   .scoreboard-page--compact .team-avatar { width: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); height: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); }
   .scoreboard-page--compact .team-identity { gap: 10px; }
-  .scoreboard-page--compact .team-identity > span:last-child { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
+  .scoreboard-page--compact .team-identity > span:last-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; flex: 1; min-width: 0; }
   .scoreboard-page--compact .team-name { min-width: 0; font-size: 16px; line-height: 20px; }
   .scoreboard-page--compact .team-ip { flex-shrink: 0; font-size: 13px; line-height: 18px; white-space: nowrap; }
   .scoreboard-page--compact .scoreboard-table td.total-column .score-value { font-size: 17px; letter-spacing: -.5px; }
@@ -52,7 +53,7 @@
 }
 
 @media (min-width: 701px) {
-  @container (min-width: 240px) {
+  @container (min-width: 180px) {
     .scoreboard-page--compact:not(.scoreboard-page--dense) .service-cell:not(.service-cell--wide-values) .service-metric > span {
       position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none;
     }
