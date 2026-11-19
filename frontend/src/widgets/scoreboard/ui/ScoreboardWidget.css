@@ -2,7 +2,7 @@
 .scoreboard-page .scoreboard-table { table-layout: fixed; min-width: var(--scoreboard-min-width, 1050px); }
 .scoreboard-page .scoreboard-table th { text-align: left; }
 .scoreboard-page .scoreboard-table th.place-column { text-align: center; }
-.scoreboard-page .scoreboard-table th.total-column { text-align: right; }
+.scoreboard-page .scoreboard-table th.total-column { text-align: right; padding-right: calc(18px + 7ch + 8px); }
 .scoreboard-page .scoreboard-table .total-column { padding-right: 18px; }
 .scoreboard-page .scoreboard-table .service-column { width: auto; }
 .scoreboard-page .scoreboard-table th.team-column { padding-left: 8px; }
@@ -15,6 +15,7 @@
   .scoreboard-page--compact .scoreboard-table th { height: 30px; padding: 4px 6px; }
   .scoreboard-page--compact .scoreboard-table td { height: var(--scoreboard-row-height, 31px); padding: 2px 4px; }
   .scoreboard-page--compact .scoreboard-table .total-column { padding-right: 12px; }
+  .scoreboard-page--compact .scoreboard-table th.total-column { padding-right: calc(12px + 7ch + 8px); }
   .scoreboard-page--compact .rank-number.rank-badge { font-size: 15px; }
   .scoreboard-page--compact .team-avatar { width: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); height: clamp(26px, calc(var(--scoreboard-row-height, 32px) - 6px), 36px); }
   .scoreboard-page--compact .team-identity { gap: 10px; }
@@ -69,6 +70,9 @@
   .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table td {
     height: var(--scoreboard-row-height, 32px);
     padding: 1px 4px;
+  }
+  .scoreboard-page--compact.scoreboard-page--dense .scoreboard-table th.total-column {
+    padding-right: calc(4px + 7ch + 8px);
   }
 
   .scoreboard-page--compact.scoreboard-page--dense .team-name {
