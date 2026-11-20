@@ -27,3 +27,22 @@ for proxy_cidr in ${TRUSTED_PROXY_CIDRS:-}; do
         >> /tmp/forcad-trusted-proxies.conf
 done
 chmod 0644 /tmp/forcad-trusted-proxies.conf
+
+admin_cidr=${FORCAD_ADMIN_CIDR:-}
+case "$admin_cidr" in
+    '')
+        printf 'default 0;\n'
+        ;;
+    *[!0-9a-fA-F.:/]*)
+        echo "FORCAD_ADMIN_CIDR must be an IPv4 or IPv6 CIDR" >&2
+        exit 1
+        ;;
+    */*)
+        printf 'default 0;\n%s 1;\n' "$admin_cidr"
+        ;;
+    *)
+        echo "FORCAD_ADMIN_CIDR must be an IPv4 or IPv6 CIDR" >&2
+        exit 1
+        ;;
+esac > /tmp/forcad-admin-network.conf
+chmod 0644 /tmp/forcad-admin-network.conf

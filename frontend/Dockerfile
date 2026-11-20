@@ -58,12 +58,13 @@ RUN envsubst '${DNS_RESOLVER}' < /etc/nginx/http.conf.template > /etc/nginx/http
     && chown -R nginx:nginx /tmp/nginx \
     && printf 'proxy_set_header X-Forwarded-Proto http;\n' > /tmp/forcad-proxy-proto \
     && : > /tmp/forcad-trusted-proxies.conf \
-    && chown nginx:nginx /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf \
-    && chmod 0644 /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf \
+    && printf 'default 0;\n' > /tmp/forcad-admin-network.conf \
+    && chown nginx:nginx /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf /tmp/forcad-admin-network.conf \
+    && chmod 0644 /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf /tmp/forcad-admin-network.conf \
     && chmod +x /docker-entrypoint.d/05-forcad-proxy-proto.sh \
     && nginx -t \
     && rm -f /tmp/nginx/nginx.pid
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 USER nginx
