@@ -206,6 +206,7 @@ services:
     environment:
       PUBLIC_SCHEME: "${PUBLIC_SCHEME:-http}"
       TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+      FORCAD_ADMIN_CIDR: "${FORCAD_ADMIN_CIDR:-}"
     restart: on-failure
     cap_drop:
       - ALL

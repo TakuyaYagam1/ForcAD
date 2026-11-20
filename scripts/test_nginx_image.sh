@@ -72,6 +72,7 @@ container_id="$(docker run --detach \
     --mount "type=bind,src=$logo_fixture_dir,dst=/var/www/front/team-logos,readonly" \
     --env PUBLIC_SCHEME=https \
     --env TRUSTED_PROXY_CIDRS=127.0.0.1/32 \
+    --env FORCAD_ADMIN_CIDR=127.0.0.0/8 \
     "$image_tag")"
 
 container_state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
@@ -138,4 +139,18 @@ if [[ "$missing_status" != 404 ]]; then
     exit 1
 fi
 
-echo "nginx verified team logos, asset headers, the teams page, and build-time branding."
+for route in /admin/ /ADMIN/ /api/v1/admin/ /api/v1/admin/login/; do
+    status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+        --max-time 5 --header 'X-Forwarded-For: 127.0.0.1' "$base_url$route")"
+    if [[ "$status" != 403 ]]; then
+        printf 'Expected 403 outside the admin network for %s, got %s\n' "$route" "$status" >&2
+        exit 1
+    fi
+done
+
+docker exec "$container_id" wget -qO- -T 5 \
+    --header 'X-Forwarded-For: 192.0.2.1' \
+    http://127.0.0.1:8080/admin/ > "$test_dir/admin.html"
+cmp "$test_dir/index.html" "$test_dir/admin.html"
+
+echo "nginx verified public assets and the admin network restriction."
