@@ -69,9 +69,11 @@ PY
 container_id="$(docker run --detach \
     --name "$container_name" \
     --publish "127.0.0.1:${host_port}:8080" \
+    --publish "127.0.0.1:$((host_port + 1)):8081" \
     --mount "type=bind,src=$logo_fixture_dir,dst=/var/www/front/team-logos,readonly" \
     --env PUBLIC_SCHEME=https \
     --env TRUSTED_PROXY_CIDRS=127.0.0.1/32 \
+    --env FORCAD_ADMIN_CIDR=127.0.0.1/32 \
     "$image_tag")"
 
 container_state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
@@ -138,4 +140,39 @@ if [[ "$missing_status" != 404 ]]; then
     exit 1
 fi
 
-echo "nginx verified team logos, asset headers, the teams page, and build-time branding."
+for route in /admin /admin/ /admin/teams /ADMIN/ /api/v1/admin /api/v1/admin/status/; do
+    status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+        --max-time 5 --header 'X-Forwarded-For: 127.0.0.1' "$base_url$route")"
+    if [[ "$status" != 403 ]]; then
+        printf 'Expected 403 on %s outside the admin network, got %s\n' "$route" "$status" >&2
+        exit 1
+    fi
+done
+
+status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --max-time 5 --header 'Content-Type: application/json' --data '{}' \
+    "$base_url/api/v1/admin/login/")"
+if [[ "$status" != 403 ]]; then
+    printf 'Expected 403 on admin login outside the admin network, got %s\n' "$status" >&2
+    exit 1
+fi
+
+docker exec "$container_id" wget -qO- -T 5 \
+    --header 'X-Forwarded-For: 192.0.2.1' \
+    http://127.0.0.1:8080/admin/ > "$test_dir/admin.html"
+cmp "$test_dir/index.html" "$test_dir/admin.html"
+
+public_url="http://127.0.0.1:$((host_port + 1))"
+curl --fail --silent --show-error --max-time 5 \
+    "$public_url/" --output "$test_dir/public.html"
+cmp "$test_dir/index.html" "$test_dir/public.html"
+for route in /admin/ /api/v1/admin/login/; do
+    status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+        --max-time 5 "$public_url$route")"
+    if [[ "$status" != 404 ]]; then
+        printf 'Expected public port to hide %s, got %s\n' "$route" "$status" >&2
+        exit 1
+    fi
+done
+
+echo "nginx verified public scoreboard and the admin network restriction."
