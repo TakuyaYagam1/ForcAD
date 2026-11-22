@@ -17,6 +17,7 @@ def reset_value(loader, node):
 
 
 ComposeLoader.add_constructor("!reset", reset_value)
+ComposeLoader.add_constructor("!override", reset_value)
 
 
 def compose_teams(root, inventory, capture_filter):
@@ -58,7 +59,7 @@ def compose_teams(root, inventory, capture_filter):
             "environment": {"DEMO_GATEWAY": team["gateway"]},
             "volumes": [
                 f"{volume}:/data",
-                f"../../config/runtime/demo/seeds/team{number}:/app/seed:ro",
+                f"../../.demo/network/seeds/team{number}:/app/seed:ro",
             ],
             "networks": {
                 network: {"ipv4_address": team["vulnbox"], "interface_name": "eth0"}
@@ -73,7 +74,7 @@ def compose_teams(root, inventory, capture_filter):
                 }
             },
             "volumes": [
-                f"../../config/runtime/demo/players/team{number}.conf:/app/keys/wg0.conf:ro"
+                f"../../.demo/network/players/team{number}.conf:/app/keys/wg0.conf:ro"
             ],
         }
         services[farm] = {
@@ -81,7 +82,7 @@ def compose_teams(root, inventory, capture_filter):
             "command": ["traffic"],
             "user": "10001:10001",
             "network_mode": f"service:{player}",
-            "env_file": f"../../config/runtime/demo-team{number}.env",
+            "env_file": f"../../.demo/network/team{number}.env",
             "depends_on": {
                 player: {"condition": "service_healthy"},
                 f"demo-team{peer}": {"condition": "service_healthy"},

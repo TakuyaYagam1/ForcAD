@@ -42,7 +42,7 @@ runs contain 120 jobs in total.
 
 Run the commands in [the demo README](README.md#availability-experiment) to
 repeat the experiment. Private reports are written to
-`config/runtime/demo/availability-{healthy,fault,pause}.json`.
+`.demo/network/availability-{healthy,fault,pause}.json`.
 
 ## Decision
 

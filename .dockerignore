@@ -44,6 +44,7 @@
 /forcad-*.tar.gz
 /.forcad-backup-*
 /config/runtime
+/.demo
 /infrastracture/settings.toml
 /infrastracture/runtime
 /checkers/**

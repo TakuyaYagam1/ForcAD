@@ -65,14 +65,10 @@ func (w *Worker) execute(
 	if selected == nil {
 		return failedResult(job.Round, ErrNoActions.Error()), nil
 	}
-	public := selected.public
-	if workflow == domain.JobActionPutsOnly && selected.action == processchecker.ActionPut && selected.status == processchecker.StatusUp {
-		public = "OK"
-	}
 	return domain.CheckerResult{
 		Round:          job.Round,
 		Status:         statusCode(selected.status),
-		PublicMessage:  public,
+		PublicMessage:  selected.public,
 		PrivateMessage: selected.private,
 		Command:        selected.command,
 	}, nil

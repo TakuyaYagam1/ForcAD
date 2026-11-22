@@ -193,6 +193,21 @@ keep the application's per-IP limiter by default. Only list actual upstream
 proxies in `TRUSTED_PROXY_CIDRS`; never add player VPN ranges to trust
 unverified `X-Forwarded-For` values.
 
+Nginx admits `/flags` and its aliases **before** token lookup or database access.
+`FORCAD_FLAGS_IP_RPS` (default `400`) and `FORCAD_FLAGS_TOTAL_RPS` (`2000`) are
+requests per second per client IP and across this ingress, respectively; each
+allows one extra second of burst. A batch of up to 100 flags costs one request.
+The authenticated per-team `FLAG_RATE` and `FLAG_BURST` still count individual flags.
+`FORCAD_WS_PER_IP` (`128`) limits simultaneous board WebSockets per client IP,
+across all API replicas behind this ingress. Excess requests return `429` with
+`Retry-After`. Spectators or farms sharing a NAT share an IP budget; size these
+settings for that group, or preserve real client IPs through a trusted proxy.
+Do not expose API or receiver ports around the ingress.
+
+Backup transfers share four slots. Nginx streams the request to the API without
+spooling the archive to disk; the API checks the admin session before decoding
+the upload. The 256 MiB archive limit and the admin VPN ACL still apply.
+
 To restrict `/admin`, `/api/v1/admin` and their subpaths, add one or both
 settings to `deployment/docker/.env`:
 

@@ -86,7 +86,7 @@ def main():
         len(settings["tasks"]["entries"]),
         settings["game"].get("extra_checks", 0),
     )
-    output = Path(__file__).resolve().parents[2] / "config/runtime/demo/timing.json"
+    output = Path(__file__).resolve().parents[2] / ".demo/network/timing.json"
     output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({k: v for k, v in report.items() if k != "samples"}, indent=2))
     print(f"Saved {output.relative_to(output.parents[3])}")

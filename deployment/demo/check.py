@@ -6,29 +6,24 @@ import subprocess
 import time
 import urllib.parse
 import urllib.request
+from functools import cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPOSE = [
-    "docker",
-    "compose",
-    "--project-directory",
-    str(ROOT / "deployment/docker"),
-    "--env-file",
-    str(ROOT / "config/runtime/demo.env"),
-    "-f",
-    str(ROOT / "deployment/docker/compose.yml"),
-    "-f",
-    str(ROOT / "deployment/docker/compose.monitoring.yml"),
-    "-f",
-    str(ROOT / "deployment/docker/compose.demo.yml"),
-    "-f",
-    str(ROOT / "config/runtime/demo/compose.yml"),
-    "--profile",
-    "monitoring",
-]
+COMPOSE = ["bash", str(ROOT / "deployment/docker/scripts/demo.sh")]
 SEEN = set()
 PASSED = 0
+
+
+@cache
+def published_origin(port):
+    binding = subprocess.check_output(
+        [*COMPOSE, "port", "demo-forcad", str(port)], text=True, timeout=10
+    ).strip()
+    host, _, published = binding.rpartition(":")
+    if host != "127.0.0.1" or not published.isdecimal():
+        raise ValueError(f"Expected a demo loopback binding for port {port}")
+    return f"http://127.0.0.1:{int(published)}"
 
 
 def execute(role, *command, check=True, **kwargs):
@@ -96,7 +91,7 @@ def phase(value):
 
 
 def query(expression):
-    url = "http://127.0.0.1:9090/api/v1/query?" + urllib.parse.urlencode(
+    url = published_origin(9090) + "/api/v1/query?" + urllib.parse.urlencode(
         {"query": expression}
     )
     with urllib.request.urlopen(url, timeout=5) as response:
@@ -130,7 +125,7 @@ def check_routes():
 
 
 def inventory():
-    return json.loads((ROOT / "config/runtime/demo/teams.json").read_text())
+    return json.loads((ROOT / ".demo/network/teams.json").read_text())
 
 
 def main():
@@ -140,7 +135,7 @@ def main():
         for index, team in enumerate(teams)
     ]
     check_routes()
-    original = (ROOT / "config/runtime/demo/phase").read_text().strip()
+    original = (ROOT / ".demo/network/phase").read_text().strip()
     assert original in {"game", "pre-game"}
     filtering = False
     try:

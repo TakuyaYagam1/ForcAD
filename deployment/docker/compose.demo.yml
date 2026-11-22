@@ -1,3 +1,5 @@
+name: forcad-demo
+
 x-demo: &demo
   image: forcad-demo:local
   build:
@@ -53,12 +55,24 @@ x-player: &player
 
 services:
   postgres:
+    image: forcad-demo-postgres:local
+    ports: !reset []
     volumes:
       - demo-postgres-data:/var/lib/postgresql
 
   postgres-data:
+    image: forcad-demo-postgres:local
     volumes:
       - demo-postgres-data:/var/lib/postgresql
+
+  checker-db-access:
+    image: forcad-demo-postgres:local
+
+  redis:
+    ports: !reset []
+  nats:
+    image: forcad-demo-nats:local
+    ports: !reset []
 
   api:
     environment:
@@ -67,6 +81,7 @@ services:
     environment:
       TRUSTED_PROXY_CIDRS: 172.30.240.10/32
   pgbouncer:
+    ports: !reset []
     environment:
       FORCAD_WORKER_REPLICAS: "1" # The demo worker shares a single metrics port.
 
@@ -90,18 +105,21 @@ services:
     ports: !reset []
     network_mode: service:demo-forcad
     volumes:
-      - ../../config/runtime/demo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../../config/runtime/demo/forcad/routers.yml:/etc/prometheus/file_sd/routers.yml:ro
-      - ../../config/runtime/demo/forcad/game-sensors.yml:/etc/prometheus/file_sd/game-sensors.yml:ro
+      - ../../.demo/network/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../.demo/network/forcad/routers.yml:/etc/prometheus/file_sd/routers.yml:ro
+      - ../../.demo/network/forcad/game-sensors.yml:/etc/prometheus/file_sd/game-sensors.yml:ro
     depends_on:
       demo-forcad: {condition: service_healthy}
+
+  grafana:
+    ports: !override ["127.0.0.1:${FORCAD_DEMO_GRAFANA_PORT:-13000}:3000"]
 
   demo-forcad:
     <<: *network
     command: [forcad]
     ports:
-      - "127.0.0.1:${FORCAD_DEMO_HTTP_PORT:-8080}:8080"
-      - "127.0.0.1:9090:9090"
+      - "127.0.0.1:${FORCAD_DEMO_HTTP_PORT:-18080}:8080"
+      - "127.0.0.1:${FORCAD_DEMO_PROMETHEUS_PORT:-19090}:9090"
     networks:
       default:
         ipv4_address: 172.30.240.10
@@ -135,9 +153,9 @@ services:
       demo-transit: {ipv4_address: 10.183.1.1, interface_name: eth1}
       demo-forcad: {ipv4_address: 10.183.2.1, interface_name: eth2}
     volumes:
-      - ../../config/runtime/demo/router:/etc/forcad/router:ro
-      - ../../config/runtime/demo/network.json:/etc/forcad/network.json:ro
-      - ../../config/runtime/demo/phase:/etc/forcad/phase:ro
+      - ../../.demo/network/router:/etc/forcad/router:ro
+      - ../../.demo/network/network.json:/etc/forcad/network.json:ro
+      - ../../.demo/network/phase:/etc/forcad/phase:ro
     healthcheck:
       test: [CMD-SHELL, "wget -qO- http://10.183.2.1:9109/metrics | grep -q 'forcad_network_scrape_success 1'"]
       interval: 5s
@@ -155,8 +173,8 @@ services:
     networks:
       demo-transit: {ipv4_address: 10.183.1.2, interface_name: eth0}
     volumes:
-      - ../../config/runtime/demo/vpn:/etc/forcad/vpn:ro
-      - ../../config/runtime/demo/wireguard/server:/app/keys:ro
+      - ../../.demo/network/vpn:/etc/forcad/vpn:ro
+      - ../../.demo/network/wireguard/server:/app/keys:ro
     depends_on:
       demo-router: {condition: service_healthy}
     healthcheck:
@@ -170,7 +188,7 @@ services:
     networks:
       demo-wan: {ipv4_address: 172.30.241.250, interface_name: eth0}
     volumes:
-      - ../../config/runtime/demo/wireguard/admins/admin-01.conf:/app/keys/wg0.conf:ro
+      - ../../.demo/network/wireguard/admins/admin-01.conf:/app/keys/wg0.conf:ro
 
   demo-sensor:
     build: ./zeek
@@ -205,8 +223,8 @@ services:
     security_opt: [no-new-privileges:true]
     tmpfs: ["/app:uid=10001,gid=10001,mode=0755,size=16m"]
     volumes:
-      - ../../config/runtime/demo/router/game-metrics.zeek:/app/game-metrics.zeek:ro
-      - ../../config/runtime/demo/router/game-inventory.zeek:/app/game-inventory.zeek:ro
+      - ../../.demo/network/router/game-metrics.zeek:/app/game-metrics.zeek:ro
+      - ../../.demo/network/router/game-inventory.zeek:/app/game-inventory.zeek:ro
     mem_limit: 1g
     cpus: 1
     pids_limit: 128

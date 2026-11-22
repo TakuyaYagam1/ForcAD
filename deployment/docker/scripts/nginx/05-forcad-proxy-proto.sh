@@ -11,6 +11,22 @@ case "$public_scheme" in
 esac
 
 umask 077
+export FORCAD_FLAGS_IP_RPS="${FORCAD_FLAGS_IP_RPS:-400}"
+export FORCAD_FLAGS_TOTAL_RPS="${FORCAD_FLAGS_TOTAL_RPS:-2000}"
+export FORCAD_WS_PER_IP="${FORCAD_WS_PER_IP:-128}"
+for limit in "$FORCAD_FLAGS_IP_RPS" "$FORCAD_FLAGS_TOTAL_RPS" "$FORCAD_WS_PER_IP"; do
+    case "$limit" in
+        0*|*[!0-9]*|??????*) echo "Ingress limits must be integers from 1 to 65535" >&2; exit 1 ;;
+    esac
+    if [ "$limit" -gt 65535 ]; then
+        echo "Ingress limits must be integers from 1 to 65535" >&2
+        exit 1
+    fi
+done
+# shellcheck disable=SC2016 # envsubst takes literal variable names.
+envsubst '${FORCAD_FLAGS_IP_RPS} ${FORCAD_FLAGS_TOTAL_RPS} ${FORCAD_WS_PER_IP}' \
+    < /etc/nginx/http.conf > /tmp/forcad-http.conf
+
 printf 'proxy_set_header X-Forwarded-Proto %s;\n' "$public_scheme" \
     > /tmp/forcad-proxy-proto
 chmod 0644 /tmp/forcad-proxy-proto

@@ -120,10 +120,11 @@ checker-specific names for service configuration. This reduces accidental secret
 propagation but does not prevent a trusted checker from accessing other resources
 of its worker identity.
 
-Successful PUT action logs contain a generic completion message. Retrieval state
-is stored with the flag, and deliberately public `pfr` hints remain available
-through the attack-data API. Never include flags or credentials in CHECK, GET or
-failed-PUT public messages.
+Successful PUT stdout is stored according to the checker protocol, never used
+as a status message. For other actions, the board verdict and action history
+use the same public text: the worker masks flag-shaped strings and the exact
+flag and private data passed to the action. It cannot recognize arbitrary
+credentials, fragments or encoded values; send those only to stderr.
 
 See [Operations](OPERATIONS.md) for deployment settings. The implementation is in
 the [process runner](../backend/internal/adapter/secondary/checker/checker.go) and

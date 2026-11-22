@@ -9,7 +9,7 @@ import threading
 import time
 import urllib.request
 
-from check import COMPOSE, ROOT, execute, inventory
+from check import COMPOSE, ROOT, execute, inventory, published_origin
 
 
 def sql(query):
@@ -33,9 +33,10 @@ def sql(query):
 
 
 def api_client():
+    origin = published_origin(8080)
     credentials = dict(
         line.split("=", 1)
-        for line in (ROOT / "config/runtime/admin.env").read_text().splitlines()
+        for line in (ROOT / ".demo/config/runtime/admin.env").read_text().splitlines()
         if line and not line.startswith("#")
     )
     client = urllib.request.build_opener(
@@ -44,11 +45,11 @@ def api_client():
 
     def request(path, data=None):
         req = urllib.request.Request(
-            "http://localhost:8080" + path,
+            origin + path,
             data=json.dumps(data).encode() if data is not None else None,
             headers={
                 "Content-Type": "application/json",
-                "Origin": "http://localhost:8080",
+                "Origin": origin,
             },
         )
         with client.open(req, timeout=10) as response:
@@ -336,7 +337,7 @@ def main():
         if args.scenario == "pause"
         else availability(args.rounds, args.scenario == "fault", settings)
     )
-    path = ROOT / f"config/runtime/demo/availability-{args.scenario}.json"
+    path = ROOT / f".demo/network/availability-{args.scenario}.json"
     path.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report.get("summary", report), indent=2))
     print(f"Saved {path.relative_to(ROOT)}")

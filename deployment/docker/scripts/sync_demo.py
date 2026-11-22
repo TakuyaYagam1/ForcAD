@@ -86,25 +86,15 @@ def sync_teams(request, configured, output):
 
 
 def main():
-    root = Path(sys.argv[1])
-    port = os.environ.get("FORCAD_DEMO_HTTP_PORT")
-    if port is None:
-        demo_env = root / "config/runtime/demo.env"
-        port = next(
-            (
-                line.split("=", 1)[1]
-                for line in demo_env.read_text().splitlines()
-                if line.startswith("FORCAD_DEMO_HTTP_PORT=")
-            ),
-            "8080",
-        )
-    if not port.isdecimal() or not 1 <= int(port) <= 65535:
-        raise SystemExit("FORCAD_DEMO_HTTP_PORT must be a valid TCP port")
-    origin = f"http://localhost:{port}"
-    configured = yaml.safe_load((root / "config/config.yml").read_text())["teams"]
+    state = Path(sys.argv[1])
+    port = int(sys.argv[2])
+    if not 1 <= port <= 65535:
+        raise SystemExit("Expected the published demo HTTP port")
+    origin = f"http://127.0.0.1:{port}"
+    configured = yaml.safe_load((state / "config/config.yml").read_text())["teams"]
     credentials = dict(
         line.split("=", 1)
-        for line in (root / "config/runtime/admin.env").read_text().splitlines()
+        for line in (state / "config/runtime/admin.env").read_text().splitlines()
         if line and not line.startswith("#")
     )
     client = urllib.request.build_opener(
@@ -138,7 +128,7 @@ def main():
         },
         "POST",
     )
-    sync_teams(request, configured, root / "config/runtime/demo")
+    sync_teams(request, configured, state / "network")
 
 
 if __name__ == "__main__":

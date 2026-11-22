@@ -14,11 +14,11 @@ x-service: &service
     dockerfile: backend/Dockerfile
     target: runtime
   env_file:
-    - path: ../../config/runtime/postgres_runtime.env
+    - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_runtime.env
       format: raw
-    - path: ../../config/runtime/redis_environment.env
+    - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/redis_environment.env
       format: raw
-    - path: ../../config/runtime/nats_environment.env
+    - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/nats_environment.env
       format: raw
   restart: on-failure
   pids_limit: ${FORCAD_SERVICE_PIDS:-512}
@@ -90,13 +90,13 @@ services:
       GOGC: "${FORCAD_API_GOGC:-200}"
       GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-512MiB}"
     env_file:
-      - path: ../../config/runtime/admin.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/admin.env
         format: raw
-      - path: ../../config/runtime/postgres_runtime.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_runtime.env
         format: raw
-      - path: ../../config/runtime/redis_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/redis_environment.env
         format: raw
-      - path: ../../config/runtime/nats_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/nats_environment.env
         format: raw
     volumes:
       - forcad-config:/run/forcad-config:ro
@@ -145,13 +145,13 @@ services:
       target: initializer
     command: ["init"]
     env_file:
-      - path: ../../config/runtime/admin.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/admin.env
         format: raw
-      - path: ../../config/runtime/postgres_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_environment.env
         format: raw
-      - path: ../../config/runtime/redis_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/redis_environment.env
         format: raw
-      - path: ../../config/runtime/nats_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/nats_environment.env
         format: raw
     environment:
       <<: *runtime-settings
@@ -182,7 +182,7 @@ services:
       - DAC_OVERRIDE
       - FOWNER
     volumes:
-      - ../../config/runtime/game.yml:/source/config.yml:ro
+      - ${FORCAD_RUNTIME_DIR:-../../config/runtime}/game.yml:/source/config.yml:ro
       - forcad-config:/run/forcad-config
     restart: "no"
     healthcheck:
@@ -211,6 +211,9 @@ services:
       TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
       FORCAD_ADMIN_CIDR: "${FORCAD_ADMIN_CIDR:-}"
       FORCAD_ADMIN_DENY_CIDRS: "${FORCAD_ADMIN_DENY_CIDRS:-}"
+      FORCAD_FLAGS_IP_RPS: "${FORCAD_FLAGS_IP_RPS:-400}"
+      FORCAD_FLAGS_TOTAL_RPS: "${FORCAD_FLAGS_TOTAL_RPS:-2000}"
+      FORCAD_WS_PER_IP: "${FORCAD_WS_PER_IP:-128}"
     restart: on-failure
     cap_drop:
       - ALL
@@ -234,7 +237,7 @@ services:
     sysctls:
       net.core.somaxconn: 1024
     env_file:
-      - path: ../../config/runtime/redis_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/redis_environment.env
         format: raw
     ports:
       - "127.0.0.1:6379:6379"
@@ -255,7 +258,7 @@ services:
       dockerfile: deployment/docker/nats/Dockerfile
     restart: on-failure
     env_file:
-      - path: ../../config/runtime/nats_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/nats_environment.env
         format: raw
     volumes:
       - forcad-nats:/data
@@ -283,7 +286,7 @@ services:
       context: ../..
       dockerfile: deployment/docker/pgbouncer/Dockerfile
     env_file:
-      - path: ../../config/runtime/postgres_runtime.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_runtime.env
         format: raw
     environment:
       <<: *runtime-settings
@@ -334,7 +337,7 @@ services:
     volumes:
       - ../../docker_volumes/postgres/data:/var/lib/postgresql
     env_file:
-      - path: ../../config/runtime/postgres_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_environment.env
         format: raw
     restart: on-failure
     cap_drop:

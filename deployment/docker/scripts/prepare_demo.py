@@ -96,18 +96,14 @@ def migrate_wireguard(output):
 
 def main():
     root = Path(sys.argv[1]).resolve()
-    config = root / "config/config.yml"
+    state = root / ".demo"
+    config = state / "config/config.yml"
     settings_path = root / "deployment/demo/settings.toml"
     network = render.load_config(settings_path)
     generated = yaml.safe_load(render.forcad_config(network))
     existing = config.read_bytes() if config.exists() else None
     document = yaml.safe_load(existing) if existing is not None else generated
-    database_exists = (root / "docker_volumes/postgres/data").exists()
-    if (
-        existing is not None
-        and database_exists
-        and not game_matches(document, generated)
-    ):
+    if existing is not None and not game_matches(document, generated):
         raise SystemExit(
             "Existing demo game config differs from settings.toml; keep the database and config together"
         )
@@ -123,8 +119,7 @@ def main():
         new_ips[: len(teams)],
     ):
         raise SystemExit("Existing teams are not a prefix of the demo inventory")
-    runtime = root / "config/runtime"
-    output = runtime / "demo"
+    output = state / "network"
     validate_settings(output, settings_path)
     changed = existing is None
     previous_count = len(teams)
@@ -132,22 +127,9 @@ def main():
         teams.append(team)
         changed = True
     document["teams"] = teams
-    if not database_exists:
-        for section in ("game", "tasks"):
-            if document.get(section) != generated[section]:
-                document[section] = generated[section]
-                changed = True
     for index, team in enumerate(teams):
-        if not database_exists:
-            for key, value in generated["teams"][index].items():
-                if (
-                    key not in {"ip", "traffic_cidrs", "token"}
-                    and team.get(key) != value
-                ):
-                    team[key] = value
-                    changed = True
         if team.get("token") is None:
-            if database_exists and index < previous_count:
+            if existing is not None and index < previous_count:
                 raise SystemExit(
                     "Existing database: copy its team tokens into config.yml before using the demo"
                 )
@@ -159,7 +141,8 @@ def main():
         if team["ip"] != new_ips[index] or team.get("traffic_cidrs") != cidrs:
             team.update(ip=new_ips[index], traffic_cidrs=cidrs)
             changed = True
-    runtime.mkdir(mode=0o700, exist_ok=True)
+    state.mkdir(mode=0o700, exist_ok=True)
+    config.parent.mkdir(mode=0o700, exist_ok=True)
     files = render.render(network)
     participant_vpn = render.network_layout(network)["participant_vpn"]
     files["compose.yml"] = compose_teams(
@@ -214,11 +197,11 @@ def main():
         (output / relative).chmod(0o644)
     if changed:
         if existing is not None:
-            backup = root / "config/config_backup_demo_network.yml"
+            backup = config.with_name("config_backup_demo_network.yml")
             if not backup.exists():
                 backup.write_bytes(existing)
         config.write_text(yaml.safe_dump(document, sort_keys=False, allow_unicode=True))
-    grafana = runtime / "demo.env"
+    grafana = state / "compose.env"
     if not grafana.exists():
         grafana.write_text("GRAFANA_ADMIN_PASSWORD=" + secrets.token_hex(24) + "\n")
     grafana_settings = grafana.read_text()
@@ -228,7 +211,7 @@ def main():
             settings.write(separator + "GRAFANA_CHECKER_DB_PASSWORD=" + secrets.token_hex(24) + "\n")
     grafana.chmod(0o600)
     for index, team in enumerate(teams):
-        (runtime / f"demo-team{index + 1}.env").write_text(
+        (output / f"team{index + 1}.env").write_text(
             f"DEMO_TOKEN={team['token']}\nDEMO_PEER={teams[(index + 1) % len(teams)]['ip']}\n"
         )
     (output / "settings.toml").write_text(settings_path.read_text())

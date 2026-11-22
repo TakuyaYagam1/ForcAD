@@ -91,7 +91,7 @@ services:
     profiles: [monitoring]
     entrypoint: ["/bin/sh", "/setup-checker-reader.sh"]
     env_file:
-      - path: ../../config/runtime/postgres_environment.env
+      - path: ${FORCAD_RUNTIME_DIR:-../../config/runtime}/postgres_environment.env
         format: raw
     environment:
       GRAFANA_CHECKER_DB_PASSWORD: "${GRAFANA_CHECKER_DB_PASSWORD:?Set GRAFANA_CHECKER_DB_PASSWORD before starting monitoring}"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -48,14 +49,15 @@ func (w *Worker) runAction(
 	result, err := w.runner.Run(ctx, request)
 	pendingReap = result.PendingReap
 	finished := time.Now()
-	guard.appendCheckerLog(checkerActionLog(job, action, flag, started, finished, result, err))
+	log := checkerActionLog(job, action, flag, started, finished, result, err)
+	guard.appendCheckerLog(log)
 	if pendingReap != nil {
 		return verdict{}, fmt.Errorf("%s - contain unreaped checker: %w", location, ErrWorkerUnreaped)
 	}
 	if err != nil {
 		return checkerActionFailure(ctx, location, action, err)
 	}
-	return w.acceptCheckerResult(ctx, guard, job, payload, ownerToken, action, flag, result)
+	return w.acceptCheckerResult(ctx, guard, job, payload, ownerToken, action, flag, result, log.PublicMessage)
 }
 
 func checkerRequest(payload domain.JobPayload, action processchecker.Action, flag *domain.Flag) processchecker.Request {
@@ -93,6 +95,7 @@ func checkerActionLog(
 	publicMessage := result.PublicMessage
 	if !validStatus(status) {
 		status = processchecker.StatusCheckFailed
+		publicMessage = "Check failed"
 	}
 	if timedOut {
 		status = processchecker.StatusDown
@@ -106,8 +109,8 @@ func checkerActionLog(
 		status = processchecker.StatusCheckFailed
 		publicMessage = actionName(action) + " failed"
 	}
-	if flag != nil {
-		publicMessage = redactCheckerSecrets(publicMessage, flag.Value, flag.PrivateData)
+	if action != processchecker.ActionPut || status != processchecker.StatusUp {
+		publicMessage = redactCheckerSecrets(publicMessage, flag)
 	}
 	duration := finished.Sub(started)
 	if duration < 0 {
@@ -157,59 +160,71 @@ func (w *Worker) acceptCheckerResult(
 	action processchecker.Action,
 	flag *domain.Flag,
 	result processchecker.Result,
+	publicMessage string,
 ) (verdict, error) {
 	const location = "checker.Worker.acceptCheckerResult"
 	v := verdict{
 		action:  action,
 		status:  result.Status,
-		public:  result.PublicMessage,
+		public:  publicMessage,
 		private: result.PrivateMessage,
 		command: result.Command,
 	}
 	if !validStatus(v.status) {
-		v.status, v.public = processchecker.StatusCheckFailed, "Check failed"
+		v.status = processchecker.StatusCheckFailed
 		v.private = fmt.Sprintf("Checker returned unsupported status %d", result.Status)
 	}
 	if v.status != processchecker.StatusUp || action != processchecker.ActionPut {
 		return v, nil
 	}
-	persisted, err := w.persistPutFlag(ctx, guard, job, payload.Task, ownerToken, flag, v)
-	if err != nil {
-		return persisted, fmt.Errorf("%s - persist checker flag: %w", location, err)
+	// Successful PUT stdout belongs to the checker storage protocol, never
+	// to the scoreboard. Only flagForStorage receives the unredacted output.
+	stored := flagForStorage(*flag, payload.Task, result.PublicMessage, result.PrivateMessage)
+	if err := w.persistPutFlag(ctx, guard, job, ownerToken, stored); err != nil {
+		return verdict{}, fmt.Errorf("%s - persist checker flag: %w", location, err)
 	}
-	return persisted, nil
+	v.public = "OK"
+	return v, nil
 }
 
 func (w *Worker) persistPutFlag(
 	ctx context.Context,
 	guard *leaseGuard,
 	job domain.CheckerJob,
-	task domain.Task,
 	ownerToken string,
-	flag *domain.Flag,
-	v verdict,
-) (verdict, error) {
-	const location = "checker.Worker.runAction"
-	flagData := flagForStorage(*flag, task, v)
-	_, err := w.flags.Create(ctx, flagData, &domain.CheckerJobOwner{
+	flag domain.Flag,
+) error {
+	const location = "checker.Worker.persistPutFlag"
+	_, err := w.flags.Create(ctx, flag, &domain.CheckerJobOwner{
 		JobID:      job.ID,
 		ClaimToken: ownerToken,
 	})
 	if errors.Is(err, domain.ErrCheckerJobClosed) {
 		guard.abort(ErrLeaseLost)
-		return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, ErrLeaseLost)
+		return fmt.Errorf("%s - persist successful PUT flag: %w", location, ErrLeaseLost)
 	}
 	if err != nil {
-		return verdict{}, fmt.Errorf("%s - persist successful PUT flag: %w", location, err)
+		return fmt.Errorf("%s - persist successful PUT flag: %w", location, err)
 	}
-	return v, nil
+	return nil
 }
 
-func redactCheckerSecrets(message string, secrets ...string) string {
-	for _, secret := range secrets {
-		if secret != "" {
-			message = strings.ReplaceAll(message, secret, "[redacted]")
+var checkerFlagPattern = regexp.MustCompile(`[A-Z0-9]{31}=`)
+
+func redactCheckerSecrets(message string, flag *domain.Flag) string {
+	if flag != nil {
+		longer, shorter := flag.PrivateData, flag.Value
+		if len(longer) < len(shorter) {
+			longer, shorter = shorter, longer
 		}
+		for _, secret := range [...]string{longer, shorter} {
+			if secret != "" {
+				message = strings.ReplaceAll(message, secret, "[redacted]")
+			}
+		}
+	}
+	if strings.Contains(message, "=") && checkerFlagPattern.MatchString(message) {
+		return checkerFlagPattern.ReplaceAllString(message, "[redacted]")
 	}
 	return message
 }

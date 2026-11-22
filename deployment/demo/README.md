@@ -34,21 +34,20 @@ flowchart LR
 
 ## Requirements
 
-Run on Linux with Docker Engine, kernel WireGuard support, and the `wg` tool.
+Run on the Linux Docker Engine host with kernel WireGuard, `wg` and `iproute2`.
 The demo also requires Compose 2.36 or later for `interface_name`, Go, Make,
 Python 3.11+, Node.js, and pnpm. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
 
 ## Start
 
-Use a separate Docker daemon for the demo if a live game is running. Both
-default to the Compose project `forcad`; `demo.sh up` runs `compose down`
-before recreating services. A separate checkout or database volume does not
-isolate that operation.
+The demo uses the `forcad-demo` Compose project and keeps its configuration
+and credentials in `.demo/`. Tournament commands use `forcad` and `config/`.
+Before recreating containers, `up` checks its fixed bridge subnets against host
+routes and stops if they overlap anything other than the demo's own bridges.
 
-Edit [settings.toml](settings.toml) to set teams, the game, and tasks. With an
-existing database, keep its team tokens in `config/config.yml` and keep its
-game and task settings matched to the TOML. A fresh demo creates that config
-and generates missing team tokens. From the repository root, run:
+Edit [settings.toml](settings.toml) to set teams, the game, and tasks. A fresh
+demo generates its own `.demo/config/config.yml` and team tokens. From the
+repository root, run:
 
 ```sh
 make -C backend sync-codegen
@@ -56,16 +55,16 @@ bash deployment/docker/scripts/demo.sh up
 ```
 
 `up` prepares the demo configuration, creates missing VPN keys, writes private
-runtime files under `config/runtime/demo/`, rebuilds the stack, and recreates
+network files under `.demo/network/`, rebuilds the stack, and recreates
 its containers while retaining volumes. The settings use the same schema as
 the infrastructure renderer.
-The demo PostgreSQL data lives in the `forcad_demo-postgres-data` Docker volume,
-separate from the regular deployment's `docker_volumes/postgres/data` bind mount.
-`demo.sh down` preserves the demo volume.
+The demo PostgreSQL data lives in `forcad-demo_demo-postgres-data`; `demo.sh
+down` preserves it. Older `forcad_demo-*` volumes and `config/runtime/demo/`
+are not attached, migrated or deleted. To keep an old demo's scores, retain
+its matching configuration and private database backup for an explicit restore.
 
-The board binds to `127.0.0.1:8080` by default. Set
-`FORCAD_DEMO_HTTP_PORT` in `config/runtime/demo.env` when that host port is
-occupied, then use the selected port in the board URL.
+All three host ports bind to loopback. To change them, set `FORCAD_DEMO_HTTP_PORT`,
+`FORCAD_DEMO_GRAFANA_PORT` or `FORCAD_DEMO_PROMETHEUS_PORT` in `.demo/compose.env`.
 
 The demo supports 2 to 32 teams. Append entries to `teams.entries` to add teams
 through the admin API and extend the VPN without rotating existing keys.
@@ -75,9 +74,9 @@ Use `demo.sh` for this stack so every Compose overlay remains enabled.
 
 | Service | URL | Credentials |
 | --- | --- | --- |
-| Board and admin | [localhost:8080](http://localhost:8080/) / [admin login](http://localhost:8080/admin/login) | `config/runtime/admin.env` |
-| Grafana dashboards | [ForcAD](http://localhost:3000/d/forcad-monitoring) / [Traffic](http://localhost:3000/d/forcad-traffic) / [DDoS](http://localhost:3000/d/forcad-ddos) / [Relay](http://localhost:3000/d/forcad-relay) | `admin`; password in `config/runtime/demo.env` |
-| Prometheus targets | [localhost:9090/targets](http://localhost:9090/targets) | None |
+| Board and admin | [localhost:18080](http://localhost:18080/) / [admin login](http://localhost:18080/admin/login) | `.demo/config/runtime/admin.env` |
+| Grafana dashboards | [ForcAD](http://localhost:13000/d/forcad-monitoring) / [Traffic](http://localhost:13000/d/forcad-traffic) / [DDoS](http://localhost:13000/d/forcad-ddos) / [Relay](http://localhost:13000/d/forcad-relay) | `admin`; password in `.demo/compose.env` |
+| Prometheus targets | [localhost:19090/targets](http://localhost:19090/targets) | None |
 
 Start practice in the board admin panel. Allow two rounds for checker results
 and about one minute for rates. Each farm reads flags from the next team's
@@ -106,7 +105,7 @@ pre-game.
 
 `timing.py` reads completed checker jobs from PostgreSQL and saves their sent,
 dispatch-delay, and completion offsets to
-`config/runtime/demo/timing.json`. It does not change game state. The offsets
+`.demo/network/timing.json`. It does not change game state. The offsets
 describe whole checker jobs, not individual CHECK, PUT, or GET calls, and do not
 test resistance to service-availability manipulation.
 
@@ -141,7 +140,7 @@ not read checker timing; all other configured teams act as controls. The script
 removes its temporary nftables table on exit. `pause` pauses through the admin
 API, restarts the ticker and worker, resumes the game, and checks that pending
 job IDs and times survive the restart and that the jobs complete. Reports are
-written to `config/runtime/demo/availability-*.json`.
+written to `.demo/network/availability-*.json`.
 
 These are local fault tests, not production-capacity tests or proof of
 continuous uptime. See the [recorded experiment](availability.md) for results
@@ -177,18 +176,18 @@ bash deployment/docker/scripts/demo.sh down
 ```
 
 `down` preserves database, notes, and monitoring volumes. Runtime keys and
-credentials live under `config/runtime/`; do not commit them.
+credentials live under `.demo/`; do not commit them.
 
 The old team pairs `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` migrate
-during `up`. The script saves `config/config_backup_demo_network.yml`, updates
+during `up`. The script saves `.demo/config/config_backup_demo_network.yml`, updates
 matching database records, retains VPN keys, and saves the prior bundle in
-`config/runtime/demo/wireguard-before-network/`. VPN expansion keeps a
+`.demo/network/wireguard-before-network/`. VPN expansion keeps a
 `wireguard-before-N-peers/` backup. If a team addition is interrupted, rerun
 `up`; its private journal prevents duplicate creation. The demo refuses
 unrecognized database teams.
 Before replacing old ephemeral notes containers, save their SQLite database
-if needed. `config/runtime/demo/seeds/team1/note.db` and
-`config/runtime/demo/seeds/team2/note.db` populate empty notes volumes once;
+if needed. `.demo/network/seeds/team1/note.db` and
+`.demo/network/seeds/team2/note.db` populate empty notes volumes once;
 later starts use the persistent volumes.
 
 ## Limits

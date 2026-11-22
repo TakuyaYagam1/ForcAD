@@ -18,7 +18,7 @@ configured password, independently of the ForcAD login. The setting initializes
 new Grafana storage; changing it does not reset an existing account's password.
 The monitoring overlay also provisions a PostgreSQL reader for the Checker log
 tables. It can select only the public checker views, not team tokens or flags.
-The local demo generates its own reader password in `config/runtime/demo.env`.
+The local demo generates its own reader password in `.demo/compose.env`.
 
 Keep the overlay when recreating or scaling services:
 

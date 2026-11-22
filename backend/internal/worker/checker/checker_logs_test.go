@@ -96,6 +96,54 @@ func TestCheckerLogsRecordActionsWithoutSecrets(t *testing.T) {
 	mu.Unlock()
 }
 
+func TestFailedFlagActionRedactsPublicVerdictAndHistory(t *testing.T) {
+	for _, action := range []processchecker.Action{processchecker.ActionPut, processchecker.ActionGet} {
+		t.Run(string(action), func(t *testing.T) {
+			task := defaultTask()
+			task.Puts, task.Gets = 1, 0
+			workflow := domain.JobActionPutsOnly
+			if action == processchecker.ActionGet {
+				task.Puts, task.Gets = 0, 1
+				workflow = domain.JobActionCheckGets
+			}
+			flag := domain.Flag{Value: "synthetic-flag", PrivateData: "synthetic-private-data"}
+			flags := &fakeFlagStore{byRound: map[int32]domain.Flag{5: flag, 6: flag, 7: flag}}
+			repo := newFakeRepository(payloadJSON(t, "", task), workflow)
+			runner := &fakeRunner{fn: func(_ context.Context, req processchecker.Request) (processchecker.Result, error) {
+				if req.Action != action {
+					return processchecker.Result{Status: processchecker.StatusUp}, nil
+				}
+				return processchecker.Result{
+					Status:         processchecker.StatusCorrupt,
+					PublicMessage:  "missing " + req.Flag + " at " + req.PrivateFlagData + ", got " + strings.Repeat("A", 31) + "=",
+					PrivateMessage: "organizer diagnostic",
+				}, nil
+			}}
+			if err := makeWorker(t, repo, flags, runner, Options{}).Handle(t.Context(), testJobID); err != nil {
+				t.Fatal(err)
+			}
+			_, _, _, _, results := repo.snapshot()
+			if len(results) != 1 || results[0].Status != int32(processchecker.StatusCorrupt) {
+				t.Fatal("failed flag action did not determine the round verdict")
+			}
+			result := results[0]
+			const want = "missing [redacted] at [redacted], got [redacted]"
+			if result.PublicMessage != want || result.PrivateMessage != "organizer diagnostic" {
+				t.Fatal("public verdict was not redacted or private diagnostic was lost")
+			}
+			for _, log := range result.Logs {
+				if log.Action == string(action) {
+					if log.PublicMessage != want {
+						t.Fatal("public action history differs from the safe verdict")
+					}
+					return
+				}
+			}
+			t.Fatal("missing public action log")
+		})
+	}
+}
+
 func TestSuccessfulPutLogDoesNotPublishReturnedState(t *testing.T) {
 	const returnedState = "synthetic-returned-state-not-the-input-seed"
 	const returnedPrivate = "synthetic-pfr-private-state"

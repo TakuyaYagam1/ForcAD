@@ -56,16 +56,16 @@ func generateFlag(
 	}, nil
 }
 
-func flagForStorage(flag domain.Flag, task domain.Task, v verdict) domain.Flag {
+func flagForStorage(flag domain.Flag, task domain.Task, stdout, stderr string) domain.Flag {
 	switch {
 	case hasTag(task.CheckerType, "nfr"):
 		flag.PublicData = ""
 	case hasTag(task.CheckerType, "pfr"):
-		flag.PublicData = v.public
-		flag.PrivateData = v.private
+		flag.PublicData = stdout
+		flag.PrivateData = stderr
 	default:
 		flag.PublicData = ""
-		flag.PrivateData = v.public
+		flag.PrivateData = stdout
 	}
 	return flag
 }

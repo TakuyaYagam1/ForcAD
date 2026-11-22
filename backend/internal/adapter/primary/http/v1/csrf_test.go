@@ -41,6 +41,25 @@ func TestAdminMutationsRequireSessionCSRF(t *testing.T) {
 	}
 }
 
+func TestBackupRejectsBeforeReadingUpload(t *testing.T) {
+	handler := NewHandler(&testGame{}, testAuth{}, &testFlags{}, nil)
+	handler.BackupHandler = NewBackupHandler(nil)
+	router := testRouterForHandler(t, "api", handler)
+	for _, path := range []string{"/api/v1/admin/backup/inspect/", "/api/v1/admin/backup/restore/"} {
+		for _, cookie := range []string{"", "session=valid"} {
+			body := strings.NewReader("unread archive")
+			req := httptest.NewRequest(http.MethodPost, path, body)
+			req.Header.Set("Content-Type", "application/gzip")
+			req.Header.Set("Cookie", cookie)
+			response := httptest.NewRecorder()
+			router.ServeHTTP(response, req)
+			if response.Code != http.StatusForbidden || body.Len() != len("unread archive") {
+				t.Fatalf("%s: status %d, %d archive bytes left unread", path, response.Code, body.Len())
+			}
+		}
+	}
+}
+
 func TestLoginAndSessionExposeCSRFOnlyInNoncacheableJSON(t *testing.T) {
 	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
 	for _, fixture := range []struct {

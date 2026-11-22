@@ -56,15 +56,10 @@ RUN envsubst '${DNS_RESOLVER}' < /etc/nginx/http.conf.template > /etc/nginx/http
     && mkdir -p /tmp/nginx/client_temp /tmp/nginx/proxy_temp \
         /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp \
     && chown -R nginx:nginx /tmp/nginx \
-    && printf 'proxy_set_header X-Forwarded-Proto http;\n' > /tmp/forcad-proxy-proto \
-    && : > /tmp/forcad-trusted-proxies.conf \
-    && printf 'default 1;\n' > /tmp/forcad-admin-network.conf \
-    && : > /tmp/forcad-admin-deny.conf \
-    && chown nginx:nginx /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf \
-        /tmp/forcad-admin-network.conf /tmp/forcad-admin-deny.conf \
-    && chmod 0644 /tmp/forcad-proxy-proto /tmp/forcad-trusted-proxies.conf \
-        /tmp/forcad-admin-network.conf /tmp/forcad-admin-deny.conf \
     && chmod +x /docker-entrypoint.d/05-forcad-proxy-proto.sh \
+    && /docker-entrypoint.d/05-forcad-proxy-proto.sh \
+    && chown nginx:nginx /tmp/forcad-http.conf /tmp/forcad-proxy-proto \
+        /tmp/forcad-trusted-proxies.conf /tmp/forcad-admin-network.conf /tmp/forcad-admin-deny.conf \
     && nginx -t \
     && rm -f /tmp/nginx/nginx.pid
 

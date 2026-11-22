@@ -154,6 +154,11 @@ func testRouter(
 	f FlagService,
 ) http.Handler {
 	t.Helper()
+	return testRouterForHandler(t, role, NewHandler(g, a, f, nil))
+}
+
+func testRouterForHandler(t *testing.T, role string, handler *Handler) http.Handler {
+	t.Helper()
 	cfg := config.Config{
 		Role:            role,
 		HTTPMaxInflight: 1,
@@ -162,7 +167,7 @@ func testRouter(
 	noop := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	r, err := NewRouter(cfg, NewHandler(g, a, f, nil), noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
+	r, err := NewRouter(cfg, handler, noop, noop, prometheus.NewRegistry(), testLimiter{}, slog.New(slog.DiscardHandler))
 	if err != nil {
 		t.Fatal(err)
 	}

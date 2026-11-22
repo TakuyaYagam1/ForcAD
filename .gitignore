@@ -63,6 +63,7 @@ node_modules/
 
 /.version
 /config/runtime/
+/.demo/
 /infrastracture/settings.toml
 /infrastracture/runtime/
 /config/config_backup*.yml
