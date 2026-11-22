@@ -241,10 +241,12 @@ class InputScanTest(TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual([event["command"] for event in self.events()], ["dir", "git"])
         self.assertNotIn("fixture-marker", result.stdout + result.stderr)
+        self.assertIn("Gitleaks findings: 1 (see gitleaks-files.json)", result.stderr)
 
     def test_scanner_failure_is_nonzero_even_when_reports_are_empty(self):
         result = self.invoke("fail-current")
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Gitleaks scan failed for gitleaks-files.json", result.stderr)
         self.assertEqual([event["command"] for event in self.events()], ["dir", "git"])
         self.assertTrue((self.reports / "gitleaks-files.json").exists())
         self.assertTrue((self.reports / "gitleaks-history.json").exists())

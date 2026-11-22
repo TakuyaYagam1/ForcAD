@@ -131,13 +131,14 @@ def _scan(scanner, command, config, report, path, *, cwd, options=()):
     )
 
 
-def _valid_report(path):
+def _finding_count(path):
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        valid = isinstance(data, list) and all(isinstance(item, dict) for item in data)
-        return valid, bool(data)
     except (OSError, UnicodeError, json.JSONDecodeError):
-        return False, False
+        return None
+    if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+        return None
+    return len(data)
 
 
 def run_scan(root, scanner, config, reports, cache):
@@ -163,6 +164,7 @@ def run_scan(root, scanner, config, reports, cache):
     try:
         with version_path.open("wb") as version:
             if not _run(executable, ["version"], cwd=root, stdout=version):
+                print("error: Gitleaks version command failed", file=sys.stderr)
                 status = 1
     except OSError:
         print("error: version report could not be written", file=sys.stderr)
@@ -194,19 +196,24 @@ def run_scan(root, scanner, config, reports, cache):
         cwd=root,
         options=("--log-opts=--all",),
     )
-    if not current_ok or not history_ok:
-        status = 1
 
-    for path in (files_path, history_path):
-        valid, findings = _valid_report(path)
-        if not valid:
+    for path, scan_ok in ((files_path, current_ok), (history_path, history_ok)):
+        findings = _finding_count(path)
+        if findings is None:
             print(
                 f"error: missing or invalid JSON list report: {path.name}",
                 file=sys.stderr,
             )
-            status = 1
         elif findings:
-            status = 1
+            print(
+                f"error: Gitleaks findings: {findings} (see {path.name})",
+                file=sys.stderr,
+            )
+        elif not scan_ok:
+            print(f"error: Gitleaks scan failed for {path.name}", file=sys.stderr)
+        else:
+            continue
+        status = 1
     return status
 
 

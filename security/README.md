@@ -100,6 +100,10 @@ GitHub Actions runs the `security` workflow monthly on the 1st at 06:17 UTC
 (09:17 Europe/Moscow) and supports manual dispatch. Separate jobs run the Go
 dependency check, source scans, and all six image builds and scans. Findings or
 scanner errors fail their job.
+For Gitleaks, the step log gives the finding count and report name without
+printing matches. Open `security-source-reports` in the run's **Artifacts**:
+`gitleaks-files.json` covers the current checkout and `gitleaks-history.json`
+covers Git history. The same line can appear in both.
 
 The separate `tests` workflow runs on pushes and pull requests targeting `main`
 and supports manual dispatch. Dependabot uses one cross-ecosystem group for all
