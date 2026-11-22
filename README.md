@@ -26,7 +26,7 @@ ForcAD is a capture-the-flag attack-defense platform.
 
 - **Manual application:** run ForcAD and its dependencies with Docker Compose on one host. Follow this guide.
 - **Full infrastructure:** generate and install separate Debian Router, VPN and ForcAD hosts with the [infrastructure guide](infrastracture/README.md).
-- **Local network demo:** run the [ten-team WireGuard demo](deployment/demo/README.md) on a Linux workstation.
+- **Local network demo:** run the [WireGuard competition demo](deployment/demo/README.md) on a Linux workstation.
 
 ## Manual application setup
 

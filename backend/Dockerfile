@@ -105,4 +105,15 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD ["for
 
 ENTRYPOINT ["forcad"]
 
+FROM checker-base AS demo
+
+RUN apk add --no-cache iproute2 nftables setpriv wireguard-tools iputils
+WORKDIR /app
+COPY --from=go-build /out/forcad /usr/local/bin/forcad
+COPY deployment/demo/*.py ./
+COPY deployment/docker/scripts/demo_entrypoint.sh /usr/local/bin/demo-entrypoint
+
+USER forcad:forcad
+ENTRYPOINT ["sh", "/usr/local/bin/demo-entrypoint"]
+
 FROM runtime AS default

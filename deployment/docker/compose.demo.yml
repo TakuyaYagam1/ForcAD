@@ -2,9 +2,8 @@ x-demo: &demo
   image: forcad-demo:local
   build:
     context: ../..
-    dockerfile: deployment/demo/Dockerfile
-    additional_contexts:
-      app: service:api
+    dockerfile: backend/Dockerfile
+    target: demo
   read_only: true
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]

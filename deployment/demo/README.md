@@ -8,6 +8,9 @@ Published ports bind to localhost. Demo services intentionally expose
 The sensor runs the router's `zeek-9.0-core` package and generated Zeek policy.
 The demo and packet tests build the same [Debian 13 image](../docker/zeek/Dockerfile);
 neither needs the upstream plugin manager or development tools.
+The simulated teams and network nodes use the production worker's Python
+base and the same ForcAD binary as the application. Network tools and fixture
+services are added only to the [`demo` build target](../../backend/Dockerfile).
 
 The board has five service columns. Only `example_service` writes flags. The
 other four services return fixed CORRUPT, CHECK FAILED, MUMBLE, and DOWN

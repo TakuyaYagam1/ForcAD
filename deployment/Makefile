@@ -21,7 +21,7 @@ export EIO_BACKEND ?= posix
 .PHONY: help test test-integration test-deployment test-load test-monitoring test-network e2e security security-filesystem security-secrets security-semgrep security-go-vuln security-rules security-test security-image security-images
 
 IMAGE_TARGETS ?=
-_IMAGE_TARGETS_ALLOWED := runtime worker nginx postgres pgbouncer nats zeek
+_IMAGE_TARGETS_ALLOWED := runtime worker nginx postgres pgbouncer nats zeek demo
 ifneq ($(strip $(IMAGE_TARGETS)),)
 ifneq ($(filter-out $(_IMAGE_TARGETS_ALLOWED),$(IMAGE_TARGETS)),)
 $(error IMAGE_TARGETS supports only $(_IMAGE_TARGETS_ALLOWED))

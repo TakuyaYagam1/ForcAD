@@ -51,6 +51,7 @@ TARGETS = {
     "pgbouncer": Target("deployment/docker/pgbouncer/Dockerfile"),
     "nats": Target("deployment/docker/nats/Dockerfile"),
     "zeek": Target("deployment/docker/zeek/Dockerfile"),
+    "demo": Target("backend/Dockerfile", "demo"),
 }
 
 

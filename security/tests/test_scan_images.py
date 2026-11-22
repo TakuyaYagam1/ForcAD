@@ -180,7 +180,7 @@ class ImageScanTest(TestCase):
             )
         self.assertEqual(
             selected,
-            ["runtime", "worker", "nginx", "postgres", "pgbouncer", "nats", "zeek"],
+            ["runtime", "worker", "nginx", "postgres", "pgbouncer", "nats", "zeek", "demo"],
         )
 
     def test_nats_build_uses_production_dockerfile_without_a_stage(self):

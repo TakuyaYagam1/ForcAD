@@ -53,7 +53,7 @@ make -C deployment security-semgrep
 | `security-secrets` | Gitleaks scans tracked files, non-ignored untracked files, and all reachable Git history. It requires a full checkout. Tracked files stay in scope when ignored; symlinks are excluded from the current-file copy, and report values are redacted. |
 | `security-semgrep` | Local rules scan `backend/internal`, `backend/config`, `backend/cmd`, `frontend/src`, and production source under `infrastracture/`. The infrastructure scan excludes `infrastracture/tests/` and rendered bundles under `infrastracture/runtime/`. Rules cover selected Python, Go, JavaScript, and TypeScript patterns, including dynamic execution, unsafe YAML or pickle loads, shell calls, disabled TLS, bare Go HTTP helpers, `document.write`, and direct `innerHTML` writes. They do not catch every way to use these APIs. |
 | `security-go-vuln` | `govulncheck` checks reachable vulnerabilities in backend packages. |
-| `security-images` | Builds and scans the final images for `runtime`, `worker`, `nginx`, `postgres`, `pgbouncer`, `nats`, and the demo/test `zeek` sensor with pinned Trivy. |
+| `security-images` | Builds and scans `runtime`, `worker`, `nginx`, `postgres`, `pgbouncer`, `nats`, the `zeek` sensor, and the `demo` fixtures with pinned Trivy. |
 
 The `security-image` target scans an existing local image by image ID. It does
 not build, pull, or publish it:

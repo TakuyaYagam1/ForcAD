@@ -34,16 +34,12 @@ updates:
       - /backend
       - /backend/integration_test/fixtures/network
       - /backend/load_test/test-data/services
-      - /deployment/demo
       - /deployment/docker/pgbouncer
       - /deployment/docker/postgres
       - /deployment/docker/nats
       - /deployment/docker/zeek
       - /frontend
       - /infrastracture/tests
-    ignore:
-      # BuildKit supplies this local build context; it is not a registry image.
-      - dependency-name: app
     patterns: ["*"]
     multi-ecosystem-group: dependencies
 
