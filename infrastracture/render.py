@@ -803,6 +803,12 @@ WantedBy=multi-user.target
 """
 
 
+def game_capture_filter(participant_vpn, inventory):
+    # A port-only BPF would lose non-initial IP fragments.
+    hosts = " or ".join(f"host {team['vulnbox']}" for team in inventory)
+    return f"ip and net {participant_vpn} and ({hosts})"
+
+
 def game_metrics(config):
     inventory = teams(config)
     layout = network_layout(config)
@@ -825,9 +831,6 @@ def game_metrics(config):
         for protocol in ("tcp", "udp")
         for port in config[f"game_{protocol}_ports"]
     )
-    # Keep IP fragments too: a port-only BPF would lose non-initial fragments.
-    target_filter = " or ".join(f"host {team['vulnbox']}" for team in inventory)
-    capture_filter = f"ip and net {layout['participant_vpn']} and ({target_filter})"
     return {
         "router/game-metrics.zeek": (ROOT / "router/game-metrics.zeek").read_text(),
         "router/game-inventory.zeek": (
@@ -844,7 +847,7 @@ def game_metrics(config):
         "router/game-metrics.service": template(
             "router/game-metrics.service.in",
             INTERFACE=config["router"]["vpn_interface"],
-            FILTER=capture_filter,
+            FILTER=game_capture_filter(layout["participant_vpn"], inventory),
         ),
         "forcad/game-sensors.yml": (f'- targets: ["{layout["forcad_router"]}:9911"]\n'),
     }

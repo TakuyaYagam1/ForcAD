@@ -2,6 +2,7 @@
 
 import contextlib
 import io
+import shlex
 import shutil
 import sys
 import tempfile
@@ -56,20 +57,30 @@ class PrepareDemoTests(unittest.TestCase):
         self.assertEqual(
             [t["name"] for t in actual["teams"]], [t["name"] for t in expected["teams"]]
         )
-        self.assertEqual(len({t["token"] for t in actual["teams"]}), 10)
+        team_count = len(expected["teams"])
+        self.assertEqual(len({t["token"] for t in actual["teams"]}), team_count)
         self.assertEqual(
             [(task["puts"], task["gets"]) for task in actual["tasks"]],
             [(2, 2), (0, 0), (0, 0), (0, 0), (0, 0)],
         )
         compose = yaml.safe_load((self.output / "compose.yml").read_text())
-        for number in range(1, 11):
+        sensor = compose["services"]["demo-sensor"]["command"]
+        service = (self.output / "router/game-metrics.service").read_text()
+        start = next(line for line in service.splitlines() if line.startswith("ExecStart="))
+        router = shlex.split(start.removeprefix("ExecStart="))
+        for arg in ("-f", "-i"):
+            self.assertEqual(
+                sensor[sensor.index(arg) + 1], router[router.index(arg) + 1]
+            )
+        for number in range(1, team_count + 1):
             self.assertIn(f"demo-team{number}", compose["networks"])
             self.assertIn(f"demo-farm{number}", compose["services"])
             self.assertTrue((self.output / f"players/team{number}.conf").is_file())
-        self.assertIn("demo-team1", compose["services"]["demo-farm10"]["depends_on"])
+        last_farm = compose["services"][f"demo-farm{team_count}"]
+        self.assertIn("demo-team1", last_farm["depends_on"])
         self.assertIn(
-            "DEMO_PEER=10.183.101.2",
-            (self.root / "config/runtime/demo-team10.env").read_text(),
+            f"DEMO_PEER={actual['teams'][0]['ip']}",
+            (self.root / f"config/runtime/demo-team{team_count}.env").read_text(),
         )
 
     def test_existing_database_rejects_game_config_drift(self):

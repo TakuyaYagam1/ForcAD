@@ -161,7 +161,10 @@ def main():
             changed = True
     runtime.mkdir(mode=0o700, exist_ok=True)
     files = render.render(network)
-    files["compose.yml"] = compose_teams(root, inventory)
+    participant_vpn = render.network_layout(network)["participant_vpn"]
+    files["compose.yml"] = compose_teams(
+        root, inventory, render.game_capture_filter(participant_vpn, inventory)
+    )
     files["network.json"] = (
         json.dumps(
             {

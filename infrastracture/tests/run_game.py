@@ -8,23 +8,25 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from check_game_endpoint import check_game_endpoint
 from game_trace import fixture, monitoring_fixture
 from helpers import ROOT, small_config
 
 import render
 
-IMAGE = "zeek/zeek:9.0.1@sha256:524cb0ce29f26a6a954fb9c357a8f92b95812476d8240f0ece26617ace249dd0"
 
-
-def container(command, check=True, **kwargs):
+def container(command, check=True, probe=None, **kwargs):
     with tempfile.TemporaryDirectory(prefix="forcad-container-") as directory:
         cid = Path(directory) / "container.cid"
         try:
-            return subprocess.run(
+            result = subprocess.run(
                 [*command[:2], "--cidfile", str(cid), *command[2:]],
                 check=check,
                 **kwargs,
             )
+            if probe is not None:
+                probe(cid.read_text().strip())
+            return result
         finally:
             if cid.exists():
                 subprocess.run(
@@ -36,20 +38,20 @@ def container(command, check=True, **kwargs):
 
 
 def main():
-    # Pull separately so Docker progress does not look like a Zeek diagnostic.
     image = subprocess.run(
-        ["docker", "image", "inspect", IMAGE],
-        check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        timeout=30,
-    )
-    if image.returncode:
-        subprocess.run(["docker", "pull", IMAGE], check=True, timeout=180)
+        ["docker", "build", "--quiet", str(ROOT.parent / "deployment/docker/zeek")],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+        timeout=600,
+    ).stdout.strip()
     config = small_config(render.load_config(ROOT / "settings.example.toml"))
     config["game_udp_ports"] = [31337]
     with tempfile.TemporaryDirectory(prefix="forcad-game-") as directory:
-        work = Path(directory)
+        # Only synthetic fixtures are visible to the sensor's unprivileged UID.
+        work = Path(directory) / "fixtures"
+        work.mkdir()
+        work.chmod(0o755)
         for name, content in render.game_metrics(config).items():
             if name.endswith(".zeek"):
                 # Offline tests do not bind to a host-specific management address.
@@ -64,6 +66,8 @@ event zeek_done() {
     print "FINAL " + to_json(Telemetry::collect_metrics("forcad_game"));
 }
 """)
+        for path in work.iterdir():
+            path.chmod(0o644)
         command = [
             "docker",
             "run",
@@ -81,7 +85,7 @@ event zeek_done() {
             f"type=bind,src={work},dst=/work,readonly",
             "--entrypoint",
             "/bin/sh",
-            IMAGE,
+            image,
             "-c",
             "pwd -P && exec zeek -b -r game.pcap game-metrics.zeek game-inventory.zeek check.zeek",
         ]
@@ -290,21 +294,26 @@ event zeek_done() {
         print(
             "Game metrics passed: HTTP reassembly/retransmission/pipelining, WS upgrade/reset/expiry, TCP/UDP, team direction and excluded sources."
         )
-        (work / "check_endpoint.py").write_text(
-            (ROOT / "tests/check_game_endpoint.py").read_text()
-        )
         container(
             [
                 "docker",
                 "run",
-                "--rm",
+                "--detach",
                 "--network",
                 "none",
+                "--user",
+                "0:0",
                 "--read-only",
                 "--cap-drop",
                 "ALL",
                 "--cap-add",
                 "NET_RAW",
+                "--cap-add",
+                "SETUID",
+                "--cap-add",
+                "SETGID",
+                "--cap-add",
+                "SETPCAP",
                 "--security-opt",
                 "no-new-privileges",
                 "--workdir",
@@ -312,12 +321,23 @@ event zeek_done() {
                 "--mount",
                 f"type=bind,src={work},dst=/work,readonly",
                 "--entrypoint",
-                "/bin/sh",
-                IMAGE,
-                "-c",
-                "pwd -P && exec python3 -B check_endpoint.py",
+                "/usr/bin/setpriv",
+                image,
+                "--reuid=10001",
+                "--regid=10001",
+                "--clear-groups",
+                "--bounding-set=-all,+net_raw",
+                "--inh-caps=+net_raw",
+                "--ambient-caps=+net_raw",
+                "zeek",
+                "-b",
+                "-i",
+                "lo",
+                "game-metrics.zeek",
+                "game-inventory.zeek",
             ],
-            check=True,
+            probe=check_game_endpoint,
+            capture_output=True,
             timeout=30,
         )
 

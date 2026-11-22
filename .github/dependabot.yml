@@ -38,6 +38,7 @@ updates:
       - /deployment/docker/pgbouncer
       - /deployment/docker/postgres
       - /deployment/docker/nats
+      - /deployment/docker/zeek
       - /frontend
       - /infrastracture/tests
     ignore:
@@ -55,6 +56,7 @@ updates:
       - dependency-name: forcad_postgres
       - dependency-name: forcad_nats
       - dependency-name: forcad-demo
+      - dependency-name: forcad-zeek
     patterns: ["*"]
     multi-ecosystem-group: dependencies
 

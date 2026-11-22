@@ -5,6 +5,10 @@ admin WireGuard, generated router rules, Zeek, ForcAD, Prometheus, and Grafana.
 Published ports bind to localhost. Demo services intentionally expose
 `/demo/flags` to their farms. The diagram shows two of the twenty team segments.
 
+The sensor runs the router's `zeek-9.0-core` package and generated Zeek policy.
+The demo and packet tests build the same [Debian 13 image](../docker/zeek/Dockerfile);
+neither needs the upstream plugin manager or development tools.
+
 The board has five service columns. Only `example_service` writes flags. The
 other four services return fixed CORRUPT, CHECK FAILED, MUMBLE, and DOWN
 statuses so every board color is visible.
@@ -32,6 +36,11 @@ The demo also requires Compose 2.36 or later for `interface_name`, Go, Make,
 Python 3.11+, Node.js, and pnpm. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
 
 ## Start
+
+Use a separate Docker daemon for the demo if a live game is running. Both
+default to the Compose project `forcad`; `demo.sh up` runs `compose down`
+before recreating services. A separate checkout or database volume does not
+isolate that operation.
 
 Edit [settings.toml](settings.toml) to set teams, the game, and tasks. With an
 existing database, keep its team tokens in `config/config.yml` and keep its

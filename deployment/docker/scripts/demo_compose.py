@@ -19,7 +19,7 @@ def reset_value(loader, node):
 ComposeLoader.add_constructor("!reset", reset_value)
 
 
-def compose_teams(root, inventory):
+def compose_teams(root, inventory, capture_filter):
     # Read shared container defaults; !reset tags only occur on base services.
     source = yaml.load(
         (root / "deployment/docker/compose.demo.yml").read_text(),
@@ -91,8 +91,7 @@ def compose_teams(root, inventory):
         }
     services["demo-router"] = {"networks": router_networks}
     command = list(source["services"]["demo-sensor"]["command"])
-    hosts = " or ".join(f"host {team['vulnbox']}" for team in inventory)
-    command[command.index("-f") + 1] = f"ip and net 10.183.200.0/24 and ({hosts})"
+    command[command.index("-f") + 1] = capture_filter
     services["demo-sensor"] = {"command": command}
     return yaml.safe_dump(
         {"services": services, "networks": networks, "volumes": volumes},

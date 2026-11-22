@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and scan the production container images with pinned Trivy."""
+"""Build and scan project container images with pinned Trivy."""
 
 from __future__ import annotations
 
@@ -50,6 +50,7 @@ TARGETS = {
     "postgres": Target("deployment/docker/postgres/Dockerfile"),
     "pgbouncer": Target("deployment/docker/pgbouncer/Dockerfile"),
     "nats": Target("deployment/docker/nats/Dockerfile"),
+    "zeek": Target("deployment/docker/zeek/Dockerfile"),
 }
 
 

@@ -174,7 +174,9 @@ services:
       - ../../config/runtime/demo/wireguard/admins/admin-01.conf:/app/keys/wg0.conf:ro
 
   demo-sensor:
-    image: zeek/zeek:9.0.1@sha256:524cb0ce29f26a6a954fb9c357a8f92b95812476d8240f0ece26617ace249dd0
+    build: ./zeek
+    image: forcad-zeek:local
+    pull_policy: never
     user: "0:0"
     network_mode: service:demo-router
     working_dir: /app
@@ -215,10 +217,11 @@ services:
       options: {max-size: "5m", max-file: "2"}
     healthcheck:
       test:
-        - CMD
-        - python3
-        - -c
-        - "import time,urllib.request; data=urllib.request.urlopen('http://10.183.2.1:9911/metrics',timeout=2).read().decode(); stamp=next(float(line.split()[-1]) for line in data.splitlines() if line.startswith('forcad_game_sync_timestamp_seconds')); assert time.time()-stamp < 45"
+        - CMD-SHELL
+        - >-
+          curl -fsS --noproxy '*' --max-time 2 http://10.183.2.1:9911/metrics |
+          awk -v now="$$(date +%s)" '$$1 ~ /^forcad_game_sync_timestamp_seconds(\{|$$)/ &&
+          $$2+0 > now-45 && $$2+0 <= now+5 { fresh = 1 } END { exit !fresh }'
       interval: 5s
       timeout: 3s
       retries: 12
