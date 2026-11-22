@@ -4,9 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from helpers import small_config
+from helpers import ROOT, small_config
 
 import render
 

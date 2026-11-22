@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON ?= $(or $(wildcard $(abspath ../api/.venv/bin/python)),python3)
 
 .PHONY: render test test-network test-game test-dashboards test-dependencies
 

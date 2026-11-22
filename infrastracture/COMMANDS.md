@@ -15,7 +15,7 @@ These commands require the source tree.
 | `python3 render.py --router-arch arm64` | Build the Router exporter for Linux/ARM64. The default is Linux/amd64. |
 | `python3 render.py --config settings.toml --output runtime-next` | Render from the named config into a new output directory. This creates fresh WireGuard keys. |
 | `python3 render.py --monitoring --config settings.toml --output monitoring-update` | Create three add-on archives using the deployed inventory. No server or member keys, game secrets, or changes to the original runtime. |
-| `make test` | Run infrastructure unit tests. |
+| `make test` | Run infrastructure unit tests. Uses the API virtualenv when present, otherwise `python3`. Override `PYTHON` to use another interpreter with PyYAML. |
 | `make test-network`, `make test-game`, `make test-dashboards` | Run the isolated network, game and dashboard checks. |
 | `make test-dependencies` | Check Debian package setup, Python bootstrap and interrupted cleanup recovery in Docker. |
 

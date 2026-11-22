@@ -5,15 +5,11 @@ import json
 import os
 import shlex
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
 from game_trace import fixture, monitoring_fixture
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-from helpers import small_config
+from helpers import ROOT, small_config
 
 import render
 

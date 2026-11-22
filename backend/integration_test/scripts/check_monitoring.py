@@ -106,12 +106,22 @@ def main():
         for path in dashboard_paths
         if "panels" in (document := json.loads(path.read_text()))
     }
-    assert set(dashboards) == {
-        "forcad-monitoring",
-        "forcad-traffic",
-        "forcad-ddos",
-        "forcad-relay",
-    }, "Monitoring dashboards are missing"
+    expected_uids = {
+        f"forcad-{name}{suffix}"
+        for name in ("monitoring", "traffic", "ddos", "relay")
+        for suffix in ("", "-ru")
+    }
+    assert set(dashboards) == expected_uids, (
+        f"Unexpected dashboard inventory: {sorted(set(dashboards) ^ expected_uids)}"
+    )
+    end = int(time.time())
+    variables = {
+        "$__rate_interval": "1m", "$__interval": "15s", "$__range": "1h",
+        "${__from:date:seconds}": str(end - 3600), "${__to:date:seconds}": str(end),
+        "${rows:raw}": "50", "${profile}": "192.0.2.1",
+        **{f"${{{name}}}": ".*" for name in ("team", "source", "target", "component", "instance")},
+        **{f"${{{name}:regex}}": ".*" for name in ("service", "source", "target")},
+    }
     auth = "admin:" + os.environ["GRAFANA_ADMIN_PASSWORD"]
     for dashboard in dashboards.values():
         loaded = get_json(grafana + "/api/dashboards/uid/" + dashboard["uid"], auth)
@@ -121,26 +131,16 @@ def main():
         assert not loaded["meta"].get("folderUid"), (
             "Dashboard must be in the Grafana root"
         )
-        panels = list(dashboard["panels"])
+        panels = list(loaded["dashboard"]["panels"])
         for panel in panels:
             panels.extend(panel.get("panels", []))
             for target in panel.get("targets", []):
                 expression = target.get("expr", "")
                 if expression:
-                    expression = expression.replace("$__rate_interval", "1m").replace(
-                        "$__interval", "15s"
-                    )
-                    expression = expression.replace("$__range", "1h")
-                    expression = expression.replace("${rows:raw}", "50")
-                    expression = expression.replace("${service:regex}", ".*")
-                    expression = expression.replace("${team}", ".*").replace(
-                        "$team", ".*"
-                    )
-                    expression = expression.replace("${source}", ".*").replace(
-                        "${target}", ".*"
-                    )
-                    expression = expression.replace("${component}", ".*").replace(
-                        "${instance}", ".*"
+                    for variable, value in variables.items():
+                        expression = expression.replace(variable, value)
+                    assert "${" not in expression and "$__" not in expression, (
+                        f"Unresolved Grafana variable in {dashboard['uid']}: {expression}"
                     )
                     query(expression)
     main_dashboard = dashboards["forcad-monitoring"]

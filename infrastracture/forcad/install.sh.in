@@ -5,6 +5,7 @@ bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 target=@@INSTALL_PATH@@
 repo=@@REPOSITORY_URL@@
 revision=@@REVISION@@
+monitoring=@@MONITORING@@
 go_version=1.27.4
 created=false
 host_installed=false
@@ -177,13 +178,13 @@ prepare_go_environment() {
 run_control_down() {
     local binary="$target/backend/bin/forcad"
     if [[ -f "$binary" && ! -L "$binary" && -x "$binary" ]]; then
-        if [[ @@MONITORING@@ == true ]]; then
+        if [[ "$monitoring" == true ]]; then
             "$binary" control --project-root "$target" monitoring down -v --remove-orphans
         else
             "$binary" control --project-root "$target" down -v --remove-orphans
         fi
     elif [[ "$go_environment_ready" == true ]]; then
-        if [[ @@MONITORING@@ == true ]]; then
+        if [[ "$monitoring" == true ]]; then
             (cd "$target" && ./control.sh monitoring down -v --remove-orphans)
         else
             (cd "$target" && ./control.sh down -v --remove-orphans)
@@ -249,7 +250,7 @@ fi
 if [[ -d "$bundle_dir/checkers" ]]; then
     cp -a "$bundle_dir/checkers/." "$target/checkers/"
 fi
-if [[ @@MONITORING@@ == true ]]; then
+if [[ "$monitoring" == true ]]; then
     command -v openssl >/dev/null || { echo "openssl is required to create the Grafana password" >&2; exit 1; }
     printf 'GRAFANA_ADMIN_PASSWORD="%s"\n' "$(openssl rand -hex 32)" >> "$target/deployment/docker/.env"
     printf 'GRAFANA_CHECKER_DB_PASSWORD="%s"\n' "$(openssl rand -hex 32)" >> "$target/deployment/docker/.env"
@@ -267,7 +268,7 @@ printf '%s\n%s\n' "$containerd_was_active" "$containerd_was_enabled" > "$target/
 : > "$target/.forcad-created-dirs"
 if ((${#created_directories[@]})); then printf '%s\n' "${created_directories[@]}" > "$target/.forcad-created-dirs"; fi
 printf '%s\n' "$sysctl_before" > "$target/.forcad-sysctl"
-printf '%s\n' @@MONITORING@@ > "$target/.forcad-monitoring"
+printf '%s\n' "$monitoring" > "$target/.forcad-monitoring"
 if [[ -z "$docker_group_before" ]]; then
     group_entry="$(getent group docker || true)"
     if [[ -n "$group_entry" ]]; then
@@ -295,7 +296,7 @@ printf '%s\n' "$host_install_output"
 host_backup="$(sed -n 's/^Installed [0-9][0-9]* files\. Backup: \/var\/backups\/forcad\/forcad\/install-//p' <<< "$host_install_output")"
 [[ -n "$host_backup" && "$host_backup" != */* ]] || { echo "Could not identify the host backup created during install" >&2; exit 1; }
 printf '%s\n' "$host_backup" > "$target/.forcad-host-backup"
-if [[ @@MONITORING@@ == true ]]; then
+if [[ "$monitoring" == true ]]; then
     ./control.sh monitoring up -d
 else
     ./control.sh start

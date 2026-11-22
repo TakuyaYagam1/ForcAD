@@ -7,8 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-ROOT = Path(__file__).resolve().parents[1]
-from helpers import checks, common, files, small_config, source_bundle
+from helpers import ROOT, checks, common, files, small_config, source_bundle
 
 import render
 from forcad import host as forcad_host

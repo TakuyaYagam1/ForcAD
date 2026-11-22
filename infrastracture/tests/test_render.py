@@ -15,10 +15,7 @@ import unittest
 from pathlib import Path, PurePosixPath
 from unittest import mock
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "tests"))
-from helpers import common, source_bundle
+from helpers import ROOT, common, source_bundle
 
 import render
 

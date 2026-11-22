@@ -4,13 +4,13 @@ import importlib
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from hostlib import checks, common, files
 
-__all__ = ["checks", "common", "files", "small_config", "source_bundle"]
+ROOT = Path(__file__).resolve().parents[1]
+
+__all__ = ["ROOT", "checks", "common", "files", "small_config", "source_bundle"]
 
 
 def small_config(config, count=2, members=2, admins=1):
