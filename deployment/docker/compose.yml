@@ -226,7 +226,7 @@ services:
     <<: *memory
     mem_reservation: "${FORCAD_REDIS_MEMORY_RESERVATION:-512m}"
     mem_limit: "${FORCAD_REDIS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
-    image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
+    image: redis:8.10.3-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
     command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxclients 10000"]
     ulimits:
       nofile: {soft: 65536, hard: 65536}

@@ -76,7 +76,7 @@ def main():
                 f"type=bind,src={work / 'prometheus.yml'},dst=/work/prometheus.yml,readonly",
                 "--entrypoint",
                 "/bin/sh",
-                "prom/prometheus:v3.15.0",
+                "prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06",
                 "-c",
                 "pwd -P && promtool check config /work/prometheus.yml && exec prometheus --config.file=/work/prometheus.yml --storage.tsdb.path=/work/data --web.listen-address=127.0.0.1:9090",
             )
@@ -157,7 +157,7 @@ def main():
                 "GF_PLUGINS_PREINSTALL_DISABLED=true",
                 "--entrypoint",
                 "/bin/sh",
-                "grafana/grafana:13.2.2",
+                "grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf",
                 "-c",
                 "pwd -P && exec /run.sh",
             )

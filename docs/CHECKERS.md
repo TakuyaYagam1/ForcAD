@@ -9,7 +9,7 @@ The worker mounts the directory at `/checkers` and uses `/opt/checkers/bin` for
 Python dependencies. Set each task's relative `checker` path in
 [configuration](CONFIGURATION.md).
 
-The worker uses Python 3.14 on Alpine Linux (musl). Build native checker binaries
+The worker uses Python 3.15 on Alpine Linux (musl). Build native checker binaries
 for musl or link them statically; existing glibc binaries need a compatible custom
 worker image. Python extensions are installed inside the worker build, so do not
 copy a host virtual environment into `/opt/checkers`.

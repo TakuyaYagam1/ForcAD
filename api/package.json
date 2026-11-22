@@ -1,11 +1,11 @@
 {
   "name": "forcad-api-contract",
   "private": true,
-  "packageManager": "pnpm@12.11.2",
+  "packageManager": "pnpm@12.21.0",
   "scripts": {
     "test": "node --test scripts/*.test.mjs"
   },
   "devDependencies": {
-    "@redocly/cli": "2.77.0"
+    "@redocly/cli": "2.82.0"
   }
 }

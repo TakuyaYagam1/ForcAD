@@ -2,7 +2,9 @@
 set -eu
 
 data_root=/var/lib/postgresql
-data_dir=$data_root/18/docker
+major=19
+major_dir=$data_root/$major
+data_dir=$major_dir/docker
 postgres_uid=$(id -u postgres)
 postgres_gid=$(id -g postgres)
 
@@ -20,7 +22,7 @@ refuse_symlink() {
 refuse_legacy_data() {
     marker=$1
     if [ -e "$marker" ] || [ -L "$marker" ]; then
-        echo "Legacy PostgreSQL data found at $marker; refusing to initialize PostgreSQL 18 at $data_dir. Keep the volume unchanged and see Start a game in README.md." >&2
+        echo "Legacy PostgreSQL data found at $marker; refusing to initialize PostgreSQL $major at $data_dir. The existing volume must be preserved." >&2
         exit 1
     fi
 }
@@ -49,19 +51,19 @@ for child in "$data_root"/* "$data_root"/.[!.]* "$data_root"/..?*; do
     refuse_symlink "$child"
     if [ -d "$child" ]; then
         refuse_symlink "$child/docker"
-        [ "$child" = "$data_root/18" ] || refuse_legacy_data "$child/docker/PG_VERSION"
+        [ "$child" = "$major_dir" ] || refuse_legacy_data "$child/docker/PG_VERSION"
     fi
-    if [ "$child" != "$data_root/18" ]; then
-        echo "Unexpected entry at $child; refusing to initialize PostgreSQL 18. Keep the volume unchanged and see Start a game in README.md." >&2
+    if [ "$child" != "$major_dir" ]; then
+        echo "Unexpected entry at $child; refusing to initialize PostgreSQL $major on this volume." >&2
         exit 1
     fi
 done
 
-refuse_symlink "$data_root/18"
+refuse_symlink "$major_dir"
 refuse_symlink "$data_dir"
 
 # A fresh bind mount is commonly root-owned and mode 0700. Adopt it only while
-# it is empty, before creating the PostgreSQL 18 directory below it.
+# it is empty, before creating the major-version directory below it.
 if [ -z "$(find "$data_root" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
     chown "$postgres_uid:$postgres_gid" "$data_root"
     chmod 0700 "$data_root"
@@ -69,14 +71,14 @@ else
     require_postgres_access "$data_root" 0100
 fi
 
-if [ ! -d "$data_root/18" ]; then
-    mkdir "$data_root/18"
-    chown "$postgres_uid:$postgres_gid" "$data_root/18"
-    chmod 0700 "$data_root/18"
+if [ ! -d "$major_dir" ]; then
+    mkdir "$major_dir"
+    chown "$postgres_uid:$postgres_gid" "$major_dir"
+    chmod 0700 "$major_dir"
 fi
-test -d "$data_root/18"
-refuse_symlink "$data_root/18"
-require_postgres_access "$data_root/18" 0100
+test -d "$major_dir"
+refuse_symlink "$major_dir"
+require_postgres_access "$major_dir" 0100
 
 if [ ! -d "$data_dir" ]; then
     mkdir "$data_dir"
@@ -89,8 +91,8 @@ if [ -z "$(find "$data_dir" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
     chmod 0700 "$data_dir"
 else
     if [ -L "$data_dir/PG_VERSION" ] || [ ! -f "$data_dir/PG_VERSION" ] \
-        || [ "$(cat "$data_dir/PG_VERSION")" != 18 ]; then
-        echo "Unrecognized or incomplete PostgreSQL data at $data_dir; refusing to change it. Keep the volume unchanged and see Start a game in README.md." >&2
+        || [ "$(cat "$data_dir/PG_VERSION")" != "$major" ]; then
+        echo "Unrecognized or incomplete PostgreSQL data at $data_dir; refusing to change it." >&2
         exit 1
     fi
     require_postgres_access "$data_dir" 0700

@@ -1,4 +1,4 @@
-FROM nats:2.15.2-alpine3.22@sha256:823e7f1d6d8ffe3b30dbd73d4a06bbb939acf94929f7fdf224404da7a05bafb5
+FROM nats:2.15.3-alpine3.22@sha256:558394a23dd3c36f2d3a64b51865fd09908010e80a542cea5e75c2af543ed62a
 
 RUN addgroup -g 10001 forcad \
     && adduser -D -H -u 10001 -G forcad forcad \

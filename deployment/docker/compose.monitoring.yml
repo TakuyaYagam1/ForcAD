@@ -16,7 +16,7 @@ services:
       METRICS_ADDR: "0.0.0.0:9090"
 
   prometheus:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
     profiles: [monitoring]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -50,7 +50,7 @@ services:
       - no-new-privileges:true
 
   grafana:
-    image: grafana/grafana:13.2.2
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
     profiles: [monitoring]
     depends_on:
       prometheus:

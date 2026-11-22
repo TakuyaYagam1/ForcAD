@@ -1,14 +1,14 @@
-FROM golang:1.27.4-alpine3.24@sha256:0a5f7fe796599ff487605987432e7619ae45beeb2fba4c2ce0b907879932aebf AS gosu
+FROM golang:1.27.4-alpine3.24@sha256:70bd7ddea8b6cbe5d6943cde279d6b67feb10cc924fb9100d1d8757c1575b280 AS gosu
 
 WORKDIR /src
-# Upstream 1.19 ships a Go 1.24.6 binary. Keep its source, update the toolchain.
-RUN wget -O gosu.tar.gz https://codeload.github.com/tianon/gosu/tar.gz/6456aaa0f3c854d199d0f037f068eb97515b7513 \
-    && echo '33d7537d588ea49458b9509bcf4554bdf5ceacc66da71e5caa1058ea3b689c3b  gosu.tar.gz' | sha256sum -c - \
+# Build gosu 1.20 from the release commit with the project's Go toolchain.
+RUN wget -O gosu.tar.gz https://codeload.github.com/tianon/gosu/tar.gz/29b939aa5bd4dc588af765b8248f6e39150d2565 \
+    && echo '2b70da8a5480fafedc16bb1fc91b572f064d03df736cbd91a616af2f1b66ab51  gosu.tar.gz' | sha256sum -c - \
     && tar -xzf gosu.tar.gz --strip-components=1 \
     && rm gosu.tar.gz \
     && CGO_ENABLED=0 go build -mod=readonly -trimpath -o /gosu .
 
-FROM postgres:18.6-alpine3.24@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+FROM postgres:19.0-alpine3.24@sha256:8b0ff4cdf221f0c53d7fcda681d3b461be725c492cd881c5ec9c0ad25023f188
 
 RUN apk upgrade --no-cache
 

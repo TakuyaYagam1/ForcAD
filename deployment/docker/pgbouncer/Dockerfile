@@ -1,14 +1,14 @@
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS build
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS build
 
 RUN apk add --no-cache build-base libevent-dev openssl-dev c-ares-dev pkgconf
 WORKDIR /src
-RUN wget -O source.tar.gz https://www.pgbouncer.org/downloads/files/1.26.0/pgbouncer-1.26.0.tar.gz \
-    && echo 'afd25dd61ee6775d37b40629b87ce08736b3e6955f3057bb212e410fbf21c71d  source.tar.gz' | sha256sum -c - \
+RUN wget -O source.tar.gz https://www.pgbouncer.org/downloads/files/1.26.1/pgbouncer-1.26.1.tar.gz \
+    && echo '00886a2994b4844cd37110970df777772cfc42a74c400522c82fba509a3f42d9  source.tar.gz' | sha256sum -c - \
     && tar -xzf source.tar.gz --strip-components=1 \
     && ./configure --prefix=/usr/local --with-cares --with-openssl --without-pam \
     && make -j2 pgbouncer
 
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 RUN apk upgrade --no-cache \
     && apk add --no-cache libevent openssl c-ares postgresql18-client \
     && addgroup -g 10001 pgbouncer \

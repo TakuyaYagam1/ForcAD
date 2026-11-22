@@ -13,7 +13,7 @@ from helpers import ROOT, small_config
 
 import render
 
-IMAGE = "zeek/zeek@sha256:70733f4e540ba1608e37e00c6a93d009f79734262c9ec2ba09d90aa9abc16de5"  # 9.0.0
+IMAGE = "zeek/zeek:9.0.1@sha256:524cb0ce29f26a6a954fb9c357a8f92b95812476d8240f0ece26617ace249dd0"
 
 
 def container(command, check=True, **kwargs):
@@ -343,7 +343,7 @@ event zeek_done() {
             f"type=bind,src={ROOT / 'tests/game_rules.yml'},dst=/work/game_rules.yml,readonly",
             "--entrypoint",
             "/bin/sh",
-            "prom/prometheus:v3.15.0",
+            "prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06",
             "-c",
             "pwd -P && promtool check rules /work/rules/game.yml && promtool test rules /work/game_rules.yml",
         ],

@@ -9,7 +9,7 @@ import (
 
 	"github.com/TakuyaYagam1/ForcAD/config"
 	localoperator "github.com/TakuyaYagam1/ForcAD/internal/operator"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func TestWorkerRefusesLegacyRuntimeCredentialsWithoutRewriting(t *testing.T) {

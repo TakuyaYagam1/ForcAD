@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // SetupOptions selects storage services managed outside the local Compose project.

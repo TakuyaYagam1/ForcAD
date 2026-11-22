@@ -86,17 +86,17 @@ docker exec "$container_id" /usr/local/bin/prepare-data
 docker exec --user "$pg_uid:$pg_gid" "$container_id" /bin/sh -ec '
     test "$(stat -c %u /var/lib/postgresql)" = "$(id -u)"
     test "$(stat -c %a /var/lib/postgresql)" = 700
-    test "$(stat -c %u /var/lib/postgresql/18)" = "$(id -u)"
-    test "$(stat -c %a /var/lib/postgresql/18)" = 700
-    test "$(stat -c %u /var/lib/postgresql/18/docker)" = "$(id -u)"
-    test "$(stat -c %a /var/lib/postgresql/18/docker)" = 700
-    : > /var/lib/postgresql/18/docker/.access-check
-    rm /var/lib/postgresql/18/docker/.access-check
+    test "$PGDATA" = /var/lib/postgresql/19/docker
+    test "$(stat -c %u "${PGDATA%/*}")" = "$(id -u)"
+    test "$(stat -c %a "${PGDATA%/*}")" = 700
+    test "$(stat -c %u "$PGDATA")" = "$(id -u)"
+    test "$(stat -c %a "$PGDATA")" = 700
+    : > "$PGDATA/.access-check"
+    rm "$PGDATA/.access-check"
 '
 echo "PASS: fresh root-owned mode-0700 tmpfs is accessible by postgres."
 
 docker exec --detach --user "$pg_uid:$pg_gid" \
-    --env PGDATA=/var/lib/postgresql/18/docker \
     --env POSTGRES_HOST_AUTH_METHOD=trust \
     "$container_id" /usr/local/bin/docker-entrypoint.sh postgres \
     -c listen_addresses= -c unix_socket_directories=/tmp
@@ -110,28 +110,27 @@ for _ in $(seq 1 40); do
 done
 [[ "$ready" == 1 ]] || fail "PostgreSQL did not start as nonroot."
 docker exec "$container_id" /bin/sh -ec \
-    "test \"\$(stat -c %u /var/lib/postgresql/18/docker/postmaster.pid)\" = \"$pg_uid\""
+    'test "$(stat -c %u "$PGDATA/postmaster.pid")" = "$(id -u postgres)"'
 docker exec --user "$pg_uid:$pg_gid" "$container_id" \
-    pg_ctl -D /var/lib/postgresql/18/docker -m fast -w stop >/dev/null
+    pg_ctl -m fast -w stop >/dev/null
 echo "PASS: PostgreSQL starts as nonroot on the adopted data root."
 
-before_state="$(docker exec "$container_id" /bin/sh -ec '
-    stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker /var/lib/postgresql/18/docker/PG_VERSION /var/lib/postgresql/18/docker/global/pg_control
-    sha256sum /var/lib/postgresql/18/docker/PG_VERSION /var/lib/postgresql/18/docker/global/pg_control
-')"
+cluster_state() {
+    docker exec "$container_id" /bin/sh -ec '
+        stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql "${PGDATA%/*}" "$PGDATA" "$PGDATA/PG_VERSION" "$PGDATA/global/pg_control"
+        sha256sum "$PGDATA/PG_VERSION" "$PGDATA/global/pg_control"
+    '
+}
+before_state="$(cluster_state)"
 docker exec "$container_id" /usr/local/bin/prepare-data
-after_state="$(docker exec "$container_id" /bin/sh -ec '
-    stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker /var/lib/postgresql/18/docker/PG_VERSION /var/lib/postgresql/18/docker/global/pg_control
-    sha256sum /var/lib/postgresql/18/docker/PG_VERSION /var/lib/postgresql/18/docker/global/pg_control
-')"
-[[ "$before_state" == "$after_state" ]] || fail "Valid PostgreSQL 18 data changed during prepare-data."
-echo "PASS: existing valid PostgreSQL 18 cluster remains unchanged."
+[[ "$before_state" == "$(cluster_state)" ]] || fail "Valid PostgreSQL data changed during prepare-data."
+echo "PASS: existing valid cluster remains unchanged."
 finish_case
 
 start_case legacy
 # Variables expand in the container shell, not on the host.
 # shellcheck disable=SC2016
-expect_refusal "README.md" '
+expect_refusal "Legacy PostgreSQL data" '
     printf "17\n" > /var/lib/postgresql/PG_VERSION
     chmod 0600 /var/lib/postgresql/PG_VERSION
     before_root=$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql)
@@ -142,21 +141,36 @@ expect_refusal "README.md" '
     test "$before_marker" = "$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql/PG_VERSION)"
     test "$before_hash" = "$(sha256sum /var/lib/postgresql/PG_VERSION)"
     test "$(cat /var/lib/postgresql/PG_VERSION)" = 17
-    test ! -e /var/lib/postgresql/18
+    test ! -e "${PGDATA%/*}"
     printf "%s\n" "$output"
 '
-echo "PASS: PG17 data refuses unchanged with README migration guidance."
+echo "PASS: legacy flat data is preserved."
+finish_case
+
+start_case previous-major
+expect_refusal "Legacy PostgreSQL data" '
+    old=/var/lib/postgresql/18/docker
+    mkdir -p "$old"
+    printf "18\n" > "$old/PG_VERSION"
+    before=$(stat -c "%u:%g:%a:%Y:%Z" "${old%/*}" "$old" "$old/PG_VERSION")
+    output=$(/usr/local/bin/prepare-data 2>&1) && exit 1
+    test "$before" = "$(stat -c "%u:%g:%a:%Y:%Z" "${old%/*}" "$old" "$old/PG_VERSION")"
+    test "$(cat "$old/PG_VERSION")" = 18
+    test ! -e "${PGDATA%/*}"
+    printf "%s\n" "$output"
+'
+echo "PASS: an 18.x volume is refused before creating a 19.x directory."
 finish_case
 
 start_case symlink
 # Variables expand in the container shell, not on the host.
 # shellcheck disable=SC2016
 expect_refusal "Symlink found" '
-    ln -s /tmp/missing-target /var/lib/postgresql/18
+    ln -s /tmp/missing-target "${PGDATA%/*}"
     output=$(/usr/local/bin/prepare-data 2>&1) && exit 1
-    test -L /var/lib/postgresql/18
-    test "$(readlink /var/lib/postgresql/18)" = /tmp/missing-target
-    test ! -e /var/lib/postgresql/18/docker
+    test -L "${PGDATA%/*}"
+    test "$(readlink "${PGDATA%/*}")" = /tmp/missing-target
+    test ! -e "$PGDATA"
     printf "%s\n" "$output"
 '
 echo "PASS: symlink refuses without being followed."
@@ -165,22 +179,22 @@ finish_case
 start_case partial
 # Variables expand in the container shell, not on the host.
 # shellcheck disable=SC2016
-expect_refusal "README.md" '
-    mkdir -p /var/lib/postgresql/18/docker
+expect_refusal "Unrecognized or incomplete PostgreSQL data" '
+    mkdir -p "$PGDATA"
     postgres_uid=$(id -u postgres)
     postgres_gid=$(id -g postgres)
-    chown "$postgres_uid:$postgres_gid" /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker
-    chmod 0700 /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker
-    printf "partial\n" > /var/lib/postgresql/18/docker/.partial
-    chown "$postgres_uid:$postgres_gid" /var/lib/postgresql/18/docker/.partial
-    before=$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker /var/lib/postgresql/18/docker/.partial; sha256sum /var/lib/postgresql/18/docker/.partial)
+    chown "$postgres_uid:$postgres_gid" /var/lib/postgresql "${PGDATA%/*}" "$PGDATA"
+    chmod 0700 /var/lib/postgresql "${PGDATA%/*}" "$PGDATA"
+    printf "partial\n" > "$PGDATA/.partial"
+    chown "$postgres_uid:$postgres_gid" "$PGDATA/.partial"
+    before=$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql "${PGDATA%/*}" "$PGDATA" "$PGDATA/.partial"; sha256sum "$PGDATA/.partial")
     output=$(/usr/local/bin/prepare-data 2>&1) && exit 1
-    after=$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql /var/lib/postgresql/18 /var/lib/postgresql/18/docker /var/lib/postgresql/18/docker/.partial; sha256sum /var/lib/postgresql/18/docker/.partial)
+    after=$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql "${PGDATA%/*}" "$PGDATA" "$PGDATA/.partial"; sha256sum "$PGDATA/.partial")
     test "$before" = "$after"
-    test ! -e /var/lib/postgresql/18/docker/PG_VERSION
+    test ! -e "$PGDATA/PG_VERSION"
     printf "%s\n" "$output"
 '
-echo "PASS: partial PG18 data refuses unchanged."
+echo "PASS: partial cluster data refuses unchanged."
 finish_case
 
 start_case unknown
@@ -196,7 +210,7 @@ expect_refusal "Unexpected entry" '
     test "$before_file" = "$(stat -c "%u:%g:%a:%Y:%Z" /var/lib/postgresql/.unrecognized)"
     test "$before_hash" = "$(sha256sum /var/lib/postgresql/.unrecognized)"
     test "$(cat /var/lib/postgresql/.unrecognized)" = preserve-me
-    test ! -e /var/lib/postgresql/18
+    test ! -e "${PGDATA%/*}"
     printf "%s\n" "$output"
 '
 echo "PASS: unknown root dotfile refuses unchanged."

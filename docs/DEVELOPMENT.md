@@ -6,13 +6,17 @@ project guides.
 ## Toolchain
 
 Use the Go version declared in [backend/go.mod](../backend/go.mod). CI uses Node
-26.8.2 and Python 3.14.8 ([test workflow](../.github/workflows/tests.yml)); pnpm
-12.11.2 is declared in the [API](../api/package.json) and
+26.13.1 and Python 3.15.2 ([test workflow](../.github/workflows/tests.yml)); pnpm
+12.21.0 is declared in the [API](../api/package.json) and
 [frontend](../frontend/package.json) manifests. Python supports code generation,
 test tools and checkers; the backend runtime is Go. Infrastructure rendering
 requires Python 3.11 or newer; generated host installers support Debian 12/13.
 GNU Make is required. Docker with the Compose plugin is required for integration
 and deployment checks.
+
+Frontend builds and browser-test type checks use the native TypeScript 7
+compiler (`typescript-compiler`). ESLint uses the TypeScript 6 JavaScript API
+required by `typescript-eslint`; keep these separate until its parser supports 7.
 
 ## Install dependencies
 

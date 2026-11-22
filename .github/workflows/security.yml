@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
@@ -50,7 +50,7 @@ jobs:
             --mount "type=bind,src=$RUNNER_TEMP/forcad-security/trivy-cache,dst=/cache" \
             --workdir /work \
             --env HOME=/tmp \
-            ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
+            ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
             fs --no-progress --config security/trivy/filesystem.yml \
             --cache-dir /cache --output /reports/trivy-filesystem.json .
           scan_status=$?
@@ -60,7 +60,7 @@ jobs:
               --user "$(id -u):$(id -g)" \
               --mount "type=bind,src=$RUNNER_TEMP/forcad-security/reports,dst=/reports,readonly" \
               --env HOME=/tmp \
-              ghcr.io/aquasecurity/trivy:0.75.0@sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283 \
+              ghcr.io/aquasecurity/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb \
               convert --format table --scanners vuln,misconfig \
               /reports/trivy-filesystem.json || scan_status=1
           else
@@ -101,7 +101,7 @@ jobs:
             --env SEMGREP_ENABLE_VERSION_CHECK=0 \
             --env EIO_BACKEND=posix \
             --entrypoint semgrep \
-            semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            semgrep/semgrep:1.186.0@sha256:6e1b04340e60e910fbb4ddbf3c857ab0918f064417ad5ac530014ccb3cf8c8f1 \
             scan --strict --error --disable-nosem --metrics off \
             --config /work/security/semgrep/rules.yml \
             --exclude 'infrastracture/tests/**' --exclude 'infrastracture/runtime/**' \

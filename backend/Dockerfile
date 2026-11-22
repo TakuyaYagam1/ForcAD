@@ -1,8 +1,8 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.29.0@sha256:572cebbc2b15e6f84c077742952674889cb63cd5e9b80abdffcbe587b6f19183
 
-FROM ghcr.io/astral-sh/uv:0.13.0@sha256:cdc6093146eb3ff6a40107b38f008b789e050e77ad87865e381d9917da55a168 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.9@sha256:d3b601f0c7b118bc1753febf7c41cc80981df678445e0254284eecf84db79a7d AS uv
 
-FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS go-build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS go-build
 
 WORKDIR /src
 
@@ -31,7 +31,7 @@ FROM go-build AS test
 
 CMD ["go", "test", "-mod=readonly", "./..."]
 
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS runtime
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS runtime
 
 ENV HOME=/home/forcad
 
@@ -58,7 +58,7 @@ FROM runtime AS initializer
 
 CMD ["init"]
 
-FROM python:3.14.8-alpine3.24@sha256:f6a589d43c42b9e7f7dc67a12d37132491f362859a5d750607710cc56da3bc72 AS checker-base
+FROM python:3.15.2-alpine3.24@sha256:0f9552bb28711333da16915ec146f5e6bb44a7fdac9ced15dc17c2e0206346dd AS checker-base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -75,7 +75,7 @@ RUN apk upgrade --no-cache \
 # omits stdlib bytecode. Compile it once while building because runtime checkers
 # cannot write caches and each action starts a fresh interpreter.
 RUN python -m pip uninstall --yes pip \
-    && python -m compileall -q /usr/local/lib/python3.14
+    && python -m compileall -q "$(python -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')"
 
 FROM checker-base AS checker-build
 

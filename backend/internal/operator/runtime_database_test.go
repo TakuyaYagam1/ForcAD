@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func TestRuntimeDatabaseCredentialsAndSanitizedGame(t *testing.T) {

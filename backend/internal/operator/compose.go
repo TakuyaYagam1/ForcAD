@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 func externalCompose(paths projectPaths, options SetupOptions) ([]byte, error) {
@@ -66,7 +66,7 @@ func pruneComposeDependencies(node *yaml.Node, removed map[string]struct{}, visi
 	}
 	visited[node] = struct{}{}
 	switch node.Kind {
-	case yaml.DocumentNode, yaml.ScalarNode, yaml.AliasNode:
+	case yaml.StreamNode, yaml.DocumentNode, yaml.ScalarNode, yaml.AliasNode:
 		return
 	case yaml.MappingNode:
 		for i := 0; i+1 < len(node.Content); i += 2 {
@@ -97,7 +97,7 @@ func pruneDependencyList(node *yaml.Node, removed map[string]struct{}, visited m
 	}
 	visited[node] = struct{}{}
 	switch node.Kind {
-	case yaml.DocumentNode, yaml.ScalarNode, yaml.AliasNode:
+	case yaml.StreamNode, yaml.DocumentNode, yaml.ScalarNode, yaml.AliasNode:
 		return
 	case yaml.MappingNode:
 		for i := 0; i+1 < len(node.Content); {

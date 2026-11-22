@@ -22,8 +22,8 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 SCANNER_IMAGE = (
-    "ghcr.io/aquasecurity/trivy:0.75.0@"
-    "sha256:9db099105405c648166e6b94155eb32f8da12673cf1f455207f7385cc9a77283"
+    "ghcr.io/aquasecurity/trivy:0.76.2@"
+    "sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d5d148f41166f2040499768fb"
 )
 IMAGE_PREFIX = "forcad-security"
 IMAGE_ID_RE = re.compile(r"sha256:[0-9a-f]{64}\Z")
