@@ -36,8 +36,11 @@ Rendering requires Python 3.11 or newer, Go at the version specified in
 Linux/amd64 by default; use `--router-arch arm64` for an ARM64 Router. Rendering
 does not change a host.
 
-The output directory must not exist. The renderer creates fresh WireGuard keys
-each time, so render to a new directory for a new deployment.
+The output directory must not exist. Normal rendering creates fresh WireGuard
+keys. For **already installed hosts**, use `python3 render.py --monitoring
+--config settings.toml --output monitoring-update` with the original settings.
+These three add-on archives contain no VPN keys, checker code or game credentials.
+Do not replace your original runtime or run the base install again.
 
 For an existing deployment, set `router.wan_ssh_sources` to exact management
 IPs or enable `router.wan_ssh_public` for direct public SSH in `settings.toml`,

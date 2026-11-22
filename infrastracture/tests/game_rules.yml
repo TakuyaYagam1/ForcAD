@@ -83,3 +83,112 @@ tests:
             exp_annotations:
               summary: Game traffic sensor main loop is stale
               description: Sensor router serves HTTP but its analysis heartbeat is missing or stale.
+  - name: profile metadata remains available before sparse observation events
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_profile_info{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Alpha",member="alpha"}'
+        values: "1x12"
+    promql_expr_test:
+      - expr: forcad:game_profile_info
+        eval_time: 3m
+        exp_samples:
+          - labels: '{__name__="forcad:game_profile_info",member="alpha",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Alpha"}'
+            value: 1
+      - expr: forcad:game_target_info
+        eval_time: 3m
+        exp_samples:
+          - labels: '{__name__="forcad:game_target_info",target_team_name="Alpha",team_ip="10.183.101.2"}'
+            value: 1
+      - expr: forcad_game_peer_http_requests_total
+        eval_time: 3m
+        exp_samples: []
+
+  - name: ambiguous profile names never claim a target team
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_profile_info{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Alpha",member="alpha"}'
+        values: "1x12"
+      - series: 'forcad_game_profile_info{job="forcad_game_sensor",instance="router",source_ip="10.183.200.3",source_team_ip="10.183.101.2",source_team_name="Conflicting",member="beta"}'
+        values: "1x12"
+      - series: 'forcad_game_observations_total{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",team_ip="10.183.101.2",service_port="8080/tcp",outcome="tcp_established"}'
+        values: "0+15x12"
+    promql_expr_test:
+      - expr: forcad:game_target_info{team_ip="10.183.101.2"}
+        eval_time: 3m
+        exp_samples:
+          - labels: '{__name__="forcad:game_target_info",target_team_name="Unmapped",team_ip="10.183.101.2"}'
+            value: 1
+  - name: actual HTTP rate alert is strict above 100 requests per second
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_profile_info{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Alpha",member="alpha"}'
+        values: "1x12"
+      - series: 'forcad_game_peer_http_requests_total{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",team_ip="10.183.102.2",service_port="8080/tcp"}'
+        values: "0+1500x12"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ForcadGamePeerHighHttpRate
+        exp_alerts: []
+
+  - name: sustained HTTP rate above 100 includes source profile metadata
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_profile_info{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Alpha",member="alpha"}'
+        values: "1x12"
+      - series: 'forcad_game_peer_http_requests_total{job="forcad_game_sensor",instance="router",source_ip="10.183.200.2",team_ip="10.183.102.2",service_port="8080/tcp"}'
+        values: "0+1800x12"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ForcadGamePeerHighHttpRate
+        exp_alerts:
+          - exp_labels:
+              member: alpha
+              service_port: "8080/tcp"
+              severity: warning
+              source_ip: 10.183.200.2
+              source_team_ip: 10.183.101.2
+              source_team_name: Alpha
+              team_ip: 10.183.102.2
+            exp_annotations:
+              summary: Game peer HTTP traffic exceeds 100 requests per second
+              description: Observed peer 10.183.200.2 from Alpha (alpha) is sending more than 100 HTTP requests/s to 10.183.102.2:8080/tcp.
+  - name: high HTTP rate remains visible without a unique profile
+    interval: 15s
+    input_series:
+      - series: 'up{job="forcad_game_sensor",instance="router"}'
+        values: "1x12"
+      - series: 'forcad_game_sync_timestamp_seconds{job="forcad_game_sensor",instance="router"}'
+        values: "0+15x12"
+      - series: 'forcad_game_peer_http_requests_total{job="forcad_game_sensor",instance="router",source_ip="10.183.200.9",team_ip="10.183.102.2",service_port="8080/tcp"}'
+        values: "0+1800x12"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ForcadGamePeerHighHttpRate
+        exp_alerts:
+          - exp_labels:
+              member: Unmapped
+              profile_state: unmapped
+              service_port: "8080/tcp"
+              severity: warning
+              source_ip: 10.183.200.9
+              source_team_name: Unmapped
+              team_ip: 10.183.102.2
+            exp_annotations:
+              summary: Game peer HTTP traffic exceeds 100 requests per second
+              description: Observed peer 10.183.200.9 from Unmapped (Unmapped) is sending more than 100 HTTP requests/s to 10.183.102.2:8080/tcp.

@@ -1,0 +1,2669 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "Все команды",
+      "url": "/d/forcad-ddos-ru?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Выборочные отказы",
+      "url": "/d/forcad-relay-ru?${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Трафик",
+      "url": "/d/forcad-traffic-ru?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Обзор команд",
+      "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/forcad-ddos",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "Панели ForcAD",
+      "tags": [
+        "forcad-ru"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad-ru"
+  ],
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "version": 1,
+  "description": "Сигналы незашифрованного игрового HTTP, потоков соединений и счётчиков маршрутизатора после фильтрации помогают исследовать DDoS. Высокие скорости и объёмы служат поводом для проверки, но сами по себе не указывают на намерение или нарушение правил.",
+  "uid": "forcad-ddos-ru",
+  "title": "DDoS (RU)",
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Недоступно",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Работает",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad:game_sensor_ready or on (job, instance) (0 * up{job=\"forcad_game_sensor\"}))",
+          "legendFormat": "Состояние сбора",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Состояние датчиков",
+      "description": "Сбор считается исправным, если все настроенные игровые датчики доступны, передают свежие данные и соответствуют инвентарю. Отсутствие данных означает, что цель для датчика не настроена."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 45
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 5,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(time() - forcad_game_sync_timestamp_seconds)",
+          "legendFormat": "Давность сигнала",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Давность сигнала датчика",
+      "description": "Датчики, от которых не было сигнала более 45 секунд, исключаются из запросов трафика. Перед интерпретацией скоростей проверьте, не устарели ли значения."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_capture_dropped_packets_total[1m]))",
+          "legendFormat": "Потери при захвате/с",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Потери при захвате/с",
+      "description": "Потери пакетов ядром при захвате на всех датчиках. Устойчивое ненулевое значение может означать, что наблюдаемые данные о трафике неполны."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 5,
+        "h": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_stream_gaps_total[1m]))",
+          "legendFormat": "Разрывы TCP-потоков/с",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Разрывы TCP-потоков/с",
+      "description": "Разрывы TCP-потоков на всех датчиках. Ненулевые значения могут быть связаны с потерей пакетов, эффектами offload или асимметричной видимостью трафика."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Недоступно",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Работает",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 0,
+        "w": 4,
+        "h": 3
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad_network_source_scrape_success{job=\"forcad_router\"} or on (job, instance) (0 * up{job=\"forcad_router\"}))",
+          "legendFormat": "Счётчики маршрутизатора",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Счётчики маршрутизатора",
+      "description": "Сбор считается исправным, если доступны все настроенные экспортёры маршрутизатора и успешно получены счётчики от источника до игрового узла."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Посмотреть целевую команду в панели «Трафик»",
+                    "url": "/d/forcad-traffic-ru?var-source=All&var-target=${__data.fields[\"IP назначения\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пакеты/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда назначения"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 12,
+        "h": 10
+      },
+      "id": 6,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Пакеты/с",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc((sum by (team_ip) (rate(forcad_network_source_packets_total{job=\"forcad_router\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id!=\"__unknown__\"})) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Команды назначения по числу наблюдаемых пакетов/с",
+      "description": "Число пакетов, переданных от источника к игровому узлу, суммируется по каждому адресу назначения за последнюю минуту по исправным счётчикам источников на маршрутизаторе. Целевая команда означает адресата, а не оценку; высокий объём сам по себе не доказывает вредоносность трафика.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "team_id": true
+            },
+            "indexByName": {
+              "team_name": 0,
+              "team_ip": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "team_name": "Victim team",
+              "team_ip": "Target IP",
+              "Value": "Packets/s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 220
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Посмотреть источник в панели «Трафик»",
+                    "url": "/d/forcad-traffic-ru?var-source=${__data.fields[\"IP источника\"]}&var-target=All&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Active targets"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Активные цели"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP источника"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 12,
+        "h": 10
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Активные цели",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(((count by (source_team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0))) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Команды-источники по числу целей с новыми потоками",
+      "description": "Число разных игровых узлов назначения, к которым от каждого источника за последнюю минуту появились новые потоки TCP или UDP, по исправным игровым датчикам. Число направлений помогает при проверке, но не указывает на намерение.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "source_team_ip": 1,
+              "Value": 2
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "source_team_ip": "Source IP",
+              "Value": "Active targets"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Посмотреть пару в панели «Трафик»",
+                    "url": "/d/forcad-traffic-ru?var-source=${__data.fields[\"IP источника\"]}&var-target=${__data.fields[\"IP назначения\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Посмотреть пару в панели «Трафик»",
+                    "url": "/d/forcad-traffic-ru?var-source=${__data.fields[\"IP источника\"]}&var-target=${__data.fields[\"IP назначения\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пакеты/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP источника"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда назначения"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 18
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Пакеты/с",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info * on (team_ip) group_left (target_team_name) forcad:game_target_info) > 0",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Наблюдаемые направления от источника к цели за последнюю минуту",
+      "description": "Пакеты/с от известных VPN-пиров до игровых узлов по исправным счётчикам маршрутизатора и источников, с однозначным сопоставлением названий команд. Нажмите на название любой команды, чтобы открыть эту пару в панели «Трафик» с тем же диапазоном времени. Для атрибуции нужны актуальные метаданные игровых датчиков; высокий объём сам по себе не доказывает нарушение правил.",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "target_team_name": 1,
+              "Value": 2,
+              "source_team_ip": 3,
+              "team_ip": 4
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "target_team_name": "Victim team",
+              "source_team_ip": "Source IP",
+              "team_ip": "Target IP",
+              "Value": "Packets/s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Выбранное направление: ${source:text} -> ${target:text}",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 9
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))",
+          "legendFormat": "Пакеты/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Пакеты/с в выбранном направлении по счётчикам маршрутизатора",
+      "description": "Пакеты от выбранной команды-источника VPN до выбранного игрового узла после фильтрации на маршрутизаторе и до SNAT. Учитываются и порты вне игры; объём помогает при проверке, но не является автоматической оценкой."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 9
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})))",
+          "legendFormat": "Скорость передачи данных",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Скорость передачи данных в выбранном направлении по счётчикам маршрутизатора",
+      "description": "Биты/с от выбранной команды-источника VPN до выбранного игрового узла после фильтрации на маршрутизаторе и до SNAT. Учитываются и порты вне игры."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "flows/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 41,
+        "w": 12,
+        "h": 9
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "Потоки TCP/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "Потоки UDP/с",
+          "refId": "B",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Новые потоки/с для выбранной пары",
+      "description": "Новые потоки TCP и UDP по исправным игровым датчикам. Для TCP учитываются неполные рукопожатия; для UDP поток считается неактивным после 60 секунд бездействия."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 41,
+        "w": 12,
+        "h": 9
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP-соединения",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Установленные TCP-соединения для выбранной пары",
+      "description": "Установленные TCP-соединения, наблюдаемые исправными игровыми датчиками до закрытия, сброса или пяти минут бездействия. Перезапуски и потери при захвате могут привести к заниженным значениям."
+    },
+    {
+      "id": 15,
+      "type": "text",
+      "title": "Интерпретация данных и охват",
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## Сигналы требуют проверки, а не вывода о намерениях\n\nДанные об HTTP-запросах и телах охватывают только незашифрованный HTTP/1. TLS не анализируется: зашифрованный трафик виден только в счётчиках TCP-потоков и пакетах/байтах после фильтрации на маршрутизаторе. По этим данным нельзя определить размер тела зашифрованного запроса. Более 100 наблюдаемых HTTP-запросов/с служит порогом для проверки, а не выводом о DDoS или нарушении правил. IP источника является внутренним адресом пира WireGuard. Если профиль не сопоставлен или сопоставление неоднозначно, отображается метка «Не сопоставлено»; WAN-адрес и личность игрока не определяются. Счётчики маршрутизатора охватывают трафик, прошедший действующий фильтр, а не отклонённый трафик. Прежде чем считать низкие значения свидетельством отсутствия трафика, убедитесь, что датчики, захват пакетов и счётчики маршрутизатора работают исправно."
+      }
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Байты после фильтрации за выбранный период",
+      "description": "Объём в байтах за выбранный период после фильтрации на роутере: от участников выбранной команды к выбранному IP. Несопоставленные участники показаны в подробной таблице. «Нет данных» означает, что счётчики роутера недоступны.",
+      "gridPos": {
+        "x": 0,
+        "y": 54,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_ip) (increase(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"})",
+          "legendFormat": "Байты",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Крупные тела незашифрованного HTTP за выбранный период",
+      "description": "Число тел запроса от 1 МиБ, измеренных при разборе открытого HTTP/1 у участников выбранной команды. Несопоставленные источники остаются в таблице событий. Зашифрованные запросы не учитываются.",
+      "gridPos": {
+        "x": 6,
+        "y": 54,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_ip) (increase(forcad_game_http_large_bodies_total{team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"})",
+          "legendFormat": "Тела >= 1 MiB",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "table",
+      "title": "HTTP от пиров >100 запросов/с (фактическая скорость за минуту)",
+      "description": "Строго больше 100 разобранных запросов открытого HTTP в секунду, в среднем за минуту. Учитываются только исправные датчики. Источники без известной команды остаются видны и после фильтрации.",
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP requests/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP requests/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "HTTP-запросы/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "HTTP-запросы/с",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(((sum by (source_ip, team_ip, service_port) (rate(forcad_game_peer_http_requests_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\"}[1m]) and on (job, instance) forcad:game_sensor_ready) > 100) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace((sum by (source_ip, team_ip, service_port) (rate(forcad_game_peer_http_requests_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\"}[1m]) and on (job, instance) forcad:game_sensor_ready) > 100) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\"))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "Value": 5
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "Value": "HTTP requests/s"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Окно трафика от пира к адресу назначения после фильтрации",
+      "description": "Пакеты/с и байты/с по парам «участник WireGuard → цель». Счётчики nft учитывают только трафик, прошедший фильтры роутера. Фильтр по команде сохраняет несопоставленные источники. Если датчик или роутер недоступен, данных нет.",
+      "gridPos": {
+        "x": 0,
+        "y": 70,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Показатель"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bytes/s": {
+                        "text": "Байты/с"
+                      },
+                      "Packets/s": {
+                        "text": "Пакеты/с"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Значение"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Значение",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (source_ip, source_team_ip, source_team_name, member, team_ip) (((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target:regex}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) and on () (min(forcad:game_sensor_ready) == 1)) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}), \"measure\", \"Packets/s\", \"__name__\", \".*\") or label_replace(label_replace(label_replace(sum by (source_ip, team_ip) (((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target:regex}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) and on () (min(forcad:game_sensor_ready) == 1)) unless on (source_ip) forcad:game_profile_info), \"member\", \"Unmapped\", \"source_ip\", \".+\"), \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"measure\", \"Packets/s\", \"__name__\", \".*\") or label_replace(sum by (source_ip, source_team_ip, source_team_name, member, team_ip) (((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target:regex}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) and on () (min(forcad:game_sensor_ready) == 1)) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}), \"measure\", \"Bytes/s\", \"__name__\", \".*\") or label_replace(label_replace(label_replace(sum by (source_ip, team_ip) (((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target:regex}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1)) and on () (min(forcad:game_sensor_ready) == 1)) unless on (source_ip) forcad:game_profile_info), \"member\", \"Unmapped\", \"source_ip\", \".+\"), \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"measure\", \"Bytes/s\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "measure": 4,
+              "Value": 5
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "measure": "Measure",
+              "Value": "Value"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Последний крупный размер тела незашифрованного HTTP (>=1 MiB)",
+      "description": "Размер последнего тела запроса за выбранный период для каждого источника, получателя и сервиса. Фильтр по команде сохраняет несопоставленные источники. Это одно измеренное тело открытого HTTP/1, а не объём TLS или всего потока.",
+      "gridPos": {
+        "x": 0,
+        "y": 90,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Body bytes"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Body bytes"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Байты тела"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds})) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds})) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\"))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "Value": 5
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "Value": "Body bytes"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "table",
+      "title": "Время наблюдения последнего крупного тела незашифрованного HTTP (UTC)",
+      "description": "Время UTC для того же события, что и в таблице размеров: источник, цель и сервис совпадают. Фильтр по команде не скрывает источники без привязки.",
+      "gridPos": {
+        "x": 0,
+        "y": 102,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed at"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed at"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Время наблюдения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_timestamp_seconds{team_ip=~\"${target:regex}\"} >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds}) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_bytes >= 1048576)) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_timestamp_seconds{team_ip=~\"${target:regex}\"} >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds}) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_bytes >= 1048576)) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\")) * 1000",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "Value": 5
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "Value": "Observed at"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Импульс размера последнего тела незашифрованного HTTP >=1 MiB: пир -> цель/сервис",
+      "description": "Показывает последний наблюдаемый размер крупного тела незашифрованного HTTP в течение 60 секунд после события, отдельно для каждой пары источник/цель/сервис. Это импульс, а не число запросов. Фильтр источника применяется к сопоставленным профилям; события с меткой «Не сопоставлено» остаются видимыми. Точный размер тела и время события в UTC указаны в таблицах ниже.",
+      "gridPos": {
+        "x": 0,
+        "y": 82,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "noValue": "Нет данных",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "auto",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sort_desc(((max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\")))",
+          "legendFormat": "{{source_team_name}} / {{member}} ({{source_ip}}) -> {{team_ip}}:{{service_port}}",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Состояние и длительность проверки (контекст сервиса, не задержка трафика)",
+      "description": "Недавние результаты CHECK из ограниченного представления checker_action_events. Счётчики состояний описывают доступность сервиса по данным чекера; измеренная длительность относится к выполнению чекера, а не к задержке HTTP-запросов. Эти данные независимы от наблюдений пакетов и потоков.",
+      "gridPos": {
+        "x": 0,
+        "y": 114,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "checker-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "wrapText": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CHECK FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Проверка не выполнена"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CORRUPT"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Повреждено"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DOWN"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Недоступно"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last check"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Последняя проверка"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "MUMBLE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Некорректный ответ"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Максимальная длительность проверки, мс"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Средняя длительность проверки, мс"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Сервис"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Timeouts"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Тайм-ауты"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Доступно"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95 check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Длительность проверки p95, мс"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "enablePagination": false,
+        "sortBy": [
+          {
+            "displayName": "Последняя проверка",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "checker-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.service AS \"Service\", e.team AS \"Team\",\n       count(e.id) FILTER (WHERE e.status = 101) AS \"UP\",\n       count(e.id) FILTER (WHERE e.status = 102) AS \"CORRUPT\",\n       count(e.id) FILTER (WHERE e.status = 103) AS \"MUMBLE\",\n       count(e.id) FILTER (WHERE e.status = 104) AS \"DOWN\",\n       count(e.id) FILTER (WHERE e.status = 110) AS \"CHECK FAILED\",\n       count(e.id) FILTER (WHERE e.timed_out) AS \"Timeouts\",\n       round(avg(e.duration_ms)::numeric, 1) AS \"Mean check duration ms\",\n       percentile_cont(0.95) WITHIN GROUP (ORDER BY e.duration_ms) AS \"p95 check duration ms\",\n       max(e.duration_ms) AS \"Max check duration ms\",\n       max(e.time) AS \"Last check\"\nFROM checker_action_events AS e\nWHERE $__timeFilter(e.time) AND e.action = 'check'\nGROUP BY e.service, e.team\nORDER BY max(e.time) DESC\nLIMIT 200",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "label": "Команда-источник",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Команда назначения",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  }
+}

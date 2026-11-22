@@ -1,6 +1,7 @@
 """Plan and check router host files."""
 
 import json
+import tempfile
 from pathlib import Path
 
 from routerlib.lifecycle import Lifecycle
@@ -71,6 +72,9 @@ class Bundle(BundleBase):
             self.put(f"{base}/active.nft", content)
         else:
             self.copy("active.nft", f"{base}/active.nft")
+        self._plan_monitoring(network_metrics, game_metrics)
+
+    def _plan_monitoring(self, network_metrics, game_metrics):
         if network_metrics:
             self.copy("network.json", "/etc/forcad/monitoring/network.json", 0o644)
             self.copy("network.nft", "/etc/forcad/monitoring/network.nft")
@@ -87,6 +91,35 @@ class Bundle(BundleBase):
                 0o644,
             )
 
+    def plan_monitoring(self):
+        self.changes.clear()
+        self._plan_monitoring(network_metrics=True, game_metrics=True)
+
+    def _validate_monitoring_rules(self, work):
+        if not self.options["network_metrics"]:
+            return
+        rules = work / "network.nft"
+        rules.write_bytes(
+            b"add table inet forcad_monitoring\ndelete table inet forcad_monitoring\n"
+            + self.changes[self.path("/etc/forcad/monitoring/network.nft")][0]
+        )
+        run("nft", "-c", "-f", str(rules))
+
+    def validate_monitoring(self):
+        with tempfile.TemporaryDirectory(prefix="forcad-monitoring-check-") as directory:
+            self._validate_monitoring_rules(Path(directory))
+        if self.options["game_metrics"]:
+            zeek = Path("/opt/zeek/bin/zeek")
+            if not zeek.is_file():
+                raise ValueError("Install Zeek at /opt/zeek before using monitoring")
+            run(
+                str(zeek),
+                "-b",
+                "-a",
+                str(self.directory / "game-metrics.zeek"),
+                str(self.directory / "game-inventory.zeek"),
+            )
+
     def validate_role(self, work):
         for path, (data, _) in self.changes.items():
             if path.suffix == ".nft" and path.parent == Path("/etc/forcad/router"):
@@ -94,13 +127,12 @@ class Bundle(BundleBase):
                     data.replace(b"/etc/forcad/router/", (str(work) + "/").encode())
                 )
         run("nft", "-c", "-f", str(work / "active.nft"))
-        if self.options["network_metrics"]:
-            rules = work / "network.nft"
-            rules.write_bytes(
-                b"add table inet forcad_monitoring\ndelete table inet forcad_monitoring\n"
-                + self.changes[self.path("/etc/forcad/monitoring/network.nft")][0]
-            )
-            run("nft", "-c", "-f", str(rules))
+        self._validate_monitoring_rules(work)
+
+    def install_monitoring(self):
+        if self.files_only or not self.manifest.exists():
+            raise ValueError("Monitoring requires a live router installation")
+        return Lifecycle(self).install_monitoring()
 
     def test_live_role(self):
         run(

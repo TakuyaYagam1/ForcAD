@@ -9,7 +9,12 @@ import time
 import urllib.parse
 from pathlib import Path
 
-from dashboard_cases import build_cases, build_infrastructure_cases
+from dashboard_cases import (
+    build_cases,
+    build_ddos_cases,
+    build_infrastructure_cases,
+    build_relay_cases,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 MONITORING = ROOT / "deployment/monitoring"
@@ -80,8 +85,16 @@ def main():
             forcad = json.loads(
                 (MONITORING / "grafana/dashboards/forcad.json").read_text()
             )
+            ddos = json.loads(
+                (MONITORING / "grafana/dashboards/ddos.json").read_text()
+            )
+            relay = json.loads(
+                (MONITORING / "grafana/dashboards/relay.json").read_text()
+            )
             cases = build_cases(traffic)
             cases["tests"].extend(build_infrastructure_cases(forcad)["tests"])
+            cases["tests"].extend(build_ddos_cases(ddos)["tests"])
+            cases["tests"].extend(build_relay_cases(relay)["tests"])
             result = subprocess.run(
                 [
                     "docker",
@@ -188,7 +201,12 @@ def main():
                             "${service:regex}": ".*",
                             "${rows:raw}": "50",
                             "${source}": ".*",
+                            "${source:regex}": ".*",
                             "${target}": ".*",
+                            "${target:regex}": ".*",
+                            "${profile}": "10.183.200.2",
+                            "${__from:date:seconds}": "0",
+                            "${__to:date:seconds}": "3600",
                             "${component}": ".*",
                             "${instance}": ".*",
                             "$team": ".*",

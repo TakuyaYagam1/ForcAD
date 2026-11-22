@@ -33,6 +33,24 @@ The managed checkout is assigned to the original `SUDO_USER`, except
 service-owned database and container storage. A direct root install remains
 root-owned. Reinstallation is refused; this bundle creates a fresh deployment.
 
+For an existing managed deployment use the new archive's top-level
+`sudo bash install.sh --monitoring`. It updates the shipped dashboards and
+rules from the bundle, merges scrape targets, preserves existing passwords,
+and configures the checker DB reader. It neither fetches a revision nor runs
+game setup, changes WireGuard keys, or restarts game containers. Provisioned
+files with local modifications are refused; save custom panels under a new UID.
+The existing checkout must already support the monitoring Compose overlay and
+checker-reader provisioning. An older, incompatible deployment is rejected;
+the add-on never migrates the game schema or upgrades its binary.
+If Compose fails after staging the files, fix the reported error and rerun
+`--monitoring`. The staged passwords and targets are reused; a failed command
+does not mean either dashboard service is ready.
+If the base game started without metrics listeners, enable their overlay at
+the next planned game restart; router and checker evidence need no restart.
+The update never claims pre-existing Docker images. If later package purge
+reports images outside the original ownership snapshot, inspect them before
+removing them or use `--keep-packages`; do not prune the host.
+
 ## Removal
 
 `uninstall.sh --confirm` permanently removes the managed checkout, database and

@@ -27,6 +27,12 @@ RestrictAddressFamilies=AF_INET AF_PACKET AF_NETLINK
 MemoryMax=1G
 CPUQuota=100%
 Nice=10
+Environment=TZ=UTC
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=forcad-game-metrics
+LogRateLimitIntervalSec=1min
+LogRateLimitBurst=100
 UMask=0077
 
 [Install]

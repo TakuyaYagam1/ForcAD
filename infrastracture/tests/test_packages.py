@@ -189,6 +189,21 @@ class DependencyTests(unittest.TestCase):
 
         return subprocess.CompletedProcess(command, 0, stdout="")
 
+    def test_capture_package_requires_base_receipt_and_leaves_dns_and_network_unchanged(self):
+        manager = self.manager()
+        snapshot = self.snapshot()
+        with self.assertRaisesRegex(ValueError, "receipt"):
+            manager.install_monitoring(pcap=True)
+        self.assertEqual(self.snapshot(), snapshot)
+        manager.install()
+        self.calls.clear()
+        resolver = self.path("/etc/resolv.conf")
+        stamp = resolver.stat().st_mtime_ns if resolver.exists() else None
+        manager.install_monitoring(pcap=True)
+        self.assertIn("wireshark-common:amd64", manager.data["packages"])
+        self.assertFalse(any(call[0][0] in {"ip", "wg", "wg-quick", "resolvconf"} for call in self.calls))
+        self.assertEqual(resolver.stat().st_mtime_ns if resolver.exists() else None, stamp)
+
     def create_state(
         self, manager, packages=(), files=None, directories=(), accounts=None
     ):

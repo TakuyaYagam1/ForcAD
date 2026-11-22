@@ -1,5 +1,6 @@
 """Small synthetic Ethernet traces for passive game-metric acceptance tests."""
 
+import gzip
 import ipaddress
 import struct
 
@@ -121,6 +122,17 @@ class TCP:
             self.seq += len(data)
         self.send(reply=not reply, flags=16)
 
+
+    def data_segmented(self, data, reply=False, segment_size=60000):
+        for start in range(0, len(data), segment_size):
+            part = data[start : start + segment_size]
+            self.send(part, reply)
+            if reply:
+                self.ack += len(part)
+            else:
+                self.seq += len(part)
+            self.send(reply=not reply, flags=16)
+
     def close(self, reset=False):
         if reset:
             self.send(reply=True, flags=20)
@@ -204,4 +216,97 @@ def fixture():
         ignored.data(request)
         ignored.data(response, reply=True)
         ignored.close()
+    return trace
+
+
+def monitoring_fixture():
+    trace = Trace()
+    below_threshold = TCP(trace)
+    body = b"a" * (1048576 - 1)
+    below_threshold.data(
+        b"POST /below HTTP/1.1\r\nHost: game\r\nContent-Length: "
+        + str(len(body)).encode()
+        + b"\r\n\r\n"
+    )
+    below_threshold.data_segmented(body)
+    below_threshold.data(b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n", reply=True)
+    below_threshold.close(reset=True)
+
+    exact_threshold = TCP(trace)
+    body = b"b" * 1048576
+    exact_threshold.data(
+        b"POST /exact HTTP/1.1\r\nHost: game\r\nContent-Length: "
+        + str(len(body)).encode()
+        + b"\r\n\r\n"
+    )
+    exact_threshold.data_segmented(body)
+    exact_threshold.data(
+        b"HTTP/1.1 429 Too Many Requests\r\nContent-Length: 0\r\n\r\n",
+        reply=True,
+    )
+    exact_threshold.close()
+
+    encoded = gzip.compress(b"g" * 1048576, mtime=0)
+    compressed = TCP(trace)
+    compressed.data(
+        b"POST /gzip HTTP/1.1\r\nHost: game\r\n"
+        b"Content-Encoding: gzip\r\nContent-Length: "
+        + str(len(encoded)).encode()
+        + b"\r\n\r\n"
+        + encoded
+    )
+    compressed.data(
+        b"HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n",
+        reply=True,
+    )
+    compressed.close()
+
+    chunked = TCP(trace)
+    body = b"c" * 1048577
+    chunks = []
+    offset = 0
+    for size in (400000, 400000, len(body) - 800000):
+        part = body[offset : offset + size]
+        chunks.extend((f"{len(part):x}\r\n".encode(), part, b"\r\n"))
+        offset += size
+    chunks.append(b"0\r\n\r\n")
+    chunked.data(
+        b"POST /chunked-large HTTP/1.1\r\nHost: game\r\n"
+        b"Transfer-Encoding: chunked\r\n\r\n"
+    )
+    chunked.data_segmented(b"".join(chunks))
+    chunked.data(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n", reply=True)
+    chunked.close()
+
+    forged_length = TCP(trace)
+    body = b"f" * 1048576
+    forged_length.data(
+        b"POST /truncated HTTP/1.1\r\nHost: game\r\n"
+        b"Content-Length: 1048676\r\n\r\n"
+    )
+    # Parsed bytes meet the threshold, but the announced message is incomplete.
+    forged_length.data_segmented(body)
+    forged_length.close(reset=True)
+    gap = TCP(trace)
+    missing = 100
+    prefix = b"d" * 800000
+    suffix = b"e" * 300000
+    gap.data(
+        b"POST /gap HTTP/1.1\r\nHost: game\r\n"
+        b"Content-Length: 1100100\r\n\r\n"
+    )
+    gap.data_segmented(prefix)
+    # The capture omits bytes the sender transmitted; the server ACK confirms
+    # they crossed the stream before the following observed payload.
+    gap.seq += missing
+    gap.send(reply=True, flags=16)
+    gap.data_segmented(suffix)
+    gap.close(reset=True)
+
+    refused = TCP(trace, handshake=False)
+    refused.send(reply=True, flags=20)
+    TCP(trace, handshake=False)
+
+    # A later packet advances capture time so Zeek can report the pending SYN.
+    trace.packet("10.183.201.2", "10.183.102.2", 30000, 8080, flags=16)
     return trace

@@ -75,6 +75,11 @@ class Bundle(BundleBase):
                     ),
                     0o644,
                 )
+        if (self.directory / "monitoring").is_dir():
+            from monitoring import ASSETS, stage_asset
+
+            for name in ASSETS:
+                stage_asset(self, project, repo, name, None)
 
     def validate_role(self, work):
         repo = Path(self.options["repo"])

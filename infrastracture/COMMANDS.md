@@ -14,12 +14,13 @@ These commands require the source tree.
 | `python3 render.py` | Read `settings.toml`, build the Router exporter, generate WireGuard configs and write bundles and archives under `runtime/`. |
 | `python3 render.py --router-arch arm64` | Build the Router exporter for Linux/ARM64. The default is Linux/amd64. |
 | `python3 render.py --config settings.toml --output runtime-next` | Render from the named config into a new output directory. This creates fresh WireGuard keys. |
+| `python3 render.py --monitoring --config settings.toml --output monitoring-update` | Create three add-on archives using the deployed inventory. No server or member keys, game secrets, or changes to the original runtime. |
 | `make test` | Run infrastructure unit tests. |
 | `make test-network`, `make test-game`, `make test-dashboards` | Run the isolated network, game and dashboard checks. |
 | `make test-dependencies` | Check Debian package setup, Python bootstrap and interrupted cleanup recovery in Docker. |
 
-The render output directory must not exist. A new output creates a new
-deployment with new keys. To reinstall the same VPN deployment, preserve its
+The render output directory must not exist. A normal render creates a new
+deployment with new keys; `--monitoring` does not. To reinstall the same VPN deployment, preserve its
 server configs and pass their directory to `install.sh --wireguard-dir PATH`.
 
 ## Extract an archive
@@ -53,6 +54,7 @@ flags retains exporters selected by the preceding install.
 | `sudo bash install.sh --network-metrics` | Enable the bundled network exporter on port 9109. |
 | `sudo bash install.sh --game-metrics` | Ensure Zeek 9 or newer at `/opt/zeek`, create `forcad-sensor` if needed, and enable game metrics on port 9911. |
 | `sudo bash install.sh --network-metrics --game-metrics` | Enable both exporters. |
+| `sudo bash install.sh --monitoring` | On an existing Router, enable/update both exporters without reinstalling networking or changing the game phase. |
 | `sudo bash install.sh --files-only` | Stage files without applying network settings or managed services. Prerequisites and requested metrics packages may still be installed. |
 | `sudo bash test.sh` | Check files and live Router state, including addresses, routes, services and configured connectivity. |
 | `sudo bash test.sh --files-only` | Check staged files without checking live state. |
@@ -87,11 +89,35 @@ workstation; give each client only its own config.
 | `sudo bash install.sh` | Install prerequisites, apply networking and firewall, then start both tunnels. |
 | `sudo bash install.sh --wireguard-dir /path/to/server` | Use existing server configs for the same deployment. Peer addresses must match the rendered allocation. |
 | `sudo bash install.sh --files-only` | Stage files without applying network settings or managed services. Prerequisites are still installed. |
+| `sudo bash install.sh --pcap` | Install the optional bounded capture on `wg-attack`, independent of the scoreboard. |
+| `sudo bash install.sh --wg-endpoints` | Install the private WG endpoint history. Can be combined with `--pcap`; neither flag reinstalls the VPN. |
 | `sudo bash test.sh` | Check files, tunnels, routes and configured connectivity. |
 | `sudo bash test.sh --files-only` | Check staged files only. |
 | `sudo wg show` | Check WireGuard status and client handshakes. |
 | `sudo bash uninstall.sh --dry-run` | Preview removal. |
 | `sudo bash uninstall.sh` | Stop the managed tunnels, remove their server configs and restore saved host state. |
+
+The VPN flags install **stopped**, optional observers. Start either one manually;
+no cron and no ForcAD start/stop hook. Provision the capture filesystem at
+`/var/lib/forcad-vpn-pcap` first. Configure the venue's actual egress networks
+(one CIDR per line, main and backup) in `/etc/forcad/vpn/endpoint-venues.txt`.
+Without them the venue classification is `unknown`.
+
+```sh
+sudo systemctl start forcad-vpn-pcap.service forcad-wg-endpoints.service
+sudo systemctl is-active forcad-vpn-pcap.service forcad-wg-endpoints.service
+observer=/usr/lib/forcad/vpn/vpnlib/observers.py
+sudo python3 "$observer" pcap-status
+sudo python3 "$observer" pcap-extract --name incident-01 --protocol tcp \
+  --source "$PEER_IP" --source-port "$PEER_PORT" --destination "$BOX_IP" \
+  --destination-port "$SERVICE_PORT" --from-ms "$FROM_MS" --to-ms "$TO_MS"
+sudo systemctl stop forcad-vpn-pcap.service forcad-wg-endpoints.service
+```
+
+Times are Unix epoch **milliseconds**. The private extract is under
+`/var/lib/forcad-vpn-pcap/exports/`; keep case files off participant systems.
+On a judge workstation forward the history viewer separately from Grafana:
+`ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:9837:/run/forcad-wg-history.sock judge@vpn`.
 
 Without bundled or selected server configs, install may reuse `/etc/wireguard/`.
 Uninstall removes `wg-attack.conf` and `wg-admin.conf` even when it reused them.
@@ -108,7 +134,8 @@ installer.
 
 | Command | Action |
 | --- | --- |
-| `sudo bash install.sh` | Install prerequisites, clone the configured revision, initialize the game configuration, and start the application. If rendered `monitoring` is `true`, also start Prometheus and Grafana. Takes no options. |
+| `sudo bash install.sh` | Install prerequisites, clone the configured revision, initialize the game configuration, and start the application. If rendered `monitoring` is `true`, also start Prometheus and Grafana. |
+| `sudo bash install.sh --monitoring` | Enable/update Grafana, Prometheus, their router targets and checker read-only views on the existing managed deployment. Preserve credentials; do not restart game services. |
 | `sudo bash test.sh` | Validate the game configuration and check host files, services and the rendered monitoring selection. |
 | `sudo bash uninstall.sh --confirm` | Permanently delete the managed game, database and volumes, then ask whether to purge installer-added dependencies and owned Docker data. |
 | `sudo bash uninstall.sh --confirm --keep-packages` | Delete the deployment and keep system packages and Docker images/build cache. |
@@ -119,10 +146,15 @@ stops if unrelated Docker resources make ownership unclear. The downloaded Go
 toolchain and caches are inside the managed checkout and are removed in either
 package mode.
 
-The rendered `[env]` settings control monitoring installation. Set
+For a fresh install the rendered `[env]` settings control monitoring. Set
 `monitoring` to `true` to start Prometheus and Grafana. `router_metrics` and
 `game_metrics` add their scrape targets on ForcAD but do not install the Router
 exporters; use the Router install flags separately.
+
+For an existing deployment run `--monitoring` on **both** Router and ForcAD, using
+the archive for each host. The ForcAD flag explicitly enables both scrape targets.
+Open the [judge runbook](../docs/MONITORING.md#judge-evidence) for VPN history,
+selective failures, and what evidence is needed before acting on a warning.
 
 ## Router/VPN uninstall options
 

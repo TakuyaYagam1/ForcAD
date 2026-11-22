@@ -561,8 +561,17 @@ class Lifecycle:
                     )
             plan = self.bundle.preflight_uninstall(force=force)
             if previous is None:
-                self.bundle.uninstall_files(force=force, dry_run=dry_run)
-                self.bundle.finish_uninstall(force=force, dry_run=dry_run)
+                if dry_run:
+                    self.bundle.uninstall_files(force=force, dry_run=True)
+                    self.bundle.finish_uninstall(force=force, dry_run=True)
+                else:
+                    observer_state = self.bundle.stop_observer_services()
+                    try:
+                        self.bundle.uninstall_files(force=force, dry_run=False)
+                        self.bundle.finish_uninstall(force=force, dry_run=False)
+                    except BaseException:
+                        self.bundle.restore_observer_services(observer_state)
+                        raise
                 print(
                     "No recorded live VPN installation; live settings were not changed."
                 )
@@ -591,7 +600,9 @@ class Lifecycle:
                 os.geteuid(),
                 os.getegid(),
             )
+            observer_state = {}
             try:
+                observer_state = self.bundle.stop_observer_services()
                 self.runtime.stop()
                 self.bundle.uninstall_files(force=force)
                 self.runtime.restore(target)
@@ -611,6 +622,10 @@ class Lifecycle:
                     failures.append(str(recovery_error))
                 try:
                     self.runtime.restore(current)
+                except Exception as recovery_error:  # noqa: BLE001
+                    failures.append(str(recovery_error))
+                try:
+                    self.bundle.restore_observer_services(observer_state)
                 except Exception as recovery_error:  # noqa: BLE001
                     failures.append(str(recovery_error))
                 if failures:

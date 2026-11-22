@@ -1,0 +1,2107 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/forcad-traffic",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Все команды",
+      "url": "/d/forcad-traffic-ru?var-source=All&var-target=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "Дашборды ForcAD",
+      "tags": [
+        "forcad-ru"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Трафик платформы",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "RPS",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 12,
+        "h": 8
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[1m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Выбранные команды",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "RPS ForcAD - ${team:text}",
+      "description": "Запросы к платформе/API/приёмнику для выбранных команд. All показывает их суммарное значение. Игровые сервисы не учитываются."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "connections",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 12,
+        "h": 8
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (team_id) (forcad_team_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Выбранные команды",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Подключения WebSocket ForcAD по командам - ${team:text}",
+      "description": "Открытые подключения WebSocket платформы для выбранных команд. All показывает их суммарное значение."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "connections/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (team_id) (rate(forcad_team_websocket_upgrades_total{job=\"forcad_api\"}[1m]) and on (job, instance) (up{job=\"forcad_api\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Выбранные команды",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Новые подключения WebSocket ForcAD/с - ${team:text}",
+      "description": "Новые апгрейды WebSocket платформы для выбранных команд. All показывает их суммарную частоту."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "connections",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 9,
+        "w": 12,
+        "h": 8
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_websocket_connections{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "legendFormat": "Открыто",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(forcad_websocket_connection_limit{job=\"forcad_api\"} and on (job, instance) (up{job=\"forcad_api\"} == 1))",
+          "legendFormat": "Ёмкость",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Ёмкость WebSocket ForcAD - все реплики API",
+      "description": "Открытые подключения WS платформы и их ёмкость по всем работающим репликам API; не зависит от фильтра команды."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Mbps",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Mbits",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum((8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Исходящий",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum((8 / 1000000 * sum by (team_ip) (rate(forcad_team_network_receive_bytes_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Входящий",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Сетевой трафик - ${team:text}",
+      "description": "Перенаправленные байты в сетях выбранных команд по направлению. IP-адреса, которые нельзя однозначно сопоставить с командой, исключены."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "packets/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 17,
+        "w": 12,
+        "h": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (team_ip) (rate(forcad_team_network_transmit_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Исходящий",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (team_ip) (rate(forcad_team_network_receive_packets_total[1m]) and on (job, instance) (up{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest{team_id=~\"${team}\"}))",
+          "legendFormat": "Входящий",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Пакеты/с - ${team:text}",
+      "description": "Перенаправленные пакеты в сетях выбранных команд по направлению."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пакетов/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP источника"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Victim team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-цель"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Vulnbox IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP vulnbox"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 24,
+        "h": 14
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "enablePagination": false,
+        "sortBy": [
+          {
+            "displayName": "Пакетов/с",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "topk(${rows:raw}, ( sum by (source_ip, team_ip) (rate(forcad_network_source_packets_total{job=\"forcad_router\"}[5m]) and on (job, instance) (forcad_network_source_scrape_success{job=\"forcad_router\"} == 1)) * on (team_ip) group_left (team_name) max by (team_ip, team_name) (forcad:team_info:latest{team_id!=\"__unknown__\",team_id=~\"${team}\"})) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "team_name": 0,
+              "source_ip": 1,
+              "team_ip": 2,
+              "Value": 3
+            },
+            "renameByName": {
+              "team_name": "Victim team",
+              "source_ip": "Source IP",
+              "team_ip": "Vulnbox IP",
+              "Value": "Packets/s"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "title": "Топ ${rows} источников, обращающихся к выбранным vulnbox",
+      "description": "Выбираемый топ ${rows:raw} исходных пар источник/vulnbox за пять минут, после фильтрации на маршрутизаторе и до SNAT. Прокрутите таблицу, чтобы просмотреть все выбранные строки. Требуется экспортёр маршрутизатора."
+    },
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Игровой трафик",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Недоступен",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Работает",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 6,
+        "h": 3
+      },
+      "id": 101,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad:game_sensor_ready or on (job, instance) (0 * up{job=\"forcad_game_sensor\"}))",
+          "legendFormat": "Статус захвата",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Статус захвата",
+      "description": "Отображаются только настроенные датчики. Если целей сбора данных нет, датчик не установлен."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 45
+              }
+            ]
+          },
+          "unit": "s",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 40,
+        "w": 6,
+        "h": 3
+      },
+      "id": 102,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(time() - forcad_game_sync_timestamp_seconds)",
+          "legendFormat": "Возраст heartbeat",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Возраст heartbeat",
+      "description": "Если heartbeat старше 45 секунд, датчик не учитывается на игровых панелях."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 40,
+        "w": 6,
+        "h": 3
+      },
+      "id": 103,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_capture_dropped_packets_total[1m]))",
+          "legendFormat": "Потери захвата/с",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Потери захвата/с",
+      "description": "Потери пакетов при системном захвате; ненулевые значения могут указывать на неполные счётчики."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0,
+          "noValue": "Нет данных"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 40,
+        "w": 6,
+        "h": 3
+      },
+      "id": 104,
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(forcad_game_stream_gaps_total[1m]))",
+          "legendFormat": "Пропуски в потоках/с",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "time_series"
+        }
+      ],
+      "type": "stat",
+      "title": "Пропуски в потоках/с",
+      "description": "Отсутствующие данные TCP-потоков, в том числе из-за потерь при захвате или ненаблюдаемых направлений."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Анализировать направление",
+                    "url": "/d/forcad-traffic-ru?var-source=${__data.fields[\"IP источника\"]}&var-target=${__data.fields[\"IP назначения\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 240
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Анализировать направление",
+                    "url": "/d/forcad-traffic-ru?var-source=${__data.fields[\"IP источника\"]}&var-target=${__data.fields[\"IP назначения\"]}&${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP RPS"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "reqps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "pps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bandwidth"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "New TCP/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "cps"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WS"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TCP"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Bandwidth"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пропускная способность"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP RPS"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "HTTP-запросы/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "New TCP/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Новые TCP-потоки/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пакетов/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP источника"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Назначение"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 18
+      },
+      "id": 111,
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "HTTP-запросы/с",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"HTTP RPS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"WS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"TCP\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"New TCP/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"Packets/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (direction) (label_join(label_replace(label_join(label_replace(label_join(((((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) and on (source_team_ip, team_ip) (((sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[1m]) and on (job, instance) forcad:game_sensor_ready)) > 0) or ((sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})) > 0) or ((8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[1m]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))) > 0)))) * on (source_team_ip) group_left (source_team_name) (forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")) * on (team_ip) group_left (target_team_name) (forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\"))), \"source\", \" [\", \"source_team_name\", \"source_team_ip\"), \"source\", \"$1]\", \"source\", \"(.*)\"), \"target\", \" [\", \"target_team_name\", \"team_ip\"), \"target\", \"$1]\", \"target\", \"(.*)\"), \"direction\", \" -> \", \"source\", \"target\")), \"column\", \"Bandwidth\", \"__name__\", \".*\")",
+          "legendFormat": "",
+          "refId": "A",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "type": "table",
+      "title": "Активные направления - за последнюю минуту",
+      "description": "Нажмите на имя команды, чтобы выбрать пару; сортируйте столбцы по нагрузке. Неактивные пары скрыты; при отсутствии метрик отображается «Нет данных». Строки с одной командой означают доступ к собственному vulnbox. Высокая нагрузка сама по себе не доказывает нарушение.",
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "column",
+            "emptyValue": "null",
+            "rowField": "direction",
+            "valueField": "Value"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "direction\\column",
+            "format": "regexp",
+            "regExp": "/^(?<Source>.*) \\[(?<SourceIP>[0-9.]+)\\] -> (?<Target>.*) \\[(?<TargetIP>[0-9.]+)\\]$/"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "direction\\column": true
+            },
+            "indexByName": {
+              "Source": 0,
+              "Target": 1,
+              "HTTP RPS": 2,
+              "WS": 3,
+              "TCP": 4,
+              "New TCP/s": 5,
+              "Packets/s": 6,
+              "Bandwidth": 7,
+              "SourceIP": 8,
+              "TargetIP": 9
+            },
+            "renameByName": {
+              "SourceIP": "Source IP",
+              "TargetIP": "Target IP"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 114,
+      "type": "row",
+      "title": "Выбранное направление: ${source:text} -> ${target:text}",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 24,
+        "h": 9
+      },
+      "id": 105,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_http_requests_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "HTTP-запросов/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Игровые HTTP-запросы/с",
+      "description": "Наблюдаемые незашифрованные HTTP/1-запросы для выбранной пары, включая апгрейды соединения. All -> All показывает общий игровой трафик."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 71,
+        "w": 12,
+        "h": 8
+      },
+      "id": 106,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_websocket_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "Подключения WebSocket",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Открытые игровые подключения WebSocket",
+      "description": "Наблюдаемые апгрейды WS учитываются до закрытия или сброса TCP либо после пяти минут простоя; показана сумма для выбранной пары."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 71,
+        "w": 12,
+        "h": 8
+      },
+      "id": 112,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) ((rate(forcad_network_source_packets_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"}))",
+          "legendFormat": "Пакетов/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Пакеты VPN -> vulnbox/с",
+      "description": "Пакеты от выбранного VPN-узла -> vulnbox после фильтрации на маршрутизаторе и до SNAT; учитываются и неигровые порты."
+    },
+    {
+      "id": 115,
+      "type": "row",
+      "title": "Соединения и пропускная способность",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 79,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 12,
+        "h": 8
+      },
+      "id": 108,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (forcad_game_tcp_connections{source_team_ip=~\"${source}\",team_ip=~\"${target}\"} and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP-соединения",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Установленные TCP-соединения",
+      "description": "Наблюдаемые установленные TCP-соединения учитываются до закрытия или сброса либо после пяти минут простоя; показана сумма для выбранной пары."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 80,
+        "w": 12,
+        "h": 8
+      },
+      "id": 113,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(8 * (sum by (source_team_ip, team_ip) ((rate(forcad_network_source_bytes_total{job=\"forcad_router\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_source_scrape_success == 1 and on (job, instance) up == 1)) * on (source_ip) group_left (source_team_ip) forcad:game_peer_info{source_team_ip=~\"${source}\"})))",
+          "legendFormat": "Пропускная способность",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Пропускная способность VPN -> vulnbox",
+      "description": "Трафик от выбранного VPN-узла -> vulnbox после фильтрации на маршрутизаторе и до SNAT; учитываются и неигровые порты."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 12,
+        "h": 8
+      },
+      "id": 107,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_tcp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "TCP-потоки/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Новые TCP-потоки/с",
+      "description": "Наблюдаемые новые TCP-потоки для выбранной пары, включая незавершённые рукопожатия."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 88,
+        "w": 12,
+        "h": 8
+      },
+      "id": 110,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_udp_flows_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "UDP-потоки/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Новые UDP-потоки/с",
+      "description": "Наблюдаемые новые UDP-потоки для выбранной пары с тайм-аутом простоя 60 секунд. Это не частота запросов приложения."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "lineWidth": 2,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 96,
+        "w": 24,
+        "h": 8
+      },
+      "id": 109,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(sum by (source_team_ip, team_ip) (rate(forcad_game_websocket_upgrades_total{source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) forcad:game_sensor_ready))",
+          "legendFormat": "Апгрейды WebSocket/с",
+          "refId": "A",
+          "range": true,
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Новые подключения WebSocket/с",
+      "description": "Наблюдаемые переходы HTTP 101 на WebSocket для выбранной пары."
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad-ru"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "team",
+        "label": "Команда",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(forcad:team_info:latest)",
+          "refId": "team"
+        },
+        "definition": "query_result(forcad:team_info:latest)",
+        "regex": "/team_id=\"(?<value>[^\"]+)\"|team_name=\"(?<text>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "source",
+        "label": "Команда-источник",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join((forcad:game_source_info or on (source_team_ip) label_replace(group by (source_team_ip) (forcad_game_peer_info), \"source_team_name\", \"$1\", \"source_team_ip\", \"(.+)\")), \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Команда-цель",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_http_requests_total), \"target_team_name\", \"$1\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "rows",
+        "label": "Топ источников",
+        "type": "custom",
+        "query": "20,50,100",
+        "current": {
+          "text": "50",
+          "value": "50"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "20",
+            "value": "20"
+          },
+          {
+            "selected": true,
+            "text": "50",
+            "value": "50"
+          },
+          {
+            "selected": false,
+            "text": "100",
+            "value": "100"
+          }
+        ],
+        "multi": false,
+        "includeAll": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Трафик (RU)",
+  "uid": "forcad-traffic-ru",
+  "version": 3,
+  "description": "Трафик платформы, счётчики роутера и игровой трафик между командами. Выберите источник и получателя, чтобы открыть подробности."
+}

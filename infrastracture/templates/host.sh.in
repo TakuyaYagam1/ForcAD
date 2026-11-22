@@ -5,6 +5,7 @@ bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 role='@@ROLE@@'
 action='@@ACTION@@'
 help_requested=false
+addon_requested=false
 
 fail() {
     printf '%s\n' "$1" >&2
@@ -44,6 +45,16 @@ validate_arguments() {
                 [[ "$role" == vpn && "$action" == install ]] ||
                     fail "--wireguard-dir is only supported by VPN install.sh"
                 ;;
+            --monitoring)
+                [[ "$role" == router && "$action" == install ]] ||
+                    fail "--monitoring is only supported by router install.sh"
+                addon_requested=true
+                ;;
+            --pcap|--wg-endpoints)
+                [[ "$role" == vpn && "$action" == install ]] ||
+                    fail "$argument is only supported by VPN install.sh"
+                addon_requested=true
+                ;;
             --network-metrics|--game-metrics)
                 [[ "$role" == router && "$action" == install ]] ||
                     fail "$argument is only supported by router install.sh"
@@ -70,6 +81,9 @@ validate_arguments() {
 
 if [[ "$help_requested" != true ]]; then
     validate_arguments "$@"
+    if [[ "$action" == install && -e "$bundle_dir/monitoring-bundle" && "$addon_requested" != true ]]; then
+        fail "This add-on bundle requires --monitoring (router) or --pcap/--wg-endpoints (VPN)"
+    fi
 fi
 
 if [[ "$EUID" -ne 0 && "$help_requested" != true ]]; then
@@ -311,6 +325,8 @@ has_dependency_receipt() {
 }
 
 if [[ "$help_requested" != true ]] && ! command -v python3 >/dev/null 2>&1; then
+    [[ "$addon_requested" == false ]] ||
+        fail "Monitoring requires an already installed host with working Python."
     if [[ "$action" == install ]]; then
         bootstrap_python
     elif [[ "$action" == uninstall ]]; then

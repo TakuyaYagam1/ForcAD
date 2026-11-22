@@ -24,14 +24,26 @@ created_directories=()
 sysctl_before=
 firewall_before=
 
+if [[ $# == 1 && ( $1 == --help || $1 == -h ) ]]; then
+    echo "Usage: bash install.sh [--monitoring]"
+    echo "  --monitoring   Enable or update monitoring in the existing managed checkout."
+    exit
+fi
 if [[ "$EUID" -ne 0 ]]; then
     exec sudo -- bash "$0" "$@"
 fi
-if [[ $# -ne 0 ]]; then
-    echo "Usage: bash install.sh" >&2
+export COMPOSE_PROJECT_NAME=@@COMPOSE_PROJECT_NAME@@
+if [[ $# == 1 && $1 == --monitoring ]]; then
+    exec python3 "$bundle_dir/monitoring.py" "$target" "$repo"
+fi
+if [[ -e "$bundle_dir/monitoring-bundle" ]]; then
+    echo "This add-on bundle requires --monitoring" >&2
     exit 2
 fi
-export COMPOSE_PROJECT_NAME=@@COMPOSE_PROJECT_NAME@@
+if [[ $# -ne 0 ]]; then
+    echo "Usage: bash install.sh [--monitoring]" >&2
+    exit 2
+fi
 if [[ -e "$target" || -L "$target" ]]; then
     echo "Refusing to overwrite existing path: $target" >&2
     exit 1

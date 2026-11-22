@@ -11,7 +11,13 @@ from hostlib.common import regular
 from hostlib.files import atomic_write, rollback_files
 
 from .network import Network
-from .system import System
+from .system import (
+    GAME_METRICS,
+    MONITORING_TABLE,
+    NETWORK_METRICS,
+    NETWORK_RULES,
+    System,
+)
 
 
 class Lifecycle:
@@ -184,6 +190,181 @@ class Lifecycle:
         raise ValueError(
             f"Operation failed; previous files and live state restored: {error}"
         ) from error
+
+    def recover_monitoring(self, checkpoint, before, options, previous, error):
+        failures = []
+        for action in (
+            lambda: self.system.stop_monitoring(before["system"], options),
+            lambda: self.restore_files(checkpoint),
+            lambda: self.system.restore_monitoring(before["system"], options),
+        ):
+            try:
+                action()
+            except Exception as failure:  # noqa: BLE001 - attempt every rollback action
+                failures.append(str(failure))
+        if failures:
+            raise ValueError(
+                f"Monitoring update failed: {error}. Recovery incomplete: "
+                f"{'; '.join(failures)}. Keep {self.journal} and backups for "
+                "recovery from the host console."
+            ) from error
+        self.save(previous)
+        raise ValueError(
+            f"Monitoring update failed; previous files and live state restored: {error}"
+        ) from error
+
+    @staticmethod
+    def _check_monitoring_destinations(
+        bundle, recorded_paths, staged_paths, system_snapshot
+    ):
+        for destination in staged_paths:
+            installed_path = "/" + destination.relative_to(bundle.root).as_posix()
+            if installed_path not in recorded_paths and (
+                destination.exists() or destination.is_symlink()
+            ):
+                raise ValueError(
+                    f"Refusing to replace an unowned monitoring file: {installed_path}"
+                )
+
+        units = system_snapshot["units"]
+        for unit, path in (
+            (NETWORK_RULES, "/etc/systemd/system/network-rules.service"),
+            (NETWORK_METRICS, "/etc/systemd/system/network-metrics.service"),
+            (GAME_METRICS, "/etc/systemd/system/game-metrics.service"),
+        ):
+            if path in recorded_paths:
+                continue
+            state = units.get(unit)
+            if state is None or state["load_state"] != "not-found":
+                raise ValueError(
+                    f"Refusing to adopt an unowned monitoring unit: {unit}"
+                )
+
+    def install_monitoring(self):
+        from hostlib.packages import Dependencies
+
+        bundle = self.bundle
+        with self.locked():
+            bundle.test_files()
+            recorded_paths = {
+                "/" + path.relative_to(bundle.root).as_posix()
+                for path in bundle.changes
+            }
+            previous = self.load()
+            if previous is None or not previous["options"].get("router_live"):
+                raise ValueError("Monitoring requires a live router installation")
+            if previous["config"] != bundle.config:
+                raise ValueError(
+                    "Monitoring requires the same installed router configuration"
+                )
+            base_options = deepcopy(previous["options"])
+            if bundle.options != base_options:
+                raise ValueError(
+                    "Monitoring requires the matching installed router options"
+                )
+
+            before_dependencies = self.snapshot(base_options)
+            if previous["baseline"]["network"].get("config") != before_dependencies[
+                "network"
+            ].get("config"):
+                raise ValueError(
+                    "Router network or DNS configuration changed; restore the live base first"
+                )
+            self.check_drift(previous, before_dependencies)
+            self.network.preflight(before_dependencies["network"])
+            self.system.preflight(before_dependencies["system"], base_options)
+
+            bundle.options = {
+                **base_options,
+                "network_metrics": True,
+                "game_metrics": True,
+            }
+            bundle.plan_monitoring()
+            system_before_dependencies = self.system.snapshot(bundle.options)
+            self._check_monitoring_destinations(
+                bundle,
+                recorded_paths,
+                bundle.changes,
+                system_before_dependencies,
+            )
+
+            Dependencies(bundle).install_monitoring()
+
+            after_dependencies = self.snapshot(base_options)
+            self.check_drift(previous, after_dependencies)
+            if after_dependencies["network"] != before_dependencies["network"]:
+                raise ValueError(
+                    "Router network changed while installing monitoring dependencies"
+                )
+
+            bundle.validate_monitoring()
+            self.system.preflight_monitoring(
+                system_before_dependencies, bundle.options
+            )
+            before = {
+                "network": after_dependencies["network"],
+                "system": system_before_dependencies,
+            }
+
+            staged_rules = bundle.changes.get(
+                bundle.path("/etc/forcad/monitoring/network.nft")
+            )
+            rules_path = bundle.path("/etc/forcad/monitoring/network.nft")
+            rules_recorded = "/etc/forcad/monitoring/network.nft" in recorded_paths
+            preserve_monitoring_table = bool(
+                staged_rules
+                and rules_recorded
+                and rules_path.is_file()
+                and rules_path.read_bytes() == staged_rules[0]
+                and before["system"]["units"][NETWORK_RULES]["active_state"]
+                == "active"
+                and MONITORING_TABLE in before["system"]["table_inventory"]
+            )
+
+            baseline = deepcopy(previous["baseline"])
+            for section in ("units", "tables"):
+                baseline["system"].setdefault(section, {})
+                for name, state in before["system"][section].items():
+                    baseline["system"][section].setdefault(name, deepcopy(state))
+            baseline["system"]["options"] = deepcopy(before["system"]["options"])
+
+            paths = list(dict.fromkeys([*bundle.changes, bundle.manifest]))
+            checkpoint = self.checkpoint(paths, bundle.directory_changes(paths))
+            self.save_runtime(checkpoint, before)
+            self.archive_journal(checkpoint)
+            record = {
+                "format": 1,
+                "phase": "applying",
+                "config": bundle.config,
+                "options": bundle.options,
+                "baseline": baseline,
+                "before": before,
+                "checkpoint": str(checkpoint[0]),
+            }
+            self.save(record)
+            try:
+                bundle.install_files(extend=True)
+                self.system.apply_monitoring(
+                    bundle.options,
+                    before["system"],
+                    preserve_monitoring_table=preserve_monitoring_table,
+                )
+                after = self.snapshot(bundle.options)
+                if after["network"] != before["network"]:
+                    raise ValueError(
+                        "Router network changed during monitoring installation"
+                    )
+                record["applied"] = after
+                record["phase"] = "active"
+                record.pop("before")
+                record.pop("checkpoint")
+                self.save(record)
+                self.archive_journal(checkpoint)
+            except BaseException as error:  # noqa: BLE001 - rollback interrupted mutations
+                self.recover_monitoring(
+                    checkpoint, before, bundle.options, previous, error
+                )
+        print("PASS network and game monitoring exporters enabled.")
 
     def install(self):
         bundle = self.bundle

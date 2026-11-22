@@ -11,10 +11,11 @@ def interpolate(expression, source=None, target=None, **filters):
     for name, value in values.items():
         regex = ".*" if value is None else re.escape(value)
         escaped = regex if value is None else json.dumps(regex)[1:-1]
-        expression = expression.replace("${" + name + "}", escaped)
-        # Explicit :regex bypasses datasource escaping. Keep this case so a
-        # regression to that format fails on real dotted IP addresses.
-        expression = expression.replace("${" + name + ":regex}", regex)
+        plain = json.dumps(value)[1:-1] if name == "profile" and value is not None else escaped
+        expression = expression.replace("${" + name + "}", plain)
+        # Regex characters need both RE2 escaping and PromQL string escaping;
+        # real dotted IPs catch a broken interpolation path.
+        expression = expression.replace("${" + name + ":regex}", escaped)
     return expression
 
 
@@ -229,6 +230,599 @@ def build_cases(dashboard):
                 "interval": "15s",
                 "input_series": stale,
                 "promql_expr_test": [check(expression("Game HTTP requests/s"), [])],
+            },
+        ],
+    }
+
+
+def _panel_queries(dashboard):
+    panels = list(dashboard["panels"])
+    for panel in panels:
+        panels.extend(panel.get("panels", []))
+    return {
+        panel["title"]: [target["expr"] for target in panel.get("targets", []) if target.get("expr")]
+        for panel in panels
+    }
+
+
+def build_ddos_cases(dashboard):
+    queries = _panel_queries(dashboard)
+    series = []
+
+    def add(name, labels, values):
+        labels = ",".join(f"{key}={json.dumps(value)}" for key, value in labels.items())
+        series.append({"series": f"{name}{{{labels}}}", "values": values})
+
+    sensor = {"job": "forcad_game_sensor", "instance": "sensor"}
+    router = {"job": "forcad_router", "instance": "router"}
+    add("forcad:game_sensor_ready", sensor, "1x9")
+    add("forcad_network_source_scrape_success", router, "1x9")
+    add("up", router, "1x9")
+    add(
+        "forcad:game_profile_info",
+        {
+            "source_ip": "10.183.200.2",
+            "source_team_ip": "10.183.101.2",
+            "source_team_name": "Team 01",
+            "member": "member-1",
+        },
+        "1x9",
+    )
+    add(
+        "forcad_game_peer_http_requests_total",
+        sensor
+        | {
+            "source_ip": "10.183.200.2",
+            "team_ip": "10.183.102.2",
+            "service_port": "8080/tcp",
+        },
+        "0+1800x8",
+    )
+    add(
+        "forcad_game_peer_http_requests_total",
+        sensor
+        | {
+            "source_ip": "10.183.200.9",
+            "team_ip": "10.183.102.2",
+            "service_port": "8080/tcp",
+        },
+        "0+1650x8",
+    )
+    body_labels = sensor | {
+        "source_ip": "10.183.200.2",
+        "team_ip": "10.183.102.2",
+        "service_port": "8080/tcp",
+    }
+    add("forcad_game_http_last_large_body_bytes", body_labels, "2097152x9")
+    add("forcad_game_http_last_large_body_timestamp_seconds", body_labels, "90x9")
+    add("forcad_game_http_large_bodies_total", body_labels, "0+1x8")
+    network_labels = router | {
+        "source_ip": "10.183.200.2",
+        "team_ip": "10.183.102.2",
+    }
+    add("forcad_network_source_packets_total", network_labels, "0+300x8")
+    add("forcad_network_source_bytes_total", network_labels, "0+60000x8")
+    unmapped_network = router | {
+        "source_ip": "10.183.200.9",
+        "team_ip": "10.183.102.2",
+    }
+    add("forcad_network_source_packets_total", unmapped_network, "0+150x8")
+    add("forcad_network_source_bytes_total", unmapped_network, "0+9000x8")
+
+    def panel(title, index=0):
+        return queries[title][index]
+
+    def expression(
+        title,
+        source="10.183.101.2",
+        target="10.183.102.2",
+        start=0,
+        end=120,
+    ):
+        expr = interpolate(panel(title), source, target)
+        return (
+            expr.replace("${__from:date:seconds}", str(start))
+            .replace("${__to:date:seconds}", str(end))
+            .replace("$__range", "2m")
+            .replace("$__rate_interval", "1m")
+        )
+
+    def check(expr, samples):
+        return {"expr": expr, "eval_time": "2m", "exp_samples": samples}
+
+    def scalar(expr, value):
+        return check(expr, [{"labels": "{}", "value": value}])
+
+    large_count = expression("Large plaintext HTTP bodies in selected range")
+    large_size = expression("Last large plaintext HTTP body size (>=1 MiB)")
+    large_time = expression("Last large plaintext HTTP body observed at (UTC)")
+    body_pulse = expression(
+        "Recent >=1 MiB plaintext body size pulse: peer -> target/service"
+    )
+    rps = expression("Peer HTTP >100 RPS (actual one-minute request rate)")
+    postfilter = expression("Postfilter peer -> destination window")
+    postfilter_bytes = expression("Postfilter bytes in selected range")
+    other_source = "10.183.101.99"
+    rps_other_source = expression(
+        "Peer HTTP >100 RPS (actual one-minute request rate)", source=other_source
+    )
+    large_count_other_source = expression(
+        "Large plaintext HTTP bodies in selected range", source=other_source
+    )
+    large_size_other_source = expression(
+        "Last large plaintext HTTP body size (>=1 MiB)", source=other_source
+    )
+    large_time_other_source = expression(
+        "Last large plaintext HTTP body observed at (UTC)", source=other_source
+    )
+    body_pulse_other_source = expression(
+        "Recent >=1 MiB plaintext body size pulse: peer -> target/service",
+        source=other_source,
+    )
+    postfilter_other_source = expression(
+        "Postfilter peer -> destination window", source=other_source
+    )
+    postfilter_bytes_other_source = expression(
+        "Postfilter bytes in selected range", source=other_source
+    )
+    large_size_after_event = expression(
+        "Last large plaintext HTTP body size (>=1 MiB)", start=91
+    )
+    return {
+        "rule_files": [],
+        "evaluation_interval": "15s",
+        "fuzzy_compare": True,
+        "tests": [
+            {
+                "name": "DDoS views join profile context to sparse event metrics",
+                "interval": "15s",
+                "input_series": series,
+                "promql_expr_test": [
+                    check(
+                        rps,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 120,
+                            },
+                            {
+                                "labels": '{member="Unmapped",service_port="8080/tcp",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 110,
+                            },
+                        ],
+                    ),
+                    scalar(large_count, 8),
+                    check(
+                        large_size,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 2097152,
+                            }
+                        ],
+                    ),
+                    check(
+                        large_time,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 90000,
+                            }
+                        ],
+                    ),
+                    check(
+                        postfilter,
+                        [
+                            {
+                                "labels": '{measure="Packets/s",member="member-1",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 20,
+                            },
+                            {
+                                "labels": '{measure="Bytes/s",member="member-1",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 4000,
+                            },
+                            {
+                                "labels": '{measure="Packets/s",member="Unmapped",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 10,
+                            },
+                            {
+                                "labels": '{measure="Bytes/s",member="Unmapped",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 600,
+                            },
+                        ],
+                    ),
+                    scalar(postfilter_bytes, 480000),  # Team filter excludes the unmapped 72,000 bytes.
+                    check(
+                        body_pulse,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 2097152,
+                            }
+                        ],
+                    ),
+                ],
+            },
+            {
+                "name": "DDoS queries stay unavailable when sensor readiness is missing",
+                "interval": "15s",
+                "input_series": [
+                    item
+                    for item in series
+                    if not item["series"].startswith("forcad:game_sensor_ready{")
+                ],
+                "promql_expr_test": [
+                    check(rps, []),
+                    check(large_count, []),
+                    check(large_size, []),
+                    check(large_time, []),
+                    check(body_pulse, []),
+                    check(postfilter, []),
+                ],
+            },
+            {
+                "name": "single large body remains visible without counter samples and respects selected time",
+                "interval": "15s",
+                "input_series": [
+                    item
+                    for item in series
+                    if not item["series"].startswith(
+                        "forcad_game_http_large_bodies_total{"
+                    )
+                ],
+                "promql_expr_test": [
+                    check(
+                        large_size,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 2097152,
+                            }
+                        ],
+                    ),
+                    check(
+                        large_time,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 90000,
+                            }
+                        ],
+                    ),
+                    check(
+                        body_pulse,
+                        [
+                            {
+                                "labels": '{member="member-1",service_port="8080/tcp",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01",team_ip="10.183.102.2"}',
+                                "value": 2097152,
+                            }
+                        ],
+                    ),
+                    check(large_size_after_event, []),
+                ],
+            },
+            {
+                "name": "source filter limits mapped rows while preserving unclassified peers",
+                "interval": "15s",
+                "input_series": series,
+                "promql_expr_test": [
+                    check(
+                        rps_other_source,
+                        [
+                            {
+                                "labels": '{member="Unmapped",service_port="8080/tcp",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 110,
+                            }
+                        ],
+                    ),
+                    check(
+                        postfilter_other_source,
+                        [
+                            {
+                                "labels": '{measure="Packets/s",member="Unmapped",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 10,
+                            },
+                            {
+                                "labels": '{measure="Bytes/s",member="Unmapped",source_ip="10.183.200.9",source_team_name="Unmapped",team_ip="10.183.102.2"}',
+                                "value": 600,
+                            },
+                        ],
+                    ),
+                    check(large_count_other_source, []),
+                    check(large_size_other_source, []),
+                    check(large_time_other_source, []),
+                    check(body_pulse_other_source, []),
+                    check(postfilter_bytes_other_source, []),
+                ],
+            },
+        ],
+    }
+
+
+def build_relay_cases(dashboard):
+    queries = _panel_queries(dashboard)
+    series = []
+
+    def add(name, labels, values):
+        labels = ",".join(f"{key}={json.dumps(value)}" for key, value in labels.items())
+        series.append({"series": f"{name}{{{labels}}}", "values": values})
+
+    sensor = {"job": "forcad_game_sensor", "instance": "sensor"}
+    add("forcad:game_sensor_ready", sensor, "1x9")
+    profiles = (
+        ("10.183.200.2", "10.183.101.2", "Team 01", "alpha"),
+        ("10.183.200.3", "10.183.102.2", "Team 02", "beta"),
+        ("10.183.200.4", "10.183.103.2", "Team 03", "gamma"),
+    )
+    for source_ip, source_team_ip, source_team_name, member in profiles:
+        add(
+            "forcad:game_profile_info",
+            {
+                "source_ip": source_ip,
+                "source_team_ip": source_team_ip,
+                "source_team_name": source_team_name,
+                "member": member,
+            },
+            "1x9",
+        )
+
+    target = {"team_ip": "10.183.110.2", "service_port": "8080/tcp"}
+    add("forcad:game_target_info", {"team_ip": target["team_ip"], "target_team_name": "Team 10"}, "1x9")
+    outcomes = {
+        "10.183.200.2": {
+            "tcp_established": "0+15x8",
+            "tcp_no_reply": "0+3x8",
+            "tcp_reset": "0+2x8",
+            "http_403": "0+1.5x8",
+            "http_429": "0+0.5x8",
+            "http_other": "0+15x8",
+        },
+        "10.183.200.3": {
+            "tcp_established": "0+7.5x8",
+            "tcp_refused": "0+1.5x8",
+            "tcp_reset": "0+1x8",
+            "http_403": "0+0.5x8",
+            "http_429": "0+0.25x8",
+            "http_other": "0+7.5x8",
+        },
+        # This peer has no unique profile metadata. It must remain visible in
+        # the unmapped table and count as an other observed peer.
+        "10.183.200.9": {
+            "tcp_no_reply": "0+3x8",
+        },
+    }
+    for source_ip, series_by_outcome in outcomes.items():
+        for outcome, values in series_by_outcome.items():
+            add(
+                "forcad_game_observations_total",
+                sensor | target | {"source_ip": source_ip, "outcome": outcome},
+                values,
+            )
+
+    # Other traffic on a different service or target must not be mixed into
+    # this selected profile's comparison.
+    add(
+        "forcad_game_observations_total",
+        sensor
+        | target
+        | {
+            "service_port": "9090/tcp",
+            "source_ip": "10.183.200.3",
+            "outcome": "http_403",
+        },
+        "0+1000x8",
+    )
+    add(
+        "forcad_game_observations_total",
+        sensor
+        | {
+            "team_ip": "10.183.111.2",
+            "service_port": "8080/tcp",
+            "source_ip": "10.183.200.3",
+            "outcome": "http_403",
+        },
+        "0+1000x8",
+    )
+
+    def expression(title):
+        expr = queries[title][0]
+        return (
+            interpolate(
+                expr,
+                source="10.183.101.2",
+                target="10.183.110.2",
+                profile="10.183.200.2",
+            )
+            .replace("$__range", "2m")
+            .replace("$__rate_interval", "1m")
+        )
+
+    def check(expr, samples):
+        return {"expr": expr, "eval_time": "2m", "exp_samples": samples}
+
+    def sample(measure, outcome, value, comparison=None):
+        labels = {
+            "member": "alpha",
+            "measure": measure,
+            "service_port": target["service_port"],
+            "source_ip": "10.183.200.2",
+            "source_team_ip": "10.183.101.2",
+            "source_team_name": "Team 01",
+            "team_ip": "10.183.110.2",
+        }
+        if outcome is not None:
+            labels["outcome"] = outcome
+        if comparison:
+            labels.update(comparison=comparison, target_team_name="Team 10")
+        return {
+            "labels": "{"
+            + ",".join(
+                f'{key}={json.dumps(value)}' for key, value in sorted(labels.items())
+            )
+            + "}",
+            "value": value,
+        }
+
+    def unmapped_sample(outcome, value):
+        labels = {
+            "member": "Unmapped",
+            "measure": "Observed outcome count",
+            "outcome": outcome,
+            "service_port": target["service_port"],
+            "source_ip": "10.183.200.9",
+            "source_team_name": "Unmapped",
+            "team_ip": "10.183.110.2",
+        }
+        return {
+            "labels": "{"
+            + ",".join(
+                f'{key}={json.dumps(value)}' for key, value in sorted(labels.items())
+            )
+            + "}",
+            "value": value,
+        }
+
+    http = expression("HTTP outcomes: selected profile and other peers")
+    tcp = expression("TCP outcomes: selected profile and other peers")
+    unmapped = expression("Unmapped observations (no profile attribution)")
+    selected_profile = expression("Selected source profile")
+    http_share = expression("Cross-profile HTTP 403/429 outcome share triage (>=10 responses)")
+    tcp_share = expression("Cross-profile TCP no-reply/refused share triage (>=10 attempts)")
+    denied = expression("Historical router-denied packets")
+    enough_http = "Comparable: other responses >=10"
+    enough_tcp = "Comparable: other attempts >=10"
+    return {
+        "rule_files": [],
+        "evaluation_interval": "15s",
+        "fuzzy_compare": True,
+        "tests": [
+            {
+                "name": "Relay compares only same target and service with explicit denominators",
+                "interval": "15s",
+                "input_series": series,
+                "promql_expr_test": [
+                    check(http_share, [
+                        sample("Observed peer share", "http_403", 12 / 136, enough_http),
+                        sample("Observed peer share", "http_429", 4 / 136, enough_http),
+                        sample("Other peers share", "http_403", 4 / 66, enough_http),
+                        sample("Other peers share", "http_429", 2 / 66, enough_http),
+                    ]),
+                    check(tcp_share, [
+                        sample("Observed peer share", "tcp_no_reply", 24 / 144, enough_tcp),
+                        sample("Other peers share", "tcp_no_reply", 24 / 96, enough_tcp),
+                    ]),
+                    check(
+                        http,
+                        [
+                            sample("Selected outcome count", "http_403", 12),
+                            sample("Selected outcome count", "http_429", 4),
+                            sample("Selected outcome count", "http_other", 120),
+                            sample("Selected HTTP response denominator", None, 136),
+                            sample("Other peers outcome count", "http_403", 4),
+                            sample("Other peers outcome count", "http_429", 2),
+                            sample("Other peers outcome count", "http_other", 60),
+                            sample("Other peers HTTP response denominator", None, 66),
+                        ],
+                    ),
+                    check(
+                        tcp,
+                        [
+                            sample("Selected TCP outcome count", "tcp_established", 120),
+                            sample("Selected TCP outcome count", "tcp_no_reply", 24),
+                            sample("Selected TCP attempt denominator", None, 144),
+                            sample("Other peers TCP outcome count", "tcp_established", 60),
+                            sample("Other peers TCP outcome count", "tcp_refused", 12),
+                            sample("Other peers TCP outcome count", "tcp_no_reply", 24),
+                            sample("Other peers TCP attempt denominator", None, 96),
+                            sample("Selected reset-after-handshake count", "tcp_reset", 16),
+                            sample(
+                                "Selected established denominator for resets",
+                                None,
+                                120,
+                            ),
+                            sample(
+                                "Other peers reset-after-handshake count",
+                                "tcp_reset",
+                                8,
+                            ),
+                            sample(
+                                "Other peers established denominator for resets",
+                                None,
+                                60,
+                            ),
+                        ],
+                    ),
+                    check(unmapped, [unmapped_sample("tcp_no_reply", 24)]),
+                    check(
+                        selected_profile,
+                        [
+                            {
+                                "labels": '{member="alpha",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01"}',
+                                "value": 1,
+                            }
+                        ],
+                    ),
+                ],
+            },
+            {
+                "name": "Selective failures without other peers are not corroborated",
+                "interval": "15s",
+                "input_series": [s for s in series if "forcad_game_observations_total" not in s["series"]
+                                 or 'source_ip="10.183.200.2"' in s["series"]],
+                "promql_expr_test": [check(http_share, [
+                    sample("Observed peer share", "http_403", 12 / 136, "No comparison: other responses <10"),
+                    sample("Observed peer share", "http_429", 4 / 136, "No comparison: other responses <10"),
+                ])],
+            },
+            {
+                "name": "VLAN drops survive absent Zeek and are not attributed to a member",
+                "interval": "15s",
+                "input_series": [
+                    {"series": 'up{job="forcad_router",instance="router"}', "values": "1x9"},
+                    {"series": 'forcad_network_relay_scrape_success{job="forcad_router",instance="router"}', "values": "1x9"},
+                    {"series": 'forcad_network_relay_attempt_packets_total{job="forcad_router",instance="router",source_team_ip="10.183.101.2",team_ip="10.183.110.2"}', "values": "0+3x8"},
+                ],
+                "promql_expr_test": [check(denied, [{"labels": "{}", "value": 24}])],
+            },
+            {
+                "name": "Profile metadata exists before any sparse outcome event",
+                "interval": "15s",
+                "input_series": [
+                    item
+                    for item in series
+                    if item["series"].startswith(
+                        ("forcad:game_sensor_ready{", "forcad:game_profile_info{")
+                    )
+                ],
+                "promql_expr_test": [
+                    check(
+                        selected_profile,
+                        [
+                            {
+                                "labels": '{member="alpha",source_ip="10.183.200.2",source_team_ip="10.183.101.2",source_team_name="Team 01"}',
+                                "value": 1,
+                            }
+                        ],
+                    ),
+                    check(http, []),
+                    check(tcp, []),
+                    check(unmapped, []),
+                ],
+            },
+            {
+                "name": "Relay outcome views are unavailable when sensor readiness is missing",
+                "interval": "15s",
+                "input_series": [
+                    item
+                    for item in series
+                    if not item["series"].startswith("forcad:game_sensor_ready{")
+                ],
+                "promql_expr_test": [
+                    check(http, []),
+                    check(tcp, []),
+                    check(unmapped, []),
+                    check(selected_profile, []),
+                ],
             },
         ],
     }

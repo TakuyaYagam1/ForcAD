@@ -1,0 +1,3239 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/forcad-monitoring",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Сбросить фильтры",
+      "url": "/d/forcad-monitoring-ru?var-service=All&var-team=All&var-component=All&var-instance=All&var-rows=50&${teamDetails:queryparam}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Все компоненты",
+      "url": "/d/forcad-monitoring-ru?var-component=All&var-instance=All",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "Дашборды ForcAD",
+      "tags": [
+        "forcad-ru"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Обзор",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 5,
+        "h": 2
+      },
+      "options": {
+        "mode": "html",
+        "content": "<div><br><a target=\"_top\" href=\"/d/forcad-monitoring-ru?${service:queryparam}&amp;${team:queryparam}&amp;${component:queryparam}&amp;${instance:queryparam}&amp;${rows:queryparam}&amp;var-teamDetails=true&amp;${__url_time_range}\">Развернуть все</a> &nbsp; <a target=\"_top\" href=\"/d/forcad-monitoring-ru?${service:queryparam}&amp;${team:queryparam}&amp;${component:queryparam}&amp;${instance:queryparam}&amp;${rows:queryparam}&amp;var-teamDetails=&amp;${__url_time_range}\">Свернуть все</a></div>"
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Нажмите «Развернуть все» над таблицей, чтобы раскрыть вложенные строки UUID/IP каждой команды, или «Свернуть все», чтобы закрыть их. Скорости суммируются по работоспособным репликам API и приёмника. Для отсутствующих источников отображается «Нет данных».",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "Нет данных"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "Нет данных"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99 (s)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              },
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "unit",
+                "value": "string"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Flags/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Флагов/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HTTP errors/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Ошибок HTTP/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Incoming Mbps"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Входящий трафик, Мбит/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Nested frames"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Вложенные таблицы"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Outgoing Mbps"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Исходящий трафик, Мбит/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Packets/s"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Пакетов/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "RPS"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Запросов/с"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p99 (s)"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "p99 (с)"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 22
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "enablePagination": false
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"RPS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_flags_total{job=~\"forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"Flags/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (rate(forcad_team_http_requests_total{status=~\"4..|5..\",job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api|forcad_receiver\"} and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"HTTP errors/s\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((histogram_quantile(0.99, sum by (team_id, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_api|forcad_receiver\"}[5m]) and on (job, instance) (up{job=~\"forcad_api|forcad_receiver\"} == 1))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"p99 (s)\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_id) (forcad_team_websocket_connections{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1))) or on (team_id) (0 * max by (team_id) (forcad_team_info{job=~\"forcad_api\"} and on (job, instance) (up{job=~\"forcad_api\"} == 1)))) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"WS\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_transmit_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"Outgoing Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((sum by (team_ip) (rate(forcad_team_network_receive_bytes_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * 8 / 1000000) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"Incoming Mbps\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (team) ((((((sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))))) + ((sum by (team_ip) (rate(forcad_team_network_transmit_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1))) or on (team_ip) (0 * (sum by (team_ip) (rate(forcad_team_network_receive_packets_total{job=~\"forcad_router\"}[5m]) and on (job, instance) (up{job=~\"forcad_router\"} == 1)))))) * on (team_ip) group_left (team_id) forcad:team_network_info:unique) or on (team_id) ((0 * max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"})) / 0)) * on (team_id) group_left (team) label_join(label_replace(label_join(label_replace(label_replace(max by (team_id, team_name, team_ip) (forcad:team_info:latest{team_id!=\"__unknown__\"}), \"team_ref\", \"$1\", \"team_id\", \"^(.+)$\"), \"team_ref\", \"unknown\", \"team_id\", \"^__unknown__$\"), \"team\", \" [\", \"team_name\", \"team_ref\"), \"team\", \"$1]\", \"team\", \"^(.*)$\"), \"team\", \" \", \"team\", \"team_ip\")), \"column\", \"Packets/s\", \"__name__\", \".*\")",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{team}} {{column}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "column",
+            "emptyValue": "null",
+            "rowField": "team",
+            "valueField": "Value"
+          }
+        },
+        {
+          "id": "extractFields",
+          "options": {
+            "source": "team\\column",
+            "format": "regexp",
+            "regExp": "/^(?<Team>.*) \\[(?<UUID>[0-9a-f-]{36})\\] (?<IP>\\S+)$/"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "team\\column": true
+            },
+            "indexByName": {
+              "Team": 0,
+              "RPS": 1,
+              "Flags/s": 2,
+              "HTTP errors/s": 3,
+              "p99 (s)": 4,
+              "WS": 5,
+              "Outgoing Mbps": 6,
+              "Incoming Mbps": 7,
+              "Packets/s": 8,
+              "UUID": 9,
+              "IP": 10
+            },
+            "renameByName": {}
+          }
+        },
+        {
+          "id": "groupToNestedTable",
+          "options": {
+            "fields": {
+              "Team": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "RPS": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Flags/s": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "HTTP errors/s": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "p99 (s)": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "WS": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Outgoing Mbps": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Incoming Mbps": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Packets/s": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "UUID": {
+                "aggregations": []
+              },
+              "IP": {
+                "aggregations": []
+              }
+            },
+            "showSubframeHeaders": true,
+            "expandAllRows": "${teamDetails:raw}"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "Team": 0,
+              "RPS (lastNotNull)": 1,
+              "Flags/s (lastNotNull)": 2,
+              "HTTP errors/s (lastNotNull)": 3,
+              "p99 (s) (lastNotNull)": 4,
+              "WS (lastNotNull)": 5,
+              "Outgoing Mbps (lastNotNull)": 6,
+              "Incoming Mbps (lastNotNull)": 7,
+              "Packets/s (lastNotNull)": 8,
+              "Nested frames": 9
+            },
+            "renameByName": {
+              "RPS (lastNotNull)": "RPS",
+              "Flags/s (lastNotNull)": "Flags/s",
+              "HTTP errors/s (lastNotNull)": "HTTP errors/s",
+              "p99 (s) (lastNotNull)": "p99 (s)",
+              "WS (lastNotNull)": "WS",
+              "Outgoing Mbps (lastNotNull)": "Outgoing Mbps",
+              "Incoming Mbps (lastNotNull)": "Incoming Mbps",
+              "Packets/s (lastNotNull)": "Packets/s"
+            }
+          }
+        }
+      ],
+      "type": "table",
+      "title": "Обзор команд"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 25,
+        "w": 8,
+        "h": 3
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(forcad_team_flags_total{job=\"forcad_receiver\",verdict=\"accepted\"}[$__range])) or (0 * sum(up{job=\"forcad_receiver\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "type": "stat",
+      "title": "Принято за период",
+      "description": "Оценка числа принятых флагов за выбранный период по всем игровым сессиям; это не игровой счёт."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 25,
+        "w": 8,
+        "h": 3
+      },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(forcad_team_flags_total{job=\"forcad_receiver\",verdict!~\"accepted|duplicate\"}[$__range])) or (0 * sum(up{job=\"forcad_receiver\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "type": "stat",
+      "title": "Отклонено за период",
+      "description": "Оценка числа отклонённых флагов за выбранный период без дубликатов по игровым сессиям."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "yellow"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 25,
+        "w": 8,
+        "h": 3
+      },
+      "id": 14,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(forcad_team_flags_total{job=\"forcad_receiver\",verdict=\"duplicate\"}[$__range])) or (0 * sum(up{job=\"forcad_receiver\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "type": "stat",
+      "title": "Дубликаты за период",
+      "description": "Оценка числа повторно отправленных флагов за выбранный период по игровым сессиям."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "flags/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 6
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (verdict) (rate(forcad_team_flags_total{job=\"forcad_receiver\"}[1m]) and on (job, instance) (up{job=\"forcad_receiver\"} == 1))",
+          "legendFormat": "{{verdict}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Отправленные флаги/с",
+      "description": "Декодированные флаги по результату. Принятые флаги записываются в базу данных. Некорректные значения и дубликаты показаны отдельно."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "flags/s",
+            "axisPlacement": "left",
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 1,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 6
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum by (team_id) (rate(forcad_team_flags_total{job=\"forcad_receiver\",verdict=\"accepted\"}[1m]) and on (job, instance) (up{job=\"forcad_receiver\"} == 1)) * on (team_id) group_left (team_name) max by (team_id, team_name) (forcad:team_info:latest)",
+          "legendFormat": "{{team_name}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "type": "timeseries",
+      "title": "Принятые флаги/с",
+      "description": "Записанные флаги по командам."
+    },
+    {
+      "id": 200,
+      "type": "row",
+      "title": "Чекер",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 201,
+          "type": "table",
+          "title": "Результаты проверок сервисов",
+          "description": "Количество действий за выбранный период. Настроенный сервис отображается и при нулевом числе действий.",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "checker-postgres"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 35,
+            "w": 24,
+            "h": 10
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false,
+                "wrapText": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CHECK FAILED"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Проверка не пройдена"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "CORRUPT"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Повреждённые данные"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DOWN"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Не работает"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Last run"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Последний запуск"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "MUMBLE"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Невнятный ответ"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Service"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Сервис"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Timeouts"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Тайм-ауты"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "UP"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Работает"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            },
+            "enablePagination": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "checker-postgres"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT s.name AS \"Service\",\n       count(e.id) FILTER (WHERE e.action = 'check') AS \"CHECK\",\n       count(e.id) FILTER (WHERE e.action = 'put') AS \"PUT\",\n       count(e.id) FILTER (WHERE e.action = 'get') AS \"GET\",\n       count(e.id) FILTER (WHERE e.status = 101) AS \"UP\",\n       count(e.id) FILTER (WHERE e.status = 102) AS \"CORRUPT\",\n       count(e.id) FILTER (WHERE e.status = 103) AS \"MUMBLE\",\n       count(e.id) FILTER (WHERE e.status = 104) AS \"DOWN\",\n       count(e.id) FILTER (WHERE e.status = 110) AS \"CHECK FAILED\",\n       count(e.id) FILTER (WHERE e.timed_out) AS \"Timeouts\",\n       max(e.time) AS \"Last run\"\nFROM checker_services AS s\nLEFT JOIN checker_action_events AS e\n  ON e.service_id = s.id\n AND $__timeFilter(e.time)\n AND e.team_id::TEXT IN (${team:sqlstring})\nWHERE s.id::TEXT IN (${service:sqlstring})\nGROUP BY s.id, s.name\nORDER BY s.name",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 202,
+          "type": "table",
+          "title": "Последние действия чекера",
+          "description": "Сохранённые действия CHECK, PUT и GET для каждого сервиса и команды. Сообщения чекера скрыты.",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "checker-postgres"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 45,
+            "w": 24,
+            "h": 16
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "align": "auto",
+                "cellOptions": {
+                  "type": "auto"
+                },
+                "inspect": false,
+                "wrapText": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Action"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Действие"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Code"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Код"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Duration ms"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Длительность, мс"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Result"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Результат"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Round"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Раунд"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Service"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Сервис"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Team"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Команда"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Time"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Время"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Timeout"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Тайм-аут"
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": {
+              "show": false
+            },
+            "enablePagination": false
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "checker-postgres"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "rawSql": "SELECT e.time AS \"Time\", e.round AS \"Round\", e.service AS \"Service\",\n       e.team AS \"Team\", upper(e.action) AS \"Action\", e.status AS \"Code\",\n       CASE e.status\n         WHEN 101 THEN 'UP' WHEN 102 THEN 'CORRUPT'\n         WHEN 103 THEN 'MUMBLE' WHEN 104 THEN 'DOWN'\n         WHEN 110 THEN 'CHECK FAILED' END AS \"Result\",\n       e.duration_ms AS \"Duration ms\", e.timed_out AS \"Timeout\"\nFROM checker_action_events AS e\nWHERE $__timeFilter(e.time)\n  AND e.service_id::TEXT IN (${service:sqlstring})\n  AND e.team_id::TEXT IN (${team:sqlstring})\nORDER BY e.time DESC, e.id DESC\nLIMIT 200",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 203,
+          "type": "timeseries",
+          "title": "Очередь и выполняющиеся задания",
+          "description": "Открытые задания включают задания в очереди и выполняющиеся задания. Сравните их число с количеством занятых слотов действий.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 61,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "errors/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max(forcad_checker_jobs_open{job=\"forcad_ticker\"})",
+              "legendFormat": "Открытые задания",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_checker_workflows_active{job=\"forcad_worker\"})",
+              "legendFormat": "Выполняющиеся рабочие процессы",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_checker_actions_active{job=\"forcad_worker\"})",
+              "legendFormat": "Занятые слоты действий",
+              "range": true,
+              "refId": "C"
+            }
+          ]
+        },
+        {
+          "id": 204,
+          "type": "timeseries",
+          "title": "Реплики воркеров",
+          "description": "Реплики, с которых Prometheus может собирать метрики. Проверьте их число перед интерпретацией отсутствующих рядов результатов.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 61,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "errors/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(up{job=\"forcad_worker\"})",
+              "legendFormat": "Доступные воркеры",
+              "range": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 205,
+          "type": "timeseries",
+          "title": "Ядра CPU контейнеров воркеров",
+          "description": "Число ядер CPU, используемых каждым контейнером воркера, включая дочерние процессы Python-чекера. Требуется Linux cgroup v2.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 69,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "errors/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "rate(forcad_worker_container_cpu_seconds_total{job=\"forcad_worker\"}[$__rate_interval])",
+              "legendFormat": "{{instance}}",
+              "range": true,
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 206,
+          "type": "timeseries",
+          "title": "Память контейнеров воркеров",
+          "description": "Память, используемая каждым контейнером воркера, включая дочерние процессы Python-чекера. Требуется Linux cgroup v2.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 69,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "errors/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "forcad_worker_container_memory_bytes{job=\"forcad_worker\"}",
+              "legendFormat": "{{instance}}",
+              "range": true,
+              "refId": "A"
+            }
+          ]
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 34,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 300,
+      "type": "row",
+      "title": "Ошибки",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 301,
+          "type": "table",
+          "title": "Последние ошибки HTTP по маршрутам - топ ${rows:raw} - ${team:text}",
+          "description": "Выбираемый топ N ненулевых частот ошибок платформы за пять минут по статусу, маршруту и компоненту. Постраничный вывод отключён; прокрутите таблицу, чтобы просмотреть все выбранные строки.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 78,
+            "w": 24,
+            "h": 12
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(topk(${rows:raw}, sum by (job, status, route) (rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..|5..\"}[5m]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) > 0), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "refId": "A",
+              "format": "table",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "enablePagination": false,
+            "sortBy": [
+              {
+                "displayName": "Ошибок/с",
+                "desc": true
+              }
+            ],
+            "footer": {
+              "show": false
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "noValue": "Нет данных",
+              "custom": {
+                "filterable": true
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Errors/s"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "reqps"
+                  },
+                  {
+                    "id": "custom.width",
+                    "value": 160
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Component"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 180
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Status"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 100
+                  },
+                  {
+                    "id": "unit",
+                    "value": "string"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Component"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Компонент"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Errors/s"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Ошибок/с"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Route"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Маршрут"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Status"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Статус"
+                  }
+                ]
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "job": true
+                },
+                "indexByName": {
+                  "component": 0,
+                  "status": 1,
+                  "route": 2,
+                  "Value": 3
+                },
+                "renameByName": {
+                  "component": "Component",
+                  "status": "Status",
+                  "route": "Route",
+                  "Value": "Errors/s"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "errors/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "reqps",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 90,
+            "w": 12,
+            "h": 9
+          },
+          "id": 302,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "(sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))))",
+              "legendFormat": "4xx",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "(sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"5..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))))",
+              "legendFormat": "5xx",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Ошибки HTTP платформы/с - ${team:text}",
+          "description": "Ошибки серверной части платформы сгруппированы по кодам 4xx и 5xx. Отклонённые запросы Nginx не учитываются."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "percent",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 5
+                  }
+                ]
+              },
+              "unit": "percent",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 90,
+            "w": 12,
+            "h": 9
+          },
+          "id": 303,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "100 * (sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\",status=~\"4..|5..\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)) or (0 * sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)))) / sum(rate(forcad_team_http_requests_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Доля ошибок HTTP",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Доля ошибок HTTP платформы - ${team:text}",
+          "description": "Ошибки / запросы по выбранным командам и работающим репликам. При отсутствии запросов доля не рассчитывается."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "seconds",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "s",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 99,
+            "w": 12,
+            "h": 9
+          },
+          "id": 304,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace((histogram_quantile(0.99, sum by (job, le) (rate(forcad_team_http_request_duration_seconds_bucket{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\",team_id=~\"${team}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "p99 HTTP платформы - ${team:text}",
+          "description": "p99 по объединённым гистограммам для каждого компонента, выбранных команд и работающих реплик."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "events/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "ops",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 99,
+            "w": 12,
+            "h": 9
+          },
+          "id": 305,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(forcad_websocket_slow_client_drops_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Медленный клиент",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(rate(forcad_websocket_notification_drops_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Уведомление об активности",
+              "range": true,
+              "refId": "B"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Потери доставки WebSocket/с - выбранные реплики",
+          "description": "Потери по выбранным репликам API. Фильтр команды не применяется."
+        },
+        {
+          "id": 306,
+          "type": "text",
+          "title": "Ошибки базы данных и Redis по компонентам",
+          "transparent": true,
+          "options": {
+            "mode": "markdown",
+            "content": ""
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 108,
+            "w": 24,
+            "h": 1
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "cancellations/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "ops",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 109,
+            "w": 12,
+            "h": 9
+          },
+          "id": 307,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (job) (rate(forcad_database_acquire_canceled_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Отмены ожидания соединения с БД/с",
+          "description": "Отмены по выбранным работающим репликам и компонентам. Фильтр команды не применяется."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "timeouts/s",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "ops",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 109,
+            "w": 12,
+            "h": 9
+          },
+          "id": 308,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (job) (rate(forcad_redis_pool_timeouts_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Тайм-ауты Redis/с",
+          "description": "Тайм-ауты по выбранным работающим репликам и компонентам. Фильтр команды не применяется."
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 77,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "Инфраструктура",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 401,
+          "type": "stat",
+          "title": "Недоступные реплики",
+          "description": "Недоступные цели сбора метрик с учётом текущих фильтров. При отсутствии данных отображается «Нет данных».",
+          "gridPos": {
+            "x": 0,
+            "y": 119,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "noValue": "Нет данных",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "values": false,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": ""
+            },
+            "orientation": "horizontal",
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 0)",
+              "legendFormat": "Недоступные реплики",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ]
+        },
+        {
+          "id": 402,
+          "type": "stat",
+          "title": "Максимальная загрузка пула БД",
+          "description": "Наиболее загруженный работающий пул БД с учётом текущих фильтров. При отсутствии данных отображается «Нет данных».",
+          "gridPos": {
+            "x": 6,
+            "y": 119,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "decimals": 1,
+              "noValue": "Нет данных",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "orange",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "values": false,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": ""
+            },
+            "orientation": "horizontal",
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "max((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Максимальная загрузка пула БД",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ]
+        },
+        {
+          "id": 403,
+          "type": "stat",
+          "title": "Ожидающие запросы Redis",
+          "description": "Запросы, ожидающие подключения к пулу Redis с учётом текущих фильтров. При отсутствии данных отображается «Нет данных».",
+          "gridPos": {
+            "x": 12,
+            "y": 119,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "noValue": "Нет данных",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "values": false,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": ""
+            },
+            "orientation": "horizontal",
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Ожидающие запросы Redis",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ]
+        },
+        {
+          "id": 404,
+          "type": "stat",
+          "title": "Работающие реплики",
+          "description": "Работающие цели сбора метрик с учётом текущих фильтров. При отсутствии данных отображается «Нет данных».",
+          "gridPos": {
+            "x": 18,
+            "y": 119,
+            "w": 6,
+            "h": 3
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "noValue": "Нет данных",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "reduceOptions": {
+              "values": false,
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": ""
+            },
+            "orientation": "horizontal",
+            "textMode": "auto",
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto"
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 1)",
+              "legendFormat": "Работающие реплики",
+              "refId": "A",
+              "instant": true,
+              "range": false
+            }
+          ]
+        },
+        {
+          "id": 405,
+          "type": "table",
+          "title": "Компоненты - текущие пулы",
+          "description": "Нажмите компонент, затем выберите реплику. Счётчики суммируются по работающим репликам; максимальный процент пула БД соответствует наиболее загруженному пулу. Счётчики БД показывают клиентские подключения PgBouncer, а не сеансы PostgreSQL.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 122,
+            "w": 24,
+            "h": 10
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace(sum by (component) (label_replace((sum by (job) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == bool 1)), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Healthy\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB in use\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB open\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"DB capacity\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((max by (job) ((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Max DB pool %\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis open\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis idle\", \"__name__\", \".*\")\nor\nlabel_replace(sum by (component) (label_replace((sum by (job) (forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")), \"column\", \"Redis waiting\", \"__name__\", \".*\")",
+              "refId": "A",
+              "format": "table",
+              "instant": true,
+              "range": false
+            }
+          ],
+          "options": {
+            "cellHeight": "sm",
+            "showHeader": true,
+            "footer": {
+              "show": false
+            },
+            "sortBy": [
+              {
+                "displayName": "Максимальная загрузка пула БД, %",
+                "desc": true
+              }
+            ],
+            "enablePagination": false
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "decimals": 0,
+              "noValue": "Нет данных",
+              "custom": {
+                "align": "right",
+                "cellOptions": {
+                  "type": "auto"
+                }
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Component"
+                },
+                "properties": [
+                  {
+                    "id": "custom.width",
+                    "value": 220
+                  },
+                  {
+                    "id": "custom.align",
+                    "value": "left"
+                  },
+                  {
+                    "id": "unit",
+                    "value": "string"
+                  },
+                  {
+                    "id": "links",
+                    "value": [
+                      {
+                        "title": "Открыть компонент",
+                        "url": "/d/forcad-monitoring-ru?var-component=forcad_${__data.fields[\"Компонент\"]}&var-instance=All&${__url_time_range}",
+                        "targetBlank": false
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Max DB pool %"
+                },
+                "properties": [
+                  {
+                    "id": "unit",
+                    "value": "percent"
+                  },
+                  {
+                    "id": "decimals",
+                    "value": 1
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Component"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Компонент"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DB capacity"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Ёмкость пула БД"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DB in use"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Используемые подключения БД"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "DB open"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Открытые подключения БД"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Healthy"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Работающие"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Max DB pool %"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Максимальная загрузка пула БД, %"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Redis idle"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Простаивающие подключения Redis"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Redis open"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Открытые подключения Redis"
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Redis waiting"
+                },
+                "properties": [
+                  {
+                    "id": "displayName",
+                    "value": "Ожидающие подключения Redis"
+                  }
+                ]
+              }
+            ]
+          },
+          "transformations": [
+            {
+              "id": "groupingToMatrix",
+              "options": {
+                "columnField": "column",
+                "emptyValue": "null",
+                "rowField": "component",
+                "valueField": "Value"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {},
+                "indexByName": {
+                  "component\\column": 0,
+                  "Healthy": 1,
+                  "DB in use": 2,
+                  "DB open": 3,
+                  "DB capacity": 4,
+                  "Max DB pool %": 5,
+                  "Redis open": 6,
+                  "Redis idle": 7,
+                  "Redis waiting": 8
+                },
+                "renameByName": {
+                  "component\\column": "Component"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": 406,
+          "type": "text",
+          "title": "Нагрузка на пул: ${component:text} / ${instance:text}",
+          "transparent": true,
+          "options": {
+            "mode": "markdown",
+            "content": ""
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 132,
+            "w": 24,
+            "h": 1
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "percent",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 90
+                  }
+                ]
+              },
+              "unit": "percent",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 133,
+            "w": 12,
+            "h": 9
+          },
+          "id": 407,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace((max by (job) ((100 * forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} / clamp_min(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 1)) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Максимальная загрузка пула БД по компонентам",
+          "description": "Для каждого компонента показана самая загруженная из выбранных исправных реплик."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "requests",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 133,
+            "w": 12,
+            "h": 9
+          },
+          "id": 408,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace((sum by (job) (forcad_redis_pool_pending_requests{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Ожидающие запросы Redis",
+          "description": "Запросы, ожидающие подключения к пулу Redis приложения."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "wait seconds / second",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "suffix:s/s",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 142,
+            "w": 12,
+            "h": 9
+          },
+          "id": 409,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace((sum by (job) (rate(forcad_database_acquire_wait_seconds_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Время ожидания в пуле БД",
+          "description": "Суммарное время одновременного ожидания за секунду по компонентам; это не задержка отдельного запроса. Выберите реплику, чтобы посмотреть один процесс."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "wait seconds / second",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "suffix:s/s",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 142,
+            "w": 12,
+            "h": 9
+          },
+          "id": 410,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "label_replace((sum by (job) (rate(forcad_redis_pool_wait_seconds_total{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}[$__rate_interval]) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))), \"component\", \"$1\", \"job\", \"forcad_(.*)\")",
+              "legendFormat": "{{component}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Время ожидания в пуле Redis",
+          "description": "Суммарное время одновременного ожидания за секунду по компонентам; это не задержка отдельного запроса. Выберите реплику, чтобы посмотреть один процесс."
+        },
+        {
+          "id": 411,
+          "type": "text",
+          "title": "История числа подключений",
+          "transparent": true,
+          "options": {
+            "mode": "markdown",
+            "content": ""
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 151,
+            "w": 24,
+            "h": 1
+          }
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "connections",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 152,
+            "w": 12,
+            "h": 9
+          },
+          "id": 412,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Используются",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(clamp_min(forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} - forcad_database_connections_in_use{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 0) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Простаивают",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_database_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Открыты",
+              "range": true,
+              "refId": "C"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_database_connection_limit{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Ёмкость пула",
+              "range": true,
+              "refId": "D"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Подключения БД приложения - выбранные реплики",
+          "description": "Используемые, простаивающие и открытые подключения, а также ёмкость выбранных работающих пулов. Это клиентские подключения PgBouncer."
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "connections",
+                "axisPlacement": "left",
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "short",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 152,
+            "w": 12,
+            "h": 9
+          },
+          "id": 413,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(clamp_min(forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} - forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"}, 0) and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Используются",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_redis_connections_idle{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Простаивают",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum(forcad_redis_connections{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} and on (job, instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\",instance=~\"${instance}\"} == 1))",
+              "legendFormat": "Открыты",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "type": "timeseries",
+          "title": "Клиентские подключения Redis - выбранные реплики",
+          "description": "Открытые и простаивающие пулы приложения. Не включаются ограничения сервера Redis и выделенные подключения Pub/Sub."
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 118,
+        "w": 24,
+        "h": 1
+      }
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad-ru"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "Сервис",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "checker-postgres"
+        },
+        "query": "SELECT name AS __text, id::TEXT AS __value FROM checker_services ORDER BY name",
+        "definition": "SELECT name AS __text, id::TEXT AS __value FROM checker_services ORDER BY name",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "team",
+        "label": "Команда",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "checker-postgres"
+        },
+        "query": "SELECT name AS __text, id::TEXT AS __value FROM checker_teams ORDER BY name",
+        "definition": "SELECT name AS __text, id::TEXT AS __value FROM checker_teams ORDER BY name",
+        "refresh": 1,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "component",
+        "label": "Компонент",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+          "refId": "component"
+        },
+        "definition": "query_result(label_replace(group by (job) (up{job=~\"forcad_api|forcad_receiver|forcad_worker|forcad_ticker\"}), \"component\", \"$1\", \"job\", \"forcad_(.*)\"))",
+        "regex": "/component=\"(?<text>[^\"]+)\"|job=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "instance",
+        "label": "Реплика",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+          "refId": "instance"
+        },
+        "definition": "query_result(group by (instance) (up{job=~\"forcad_(api|receiver|worker|ticker)\",job=~\"${component}\"}))",
+        "regex": "/instance=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "rows",
+        "label": "Строки ошибок HTTP",
+        "type": "custom",
+        "query": "20,50,100",
+        "current": {
+          "text": "50",
+          "value": "50"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "20",
+            "value": "20"
+          },
+          {
+            "selected": true,
+            "text": "50",
+            "value": "50"
+          },
+          {
+            "selected": false,
+            "text": "100",
+            "value": "100"
+          }
+        ],
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "teamDetails",
+        "type": "textbox",
+        "query": "",
+        "hide": 2,
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": []
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "ForcAD (RU)",
+  "uid": "forcad-monitoring-ru",
+  "version": 4,
+  "description": "Активность команд, состояние чекера, ошибки приложения и ресурсы инфраструктуры."
+}

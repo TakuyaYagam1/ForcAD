@@ -21,6 +21,38 @@
   "id": null,
   "links": [
     {
+      "type": "link",
+      "title": "DDoS",
+      "url": "/d/forcad-ddos?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Traffic",
+      "url": "/d/forcad-traffic?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Team overview",
+      "url": "/d/forcad-monitoring?${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Русский",
+      "url": "/d/forcad-relay-ru",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
       "type": "dashboards",
       "title": "ForcAD dashboards",
       "tags": [
@@ -36,28 +68,28 @@
     {
       "id": 1,
       "type": "text",
-      "title": "What this dashboard measures",
-      "description": "Scope and interpretation of relay-attempt counters.",
+      "title": "Selective outcomes and coverage",
+      "description": "Outcome shares require at least 10 selected attempts/responses. Comparator is all other observed peers on the exact same target IP, service port and time range; it is explicitly marked N/A when fewer than 10 control observations exist. TCP resets are post-establishment; HTTP 403/429 are not intent claims. Counters have no phase label, and client retries are separate attempts.",
       "gridPos": {
         "x": 0,
         "y": 0,
         "w": 24,
-        "h": 7
+        "h": 3
       },
       "options": {
         "mode": "markdown",
-        "content": "## Denied direct relay attempts\n\nThe Router counts packets sent directly from one configured vulnbox address to another after source-spoof checks and immediately before the existing deny rule. Every series is an inventory-mapped source/target team pair.\n\nA count is evidence of an **attempted direct** vulnbox-to-vulnbox packet, not a successful relay or proxy. Direct traffic remains blocked if monitoring or scraping fails. Vulnbox WAN egress remains unrestricted; indirect relays through external systems are outside this counter's scope."
+        "content": "## Profile → target/service outcome triage\n\nRanks observed TCP no-reply/refused and HTTP 403/429 shares with same-target/service peer controls. No comparison means fewer than 10 other observations. Evidence only; keep the time range within one game phase."
       }
     },
     {
       "id": 2,
       "type": "stat",
       "title": "Router capture status",
-      "description": "Ready only when Prometheus can reach the router exporter and its bounded relay-set scrape succeeds. Missing data stays N/A.",
+      "description": "Ready only when the router exporter is reachable and the bounded relay-counter scrape succeeds. Missing data stays N/A.",
       "gridPos": {
         "x": 0,
-        "y": 7,
-        "w": 8,
+        "y": 3,
+        "w": 6,
         "h": 4
       },
       "datasource": {
@@ -129,13 +161,134 @@
     },
     {
       "id": 3,
-      "type": "stat",
-      "title": "Denied packets in range",
-      "description": "Counter increase for the selected source and target teams while capture was ready.",
+      "type": "table",
+      "title": "Selected source profile",
+      "description": "Live unique profile metadata from healthy Zeek; it exists independently of sparse outcome events and does not depend on board API inventory.",
       "gridPos": {
-        "x": 8,
-        "y": 7,
-        "w": 8,
+        "x": 6,
+        "y": 3,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "N/A",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open team overview",
+                    "url": "/d/forcad-monitoring?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by (source_ip, source_team_ip, source_team_name, member) (forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"} and on() group(forcad:game_sensor_ready))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "team_id": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "source_team_ip": 3
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "source_team_ip": "Team vulnbox IP"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Historical router-denied packets",
+      "description": "Historical direct router-denied packets from team vulnbox → target vulnbox, using the router's source_team_ip counter and ignoring player/WG profile selection. Counted after source-spoof checks and before the deny rule; it is not a successful relay. N/A means router metrics are unavailable.",
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
         "h": 4
       },
       "datasource": {
@@ -184,8 +337,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
-          "legendFormat": "Denied packets",
+          "expr": "sum(increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source:regex}\",team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
+          "legendFormat": "Router-denied packets",
           "refId": "A",
           "instant": true,
           "range": false
@@ -193,152 +346,14 @@
       ]
     },
     {
-      "id": 4,
-      "type": "stat",
-      "title": "Active denied pairs",
-      "description": "Selected source/target pairs with a non-zero denied packet rate in the last five minutes.",
-      "gridPos": {
-        "x": 16,
-        "y": 7,
-        "w": 8,
-        "h": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "decimals": 0,
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "orientation": "horizontal",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "count((sum by (source_team_ip, team_ip) (rate(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[5m]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))) > 0) or vector(0)",
-          "legendFormat": "Active pairs",
-          "refId": "A",
-          "instant": true,
-          "range": false
-        }
-      ]
-    },
-    {
-      "id": 5,
-      "type": "timeseries",
-      "title": "Denied direct relay packet rate - ${source:text} to ${target:text}",
-      "description": "Router-denied packets per second for each selected inventory-mapped source/target team pair.",
-      "gridPos": {
-        "x": 0,
-        "y": 11,
-        "w": 24,
-        "h": 8
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "pps",
-          "min": 0,
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "packets/s",
-            "axisPlacement": "left",
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "lineWidth": 2,
-            "showPoints": "never"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (source_team_ip, team_ip) (rate(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__rate_interval]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
-          "legendFormat": "{{source_team_ip}} -> {{team_ip}}",
-          "refId": "A",
-          "range": true
-        }
-      ]
-    },
-    {
-      "id": 6,
+      "id": 9,
       "type": "table",
-      "title": "Denied direct relay attempts by source and target",
-      "description": "Counter increase over the selected time range. Rows scroll inside this tall panel; pagination is disabled.",
+      "title": "Cross-profile TCP no-reply/refused share triage (>=10 attempts)",
+      "description": "Ranks observed tcp_no_reply/tcp_refused shares per uniquely mapped profile → target IP/service. Peer denominator must be >=10 attempts. Controls are all other observed peers on the same target IP/service port/time range; the selected peer is subtracted. No comparison is explicitly labeled when the control denominator is <10. tcp_reset is excluded because it occurs after establishment.",
       "gridPos": {
         "x": 0,
-        "y": 19,
-        "w": 24,
+        "y": 7,
+        "w": 12,
         "h": 14
       },
       "datasource": {
@@ -347,37 +362,86 @@
       },
       "fieldConfig": {
         "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "noValue": "N/A",
           "custom": {
-            "align": "auto",
+            "align": "right",
             "cellOptions": {
               "type": "auto"
             },
-            "inspect": false
-          },
-          "unit": "short",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open team overview",
+                    "url": "/d/forcad-monitoring?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
         "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
         "footer": {
           "show": false
         },
-        "showHeader": true,
-        "enablePagination": false,
         "sortBy": [
           {
-            "displayName": "Denied packets",
+            "displayName": "Observed share",
             "desc": true
           }
         ]
@@ -389,7 +453,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc((((sum by (source_team_ip, team_ip) (increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source}\",team_ip=~\"${target}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))) * on (source_team_ip) group_left (source_team_name) forcad:game_source_info) * on (team_ip) group_left (target_team_name) forcad:game_target_info) > 0)",
+          "expr": "((label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) unless on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"No comparison: other attempts <10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) and on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other attempts >=10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port, outcome) group_right() sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) / on(source_ip, team_ip, service_port) group_left() ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)), \"measure\", \"Other peers share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other attempts >=10\", \"source_ip\", \".+\")) * on(source_ip) group_left(source_team_ip,source_team_name,member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) * on(team_ip) group_left(target_team_name) (forcad:game_target_info or on(team_ip) (group by(team_ip) (forcad_game_observations_total{job=\"forcad_game_sensor\"})))",
           "format": "table",
           "instant": true,
           "range": false,
@@ -401,23 +465,619 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true
+              "Time": true,
+              "source_team_ip": true,
+              "__name__": true
             },
             "indexByName": {
               "source_team_name": 0,
-              "source_team_ip": 1,
-              "target_team_name": 2,
+              "member": 1,
+              "source_ip": 2,
               "team_ip": 3,
-              "Value": 4
+              "target_team_name": 4,
+              "service_port": 5,
+              "outcome": 6,
+              "measure": 7,
+              "comparison": 8,
+              "Value": 9
             },
             "renameByName": {
               "source_team_name": "Source team",
-              "source_team_ip": "Source vulnbox IP",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
               "target_team_name": "Target team",
-              "team_ip": "Target vulnbox IP",
-              "Value": "Denied packets"
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "comparison": "Comparison",
+              "Value": "Observed share"
             }
           }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Cross-profile HTTP 403/429 outcome share triage (>=10 responses)",
+      "description": "Ranks observed HTTP 403/429 response shares per uniquely mapped profile → target IP/service. Peer denominator must be >=10 observed HTTP responses (403/429/other). Controls are all other observed peers on the same target IP/service port/time range, with the selected peer subtracted. No comparison is explicitly labeled when the control denominator is <10. Status shares are observations, not abuse or policy-violation claims.",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open team overview",
+                    "url": "/d/forcad-monitoring?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Observed share",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) unless on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"No comparison: other responses <10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) and on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other responses >=10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port, outcome) group_right() sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) / on(source_ip, team_ip, service_port) group_left() ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)), \"measure\", \"Other peers share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other responses >=10\", \"source_ip\", \".+\")) * on(source_ip) group_left(source_team_ip,source_team_name,member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) * on(team_ip) group_left(target_team_name) (forcad:game_target_info or on(team_ip) (group by(team_ip) (forcad_game_observations_total{job=\"forcad_game_sensor\"})))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "target_team_name": 4,
+              "service_port": 5,
+              "outcome": 6,
+              "measure": 7,
+              "comparison": 8,
+              "Value": 9
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "target_team_name": "Target team",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "comparison": "Comparison",
+              "Value": "Observed share"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "HTTP outcomes: selected profile and other peers",
+      "description": "Observed 403/429/other plaintext HTTP response counts and response denominators over the selected range. Other peers are aggregated across all source teams, but only for the same target IP and service port; the selected profile is excluded.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open team overview",
+                    "url": "/d/forcad-monitoring?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Count",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected outcome count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected HTTP response denominator\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers outcome count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers HTTP response denominator\", \"team_ip\", \".+\")) and on (team_ip, service_port) (sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_.+\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "measure": 6,
+              "Value": 7
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "TCP outcomes: selected profile and other peers",
+      "description": "TCP attempts are established/no-reply/refused. tcp_reset is a separate reset-after-handshake count; it is excluded from attempt denominators and compared with established-connection denominators. Other peers are aggregated across all source teams at the same target IP/service port; the selected profile is excluded.",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open team overview",
+                    "url": "/d/forcad-monitoring?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Count",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected TCP outcome count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected TCP attempt denominator\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers TCP outcome count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers TCP attempt denominator\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_reset\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected reset-after-handshake count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_established\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected established denominator for resets\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_reset\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers reset-after-handshake count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_established\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers established denominator for resets\", \"team_ip\", \".+\")) and on (team_ip, service_port) (sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_.+\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "measure": 6,
+              "Value": 7
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Unmapped observations (no profile attribution)",
+      "description": "Healthy-sensor observations with no unique source-profile mapping. Shows only the observed WG peer IP, target IP, service port, outcome and count; no team/member is inferred. Empty/unavailable counters are N/A, not proof of no traffic.",
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "N/A",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open private judge profile history",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"WG IP\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\"), \"measure\", \"Observed outcome count\", \"team_ip\", \".+\")",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "Value": 6
+            },
+            "renameByName": {
+              "source_team_name": "Profile mapping",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Checker status and duration (separate service context)",
+      "description": "Recent checker CHECK outcomes from the restricted checker_action_events view. Status counts describe checker-reported service availability; duration is checker runtime, not network or HTTP request latency, and is not attributed to a peer.",
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "checker-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "N/A",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "wrapText": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "enablePagination": false,
+        "sortBy": [
+          {
+            "displayName": "Last check",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "checker-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.service AS \"Service\", e.team AS \"Team\",\n       count(e.id) FILTER (WHERE e.status = 101) AS \"UP\",\n       count(e.id) FILTER (WHERE e.status = 102) AS \"CORRUPT\",\n       count(e.id) FILTER (WHERE e.status = 103) AS \"MUMBLE\",\n       count(e.id) FILTER (WHERE e.status = 104) AS \"DOWN\",\n       count(e.id) FILTER (WHERE e.status = 110) AS \"CHECK FAILED\",\n       count(e.id) FILTER (WHERE e.timed_out) AS \"Timeouts\",\n       round(avg(e.duration_ms)::numeric, 1) AS \"Mean check duration ms\",\n       percentile_cont(0.95) WITHIN GROUP (ORDER BY e.duration_ms) AS \"p95 check duration ms\",\n       max(e.duration_ms) AS \"Max check duration ms\",\n       max(e.time) AS \"Last check\"\nFROM checker_action_events AS e\nWHERE $__timeFilter(e.time) AND e.action = 'check'\nGROUP BY e.service, e.team\nORDER BY max(e.time) DESC\nLIMIT 200",
+          "refId": "A"
         }
       ]
     }
@@ -455,18 +1115,38 @@
         "options": []
       },
       {
-        "name": "target",
-        "label": "Target team",
+        "name": "profile",
+        "label": "Source profile",
         "type": "query",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
         "query": {
-          "query": "query_result(label_join(forcad:game_target_info, \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "query": "query_result(label_join(forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}, \"display\", \" / \", \"source_team_name\", \"member\", \"source_ip\"))",
+          "refId": "profile"
+        },
+        "definition": "query_result(label_join(forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}, \"display\", \" / \", \"source_team_name\", \"member\", \"source_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "Target IP",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_observations_total and on (job, instance) forcad:game_sensor_ready), \"target_team_name\", \"Unmapped\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
           "refId": "target"
         },
-        "definition": "query_result(label_join(forcad:game_target_info, \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_observations_total and on (job, instance) forcad:game_sensor_ready), \"target_team_name\", \"Unmapped\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
         "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
         "refresh": 1,
         "sort": 1,
@@ -485,9 +1165,9 @@
     "from": "now-15m",
     "to": "now"
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Relay",
   "uid": "forcad-relay",
   "version": 1,
-  "description": "Denied direct vulnbox-to-vulnbox packet attempts and router capture readiness. External relay paths are out of scope."
+  "description": "Selective per-profile HTTP and TCP outcome counts and denominators versus other peers on the same target/service/time, with checker health and one historical router-denied packet context panel. Outcomes are not intent or successful-relay verdicts."
 }

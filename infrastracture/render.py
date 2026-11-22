@@ -151,7 +151,7 @@ def interface(value):
         raise ValueError("Interface names must be simple Linux device names, not lo")
 
 
-def safe_asset(value, directory, location):
+def relative_asset(value, directory, location):
     if (
         not isinstance(value, str)
         or not value
@@ -160,8 +160,12 @@ def safe_asset(value, directory, location):
         or any(part in {"", ".", ".."} for part in value.split("/"))
     ):
         raise ValueError(f"{location} must be a safe relative path")
+    return ROOT.parent / directory / value
+
+
+def safe_asset(value, directory, location):
     base = ROOT.parent / directory
-    target = base / value
+    target = relative_asset(value, directory, location)
     resolved_base = base.resolve()
     resolved_target = target.resolve()
     if (
@@ -177,7 +181,8 @@ def safe_asset(value, directory, location):
     return target
 
 
-def load_config(path):
+def load_config(path, *, require_assets=True):
+    validate_asset = safe_asset if require_assets else relative_asset
     with Path(path).open("rb") as stream:
         config = tomllib.load(stream)
     required = {
@@ -303,7 +308,7 @@ def load_config(path):
         if team["logo"] == "":
             team["logo"] = None
         elif team["logo"] is not None:
-            safe_asset(team["logo"], "public/teams", f"teams.entries[{index}].logo")
+            validate_asset(team["logo"], "public/teams", f"teams.entries[{index}].logo")
     if npc_count > 1:
         raise ValueError("teams.entries may contain at most one NPC")
     if npc_count == len(entries):
@@ -344,7 +349,7 @@ def load_config(path):
         raise ValueError("env.brand_primary must use #RRGGBB")
     if not re.fullmatch(r"#[0-9A-Fa-f]{6}", env["brand_accent"]):
         raise ValueError("env.brand_accent must use #RRGGBB")
-    safe_asset(env["brand_logo"], "public/brand", "env.brand_logo")
+    validate_asset(env["brand_logo"], "public/brand", "env.brand_logo")
     game = config["game"]
     integer(game["extra_checks"], 0, 8, "game.extra_checks")
     if game["extra_checks"] and game["mode"] != "classic":
@@ -398,7 +403,7 @@ def load_config(path):
             raise ValueError(f"tasks.entries[{index}].name must be unique and nonempty")
         task_names.add(task["name"])
         checker = task["checker"]
-        safe_asset(checker, "checkers", f"tasks.entries[{index}].checker")
+        validate_asset(checker, "checkers", f"tasks.entries[{index}].checker")
         if (
             not isinstance(task["checker_type"], str)
             or not task["checker_type"].strip()
@@ -806,6 +811,14 @@ def game_metrics(config):
         for team in inventory
         for peer in team["peers"]
     )
+    profile_members = ",\n".join(
+        f'    [{peer}] = "member-{number:02}"'
+        for team in inventory for number, peer in enumerate(team["peers"], 1)
+    )
+    profile_teams = ",\n".join(
+        f'    [{peer}] = {json.dumps(team["name"], ensure_ascii=False)}'
+        for team in inventory for peer in team["peers"]
+    )
     targets = ", ".join(team["vulnbox"] for team in inventory)
     ports = ", ".join(
         f"{port}/{protocol}"
@@ -820,6 +833,8 @@ def game_metrics(config):
         "router/game-inventory.zeek": (
             "# Public mapping; keep synchronized with WireGuard and ForcAD.\n"
             f"redef Forcad::peers = {{\n{peer_map}\n}};\n"
+            f"redef Forcad::profile_members = {{\n{profile_members}\n}};\n"
+            f"redef Forcad::profile_teams = {{\n{profile_teams}\n}};\n"
             f"redef Forcad::vulnboxes = {{ {targets} }};\n"
             f"redef Forcad::game_ports = {{ {ports} }};\n"
             f'redef Telemetry::metrics_address = "{layout["forcad_router"]}";\n'
@@ -1088,6 +1103,17 @@ def fresh_forcad_bundle(config):
     }
 
 
+def monitoring_assets():
+    from forcad.monitoring import ASSETS
+
+    source = ROOT.parent / "deployment/monitoring"
+    files = {
+        f"forcad/monitoring/{name}": (source / name).read_text() for name in ASSETS
+    }
+    files["forcad/monitoring.py"] = (ROOT / "forcad/monitoring.py").read_text()
+    return files
+
+
 def fresh_forcad_files(config):
     files = {
         "forcad/config.yml": forcad_config(config),
@@ -1107,6 +1133,7 @@ def fresh_forcad_files(config):
         ),
     }
     files.update(fresh_forcad_bundle(config))
+    files.update(monitoring_assets())
     files.update(forcad_assets(config))
     files.update(
         {
@@ -1117,9 +1144,34 @@ def fresh_forcad_files(config):
     return files
 
 
-def render(config):
+def network_metric_files(config):
+    address = network_layout(config)["forcad_router"]
+    return {
+        "router/network.json": json.dumps(network_inventory(teams(config)), indent=2) + "\n",
+        "router/network-metrics.service": template(
+            "router/network-metrics.service", LISTEN_ADDRESS=str(address)
+        ),
+        "router/network-rules.service": (ROOT / "router/network-rules.service").read_text(),
+        "forcad/routers.yml": f'- targets: ["{address}:9109"]\n',
+    }
+
+
+def monitoring_bundle(config):
+    """Update add-ons on an existing deployment without reading or creating keys."""
+    files = host_bundle(config)
+    for role in ("router", "vpn", "forcad"):
+        files[f"{role}/monitoring-bundle"] = "Monitoring add-ons only.\n"
+    # Read-only inputs for drift checks and verified rollback, never applied by an add-on.
+    files.update(network_reference_files(config))
+    files.update(game_metrics(config))
+    files.update(monitoring_assets())
+    files.update(fresh_forcad_bundle(config))
+    files.update(network_metric_files(config))
+    return files
+
+
+def network_reference_files(config):
     files = {}
-    layout = network_layout(config)
     for role in ("router", "vpn", "forcad"):
         files[f"{role}/interfaces"] = interfaces(config, role)
     sysctl = """net.ipv4.ip_forward=1
@@ -1136,6 +1188,12 @@ net.ipv6.conf.default.disable_ipv6=1
 """
     for role in ("router", "vpn"):
         files[f"{role}/sysctl.conf"] = sysctl
+    return files
+
+
+def render(config):
+    files = network_reference_files(config)
+    for role in ("router", "vpn"):
         files[f"{role}/forcad-{role}-firewall.service"] = firewall_service(role)
         files[f"{role}/networking.conf"] = (
             "[Unit]\n"
@@ -1157,20 +1215,9 @@ net.ipv6.conf.default.disable_ipv6=1
         )
     )
     files["router/active.nft"] = 'include "/etc/forcad/router/pre-game.nft"\n'
-    files["router/network.json"] = (
-        json.dumps(network_inventory(teams(config)), indent=2) + "\n"
-    )
-    files["router/network-metrics.service"] = (
-        (ROOT / "router/network-metrics.service")
-        .read_text()
-        .replace("@@LISTEN_ADDRESS@@", str(network_layout(config)["forcad_router"]))
-    )
-    files["router/network-rules.service"] = (
-        ROOT / "router/network-rules.service"
-    ).read_text()
     files["vpn/firewall.nft"] = vpn_rules(config)
     files["vpn/firewall.conf"] = (ROOT / "vpn/firewall.conf").read_text()
-    files["forcad/routers.yml"] = f'- targets: ["{layout["forcad_router"]}:9109"]\n'
+    files.update(network_metric_files(config))
     files.update(game_metrics(config))
     files.update(host_bundle(config))
     files.update(fresh_forcad_files(config))
@@ -1461,12 +1508,15 @@ def main():
         default="amd64",
         help="router CPU architecture (Linux; default: amd64)",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--monitoring", action="store_true",
+                      help="write add-ons for already installed hosts to a new output directory, without generating keys")
+    mode.add_argument(
         "--refresh-router",
         action="store_true",
         help="refresh WAN SSH rules and router archive in an existing runtime, preserving VPN keys",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--extend-admins",
         action="store_true",
         help="add admin VPN peers in an existing runtime without rotating keys",
@@ -1474,7 +1524,7 @@ def main():
     args = parser.parse_args()
     output_created = False
     try:
-        config = load_config(args.config)
+        config = load_config(args.config, require_assets=not args.monitoring)
         if args.refresh_router:
             refresh_router(config, args.config, args.output)
             print(f"Refreshed router bundle in {args.output}; WireGuard keys unchanged.")
@@ -1482,6 +1532,13 @@ def main():
         if args.extend_admins:
             extend_admins(config, args.config, args.output)
             print(f"Extended admin VPN peers in {args.output}; existing keys unchanged.")
+            return
+        if args.monitoring:
+            write_bundle(args.output, monitoring_bundle(config))
+            output_created = True
+            build_router_metrics(args.output, args.router_arch)
+            create_archives(args.output)
+            print(f"Rendered monitoring add-ons in {args.output}; no WireGuard keys or game credentials included.")
             return
         files = render(config)
         files["settings.toml"] = args.config.read_text()

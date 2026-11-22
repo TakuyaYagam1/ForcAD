@@ -1,0 +1,2023 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "type": "link",
+      "title": "DDoS",
+      "url": "/d/forcad-ddos-ru?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Трафик",
+      "url": "/d/forcad-traffic-ru?var-source=All&var-target=All&${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Обзор команды",
+      "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "English",
+      "url": "/d/forcad-relay",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "type": "dashboards",
+      "title": "Панели ForcAD",
+      "tags": [
+        "forcad-ru"
+      ],
+      "asDropdown": false,
+      "includeVars": true,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "Выборочные исходы и охват данных",
+      "description": "Для расчёта долей исходов нужно не менее 10 попыток или ответов выбранного профиля. Сравнение проводится со всеми остальными наблюдаемыми пирами для того же IP назначения, порта сервиса и диапазона времени. Если в контрольной группе меньше 10 наблюдений, отображается «Нет данных». Сбросы TCP происходят после установления соединения; HTTP 403/429 не указывают на намерение. У счётчиков нет метки игровой фазы, а повторы клиента учитываются как отдельные попытки.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "## Исходы профиля для цели и сервиса\n\nСортирует наблюдаемые доли tcp_no_reply/tcp_refused и HTTP 403/429, сравнивая их с показателями других пиров для той же цели и сервиса. Отсутствие сравнения означает, что в контрольной группе меньше 10 наблюдений. Это только данные для проверки; ограничьте диапазон времени одной игровой фазой."
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Состояние сбора счётчиков маршрутизатора",
+      "description": "Состояние считается готовым, только если экспортёр маршрутизатора доступен и ограниченный сбор счётчиков ретрансляции завершился успешно. При отсутствии данных показывается «Нет данных».",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Нет данных",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Недоступно",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Сбор работает",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "min(forcad_network_relay_scrape_success{job=\"forcad_router\"} * on (job, instance) (up{job=\"forcad_router\"} == bool 1))",
+          "legendFormat": "Сбор данных",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Выбранный профиль источника",
+      "description": "Текущие метаданные однозначно сопоставленных профилей из исправного Zeek. Они доступны независимо от редких событий исходов и не зависят от инвентаря API игрового сервера.",
+      "gridPos": {
+        "x": 6,
+        "y": 3,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team vulnbox IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP игрового узла команды"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by (source_ip, source_team_ip, source_team_name, member) (forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"} and on() group(forcad:game_sensor_ready))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "team_id": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "source_team_ip": 3
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "source_team_ip": "Team vulnbox IP"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Исторические пакеты, отклонённые маршрутизатором",
+      "description": "Пакеты от вулнбокса команды к вулнбоксу назначения, отброшенные роутером за выбранный период. Счётчик работает после проверки исходного адреса и до правила блокировки. Профиль WireGuard здесь не участвует. Это не успешное проксирование. Если метрики роутера недоступны, показано «Нет данных».",
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "horizontal",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(forcad_network_relay_attempt_packets_total{job=\"forcad_router\",source_team_ip=~\"${source:regex}\",team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) (forcad_network_relay_scrape_success{job=\"forcad_router\"} == 1 and on (job, instance) up{job=\"forcad_router\"} == 1))",
+          "legendFormat": "Пакеты, отклонённые маршрутизатором",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Сравнение долей tcp_no_reply/tcp_refused между профилями (>=10 попыток)",
+      "description": "Сортирует наблюдаемые доли tcp_no_reply/tcp_refused для однозначно сопоставленных профилей по IP назначения и сервису. Для профиля в знаменателе требуется >=10 попыток. Контрольная группа включает всех остальных наблюдаемых пиров для того же IP назначения, порта сервиса и диапазона времени; выбранный пир исключается. Если в контрольной группе меньше 10 наблюдений, сравнение явно помечается. tcp_reset исключён, поскольку возникает после установления соединения.",
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Comparison"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Сравнение"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Comparable: other attempts >=10": {
+                        "text": "Сравнение доступно: >=10 попыток у остальных пиров"
+                      },
+                      "No comparison: other attempts <10": {
+                        "text": "Нет сравнения: у остальных пиров <10 попыток"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Показатель"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Observed peer share": {
+                        "text": "Наблюдаемая доля пира"
+                      },
+                      "Other peers share": {
+                        "text": "Доля остальных пиров"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемый исход"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемая доля"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Наблюдаемая доля",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) unless on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"No comparison: other attempts <10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) and on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other attempts >=10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port, outcome) group_right() sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) / on(source_ip, team_ip, service_port) group_left() ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)), \"measure\", \"Other peers share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other attempts >=10\", \"source_ip\", \".+\")) * on(source_ip) group_left(source_team_ip,source_team_name,member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) * on(team_ip) group_left(target_team_name) (forcad:game_target_info or on(team_ip) (group by(team_ip) (forcad_game_observations_total{job=\"forcad_game_sensor\"})))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "target_team_name": 4,
+              "service_port": 5,
+              "outcome": 6,
+              "measure": 7,
+              "comparison": 8,
+              "Value": 9
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "target_team_name": "Target team",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "comparison": "Comparison",
+              "Value": "Observed share"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Сравнение долей исходов HTTP 403/429 между профилями (>=10 ответов)",
+      "description": "Сортирует наблюдаемые доли ответов HTTP 403/429 для однозначно сопоставленных профилей по IP назначения и сервису. Для профиля в знаменателе требуется >=10 наблюдаемых ответов HTTP (403/429/прочие). Контрольная группа включает всех остальных наблюдаемых пиров для того же IP назначения, порта сервиса и диапазона времени; выбранный пир исключается. Если в контрольной группе меньше 10 наблюдений, сравнение явно помечается. Доли статусов отражают наблюдения, а не злоупотребление или нарушение правил.",
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Comparison"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Сравнение"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Comparable: other responses >=10": {
+                        "text": "Сравнение доступно: >=10 ответов у остальных пиров"
+                      },
+                      "No comparison: other responses <10": {
+                        "text": "Нет сравнения: у остальных пиров <10 ответов"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Показатель"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Observed peer share": {
+                        "text": "Наблюдаемая доля пира"
+                      },
+                      "Other peers share": {
+                        "text": "Доля остальных пиров"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемый исход"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed share"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемая доля"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Наблюдаемая доля",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "((label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) unless on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"No comparison: other responses <10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) / on(source_ip, team_ip, service_port) group_left() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)) and on(source_ip, team_ip, service_port) ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)), \"measure\", \"Observed peer share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other responses >=10\", \"source_ip\", \".+\") or label_replace(label_replace((((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port, outcome) group_right() sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) / on(source_ip, team_ip, service_port) group_left() ((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) - on(team_ip, service_port) group_right() sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready)) >= 10)) and on(source_ip, team_ip, service_port) (sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on(job,instance) forcad:game_sensor_ready) >= 10)), \"measure\", \"Other peers share\", \"source_ip\", \".+\"), \"comparison\", \"Comparable: other responses >=10\", \"source_ip\", \".+\")) * on(source_ip) group_left(source_team_ip,source_team_name,member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) * on(team_ip) group_left(target_team_name) (forcad:game_target_info or on(team_ip) (group by(team_ip) (forcad_game_observations_total{job=\"forcad_game_sensor\"})))",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true,
+              "__name__": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "target_team_name": 4,
+              "service_port": 5,
+              "outcome": 6,
+              "measure": 7,
+              "comparison": 8,
+              "Value": 9
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "target_team_name": "Target team",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "comparison": "Comparison",
+              "Value": "Observed share"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Исходы HTTP: выбранный профиль и остальные пиры",
+      "description": "Количество наблюдаемых ответов незашифрованного HTTP со статусами 403/429/прочими и знаменатели ответов за выбранный период. Данные остальных пиров суммируются по всем командам-источникам, но только для того же IP назначения и порта сервиса; выбранный профиль исключён.",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Количество"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Показатель"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Other peers HTTP response denominator": {
+                        "text": "Знаменатель HTTP-ответов остальных пиров"
+                      },
+                      "Other peers outcome count": {
+                        "text": "Число исходов остальных пиров"
+                      },
+                      "Selected HTTP response denominator": {
+                        "text": "Знаменатель HTTP-ответов выбранного профиля"
+                      },
+                      "Selected outcome count": {
+                        "text": "Число исходов выбранного профиля"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемый исход"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Количество",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected outcome count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected HTTP response denominator\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers outcome count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_403|http_429|http_other\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers HTTP response denominator\", \"team_ip\", \".+\")) and on (team_ip, service_port) (sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"http_.+\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "measure": 6,
+              "Value": 7
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Исходы TCP: выбранный профиль и остальные пиры",
+      "description": "Попытки TCP делятся на установленные, без ответа и отклонённые. tcp_reset считается отдельно как сброс после рукопожатия; он не входит в знаменатель попыток и сравнивается со знаменателем установленных соединений. Данные остальных пиров суммируются по всем командам-источникам для того же IP назначения и порта сервиса; выбранный профиль исключён.",
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть обзор команды",
+                    "url": "/d/forcad-monitoring-ru?${__url_time_range}",
+                    "targetBlank": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Количество"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Measure"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Показатель"
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Other peers TCP attempt denominator": {
+                        "text": "Знаменатель попыток TCP остальных пиров"
+                      },
+                      "Other peers TCP outcome count": {
+                        "text": "Число исходов TCP остальных пиров"
+                      },
+                      "Other peers established denominator for resets": {
+                        "text": "Знаменатель установленных соединений остальных пиров для сбросов"
+                      },
+                      "Other peers reset-after-handshake count": {
+                        "text": "Число сбросов TCP остальных пиров после рукопожатия"
+                      },
+                      "Selected TCP attempt denominator": {
+                        "text": "Знаменатель попыток TCP выбранного профиля"
+                      },
+                      "Selected TCP outcome count": {
+                        "text": "Число исходов TCP выбранного профиля"
+                      },
+                      "Selected established denominator for resets": {
+                        "text": "Знаменатель установленных соединений выбранного профиля для сбросов"
+                      },
+                      "Selected reset-after-handshake count": {
+                        "text": "Число сбросов TCP выбранного профиля после рукопожатия"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемый исход"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Source team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда-источник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        },
+        "sortBy": [
+          {
+            "displayName": "Количество",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected TCP outcome count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected TCP attempt denominator\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers TCP outcome count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_established|tcp_no_reply|tcp_refused\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers TCP attempt denominator\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_reset\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected reset-after-handshake count\", \"team_ip\", \".+\") or label_replace((sum by (source_ip, team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_established\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Selected established denominator for resets\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_reset\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers reset-after-handshake count\", \"team_ip\", \".+\") or label_replace((sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip!=\"${profile}\",team_ip=~\"${target:regex}\",outcome=\"tcp_established\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) * on () group_left (source_ip, source_team_ip, source_team_name, member) forcad:game_profile_info{source_ip=\"${profile}\",source_team_ip=~\"${source:regex}\"}), \"measure\", \"Other peers established denominator for resets\", \"team_ip\", \".+\")) and on (team_ip, service_port) (sum by (team_ip, service_port) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",source_ip=\"${profile}\",team_ip=~\"${target:regex}\",outcome=~\"tcp_.+\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) > 0)",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "measure": 6,
+              "Value": 7
+            },
+            "renameByName": {
+              "source_team_name": "Source team",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "measure": "Measure",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "Наблюдения без сопоставления профиля (без атрибуции)",
+      "description": "Наблюдения исправных датчиков без однозначного сопоставления профиля источника. Показаны только IP пира WireGuard, IP назначения, порт сервиса, исход и количество; команда и участник не определяются. Пустые или недоступные счётчики отображаются как «Нет данных» и не доказывают отсутствие трафика.",
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "right",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "string"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Открыть историю профиля в закрытой панели судьи",
+                    "url": "http://127.0.0.1:9837/?peer=${__data.fields[\"IP WireGuard\"]}&from=${__from}&to=${__to}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Количество"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Member"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Участник"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Observed outcome"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Наблюдаемый исход"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Profile mapping"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Сопоставление профиля"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service port"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Порт сервиса"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Target IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP назначения"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "WG IP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "IP WireGuard"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "measure"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Observed outcome count": {
+                        "text": "Число наблюдаемых исходов"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "cellHeight": "sm",
+        "showHeader": true,
+        "enablePagination": false,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(label_replace(label_replace(sum by (source_ip, team_ip, service_port, outcome) (increase(forcad_game_observations_total{job=\"forcad_game_sensor\",team_ip=~\"${target:regex}\"}[$__range]) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\"), \"measure\", \"Observed outcome count\", \"team_ip\", \".+\")",
+          "format": "table",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "source_team_ip": true
+            },
+            "indexByName": {
+              "source_team_name": 0,
+              "member": 1,
+              "source_ip": 2,
+              "team_ip": 3,
+              "service_port": 4,
+              "outcome": 5,
+              "Value": 6
+            },
+            "renameByName": {
+              "source_team_name": "Profile mapping",
+              "member": "Member",
+              "source_ip": "WG IP",
+              "team_ip": "Target IP",
+              "service_port": "Service port",
+              "outcome": "Observed outcome",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Состояние и длительность проверки (отдельный контекст сервиса)",
+      "description": "Недавние результаты CHECK из ограниченного представления checker_action_events. Счётчики состояний описывают доступность сервиса по данным чекера; длительность относится к выполнению чекера, а не к задержке сети или HTTP-запросов, и не связывается с отдельным пиром.",
+      "gridPos": {
+        "x": 0,
+        "y": 59,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "checker-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "Нет данных",
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "wrapText": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CHECK FAILED"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Проверка не выполнена"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CORRUPT"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Повреждено"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "DOWN"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Недоступно"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last check"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Последняя проверка"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "MUMBLE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Некорректный ответ"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Max check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Максимальная длительность проверки, мс"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mean check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Средняя длительность проверки, мс"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Service"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Сервис"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Team"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Команда"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Timeouts"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Тайм-ауты"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "UP"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Доступно"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95 check duration ms"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Длительность проверки p95, мс"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "enablePagination": false,
+        "sortBy": [
+          {
+            "displayName": "Последняя проверка",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "checker-postgres"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.service AS \"Service\", e.team AS \"Team\",\n       count(e.id) FILTER (WHERE e.status = 101) AS \"UP\",\n       count(e.id) FILTER (WHERE e.status = 102) AS \"CORRUPT\",\n       count(e.id) FILTER (WHERE e.status = 103) AS \"MUMBLE\",\n       count(e.id) FILTER (WHERE e.status = 104) AS \"DOWN\",\n       count(e.id) FILTER (WHERE e.status = 110) AS \"CHECK FAILED\",\n       count(e.id) FILTER (WHERE e.timed_out) AS \"Timeouts\",\n       round(avg(e.duration_ms)::numeric, 1) AS \"Mean check duration ms\",\n       percentile_cont(0.95) WITHIN GROUP (ORDER BY e.duration_ms) AS \"p95 check duration ms\",\n       max(e.duration_ms) AS \"Max check duration ms\",\n       max(e.time) AS \"Last check\"\nFROM checker_action_events AS e\nWHERE $__timeFilter(e.time) AND e.action = 'check'\nGROUP BY e.service, e.team\nORDER BY max(e.time) DESC\nLIMIT 200",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": [
+    "forcad-ru"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "source",
+        "label": "Команда-источник",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join(forcad:game_source_info, \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+          "refId": "source"
+        },
+        "definition": "query_result(label_join(forcad:game_source_info, \"display\", \" / \", \"source_team_name\", \"source_team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      },
+      {
+        "name": "profile",
+        "label": "Профиль источника",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join(forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}, \"display\", \" / \", \"source_team_name\", \"member\", \"source_ip\"))",
+          "refId": "profile"
+        },
+        "definition": "query_result(label_join(forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}, \"display\", \" / \", \"source_team_name\", \"member\", \"source_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|source_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": false,
+        "options": []
+      },
+      {
+        "name": "target",
+        "label": "IP назначения",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_observations_total and on (job, instance) forcad:game_sensor_ready), \"target_team_name\", \"Unmapped\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+          "refId": "target"
+        },
+        "definition": "query_result(label_join((forcad:game_target_info or on (team_ip) label_replace(group by (team_ip) (forcad_game_observations_total and on (job, instance) forcad:game_sensor_ready), \"target_team_name\", \"Unmapped\", \"team_ip\", \"(.+)\")), \"display\", \" / \", \"target_team_name\", \"team_ip\"))",
+        "regex": "/display=\"(?<text>[^\"]+)\"|team_ip=\"(?<value>[^\"]+)\"/g",
+        "refresh": 1,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "options": []
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "title": "Выборочные отказы (RU)",
+  "uid": "forcad-relay-ru",
+  "version": 1,
+  "description": "Сравните число и долю ответов HTTP и исходов TCP для одного профиля с результатами других участников на том же сервисе за тот же период. Рядом — состояние чекера и отдельный счётчик пакетов, отброшенных роутером. Эти наблюдения не доказывают намеренную фильтрацию или успешное проксирование."
+}

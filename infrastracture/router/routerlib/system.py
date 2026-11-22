@@ -165,9 +165,80 @@ class System:
         return captured
 
     @staticmethod
-    def _normalized_table_text(text):
+    def _without_dynamic_accounting_elements(text, set_name):
+        declaration = re.search(
+            r"(?m)^[ \t]*set[ \t]+"
+            + re.escape(set_name)
+            + r"[ \t]*\{",
+            text,
+        )
+        if declaration is None:
+            return text
+
+        opening = declaration.end() - 1
+        depth = 0
+        quoted = False
+        escaped = False
+        index = opening
+        while index < len(text):
+            char = text[index]
+            if quoted:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = False
+            elif char == '"':
+                quoted = True
+            elif char == "#":
+                newline = text.find("\n", index)
+                if newline < 0:
+                    break
+                index = newline
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            index += 1
+        if depth != 0:
+            return text
+
+        end = index + 1
+        block = text[declaration.start() : end]
+        if not (
+            re.search(
+                r"(?m)^[ \t]*flags[ \t]+[^;\n]*\bdynamic\b[^;\n]*;?[ \t]*$",
+                block,
+            )
+            and re.search(r"(?m)^[ \t]*counter[ \t]*;?[ \t]*$", block)
+        ):
+            return text
+
+        elements = re.search(
+            r"(?ms)^[ \t]*elements[ \t]*=[ \t]*\{[^{}]*\}[ \t]*;?[ \t]*(?:\n|$)",
+            block,
+        )
+        if elements is None:
+            return text
+        block = block[: elements.start()] + block[elements.end() :]
+        # nft 1.1 appends the live element count to the set's size directive.
+        block = re.sub(r"(?m)^([ \t]*size[ \t]+\d+)[ \t]+# count \d+[ \t]*$", r"\1", block)
+        return text[: declaration.start()] + block + text[end:]
+
+    @staticmethod
+    def _normalized_table_text(text, table=None):
         if text is None:
             return None
+        if table == "inet forcad_router":
+            text = System._without_dynamic_accounting_elements(
+                text, "relay_attempts"
+            )
+        elif table == "inet forcad_monitoring":
+            for set_name in ("sources_v4", "sources_v6"):
+                text = System._without_dynamic_accounting_elements(text, set_name)
         return re.sub(
             r"\bcounter\s+packets\s+\d+\s+bytes\s+\d+",
             "counter packets 0 bytes 0",
@@ -285,10 +356,10 @@ class System:
                 "Host runtime state changed after snapshot; capture it again"
             )
         if {
-            key: self._normalized_table_text(text)
+            key: self._normalized_table_text(text, key)
             for key, text in current_tables.items()
         } != {
-            key: self._normalized_table_text(text)
+            key: self._normalized_table_text(text, key)
             for key, text in snapshot["tables"].items()
         }:
             raise ValueError("An owned nftables table changed after snapshot")
@@ -338,6 +409,82 @@ class System:
 
         firewall = current_units[FIREWALL]
         self._require_not_masked(FIREWALL, firewall)
+
+    def preflight_monitoring(self, before, options):
+        """Validate only the installed router and the monitoring resources."""
+        self._require_live_root()
+        selected = self._options(options)
+        self._check_snapshot_shape(before)
+        if selected != before.get("options"):
+            raise ValueError("Runtime options differ from the captured snapshot")
+
+        self._validate_unit_states(before["units"])
+        current_units = {
+            name: self._unit_state(name) for name in before["units"]
+        }
+        self._validate_unit_states(current_units)
+        if current_units != before["units"]:
+            raise ValueError("Router services changed after the monitoring snapshot")
+
+        inventory = sorted(self._table_inventory())
+        self._check_table_inventory(inventory, selected)
+        current_tables = self._capture_tables(inventory, selected)
+        if inventory != before.get("table_inventory") or {
+            key: self._normalized_table_text(text, key)
+            for key, text in current_tables.items()
+        } != {
+            key: self._normalized_table_text(text, key)
+            for key, text in before["tables"].items()
+        }:
+            raise ValueError("Router nftables changed after the monitoring snapshot")
+        self._assert_firewall_clear(selected, inventory)
+
+        for unit in (FIREWALL, NETWORKING):
+            state = current_units.get(unit)
+            if (
+                state is None
+                or state["load_state"] != "loaded"
+                or state["active_state"] != "active"
+            ):
+                raise ValueError(
+                    f"Monitoring requires the existing live router: {unit} is not active"
+                )
+
+        transitioning = [
+            unit
+            for unit, state in current_units.items()
+            if state["active_state"] in {"activating", "deactivating", "reloading"}
+        ]
+        if transitioning:
+            raise ValueError(
+                "Wait for these router services to finish changing: "
+                + ", ".join(sorted(transitioning))
+            )
+
+        if selected["network_metrics"]:
+            rules = current_units[NETWORK_RULES]
+            metrics = current_units[NETWORK_METRICS]
+            table_exists = MONITORING_TABLE in inventory
+            if (rules["active_state"] == "active") != table_exists:
+                raise ValueError(
+                    "network-rules.service state does not match forcad_monitoring; resolve it manually"
+                )
+            if metrics["active_state"] == "active" and not table_exists:
+                raise ValueError(
+                    "network-metrics.service is active without forcad_monitoring"
+                )
+            self._require_not_masked(NETWORK_RULES, rules)
+            self._require_not_masked(NETWORK_METRICS, metrics)
+            self._run_nft_script(
+                self._monitoring_script(
+                    self._network_rules_bytes(), set(inventory)
+                ),
+                check=True,
+            )
+
+        if selected["game_metrics"]:
+            self._require_not_masked(GAME_METRICS, current_units[GAME_METRICS])
+            self._check_sensor_account()
 
     @staticmethod
     def _check_sensor_account():
@@ -459,6 +606,213 @@ class System:
             self._check_sensor_account()
             self._ensure_metrics_unit(GAME_METRICS, selected)
         self.verify(selected)
+
+    def apply_monitoring(
+        self, options, before, *, preserve_monitoring_table=False
+    ):
+        """Start or update exporters without applying router firewall state."""
+        self._require_live_root()
+        selected = self._options(options)
+        self._check_snapshot_shape(before)
+        if selected != before.get("options"):
+            raise ValueError("Runtime options differ from the captured snapshot")
+        run("systemctl", "daemon-reload")
+
+        if selected["network_metrics"]:
+            if preserve_monitoring_table:
+                inventory = self._assert_firewall_clear(selected)
+                state = self._unit_state(NETWORK_RULES)
+                self._require_not_masked(NETWORK_RULES, state)
+                if (
+                    MONITORING_TABLE not in inventory
+                    or state["active_state"] != "active"
+                ):
+                    raise ValueError(
+                        "Cannot preserve a missing or inactive monitoring table"
+                    )
+                self._ensure_permanent_enable(NETWORK_RULES, state)
+            else:
+                self._apply_network_metrics(selected)
+            self._ensure_metrics_unit(NETWORK_METRICS, selected)
+
+        if selected["game_metrics"]:
+            self._ensure_metrics_unit(GAME_METRICS, selected)
+
+        self.verify_monitoring(options, before=before)
+
+    def verify_monitoring(self, options, *, before=None):
+        """Verify exporter readiness without touching firewall or NAT units."""
+        self._require_live_root()
+        selected = self._options(options)
+        required = []
+        if selected["network_metrics"]:
+            required.extend((NETWORK_RULES, NETWORK_METRICS))
+        if selected["game_metrics"]:
+            required.append(GAME_METRICS)
+
+        failures = []
+        for unit in required:
+            state = self._unit_state(unit)
+            if (
+                state["load_state"] != "loaded"
+                or state["active_state"] != "active"
+                or state["unit_file_state"] != "enabled"
+            ):
+                failures.append(
+                    f"{unit} (load={state['load_state']}, active={state['active_state']}, enabled={state['unit_file_state']})"
+                )
+        inventory = sorted(self._table_inventory())
+        self._check_table_inventory(inventory, selected)
+        if selected["network_metrics"] and MONITORING_TABLE not in inventory:
+            failures.append("inet forcad_monitoring (missing)")
+
+        if before is not None:
+            self._check_snapshot_shape(before)
+            current = self.snapshot(options)
+            for unit in (FIREWALL, NETWORKING):
+                if current["units"].get(unit) != before["units"].get(unit):
+                    failures.append(f"{unit} changed during monitoring installation")
+            for table in BASE_TABLES:
+                if self._normalized_table_text(
+                    current["tables"].get(table), table
+                ) != (
+                    self._normalized_table_text(
+                        before["tables"].get(table), table
+                    )
+                ):
+                    failures.append(f"{table} changed during monitoring installation")
+
+        if failures:
+            raise ValueError(
+                "Router monitoring is not ready: " + ", ".join(failures)
+            )
+
+    def _restore_monitoring_table(self, wanted, options):
+        inventory = self._assert_firewall_clear(options)
+        if wanted is None:
+            if MONITORING_TABLE in inventory:
+                self._run_nft_script(f"delete table {MONITORING_TABLE}\n", check=True)
+                self._run_nft_script(f"delete table {MONITORING_TABLE}\n")
+            return
+
+        if MONITORING_TABLE in inventory:
+            family, name = MONITORING_TABLE.split()
+            current = run("nft", "list", "table", family, name)
+            if self._normalized_table_text(current) == self._normalized_table_text(
+                wanted
+            ):
+                return
+            self._run_nft_script(f"delete table {MONITORING_TABLE}\n", check=True)
+            self._run_nft_script(f"delete table {MONITORING_TABLE}\n")
+
+        script = wanted.rstrip() + "\n"
+        self._run_nft_script(script, check=True)
+        self._run_nft_script(script)
+
+    def stop_monitoring(self, snapshot, options):
+        """Stop only exporters and rules added by the monitoring transaction."""
+        self._require_live_root()
+        selected = self._options(options)
+        self._check_snapshot_shape(snapshot)
+        if selected != snapshot.get("options"):
+            raise ValueError("Runtime options differ from the captured snapshot")
+
+        for unit in (NETWORK_METRICS, GAME_METRICS):
+            state = self._unit_state(unit)
+            if state["active_state"] in ACTIVE_STATES:
+                self._guarded_command("stop", unit, selected)
+
+        if selected["network_metrics"]:
+            baseline = snapshot["units"][NETWORK_RULES]
+            if baseline["active_state"] != "active":
+                state = self._unit_state(NETWORK_RULES)
+                if state["active_state"] in ACTIVE_STATES:
+                    self._guarded_command("stop", NETWORK_RULES, selected)
+
+    def restore_monitoring(self, snapshot, options):
+        """Rollback only monitoring units and their owned nftables table."""
+        self._require_live_root()
+        selected = self._options(options)
+        self._check_snapshot_shape(snapshot)
+        if selected != snapshot.get("options"):
+            raise ValueError("Runtime options differ from the captured snapshot")
+
+        units = snapshot["units"]
+        monitoring_units = (NETWORK_RULES, NETWORK_METRICS, GAME_METRICS)
+        self._validate_unit_states(
+            {unit: units[unit] for unit in monitoring_units}
+        )
+        run("systemctl", "daemon-reload")
+        current = {unit: self._unit_state(unit) for unit in monitoring_units}
+        self._validate_unit_states(current)
+
+        for unit in (NETWORK_METRICS, GAME_METRICS):
+            if current[unit]["active_state"] in ACTIVE_STATES:
+                self._guarded_command("stop", unit, selected)
+        if (
+            units[NETWORK_RULES]["active_state"] != "active"
+            and current[NETWORK_RULES]["active_state"] in ACTIVE_STATES
+        ):
+            self._guarded_command("stop", NETWORK_RULES, selected)
+
+        for unit in monitoring_units:
+            wanted = units[unit]
+            state = self._unit_state(unit)
+            if wanted["load_state"] == "not-found":
+                if state["active_state"] in ACTIVE_STATES:
+                    self._guarded_command("stop", unit, selected)
+                if state["unit_file_state"] in ENABLED_STATES:
+                    self._set_restored_unit_file_state(
+                        unit, "disabled", state["unit_file_state"], selected
+                    )
+                continue
+            if state["load_state"] == "not-found":
+                raise ValueError(f"Cannot restore missing monitoring unit: {unit}")
+            self._set_restored_unit_file_state(
+                unit,
+                wanted["unit_file_state"],
+                state["unit_file_state"],
+                selected,
+            )
+
+        rules_wanted_active = units[NETWORK_RULES]["active_state"] == "active"
+        rules_state = self._unit_state(NETWORK_RULES)
+        if rules_wanted_active and rules_state["active_state"] not in ACTIVE_STATES:
+            self._restore_monitoring_table(None, selected)
+            self._guarded_command("start", NETWORK_RULES, selected)
+        elif not rules_wanted_active and rules_state["active_state"] in ACTIVE_STATES:
+            self._guarded_command("stop", NETWORK_RULES, selected)
+
+        self._restore_monitoring_table(
+            snapshot["tables"].get(MONITORING_TABLE), selected
+        )
+
+        for unit in (NETWORK_METRICS, GAME_METRICS):
+            wanted_active = units[unit]["active_state"] == "active"
+            state = self._unit_state(unit)
+            if wanted_active and state["active_state"] not in ACTIVE_STATES:
+                self._guarded_command("start", unit, selected)
+
+        restored = {unit: self._unit_state(unit) for unit in monitoring_units}
+        for unit in monitoring_units:
+            if restored[unit] != units[unit]:
+                raise ValueError(f"Could not restore monitoring unit state: {unit}")
+
+        inventory = sorted(self._table_inventory())
+        self._check_table_inventory(inventory, selected)
+        wanted_table = snapshot["tables"].get(MONITORING_TABLE)
+        if wanted_table is None:
+            if MONITORING_TABLE in inventory:
+                raise ValueError("Could not remove the monitoring table")
+        elif MONITORING_TABLE not in inventory:
+            raise ValueError("Could not restore the monitoring table")
+        else:
+            family, name = MONITORING_TABLE.split()
+            current_table = run("nft", "list", "table", family, name)
+            if self._normalized_table_text(current_table) != (
+                self._normalized_table_text(wanted_table)
+            ):
+                raise ValueError("Could not restore the monitoring table")
 
     def _managed_units(self, options):
         units = [FIREWALL]
@@ -691,8 +1045,8 @@ class System:
         for key in set(expected_tables) & set(current_tables):
             if allow_game_switch and key in BASE_TABLES:
                 continue
-            if self._normalized_table_text(expected_tables[key]) != (
-                self._normalized_table_text(current_tables[key])
+            if self._normalized_table_text(expected_tables[key], key) != (
+                self._normalized_table_text(current_tables[key], key)
             ):
                 tables_changed = True
                 break

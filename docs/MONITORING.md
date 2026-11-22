@@ -73,12 +73,23 @@ endpoints have no authentication; keep them private. `/drain` still requires
 | --- | --- |
 | ForcAD | Board overview plus Checker, Errors and Infrastructure sections |
 | Traffic | Board totals and game source -> target activity, flows and capture health |
-| DDoS | Victim load, source-team fan-out and observed source -> victim directions |
-| Relay | Denied direct vulnbox -> configured vulnbox packets before SNAT |
+| DDoS | HTTP rate, large observed request bodies and traffic volume by team, WG member, victim and service |
+| Relay | Selective failure symptoms for peer → service; confirmed router VLAN drops are shown separately |
 
-The UIDs are `forcad-monitoring`, `forcad-traffic`, `forcad-ddos` and
-`forcad-relay`. Links preserve the time range. The ForcAD overview is expanded;
-its other sections can be expanded by heading. Team selectors support searching.
+English is the default. The original UIDs are `forcad-monitoring`,
+`forcad-traffic`, `forcad-ddos` and `forcad-relay`. On any of them choose
+**Русский** for the Russian dashboard, or **English** to switch back. The
+language link preserves the selected time range and filters; Russian UIDs
+end in `-ru`. To change Grafana's own menus, set **Profile → Preferences →
+Language**; that preference does not translate user-authored [panel text](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/configure-panel-options/).
+
+Edit the English dashboard and its `deployment/monitoring/grafana/i18n/*.ru.json`
+catalog, then run `python3 deployment/monitoring/grafana/localize.py`. Do not
+edit the generated `dashboards/*.ru.json`. Both languages use identical
+PromQL, SQL, thresholds and stored data.
+
+The ForcAD overview is expanded; its other sections can be expanded by
+heading. Team selectors support searching.
 Table heights remain fixed in native Grafana, but tables scroll inside their
 panels instead of using page arrows. The Errors route table and Traffic top
 sources table offer 20, 50 or 100 rows through the Rows selector. Short graph
@@ -159,11 +170,12 @@ Capture each path once. Router counters do not measure HTTP requests or WS.
 
 ## Game traffic
 
-Install the [Zeek sensor](../infrastracture/router/README.md#exporters)
-on the Router with `sudo bash install.sh --game-metrics`. In
-`infrastracture/settings.toml`, `game_metrics` adds its scrape target; it does
-not install Zeek. For a manual setup, add the private TCP/9911 endpoint to
-`deployment/monitoring/file_sd/game-sensors.yml`. Restart existing Prometheus
+On an already installed Router use `sudo bash install.sh --monitoring` for the
+[Zeek sensor and network exporter](../infrastracture/router/README.md#exporters).
+Use the same flag on the managed ForcAD host to update the dashboards, rules and
+both scrape targets. For a fresh install, `game_metrics` selects the target; it
+does not install Zeek. For a manual setup, add the private TCP/9911 endpoint to
+`deployment/monitoring/file_sd/game-sensors.yml`. Reload existing Prometheus
 when adding jobs or rules; target-file updates are discovered automatically.
 
 Zeek passively captures both directions on the router's VPN interface before
@@ -191,14 +203,15 @@ metadata. High rates guide investigation rather than proving a violation.
 
 TLS, HTTP/2 and WS message counts are not covered. Captured traffic may be
 blocked later. Restarts reset counters and lose existing session state; packet
-loss, stream gaps, offloads or asymmetric routing can undercount. No traffic
-logs, URLs, headers or bodies are stored.
+loss, stream gaps, offloads or asymmetric routing can undercount. The router
+does not store bodies, URLs or headers. Large-body evidence is metadata; the
+separate optional VPN recorder stores packets.
 
 Failed/stale sensors are omitted from game panels, so multiple sensors can yield
 partial totals. Check capture status, heartbeat, drops and gaps before interpreting
 traffic. High rates guide investigation; they do not prove a rules violation.
 
-## Direct relay attempts
+## Selective failures and direct relay attempts
 
 The Router already drops direct configured vulnbox-to-vulnbox forwarding.
 Before that drop, its bounded `relay_attempts` nft set counts packets from a
@@ -207,14 +220,83 @@ holds at most 4096 distinct configured pairs; once full, new pairs may lack
 counters while the firewall still drops their packets. The exporter exposes
 `forcad_network_relay_attempt_packets_total{source_team_ip,team_ip}` and
 `forcad_network_relay_scrape_success` separately from the existing traffic
-counters. **Relay** shows denied pairs and collection status. Counters reset
-when Router rules are replaced; source and target IPs identify configured
-vulnboxes, not users or application-level proxies.
+counters. The separate router-denied stat sums these packets over the selected
+interval. The raw counter gives the two vulnbox IPs, not a participant profile
+or an application proxy. Counters reset when router rules are replaced.
 
 Vulnbox WAN egress to public destinations remains allowed for
 player-installed monitoring tools. An indirect path through an external
 server does not match the direct drop and cannot be reliably detected or
 blocked by these Router counters. No automatic bans are configured.
+
+For competition precedent see the FAUST organizers' [traffic fingerprinting
+study](https://www.haproxy.com/user-spotlight-series/preventing-traffic-fingerprinting-in-capture-the-flag-competitions).
+SNAT conceals source addresses, not all differences between checker and player
+requests. This deployment does not insert a transparent application proxy or
+rewrite game protocols.
+
+## Judge evidence
+
+1. In **DDoS**, select the UTC interval and target, then compare peers for the
+   same service. A complete HTTP/1 request body of at least 1 MiB is not a
+   1 MiB IP packet. Zeek counts parsed body bytes, not `Content-Length`;
+   supported compression can make this larger than the bytes on the wire.
+   TLS, SSH, UDP and HTTP/2 show traffic volume, not request size. Compare
+   checker results in the same interval and keep the member's WG `/32`.
+2. In **Relay**, start with the cross-profile tables: they rank observed
+   failure shares with at least ten attempts (TCP) or ten decoded responses
+   (HTTP). Check how other profiles fared on that same target and port;
+   fewer than ten comparison observations are marked as insufficient. RST,
+   no reply, HTTP 403/429, or checker UP do not prove filtering by regex or IP.
+   Check the game phase, allowed port, capture
+   health, direction, sample size, and whether other peers exercised an
+   equivalent operation. The target normally sees the router's SNAT IP, not
+   the original member; a direct VLAN drop never reached that target.
+3. If attribution matters, match a legitimate connection while it is still in
+   conntrack. On the router, `sudo conntrack -L -p tcp --orig-src "$PEER"
+   --orig-dst "$BOX" --sport "$SPORT" --dport "$DPORT"` supplies the original
+   and reply tuples (`conntrack` CLI required). With the judge's permission
+   compare the translated tuple on the target VLAN, e.g. `sudo timeout 30
+   tcpdump -nnqt -i "$TARGET_VLAN" "host $BOX and tcp port $DPORT"`. A VPN-only
+   trace cannot show where a missing reply was lost. A completed TCP handshake
+   does not establish that the application accepted the request.
+4. For endpoint history open a **second** SSH tunnel on a trusted, single-user
+   judge workstation. The existing Grafana tunnel remains on ForcAD; this one
+   terminates on the VPN:
+
+   ```sh
+   ssh -N -o ExitOnForwardFailure=yes \
+     -L 127.0.0.1:9837:/run/forcad-wg-history.sock judge@vpn
+   ```
+
+   Use the history link in Grafana, or `http://127.0.0.1:9837/`. The VPN
+   account needs access to the Unix socket (`root:adm`, mode `0660`). Do not
+   bind the forward to a public address. The time is when the authenticated
+   peer's endpoint was *observed*, not a login. NAT, mobile failover and
+   [WireGuard roaming](https://www.wireguard.com/#built-in-roaming) make IP
+   count a poor proxy for headcount. Use the venue's actual main and backup
+   egress ranges; an address outside them is a lead, not proof of location.
+   Raw endpoints never appear in Prometheus or Grafana labels.
+5. On the VPN save **only the incident interval and flow** from the rotating
+   capture for the judge file; see [VPN instructions](../infrastracture/vpn/README.md).
+   Log UTC, source member, target, protocol, both ports, capture loss, and
+   the SHA-256 of the extract. SSH content remains encrypted: the pcap cannot
+   identify a person, an AI tool, or commands. Publish the capture policy
+   before play, restrict access to judges, and delete case copies after the
+   appeal window. No automatic blocking is performed by these observers.
+
+Capture storage is a rate budget, not a team count. Six hours at a combined
+100 Mbit/s on `wg-attack` is about 270 GB before capture overhead. A decimal
+1 TB disk tops out near 370 Mbit/s over six hours **before** reserved space or
+overhead. Five hours contain 60 five-minute intervals; six hours contain 72.
+An initial/final partial interval, a restart or the per-file size limit changes
+the file count. At high rates the ring retains a shorter history. Check the
+oldest available timestamp and free space before promising a replay.
+The default active ring has 96 segments, at most 4,000,000 kB each. The
+startup check budgets about 405 GB free for that ring, bounded incident
+exports and a 10 GiB reserve. An older ring can remain after a restart.
+Mount the evidence disk at `/var/lib/forcad-vpn-pcap` before starting the
+service; free space on an unmounted disk does not count.
 
 ## Alerts and checks
 

@@ -29,6 +29,41 @@ ports; admin VPN clients already have general Router access. Use both install
 options to enable both exporters; reinstalling without flags retains previously
 selected exporters.
 
+On a matching, already-installed live Router base, run
+`sudo bash install.sh --monitoring` to install or refresh both exporters. The
+manifest, installed files and runtime journal must match the current bundle.
+This add-on does not reapply Router networking, WireGuard keys, game phase,
+firewall or NAT; it manages only the monitoring table and exporter services.
+Repeat runs are safe. The existing `--network-metrics` and `--game-metrics`
+options retain their full-installer behavior.
+
+Game observations are restricted to configured VPN peers, vulnboxes and game
+ports. New service metrics label the destination port as e.g. `8080/tcp`.
+`forcad_game_peer_http_requests_total` counts parsed HTTP/1 request lines.
+Large-body metrics count completed originator request bodies at or above the
+inclusive 1,048,576-byte default (`Forcad::large_body_threshold` changes it).
+Zeek measures the parsed HTTP message body after HTTP/1 framing and chunk
+decoding, and reports uncompressed body length for supported gzip/deflate
+content encodings. `Content-Length` is not used as the size; unsupported
+content encodings are not guaranteed to be expanded. Interrupted messages and
+bodies containing content gaps are excluded, even if parsed bytes meet the
+threshold; originator stream gaps remain visible in the existing counter.
+
+`forcad_game_observations_total` records exclusive observed initial TCP
+outcomes (`tcp_established`, `tcp_no_reply`, `tcp_refused`), then records a
+later established-connection reset separately as `tcp_reset`. Plaintext HTTP
+final responses are `http_403`, `http_429` or `http_other`; informational
+responses are ignored. No `http_no_reply` outcome is emitted because a missing
+response cannot be reliably distinguished from a capture gap or incomplete
+observation.
+
+Completed large request bodies emit metadata-only `FORCAD_LARGE_HTTP_BODY`
+records to the restricted system journal, rate-limited to at most 100 records
+per minute. Records include UTC time, peer and target IP/port, protocol and
+measured body size; they never include URLs, headers or body contents. Inspect
+them with `journalctl -u game-metrics.service`.
+
+
 ## Firewall and removal
 
 The firewall starts in pre-game mode. It permits participant ICMP echo to

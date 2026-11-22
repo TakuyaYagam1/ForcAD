@@ -110,7 +110,7 @@ class FileOperations:
         """Role-specific files to remove even when installation adopted them."""
         return set()
 
-    def install_files(self):
+    def install_files(self, *, extend=False):
         from .access import operator
 
         previous_manifest = (
@@ -118,6 +118,11 @@ class FileOperations:
             if self.manifest.exists()
             else {}
         )
+        if extend and (
+            previous_manifest.get("config") != self.config
+            or previous_manifest.get("options", {}).get("repo") != self.options.get("repo")
+        ):
+            raise ValueError("Monitoring requires the matching installed host inventory")
         if previous_manifest and previous_manifest.get("format") != 2:
             raise ValueError(
                 "Legacy installation has no verified rollback history. Restore its original backup manually before reinstalling."
@@ -140,6 +145,12 @@ class FileOperations:
                     "gid": self.owner["gid"] if self.owner else owner.stat().st_gid,
                 }
             )
+        if extend:
+            # Keep the original expected state of unrelated files, including
+            # subsequent operator edits. Do not silently adopt them on reinstall.
+            merged = {item["path"]: item for item in previous_manifest["files"]}
+            merged.update((item["path"], item) for item in records)
+            records = list(merged.values())
         manifest = {
             "format": 2,
             "config": self.config,
@@ -166,6 +177,12 @@ class FileOperations:
             )
         ]
         directories = self.directory_changes(list(self.changes))
+        if extend:
+            parents = {parent for path in self.changes for parent in path.parents}
+            directories = [
+                item for item in directories
+                if not item["existed"] and self.path(item["path"]) in parents
+            ]
         if not changed and not directories:
             print("Already installed; no files changed.")
             return
@@ -204,7 +221,7 @@ class FileOperations:
                     path.mkdir(mode=item["installed_mode"])
                 path.chmod(item["installed_mode"])
                 os.chown(path, item["installed_uid"], item["installed_gid"])
-            for directory in ("/etc/forcad", "/etc/forcad/monitoring"):
+            for directory in (() if extend else ("/etc/forcad", "/etc/forcad/monitoring")):
                 if directory.endswith("monitoring") and not (
                     self.role == "router"
                     and (

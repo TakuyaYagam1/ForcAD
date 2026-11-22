@@ -33,8 +33,47 @@ groups:
           max by (team_ip, target_team_name) (
             label_replace(
               forcad:team_info:latest and on (team_ip) forcad:team_network_info:unique,
-              "target_team_name", "$1", "team_name", "(.*)")
+              "target_team_name", "$1", "team_name", "(.+)")
           )
+          or on (team_ip)
+          (
+            max by (team_ip, target_team_name) (
+              label_replace(
+                label_replace(
+                  forcad_game_profile_info and on (job, instance) forcad:game_sensor_ready,
+                  "team_ip", "$1", "source_team_ip", "(.+)"),
+                "target_team_name", "$1", "source_team_name", "(.+)")
+            )
+            and on (team_ip)
+            count by (team_ip) (
+              max by (team_ip, target_team_name) (
+                label_replace(
+                  label_replace(
+                    forcad_game_profile_info and on (job, instance) forcad:game_sensor_ready,
+                    "team_ip", "$1", "source_team_ip", "(.+)"),
+                  "target_team_name", "$1", "source_team_name", "(.+)")
+              )
+            ) == 1
+          )
+          or on (team_ip)
+          label_replace(
+            group by (team_ip) (
+              forcad_game_observations_total
+              and on (job, instance) forcad:game_sensor_ready
+            ),
+            "target_team_name", "Unmapped", "team_ip", "(.+)")
+
+      - record: forcad:game_profile_info
+        expr: |
+          max by (source_ip, source_team_ip, source_team_name, member) (
+            forcad_game_profile_info and on (job, instance) forcad:game_sensor_ready
+          )
+          and on (source_ip)
+          count by (source_ip) (
+            max by (source_ip, source_team_ip, source_team_name, member) (
+              forcad_game_profile_info and on (job, instance) forcad:game_sensor_ready
+            )
+          ) == 1
 
       - alert: ForcadGameSensorDown
         expr: up{job="forcad_game_sensor"} == 0
@@ -73,3 +112,39 @@ groups:
         annotations:
           summary: Game TCP streams have gaps
           description: "Sensor {{ $labels.instance }} cannot reconstruct some streams. Check capture loss and asymmetric routing."
+
+      - alert: ForcadGamePeerHighHttpRate
+        expr: |
+          (
+            (
+              sum by (source_ip, team_ip, service_port) (
+                rate(forcad_game_peer_http_requests_total{job="forcad_game_sensor"}[1m])
+                and on (job, instance) forcad:game_sensor_ready
+              ) > 100
+            )
+            * on (source_ip) group_left (source_team_ip, source_team_name, member)
+              forcad:game_profile_info
+          )
+          or on (source_ip, team_ip, service_port)
+          label_replace(
+            label_replace(
+              label_replace(
+                (
+                  sum by (source_ip, team_ip, service_port) (
+                    rate(forcad_game_peer_http_requests_total{job="forcad_game_sensor"}[1m])
+                    and on (job, instance) forcad:game_sensor_ready
+                  ) > 100
+                )
+                unless on (source_ip) forcad:game_profile_info,
+                "source_team_name", "Unmapped", "source_ip", ".+"
+              ),
+              "member", "Unmapped", "source_ip", ".+"
+            ),
+            "profile_state", "unmapped", "source_ip", ".+"
+          )
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Game peer HTTP traffic exceeds 100 requests per second
+          description: "Observed peer {{ $labels.source_ip }} from {{ $labels.source_team_name }} ({{ $labels.member }}) is sending more than 100 HTTP requests/s to {{ $labels.team_ip }}:{{ $labels.service_port }}."

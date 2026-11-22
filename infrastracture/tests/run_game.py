@@ -9,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from game_trace import fixture
+from game_trace import fixture, monitoring_fixture
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -135,6 +135,136 @@ event zeek_done() {
         for name in ("websocket_connections", "tcp_connections", "udp_flows_active"):
             assert metric("FINAL", name) == 0, (name, metric("FINAL", name))
         assert not result.stderr, result.stderr
+
+        monitoring_fixture().write(work / "game.pcap", age_seconds=10)
+        observed = container(
+            command, check=True, capture_output=True, text=True, timeout=60
+        )
+        monitoring_snapshots = {}
+        for line in observed.stdout.splitlines():
+            if line.startswith(("SNAPSHOT ", "FINAL ")):
+                phase, document = line.split(" ", 1)
+                monitoring_snapshots[phase] = json.loads(document)
+        assert set(monitoring_snapshots) == {"SNAPSHOT", "FINAL"}, (
+            observed.stdout + observed.stderr
+        )
+
+        def peer_metric(phase, name, *, outcome=None):
+            expected = {
+                "source_ip": "10.183.200.2",
+                "team_ip": "10.183.102.2",
+                "service_port": "8080/tcp",
+            }
+            if outcome is not None:
+                expected["outcome"] = outcome
+            for item in monitoring_snapshots[phase]:
+                labels = dict(
+                    zip(item["label_names"], item["label_values"], strict=True)
+                )
+                if item["opts"]["name"] == "forcad_game_" + name and labels == expected:
+                    return item["value"]
+            raise AssertionError(f"Missing {name} for {expected}: {monitoring_snapshots[phase]}")
+
+        def legacy_metric(
+            phase, name, source="10.183.101.2", target="10.183.102.2"
+        ):
+            for item in monitoring_snapshots[phase]:
+                labels = dict(
+                    zip(item["label_names"], item["label_values"], strict=True)
+                )
+                if (
+                    item["opts"]["name"] == "forcad_game_" + name
+                    and labels.get("source_team_ip") == source
+                    and labels.get("team_ip") == target
+                ):
+                    return item["value"]
+            raise AssertionError(
+                f"Missing metric {name}: {monitoring_snapshots[phase]}"
+            )
+
+        expected_peer_metrics = {
+            "peer_http_requests_total": 6,
+            "http_large_bodies_total": 3,
+            "http_last_large_body_bytes": 1048577,
+            "observations_total": {
+                "tcp_established": 6,
+                "tcp_no_reply": 1,
+                "tcp_refused": 1,
+                "tcp_reset": 3,
+                "http_403": 1,
+                "http_429": 1,
+                "http_other": 2,
+            },
+        }
+        for name, value in expected_peer_metrics.items():
+            if name == "observations_total":
+                for outcome, count in value.items():
+                    assert peer_metric("SNAPSHOT", name, outcome=outcome) == count, (
+                        outcome,
+                        peer_metric("SNAPSHOT", name, outcome=outcome),
+                        count,
+                    )
+            else:
+                assert peer_metric("SNAPSHOT", name) == value, (
+                    name,
+                    peer_metric("SNAPSHOT", name),
+                    value,
+                )
+        initial_outcomes = (
+            peer_metric("SNAPSHOT", "observations_total", outcome=outcome)
+            for outcome in ("tcp_established", "tcp_no_reply", "tcp_refused")
+        )
+        assert sum(initial_outcomes) == 8
+        expected_profile = {
+            "source_ip": "10.183.200.2",
+            "source_team_ip": "10.183.101.2",
+            "source_team_name": config["teams"]["entries"][0]["name"],
+            "member": "member-01",
+        }
+        profiles = [
+            item
+            for item in monitoring_snapshots["SNAPSHOT"]
+            if item["opts"]["name"] == "forcad_game_profile_info"
+        ]
+        assert any(
+            dict(
+                zip(item["label_names"], item["label_values"], strict=True)
+            )
+            == expected_profile
+            and item["value"] == 1.0
+            for item in profiles
+        ), profiles
+        timestamp = peer_metric(
+            "SNAPSHOT", "http_last_large_body_timestamp_seconds"
+        )
+        assert timestamp >= 1700000000, timestamp
+        assert legacy_metric("SNAPSHOT", "stream_gaps_total") >= 1
+        event_output = observed.stdout + observed.stderr
+        body_events = [
+            line
+            for line in event_output.splitlines()
+            if "FORCAD_LARGE_HTTP_BODY" in line
+        ]
+        event_sizes = {
+            int(line.split("bytes=", 1)[1].split()[0]) for line in body_events
+        }
+        assert len(body_events) == 3, event_output
+        assert event_sizes == {1048576, 1048577}, event_sizes
+        assert all(
+            line.startswith("FORCAD_LARGE_HTTP_BODY ts=")
+            and "Z source=10.183.200.2:" in line
+            and "target=10.183.102.2:8080/tcp protocol=tcp" in line
+            for line in body_events
+        ), body_events
+        assert "a" * 64 not in event_output
+        assert "b" * 64 not in event_output
+        assert "c" * 64 not in event_output
+        assert "f" * 64 not in event_output
+        print(
+            "Monitoring passed: 1 MiB boundary, segmented/chunked bodies, "
+            "truncated Content-Length, capture gaps, TCP and HTTP outcomes."
+        )
+
         # Advancing capture time expires idle flows before process shutdown.
         fixture().write(work / "game.pcap", age_seconds=360)
         service = render.game_metrics(config)["router/game-metrics.service"]

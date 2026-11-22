@@ -39,6 +39,22 @@ def main(bundle_class, directory):
     parser.add_argument(
         "--wireguard-dir", type=Path, help="Directory containing server configs only"
     )
+    role = getattr(bundle_class, "ROLE", None)
+    parser.set_defaults(monitoring=False, pcap=False, wg_endpoints=False)
+    if role in (None, "router"):
+        parser.add_argument(
+            "--monitoring", action="store_true",
+            help="Add both exporters to an installed router without reapplying networking",
+        )
+    if role in (None, "vpn"):
+        parser.add_argument(
+            "--pcap", action="store_true",
+            help="Install optional five-minute capture on an existing VPN",
+        )
+        parser.add_argument(
+            "--wg-endpoints", action="store_true",
+            help="Install private WG endpoint history on an existing VPN",
+        )
     parser.add_argument(
         "--network-metrics",
         action="store_true",
@@ -79,6 +95,20 @@ def main(bundle_class, directory):
     os.umask(0o077)
     try:
         bundle = bundle_class(Path(directory))
+        if args.monitoring or args.pcap or args.wg_endpoints:
+            if args.action != "install" or any((
+                args.dry_run, args.force, args.resume, args.discard_backups, args.repo,
+                args.wireguard_dir, args.network_metrics, args.game_metrics, args.live,
+                args.files_only, args.purge_packages, args.keep_packages,
+            )):
+                raise ValueError("Monitoring add-ons must be installed separately from base configuration")
+            if bundle.role == "router" and args.monitoring and not (args.pcap or args.wg_endpoints):
+                bundle.install_monitoring()
+            elif bundle.role == "vpn" and not args.monitoring:
+                bundle.install_observers(pcap=args.pcap, wg_endpoints=args.wg_endpoints)
+            else:
+                raise ValueError("Use --monitoring on the router; --pcap and --wg-endpoints on the VPN")
+            return
         if args.resume and (
             args.action != "uninstall" or bundle.role != "router" or args.files_only
         ):

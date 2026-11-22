@@ -399,7 +399,7 @@ class Dependencies:
                 "Existing forcad-sensor must be a system account with a nologin shell"
             )
 
-    def install(self, game_metrics=False):
+    def _prepare_install(self):
         distribution = {}
         for line in self.path("/etc/os-release").read_text().splitlines():
             key, separator, value = line.partition("=")
@@ -413,6 +413,24 @@ class Dependencies:
         self._open()
         self.data["distribution"] = distribution["VERSION_ID"]
         self.save()
+
+    def install_monitoring(self, *, pcap=False):
+        """Use the existing package receipt, without touching resolver or base services."""
+        if self.role not in {"router", "vpn"} or pcap != (self.role == "vpn"):
+            raise ValueError("Unsupported monitoring dependencies for this role")
+        if not regular(self.directory / "state.json").is_file():
+            raise ValueError("Monitoring requires the base dependency receipt")
+        self._prepare_install()
+        if pcap:
+            self.install_packages(["wireshark-common", "tshark"])
+        else:
+            from .zeek import ensure_zeek
+
+            ensure_zeek(self)
+            self.ensure_sensor()
+
+    def install(self, game_metrics=False):
+        self._prepare_install()
         self._prepare_dns()
         packages = [
             *BASE,
