@@ -1121,6 +1121,7 @@ def fresh_forcad_files(config):
     files = {
         "forcad/config.yml": forcad_config(config),
         "forcad/.env": forcad_environment(config),
+        "forcad/install_checkers.py": (ROOT / "forcad/install_checkers.py").read_text(),
         "forcad/host/environment.env": (
             'FORCAD_NGINX_BIND="'
             + config["env"]["public_host"]

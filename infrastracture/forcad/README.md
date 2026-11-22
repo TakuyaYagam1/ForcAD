@@ -23,6 +23,10 @@ and assets, initializes the game, and starts the application. If `monitoring`
 under `[env]` is `true`, it also starts Prometheus and Grafana. Scripts under
 `host/` are installer helpers, not a separate procedure.
 
+The checker files in the bundle stay private. In the installed `checkers/`
+tree, each configured task's `checker` and its directories get `0755`;
+supporting files get `0644`. The worker mounts that tree read-only.
+
 The installer stages network files but does not restart networking. Apply any
 address or gateway changes from the host console before installation. Run the
 top-level `test.sh` after install.

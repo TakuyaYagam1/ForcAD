@@ -248,7 +248,7 @@ if [[ -d "$bundle_dir/public" ]]; then
     find "$target/public" -type f -exec chmod 0644 {} +
 fi
 if [[ -d "$bundle_dir/checkers" ]]; then
-    cp -a "$bundle_dir/checkers/." "$target/checkers/"
+    python3 "$bundle_dir/install_checkers.py" "$target"
 fi
 if [[ "$monitoring" == true ]]; then
     command -v openssl >/dev/null || { echo "openssl is required to create the Grafana password" >&2; exit 1; }
