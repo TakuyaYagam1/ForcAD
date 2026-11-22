@@ -9,7 +9,9 @@ remove the isolated containers, images, volumes, and temporary files.
 The default workload uses 20 teams, three fixture services, six REST routes,
 active Python checkers, and 20 WebSocket observers. Its steady stages send 40
 flag batches per second with 100 values per batch, including duplicates. The
-default stack runs two receivers and two workers with eight checker slots each.
+isolated test stack runs two receivers and two workers with eight checker slots
+each. Production defaults to four workers; set `LOAD_WORKER_REPLICAS=4` to
+match its checker slot count without changing the test workload.
 
 Checker jobs use persistent NATS JetStream. `LOAD_BROKER_PREFLIGHT=1` verifies
 worker drain and recovery after restarting only the isolated stack's NATS

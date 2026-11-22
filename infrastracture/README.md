@@ -7,6 +7,10 @@ network interfaces and VLANs for the configured address plan.
 [Command reference](COMMANDS.md) | [Router](router/README.md) |
 [VPN](vpn/README.md) | [ForcAD](forcad/README.md)
 
+Before provisioning the VMs, [size the ForcAD host for your event](../docs/OPERATIONS.md#sizing-the-forcad-host).
+The championship example covers the game host; budget the Router, VPN and
+each team's vulnbox separately.
+
 ## Configure and render
 
 From the repository root:

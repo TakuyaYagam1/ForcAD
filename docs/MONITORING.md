@@ -63,9 +63,15 @@ open the local `http://127.0.0.1` URLs in the workstation browser.
 
 Override ports with `FORCAD_GRAFANA_PORT` and `FORCAD_PROMETHEUS_PORT`; an empty
 value requests a random host port. Prometheus scrapes replicas through Docker
-DNS every 15 seconds and retains up to 15 days or 4 GB. Internal `/metrics`
-endpoints have no authentication; keep them private. `/drain` still requires
-`ControlToken`.
+DNS every 15 seconds. The default retention is **7 days or 16 GB**, whichever
+is reached first. When upgrading from 15 days / 4 GB, set
+`FORCAD_PROMETHEUS_RETENTION_TIME=15d` and `FORCAD_PROMETHEUS_RETENTION_SIZE=4GB`
+**before** recreating Prometheus if you need the old retention policy. Shortening
+retention can delete older samples; raising it again will not restore them.
+Queries allow eight concurrent executions and five million samples per query;
+adjust `FORCAD_PROMETHEUS_QUERY_CONCURRENCY` and `FORCAD_PROMETHEUS_QUERY_SAMPLES`
+only after checking memory pressure. Internal `/metrics` endpoints have no
+authentication; keep them private. `/drain` still requires `ControlToken`.
 
 ## Dashboards
 

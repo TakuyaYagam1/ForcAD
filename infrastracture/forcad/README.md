@@ -10,6 +10,11 @@ The install path must be unused, and Docker must not contain containers,
 volumes or networks for the `forcad` Compose project. This installer creates a
 new game; it does not update an existing deployment.
 
+The installer does not resize VMs. Use the [ForcAD host sizing guide](../../docs/OPERATIONS.md#sizing-the-forcad-host)
+to distinguish the 10-team rehearsal estimate from the 22-team championship
+deployment. [Resource limits](../../docs/OPERATIONS.md#resource-limits) lists
+the Compose settings to adjust for your host.
+
 ## Install and test
 
 The top-level `install.sh` takes no options. It installs prerequisites, clones

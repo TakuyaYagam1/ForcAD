@@ -1,5 +1,17 @@
 # ForcAD
 
+> [!IMPORTANT]
+> **Planning an event?** Start with [hardware sizing](docs/OPERATIONS.md#sizing-the-forcad-host)
+> and the [full Router, VPN and ForcAD setup](infrastracture/README.md). For
+> about 10 teams, start rehearsals at **8–12 vCPU and 16 GiB RAM** on the
+> ForcAD VM. Actual requirements depend on your services, checkers and round time.
+>
+> **Russian Championship final:** A **24 vCPU / 32 GiB** ForcAD VM with
+> **4 workers × 8 checker slots** served 21 competing teams and one NPC for
+> exploit testing. Over 240 minutes, teams submitted more than 100,000 flags;
+> `daywave.` alone submitted about 25,000 on one service. The organizers
+> reported 100% uptime and no HTTP 5xx responses.
+
 ![ForcAD](public/ForcAD.png)
 
 ForcAD is a capture-the-flag attack-defense platform.

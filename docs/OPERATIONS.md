@@ -17,6 +17,29 @@ scaling and shutdown so the overlay stays active. Plain `start`, `scale` and
 `compose` do not include it. See [Monitoring](MONITORING.md#start). For the
 network demo, use its [manage commands](../deployment/demo/README.md#manage-the-stack).
 
+## Sizing the ForcAD host
+
+These figures cover the ForcAD VM only, not the Router, VPN or team vulnboxes.
+The [infrastructure guide](../infrastracture/README.md) covers the full installation.
+
+| Event size | vCPU | RAM | Basis |
+| --- | ---: | ---: | --- |
+| About 10 teams | 8–12 | 16 GiB | Starting point for rehearsal; not a measured minimum. |
+| 22 targets (21 competing teams and one NPC) | 24 | 32 GiB | Provisioned at the Russian Championship final: three services, 60-second rounds, four workers with eight slots each. A reference for a comparable 20+ team event, not a guarantee for every workload. |
+
+The organizers' hypervisor charts show **64.29% CPU** at 01:30 MSK on
+November 19, 2026 and **20.77 GiB used** at 04:00 that day. The **9.58 GiB**
+reading is from November 22 at 14:00 MSK. These are separate samples for the entire VM,
+not ForcAD process memory, event-wide peaks or proof that 16 GiB would have
+covered the same final.
+
+The same team count can require different hardware. More services, more
+CHECK/PUT/GET actions or slower checkers leave less time to finish a round.
+Rehearse on the proposed VM with the real checkers, round length, expected flag
+batches and the monitoring you intend to run. Check unfinished jobs at round
+boundaries, available host RAM and swap, and `/flags` latency and errors before
+adding workers or reducing RAM. See [per-service budgets](#resource-limits).
+
 ## Migrating the checker broker
 
 This checkout uses NATS JetStream. Migrate between games, with the old workers
@@ -223,19 +246,23 @@ a burst of 5. Requests over this limit return `429` with `Retry-After: 2`.
 Compose disables the backend login limiter only while this ingress limit is
 active; direct API deployments still enforce the backend per-IP budget.
 
-The Compose defaults are four API, two receiver and two worker replicas, plus one
-ticker. Scale services with Compose, for example:
+Production Compose starts four API replicas, two flag receivers, four checker
+workers and one ticker. Each worker admits eight checker actions, for **32 slots**
+in all. These are the defaults for the [championship profile](#sizing-the-forcad-host).
+For example, to try a fifth worker on a stack without the monitoring overlay:
 
 ```bash
-./control.sh compose up -d --scale receiver=3 --scale worker=3
+./control.sh scale -s worker 5
 ```
 
-Set `FORCAD_WORKER_REPLICAS=3` before `start` to keep three worker replicas as
-the Compose default. Workers consume jobs from one queue; a second worker does
-not repeat the same checker action or vote on its result. Increase replicas
-when unfinished jobs rise while action slots are busy, then watch worker CPU,
-memory, timeouts and per-service result rates in the Checker dashboard. The
-local network demo has one worker because its containers share a metrics port.
+Set `FORCAD_WORKER_REPLICAS=5` before `start` to keep that size across
+recreations. With monitoring enabled, [keep its overlay](MONITORING.md#start).
+Workers consume from one queue; adding a worker does not repeat a checker
+action. Rehearse a scale-up when unfinished jobs carry over into the next
+round and `ForcadCheckerSlotsBusy` fires (>90% of slots busy for one minute).
+Check CPU, free host memory and checker latency first. A flag-submission
+spike alone is not a reason to scale checkers: `/flags` uses the receivers.
+The local network demo keeps one worker because its containers share a metrics port.
 
 `runtime-capacity` runs inside the deployed API container and reads its settings.
 Pass current replica counts because it does not discover them. Compose shares the configured per-role pool limits with every process. If you
@@ -245,7 +272,7 @@ add per-role overrides for workers, pass the worker's `WORKER_CONCURRENCY` and
 
 ```bash
 ./control.sh runtime-capacity \
-  --api-replicas 4 --receiver-replicas 3 --worker-replicas 3 --ticker-replicas 1
+  --api-replicas 4 --receiver-replicas 2 --worker-replicas 5 --ticker-replicas 1
 ```
 
 ## Resource limits
@@ -268,23 +295,26 @@ directly to PostgreSQL; migrations need session advisory locks.
 | Role | pgx connections per replica | PgBouncer server connections, all replicas |
 | --- | --- | --- |
 | API | 16 | 32 |
-| Receiver | 32 | 64 |
-| Worker | 16 | 32 |
+| Receiver | 16 | 64 |
+| Worker | 4 | 32 |
 | Ticker | 8 | 8 |
 
 Set `FORCAD_<ROLE>_DATABASE_MAX_CONNS` for client pools and
 `PGBOUNCER_<ROLE>_CONNECTIONS` for server pools, with uppercase role names.
-`DATABASE_MAX_CONNS` is a fallback for every role. Client connections open on
-demand. The default nine application replicas total 168 client slots; one
-PgBouncer instance permits at most 136 server connections across its four aliases.
-Scaling receivers increases client slots while preserving their 64-server budget.
+`DATABASE_MAX_CONNS` is a fallback for every role. The 11 default application
+replicas allow 120 pgx clients (64 API, 32 receiver, 16 worker, 8 ticker).
+PgBouncer permits up to 136 server connections across its four aliases.
+The API client and server pools are prewarmed: their minima default to their
+configured maxima (16 and 32). Set `FORCAD_API_DATABASE_MIN_CONNS=0` and
+`PGBOUNCER_API_MIN_CONNECTIONS=0` to open API connections on demand.
+Scaling receivers increases client slots, not their 64-server budget.
 Each alias's client cap defaults to the larger of 256, its server cap, and
 `replicas * pgx_connections + 8` diagnostic connections. Explicit
 `PGBOUNCER_<ROLE>_CLIENTS` and `PGBOUNCER_MAX_CLIENTS` (default 1024) must cover
-declared demand; invalid budgets prevent PgBouncer startup. Twenty workers with
-16 pgx slots allow 328 worker clients while retaining 32 worker server connections
-and the same timeouts. This admits declared clients; it is not a throughput
-guarantee or an increase in PostgreSQL concurrency.
+declared demand; invalid budgets prevent PgBouncer startup. For example, 20
+workers explicitly configured with 16 pgx slots each allow 328 worker clients
+while retaining 32 worker server connections. This admits declared clients; it
+does not guarantee throughput or increase PostgreSQL concurrency.
 
 Keep `FORCAD_API_REPLICAS`, `FORCAD_RECEIVER_REPLICAS`, `FORCAD_WORKER_REPLICAS`
 and `FORCAD_TICKER_REPLICAS` aligned with actual Compose replicas (0-1024).
@@ -332,10 +362,13 @@ worker hosts. The default local bridge configuration does not enable TLS; SCRAM
 authentication alone does not encrypt query traffic. Validate valid-CA connections
 and rejection of an untrusted CA/hostname in isolation before rollout.
 
-PostgreSQL keeps a global ceiling of 500 (`FORCAD_POSTGRES_MAX_CONNECTIONS`).
-Additional pooler instances, direct clients and external worker hosts need a
-combined budget below the actual server ceiling. `worker` starts a local pooler
-on each worker host. Ports 5432 (direct) and 6432 (pooler) bind to loopback.
+PostgreSQL defaults to 200 connections (`FORCAD_POSTGRES_MAX_CONNECTIONS`),
+`shared_buffers=2GB` (`FORCAD_POSTGRES_SHARED_BUFFERS`) and a 512 MiB `/dev/shm`
+(`FORCAD_POSTGRES_SHM_SIZE`). Before upgrading an existing deployment from the
+old 500-connection default, count all poolers and direct clients, including
+external worker hosts. Their combined budget must fit the server.
+`worker` starts a local pooler on each worker host. Ports 5432 (direct) and
+6432 (pooler) bind to loopback.
 Redis allows 10000 clients; its Go pools remain bounded at 32 connections per
 process. Nginx uses automatic workers, 8192 connections per worker, reusable
 upstream connections and a 65536 file-descriptor ceiling. Upstream sockets also
@@ -373,25 +406,32 @@ not stall requests. Overflow drops entries and increments
 This queue is for diagnostic logs. Accepted flags and scores still require a
 durable database commit.
 
-Compose sets soft memory reservations per container, including storage and
-startup services. Containers can use more memory; hard caps default to `0`
-(unlimited).
+Compose uses the following **soft reservations per container**. Configure a
+role with `FORCAD_<ROLE>_MEMORY_RESERVATION` and an optional hard cap with
+`FORCAD_<ROLE>_MEMORY` (uppercase role names). Nginx and the base startup
+services use `FORCAD_SERVICE_MEMORY_RESERVATION` / `FORCAD_SERVICE_MEMORY`.
 
-| Containers | Soft reservation | Reservation variable | Optional hard-cap variable |
-| --- | --- | --- | --- |
-| Receiver | 2 GiB | `FORCAD_RECEIVER_MEMORY_RESERVATION` | `FORCAD_RECEIVER_MEMORY` |
-| Worker | 8 GiB | `FORCAD_WORKER_MEMORY_RESERVATION` | `FORCAD_WORKER_MEMORY` |
-| All others | 1 GiB | `FORCAD_SERVICE_MEMORY_RESERVATION` | `FORCAD_SERVICE_MEMORY` |
+| Containers | Soft reservation per replica |
+| --- | ---: |
+| Worker | 768 MiB |
+| API, receiver, Redis, NATS, Grafana | 512 MiB |
+| PostgreSQL | 4 GiB |
+| Prometheus | 2 GiB |
+| Ticker, PgBouncer, Nginx, base startup services | 128 MiB |
 
-Export these variables before running `./control.sh start`. For example,
-`FORCAD_WORKER_MEMORY=12g ./control.sh start` keeps the 8 GiB soft reservation
-and adds a 12 GiB hard cap per worker. Set any nonzero cap above its reservation.
+Hard memory caps default to `0` (unlimited). The Go runtime has separate soft
+targets: `GOMEMLIMIT` is 512 MiB for API (`GOGC=200`), 768 MiB for receiver
+and 192 MiB for worker. The worker target does **not** cover checker subprocesses.
+Set overrides in `deployment/docker/.env` before recreating containers. For
+example, `FORCAD_WORKER_MEMORY=4g` limits a worker **and all its checkers**
+to 4 GiB; size any hard cap from measured peak usage, not its reservation.
 
 A [Docker memory reservation](https://docs.docker.com/engine/containers/resource_constraints/#limit-a-containers-access-to-memory)
 does not preallocate RAM or guarantee a minimum. Without hard caps, containers
-share available host memory and can exhaust it. The default long-running
-replicas total 30 GiB of soft reservations; three workers and five receivers
-raise that to 44 GiB. Scaling therefore still requires a host memory budget.
+share available host memory and can exhaust it. Long-running services total
+11.375 GiB of soft reservations without monitoring, or 13.875 GiB including
+Prometheus and Grafana. The difference from 32 GiB is **not** guaranteed
+headroom; use peak host memory, swap and OOM events from representative rounds.
 `runtime-capacity` reports checker address-space ceilings, not these Compose
 reservations. Application `pids_limit` defaults to 512 (`FORCAD_SERVICE_PIDS`),
 or 2048 for workers (`FORCAD_WORKER_PIDS`). The worker limit includes its runtime

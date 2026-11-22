@@ -7,9 +7,52 @@ import (
 	"errors"
 	"flag"
 	"io"
+	"os"
 	"strings"
 	"testing"
 )
+
+func TestCapacityUsesStandardDefaults(t *testing.T) {
+	for _, key := range []string{
+		"DATABASE_MAX_CONNS",
+		"FORCAD_API_DATABASE_MAX_CONNS",
+		"FORCAD_RECEIVER_DATABASE_MAX_CONNS",
+		"FORCAD_WORKER_DATABASE_MAX_CONNS",
+		"FORCAD_TICKER_DATABASE_MAX_CONNS",
+		"HTTP_MAX_INFLIGHT",
+		"FORCAD_API_HTTP_MAX_INFLIGHT",
+		"FORCAD_RECEIVER_HTTP_MAX_INFLIGHT",
+		"WORKER_CONCURRENCY",
+		"FORCAD_CHECKER_MEMORY_LIMIT_MB",
+	} {
+		t.Setenv(key, "")
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var output bytes.Buffer
+	if err := RuntimeCapacity(t.Context(), nil, &output); err != nil {
+		t.Fatal(err)
+	}
+	var report struct {
+		Total            int            `json:"database_connection_ceiling"`
+		Roles            map[string]int `json:"database_connections_by_role"`
+		CheckerProcesses int            `json:"checker_process_ceiling"`
+		CheckerMemoryMiB int            `json:"checker_memory_ceiling_mib"`
+	}
+	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.Total != 120 ||
+		report.Roles["api"] != 64 ||
+		report.Roles["receiver"] != 32 ||
+		report.Roles["worker"] != 16 ||
+		report.Roles["ticker"] != 8 ||
+		report.CheckerProcesses != 32 ||
+		report.CheckerMemoryMiB != 32768 {
+		t.Fatalf("capacity=%+v", report)
+	}
+}
 
 func TestCapacityUsesEveryRolePool(t *testing.T) {
 	for key, value := range map[string]string{
@@ -17,6 +60,7 @@ func TestCapacityUsesEveryRolePool(t *testing.T) {
 		"FORCAD_RECEIVER_DATABASE_MAX_CONNS": "32",
 		"FORCAD_WORKER_DATABASE_MAX_CONNS":   "16",
 		"FORCAD_TICKER_DATABASE_MAX_CONNS":   "8",
+		"WORKER_CONCURRENCY":                 "8",
 		"FORCAD_API_HTTP_MAX_INFLIGHT":       "256",
 		"FORCAD_RECEIVER_HTTP_MAX_INFLIGHT":  "128",
 	} {
@@ -27,14 +71,15 @@ func TestCapacityUsesEveryRolePool(t *testing.T) {
 		t.Fatal(err)
 	}
 	var report struct {
-		Total int            `json:"database_connection_ceiling"`
-		Roles map[string]int `json:"database_connections_by_role"`
-		HTTP  int            `json:"http_inflight_ceiling"`
+		Total            int            `json:"database_connection_ceiling"`
+		Roles            map[string]int `json:"database_connections_by_role"`
+		CheckerProcesses int            `json:"checker_process_ceiling"`
+		HTTP             int            `json:"http_inflight_ceiling"`
 	}
 	if err := json.Unmarshal(output.Bytes(), &report); err != nil {
 		t.Fatal(err)
 	}
-	if report.Total != 168 || report.Roles["api"] != 64 || report.Roles["receiver"] != 64 || report.Roles["ticker"] != 8 || report.HTTP != 1280 {
+	if report.Total != 200 || report.Roles["api"] != 64 || report.Roles["receiver"] != 64 || report.Roles["worker"] != 64 || report.Roles["ticker"] != 8 || report.HTTP != 1280 || report.CheckerProcesses != 32 {
 		t.Fatalf("capacity=%+v", report)
 	}
 }

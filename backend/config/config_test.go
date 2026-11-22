@@ -144,11 +144,14 @@ func TestLoginLimitAtProxyRequiresExplicitValidSetting(t *testing.T) {
 
 func TestDatabasePoolerKeepsCredentialsAndSeparatesRoles(t *testing.T) {
 	for role, limit := range map[string]int32{
-		"receiver": 32,
-		"worker":   16,
+		"api":      16,
+		"receiver": 16,
+		"worker":   4,
 		"ticker":   8,
 	} {
 		c, err := loadTest(map[string]string{
+			"ADMIN_USERNAME":       "operator",
+			"ADMIN_PASSWORD":       strings.Repeat("a", 16),
 			"FORCAD_ROLE":          role,
 			"POSTGRES_HOST":        "database.example",
 			"POSTGRES_DB":          "custom",
@@ -169,6 +172,14 @@ func TestDatabasePoolerKeepsCredentialsAndSeparatesRoles(t *testing.T) {
 	})
 	if err != nil || c.DatabaseMaxConns != 24 {
 		t.Fatalf("role override: limit=%d err=%v", c.DatabaseMaxConns, err)
+	}
+	c, err = loadTest(map[string]string{
+		"FORCAD_ROLE":                      "worker",
+		"DATABASE_MAX_CONNS":               "50",
+		"FORCAD_WORKER_DATABASE_MAX_CONNS": "24",
+	})
+	if err != nil || c.DatabaseMaxConns != 24 {
+		t.Fatalf("worker role override: limit=%d err=%v", c.DatabaseMaxConns, err)
 	}
 	if _, err := loadTest(map[string]string{
 		"FORCAD_ROLE":          "worker",
@@ -204,9 +215,9 @@ func TestDatabaseMinimumPoolSize(t *testing.T) {
 		{
 			name: "full",
 			settings: map[string]string{
-				"DATABASE_MIN_CONNS": "32",
+				"DATABASE_MIN_CONNS": "16",
 			},
-			want: 32,
+			want: 16,
 		},
 		{
 			name: "configured maximum",
@@ -226,7 +237,7 @@ func TestDatabaseMinimumPoolSize(t *testing.T) {
 		{
 			name: "above maximum",
 			settings: map[string]string{
-				"DATABASE_MIN_CONNS": "33",
+				"DATABASE_MIN_CONNS": "17",
 			},
 			invalid: true,
 		},

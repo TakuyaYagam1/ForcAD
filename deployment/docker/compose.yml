@@ -1,7 +1,7 @@
 name: forcad
 
 x-memory: &memory
-  mem_reservation: "${FORCAD_SERVICE_MEMORY_RESERVATION:-1g}"
+  mem_reservation: "${FORCAD_SERVICE_MEMORY_RESERVATION:-128m}"
   mem_limit: "${FORCAD_SERVICE_MEMORY:-0}"
   logging:
     driver: local
@@ -33,8 +33,8 @@ x-runtime-settings: &runtime-settings
   FORCAD_API_HTTP_MAX_INFLIGHT: "${FORCAD_API_HTTP_MAX_INFLIGHT:-256}"
   FORCAD_RECEIVER_HTTP_MAX_INFLIGHT: "${FORCAD_RECEIVER_HTTP_MAX_INFLIGHT:-128}"
   FORCAD_API_DATABASE_MAX_CONNS: "${FORCAD_API_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
-  FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-32}}"
-  FORCAD_WORKER_DATABASE_MAX_CONNS: "${FORCAD_WORKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_RECEIVER_DATABASE_MAX_CONNS: "${FORCAD_RECEIVER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}"
+  FORCAD_WORKER_DATABASE_MAX_CONNS: "${FORCAD_WORKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-4}}"
   FORCAD_TICKER_DATABASE_MAX_CONNS: "${FORCAD_TICKER_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-8}}"
   METRICS_ADDR: 127.0.0.1:9090
   PUBLIC_ORIGIN: "${PUBLIC_ORIGIN:-}"
@@ -80,15 +80,15 @@ x-worker: &worker-service
 services:
   api:
     <<: *app-service
-    mem_reservation: "${FORCAD_API_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_API_MEMORY_RESERVATION:-512m}"
     mem_limit: "${FORCAD_API_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: api
       FORCAD_LOGIN_RATE_LIMIT_AT_PROXY: "true"
-      DATABASE_MIN_CONNS: "${FORCAD_API_DATABASE_MIN_CONNS:-0}"
-      GOGC: "${FORCAD_API_GOGC:-100}"
-      GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-off}"
+      DATABASE_MIN_CONNS: "${FORCAD_API_DATABASE_MIN_CONNS:-${FORCAD_API_DATABASE_MAX_CONNS:-${DATABASE_MAX_CONNS:-16}}}"
+      GOGC: "${FORCAD_API_GOGC:-200}"
+      GOMEMLIMIT: "${FORCAD_API_GOMEMLIMIT:-512MiB}"
     env_file:
       - path: ../../config/runtime/admin.env
         format: raw
@@ -106,12 +106,12 @@ services:
 
   receiver:
     <<: *app-service
-    mem_reservation: "${FORCAD_RECEIVER_MEMORY_RESERVATION:-2g}"
+    mem_reservation: "${FORCAD_RECEIVER_MEMORY_RESERVATION:-512m}"
     mem_limit: "${FORCAD_RECEIVER_MEMORY:-0}"
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: receiver
-      GOMEMLIMIT: "${FORCAD_RECEIVER_GOMEMLIMIT:-off}"
+      GOMEMLIMIT: "${FORCAD_RECEIVER_GOMEMLIMIT:-768MiB}"
     deploy:
       replicas: ${FORCAD_RECEIVER_REPLICAS:-2}
 
@@ -120,16 +120,16 @@ services:
     environment:
       <<: *runtime-settings
       FORCAD_ROLE: worker
-      GOMEMLIMIT: "${FORCAD_WORKER_GOMEMLIMIT:-off}"
-    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-8g}"
+      GOMEMLIMIT: "${FORCAD_WORKER_GOMEMLIMIT:-192MiB}"
+    mem_reservation: "${FORCAD_WORKER_MEMORY_RESERVATION:-768m}"
     mem_limit: "${FORCAD_WORKER_MEMORY:-0}"
     pids_limit: ${FORCAD_WORKER_PIDS:-2048}
     deploy:
-      replicas: ${FORCAD_WORKER_REPLICAS:-2}
+      replicas: ${FORCAD_WORKER_REPLICAS:-4}
 
   ticker:
     <<: *app-service
-    mem_reservation: "${FORCAD_TICKER_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_TICKER_MEMORY_RESERVATION:-128m}"
     mem_limit: "${FORCAD_TICKER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     environment:
       <<: *runtime-settings
@@ -224,7 +224,7 @@ services:
 
   redis:
     <<: *memory
-    mem_reservation: "${FORCAD_REDIS_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_REDIS_MEMORY_RESERVATION:-512m}"
     mem_limit: "${FORCAD_REDIS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     image: redis:8.4.7-alpine@sha256:0514fa59e3d84e2f3be66731c5401fc2a85b8ea71b49c0116c850f6a558076f4
     command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --maxclients 10000"]
@@ -247,7 +247,7 @@ services:
 
   nats:
     <<: *memory
-    mem_reservation: "${FORCAD_NATS_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_NATS_MEMORY_RESERVATION:-512m}"
     mem_limit: "${FORCAD_NATS_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     image: forcad_nats:local
     build:
@@ -277,7 +277,7 @@ services:
 
   pgbouncer:
     <<: *memory
-    mem_reservation: "${FORCAD_PGBOUNCER_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_PGBOUNCER_MEMORY_RESERVATION:-128m}"
     mem_limit: "${FORCAD_PGBOUNCER_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
     build:
       context: ../..
@@ -289,7 +289,7 @@ services:
       <<: *runtime-settings
       FORCAD_API_REPLICAS: "${FORCAD_API_REPLICAS:-4}"
       FORCAD_RECEIVER_REPLICAS: "${FORCAD_RECEIVER_REPLICAS:-2}"
-      FORCAD_WORKER_REPLICAS: "${FORCAD_WORKER_REPLICAS:-2}"
+      FORCAD_WORKER_REPLICAS: "${FORCAD_WORKER_REPLICAS:-4}"
       FORCAD_TICKER_REPLICAS: "${FORCAD_TICKER_REPLICAS:-1}"
       PGBOUNCER_MAX_CLIENTS: "${PGBOUNCER_MAX_CLIENTS:-1024}"
       PGBOUNCER_API_CLIENTS: "${PGBOUNCER_API_CLIENTS:-}"
@@ -297,7 +297,7 @@ services:
       PGBOUNCER_WORKER_CLIENTS: "${PGBOUNCER_WORKER_CLIENTS:-}"
       PGBOUNCER_TICKER_CLIENTS: "${PGBOUNCER_TICKER_CLIENTS:-}"
       PGBOUNCER_API_CONNECTIONS: "${PGBOUNCER_API_CONNECTIONS:-32}"
-      PGBOUNCER_API_MIN_CONNECTIONS: "${PGBOUNCER_API_MIN_CONNECTIONS:-0}"
+      PGBOUNCER_API_MIN_CONNECTIONS: "${PGBOUNCER_API_MIN_CONNECTIONS:-${PGBOUNCER_API_CONNECTIONS:-32}}"
       PGBOUNCER_RECEIVER_CONNECTIONS: "${PGBOUNCER_RECEIVER_CONNECTIONS:-64}"
       PGBOUNCER_WORKER_CONNECTIONS: "${PGBOUNCER_WORKER_CONNECTIONS:-32}"
       PGBOUNCER_TICKER_CONNECTIONS: "${PGBOUNCER_TICKER_CONNECTIONS:-8}"
@@ -324,9 +324,9 @@ services:
 
   postgres:
     <<: *memory
-    mem_reservation: "${FORCAD_POSTGRES_MEMORY_RESERVATION:-1g}"
+    mem_reservation: "${FORCAD_POSTGRES_MEMORY_RESERVATION:-4g}"
     mem_limit: "${FORCAD_POSTGRES_MEMORY:-${FORCAD_SERVICE_MEMORY:-0}}"
-    shm_size: "${FORCAD_POSTGRES_SHM_SIZE:-64m}"
+    shm_size: "${FORCAD_POSTGRES_SHM_SIZE:-512m}"
     image: forcad_postgres:local
     build:
       context: ../..
@@ -346,8 +346,8 @@ services:
         condition: service_completed_successfully
     command:
       - postgres
-      - --max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-500}
-      - --shared-buffers=${FORCAD_POSTGRES_SHARED_BUFFERS:-128MB}
+      - --max-connections=${FORCAD_POSTGRES_MAX_CONNECTIONS:-200}
+      - --shared-buffers=${FORCAD_POSTGRES_SHARED_BUFFERS:-2GB}
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:

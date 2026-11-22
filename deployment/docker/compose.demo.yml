@@ -67,6 +67,9 @@ services:
   receiver:
     environment:
       TRUSTED_PROXY_CIDRS: 172.30.240.10/32
+  pgbouncer:
+    environment:
+      FORCAD_WORKER_REPLICAS: "1" # The demo worker shares a single metrics port.
 
   # These processes share the ForcAD host namespace. Only its setup container
   # receives NET_ADMIN; the application and collectors keep their normal caps.

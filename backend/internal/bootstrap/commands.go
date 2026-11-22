@@ -174,7 +174,7 @@ func RuntimeCapacity(ctx context.Context, args []string, out io.Writer) error {
 	options.SetOutput(out)
 	apiReplicas := options.Int("api-replicas", 4, "API process count")
 	receiverReplicas := options.Int("receiver-replicas", 2, "receiver process count")
-	workerReplicas := options.Int("worker-replicas", 2, "worker process count")
+	workerReplicas := options.Int("worker-replicas", 4, "worker process count")
 	tickerReplicas := options.Int("ticker-replicas", 1, "scheduler process count")
 	if err := options.Parse(args); err != nil {
 		return fmt.Errorf("%s - parse runtime capacity command: %w", location, err)

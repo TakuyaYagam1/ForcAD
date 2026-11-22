@@ -95,7 +95,8 @@ service names for raw Compose commands; the old Celery and Flower processes
 are not part of the Go deployment.
 
 Replica counts accept 0 through 1024. Without `--workers`, `start` uses the
-Compose defaults (currently two workers), whereas the old CLI defaulted to one.
+Compose defaults (four workers with eight checker slots each), whereas `worker`
+starts one worker on an additional host unless given `--workers`.
 Explicit `start --workers N` or `start --scale ROLE=N` also sets the matching
 PgBouncer replica budget for that invocation, without changing `.env` or explicit
 client/server caps. Persist replica settings in the environment for later starts.

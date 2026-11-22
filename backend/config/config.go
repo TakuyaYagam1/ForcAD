@@ -213,8 +213,8 @@ func validateDatabaseTLS(raw, required string) error {
 
 func defaultDatabaseMaxConns(role string) int32 {
 	switch role {
-	case "receiver":
-		return 32
+	case "worker":
+		return 4
 	case "ticker":
 		return 8
 	default:

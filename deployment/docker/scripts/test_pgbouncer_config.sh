@@ -21,8 +21,16 @@ umask 077
 config=/run/pgbouncer/pgbouncer.ini
 unset PGBOUNCER_API_CONNECTIONS PGBOUNCER_API_MIN_CONNECTIONS
 awk -f /tmp/config.awk
-grep '^forcad_api = .* pool_size=32 max_db_connections=32 min_pool_size=0 ' "$config" >/dev/null
+grep '^forcad_api = .* pool_size=32 max_db_connections=32 min_pool_size=32 ' "$config" >/dev/null
+PGBOUNCER_API_CONNECTIONS=7 awk -f /tmp/config.awk
+grep '^forcad_api = .* pool_size=7 max_db_connections=7 min_pool_size=7 ' "$config" >/dev/null
 awk '$1 ~ /^forcad_/ && $1 != "forcad_api"' "$config" > /run/pgbouncer/other-roles
+PGBOUNCER_MAX_CLIENTS=152 awk -f /tmp/config.awk
+if PGBOUNCER_MAX_CLIENTS=151 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted global clients below default application demand' >&2
+    exit 1
+fi
+grep 'PGBOUNCER_MAX_CLIENTS' /run/pgbouncer/error.log >/dev/null
 
 for setting in 0:32 1:32 32:32 0:7 7:7 65535:65535; do
     minimum=${setting%:*}
@@ -45,18 +53,30 @@ if PGBOUNCER_API_MIN_CONNECTIONS="$(printf '1\n2')" awk -f /tmp/config.awk > /ru
     exit 1
 fi
 grep 'PGBOUNCER_API_MIN_CONNECTIONS' /run/pgbouncer/error.log >/dev/null
-FORCAD_WORKER_REPLICAS=20 awk -f /tmp/config.awk
+FORCAD_WORKER_DATABASE_MAX_CONNS=16 FORCAD_WORKER_REPLICAS=20 awk -f /tmp/config.awk
 grep '^forcad_worker = .* pool_size=32 max_db_connections=32 max_db_client_connections=328 ' "$config" >/dev/null
+if PGBOUNCER_WORKER_CONNECTIONS=8 PGBOUNCER_WORKER_CLIENTS=23 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted worker clients below the default worker budget' >&2
+    exit 1
+fi
+PGBOUNCER_WORKER_CONNECTIONS=8 PGBOUNCER_WORKER_CLIENTS=24 awk -f /tmp/config.awk
+grep '^forcad_worker = .* pool_size=8 max_db_connections=8 max_db_client_connections=24 ' "$config" >/dev/null
+if FORCAD_WORKER_DATABASE_MAX_CONNS=8 PGBOUNCER_WORKER_CONNECTIONS=8 PGBOUNCER_WORKER_CLIENTS=39 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+    echo 'FAIL: accepted worker clients below the default replica budget' >&2
+    exit 1
+fi
+FORCAD_WORKER_DATABASE_MAX_CONNS=8 PGBOUNCER_WORKER_CONNECTIONS=8 PGBOUNCER_WORKER_CLIENTS=40 awk -f /tmp/config.awk
+grep '^forcad_worker = .* pool_size=8 max_db_connections=8 max_db_client_connections=40 ' "$config" >/dev/null
 FORCAD_API_REPLICAS=0 FORCAD_RECEIVER_REPLICAS=0 FORCAD_TICKER_REPLICAS=0 FORCAD_WORKER_REPLICAS=20 awk -f /tmp/config.awk
 for replicas in -1 1025 invalid; do
     if FORCAD_WORKER_REPLICAS="$replicas" awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
         echo 'FAIL: accepted invalid replica count' >&2; exit 1
     fi
 done
-if FORCAD_WORKER_REPLICAS=20 PGBOUNCER_WORKER_CLIENTS=256 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+if FORCAD_WORKER_DATABASE_MAX_CONNS=16 FORCAD_WORKER_REPLICAS=20 PGBOUNCER_WORKER_CLIENTS=256 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
     echo 'FAIL: accepted worker clients below replica demand' >&2; exit 1
 fi
-if FORCAD_WORKER_REPLICAS=64 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
+if FORCAD_WORKER_DATABASE_MAX_CONNS=16 FORCAD_WORKER_REPLICAS=64 awk -f /tmp/config.awk > /run/pgbouncer/error.log; then
     echo 'FAIL: accepted aggregate demand beyond global client cap' >&2; exit 1
 fi
 if PGBOUNCER_SERVER_TLS_SSLMODE=verify-full awk -f /tmp/config.awk > /run/pgbouncer/error.log; then

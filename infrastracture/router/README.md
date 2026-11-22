@@ -29,6 +29,23 @@ ports; admin VPN clients already have general Router access. Use both install
 options to enable both exporters; reinstalling without flags retains previously
 selected exporters.
 
+The Router is a separate VM from ForcAD. Zeek defaults to `MemoryMax=1G` and
+`CPUQuota=100%`. To reproduce the optional `ch-final` settings on a dedicated
+4 vCPU / 8 GiB Router, use `systemctl edit game-metrics.service`:
+
+```ini
+[Service]
+MemoryHigh=4G
+MemoryMax=infinity
+CPUQuota=
+CPUWeight=10
+```
+
+This trades a hard memory cap and one CPU's quota for memory throttling and
+relative CPU priority. Keep the defaults on a small Router. Rehearse the
+drop-in only if capture is losing packets, while checking forwarding latency
+and available RAM; apply it by restarting the sensor outside the game.
+
 ## Zeek repository key
 
 The bootstrap accepts only these OBS `Release.key` SHA-256 values: Debian 12
