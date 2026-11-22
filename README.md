@@ -11,6 +11,12 @@
 > exploit testing. Over 240 minutes, teams submitted more than 100,000 flags;
 > `daywave.` alone submitted about 25,000 on one service. The organizers
 > reported 100% uptime and no HTTP 5xx responses.
+>
+> **Physical host for that VM (not a minimum requirement):** 2 ×
+> [AMD EPYC 7662](https://www.amd.com/en/support/downloads/drivers.html/processors/epyc/epyc-7002-series/amd-epyc-7662.html)
+> (64 cores / 128 threads, 2.0 GHz base, up to 3.3 GHz boost, 225 W TDP each);
+> 240 GiB DDR4 ECC RAM (15 × 16 GiB); and 2 × 2 TB Intel SSD DC P4510
+> (2.5-inch U.2) in RAID 1.
 
 ![ForcAD](public/ForcAD.png)
 
