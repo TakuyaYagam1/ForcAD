@@ -29,6 +29,23 @@ ports; admin VPN clients already have general Router access. Use both install
 options to enable both exporters; reinstalling without flags retains previously
 selected exporters.
 
+## Zeek repository key
+
+The bootstrap accepts only these OBS `Release.key` SHA-256 values: Debian 12
+accepts the older export
+`b67ae73b8543af4195c930b52a07c208611253fdc519873adcf1190ffcfc1377` and the
+renewed export
+`909acf470dcfc539f362af9a4b565bb803702d579976a238fbe2eef284a78a1e`; Debian
+13 accepts only the renewed export.
+Debian 13 adds a GnuPG armor-version header and a renewed self-signature, not a
+new public key. Both artifacts contain the same RSA primary-key fingerprint,
+`F9FA0223B56B116C363737EF5DA57BDD6DD785CA`. The
+[OBS signing-key page](https://build.opensuse.org/projects/security:zeek/signing_keys)
+lists that key and its 2029-01-26 expiry; the
+[Zeek installation guide](https://docs.zeek.org/en/current/install.html)
+documents the OBS package source. The APT source remains restricted with
+`signed-by`; do not bypass either the artifact pin or APT signature checks.
+
 On a matching, already-installed live Router base, run
 `sudo bash install.sh --monitoring` to install or refresh both exporters. The
 manifest, installed files and runtime journal must match the current bundle.

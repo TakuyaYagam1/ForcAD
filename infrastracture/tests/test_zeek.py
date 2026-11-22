@@ -104,7 +104,11 @@ class ZeekTests(unittest.TestCase):
         deps = deps or self.deps
         key_hash = hashlib.sha256(deps.key).hexdigest()
         with (
-            patch.object(zeek, "KEY_SHA256", key_hash),
+            patch.object(
+                zeek,
+                "KEY_SHA256",
+                key_hash,
+            ),
             self.root_owned_runtime(deps),
         ):
             return zeek.ensure_zeek(deps)
@@ -164,7 +168,11 @@ class ZeekTests(unittest.TestCase):
         self.deps.versions[str(binary)] = "zeek version 9.2.1\n"
 
         with (
-            patch.object(zeek, "KEY_SHA256", hashlib.sha256(TEST_KEY).hexdigest()),
+            patch.object(
+                zeek,
+                "KEY_SHA256",
+                hashlib.sha256(TEST_KEY).hexdigest(),
+            ),
             self.root_owned_runtime(
                 overrides={binary: {"st_mode": binary.stat().st_mode | stat.S_IWGRP}}
             ),
@@ -180,7 +188,11 @@ class ZeekTests(unittest.TestCase):
         binary.write_bytes(b"existing runtime")
 
         with (
-            patch.object(zeek, "KEY_SHA256", hashlib.sha256(TEST_KEY).hexdigest()),
+            patch.object(
+                zeek,
+                "KEY_SHA256",
+                hashlib.sha256(TEST_KEY).hexdigest(),
+            ),
             self.root_owned_runtime(overrides={binary: {"st_uid": 1000}}),
             self.assertRaisesRegex(ValueError, "not root-owned"),
         ):
@@ -195,7 +207,11 @@ class ZeekTests(unittest.TestCase):
         binary_directory = binary.parent
 
         with (
-            patch.object(zeek, "KEY_SHA256", hashlib.sha256(TEST_KEY).hexdigest()),
+            patch.object(
+                zeek,
+                "KEY_SHA256",
+                hashlib.sha256(TEST_KEY).hexdigest(),
+            ),
             self.root_owned_runtime(
                 overrides={
                     binary_directory: {
@@ -299,13 +315,42 @@ class ZeekTests(unittest.TestCase):
         self.assertIn("zeek-9.0-core:amd64", self.deps.installed_packages)
         self.assertEqual(self.deps.data["accounts"]["zeek_group"], 988)
 
-    def test_rejects_a_rotated_key_before_writing_apt_sources(self):
-        with self.assertRaisesRegex(ValueError, "key checksum changed"):
-            zeek.ensure_zeek(self.deps)
+    def test_accepts_legacy_key_only_for_debian_12(self):
+        key_hash = hashlib.sha256(TEST_KEY).hexdigest()
+        with patch.object(zeek, "DEBIAN_12_LEGACY_KEY_SHA256", key_hash):
+            debian_12 = FakeDependencies("12")
+            self.addCleanup(debian_12.close)
+            with self.root_owned_runtime(debian_12):
+                version = zeek.ensure_zeek(debian_12)
 
-        self.assertEqual(self.deps.install_calls, [["ca-certificates", "curl"]])
-        self.assertEqual(self.deps.files, {})
-        self.assertFalse(self.deps.path(zeek.SOURCE_PATH).exists())
+            self.assertEqual(version, "9.0.0")
+            self.assertEqual(
+                debian_12.install_calls,
+                [["ca-certificates", "curl"], ["zeek-9.0-core"]],
+            )
+            self.assertEqual(debian_12.files[zeek.KEY_PATH], TEST_KEY)
+
+            debian_13 = FakeDependencies("13")
+            self.addCleanup(debian_13.close)
+            with self.assertRaisesRegex(ValueError, "key checksum changed"):
+                zeek.ensure_zeek(debian_13)
+
+            self.assertEqual(debian_13.install_calls, [["ca-certificates", "curl"]])
+            self.assertEqual(debian_13.files, {})
+            self.assertFalse(debian_13.path(zeek.SOURCE_PATH).exists())
+
+    def test_rejects_an_unpinned_key_before_writing_apt_sources(self):
+        for distribution in ("12", "13"):
+            with self.subTest(distribution=distribution):
+                deps = FakeDependencies(distribution)
+                self.addCleanup(deps.close)
+
+                with self.assertRaisesRegex(ValueError, "key checksum changed"):
+                    zeek.ensure_zeek(deps)
+
+                self.assertEqual(deps.install_calls, [["ca-certificates", "curl"]])
+                self.assertEqual(deps.files, {})
+                self.assertFalse(deps.path(zeek.SOURCE_PATH).exists())
 
     def test_refuses_an_unowned_keyring_file(self):
         key = self.deps.path(zeek.KEY_PATH)

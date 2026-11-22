@@ -6,7 +6,10 @@ import stat
 
 from .common import regular
 
-KEY_SHA256 = "b67ae73b8543af4195c930b52a07c208611253fdc519873adcf1190ffcfc1377"
+KEY_SHA256 = "909acf470dcfc539f362af9a4b565bb803702d579976a238fbe2eef284a78a1e"
+DEBIAN_12_LEGACY_KEY_SHA256 = (
+    "b67ae73b8543af4195c930b52a07c208611253fdc519873adcf1190ffcfc1377"
+)
 KEY_PATH = "/etc/apt/keyrings/forcad-zeek.asc"
 SOURCE_PATH = "/etc/apt/sources.list.d/forcad-zeek.list"
 SUPPORTED_DISTRIBUTIONS = {"12", "13"}
@@ -203,7 +206,10 @@ def ensure_zeek(deps):
     key = key_result.stdout
     if not isinstance(key, bytes):
         key = _text(key).encode()
-    if hashlib.sha256(key).hexdigest() != KEY_SHA256:
+    key_sha256 = hashlib.sha256(key).hexdigest()
+    if key_sha256 != KEY_SHA256 and not (
+        distribution == "12" and key_sha256 == DEBIAN_12_LEGACY_KEY_SHA256
+    ):
         raise ValueError(
             "Zeek repository key checksum changed; review the key rotation"
         )
