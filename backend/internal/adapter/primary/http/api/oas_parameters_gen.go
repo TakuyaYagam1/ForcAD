@@ -283,6 +283,202 @@ func decodeDeleteAdminTeamTaskParams(args [1]string, argsEscaped bool, r *http.R
 	return params, nil
 }
 
+// ExportAdminBackupParams is parameters of exportAdminBackup operation.
+type ExportAdminBackupParams struct {
+	// Event name used in the manifest and archive filename.
+	Name    OptString `json:",omitempty,omitzero"`
+	Range   OptString `json:",omitempty,omitzero"`
+	IfRange OptString `json:",omitempty,omitzero"`
+}
+
+func unpackExportAdminBackupParams(packed middleware.Parameters) (params ExportAdminBackupParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "name",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Name = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "Range",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.Range = v.(OptString)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "If-Range",
+			In:   "header",
+		}
+		if v, ok := packed[key]; ok {
+			params.IfRange = v.(OptString)
+		}
+	}
+	return params
+}
+
+func decodeExportAdminBackupParams(args [0]string, argsEscaped bool, r *http.Request) (params ExportAdminBackupParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	h := uri.NewHeaderDecoder(r.Header)
+	// Set default value for query: name.
+	{
+		val := string("event")
+		params.Name.SetTo(val)
+	}
+	// Decode query: name.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "name",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotNameVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotNameVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Name.SetTo(paramsDotNameVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.Name.Get(); ok {
+					if err := func() error {
+						if err := (validate.String{
+							MinLength:     0,
+							MinLengthSet:  false,
+							MaxLength:     0,
+							MaxLengthSet:  false,
+							Email:         false,
+							Hostname:      false,
+							Regex:         regexMap["^(?:[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})?$"],
+							MinNumeric:    0,
+							MinNumericSet: false,
+							MaxNumeric:    0,
+							MaxNumericSet: false,
+						}).Validate(string(value)); err != nil {
+							return errors.Wrap(err, "string")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "name",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode header: Range.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "Range",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotRangeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotRangeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Range.SetTo(paramsDotRangeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "Range",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode header: If-Range.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "If-Range",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotIfRangeVal string
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToString(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotIfRangeVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.IfRange.SetTo(paramsDotIfRangeVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "If-Range",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetAdminTaskParams is parameters of getAdminTask operation.
 type GetAdminTaskParams struct {
 	TaskID uuid.UUID
@@ -1111,6 +1307,136 @@ func decodeGetClientTeamHistoryParams(args [1]string, argsEscaped bool, r *http.
 		return params, &ogenerrors.DecodeParamError{
 			Name: "team_id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// GetClientTeamLogoParams is parameters of getClientTeamLogo operation.
+type GetClientTeamLogoParams struct {
+	// Filename from the team's logo path.
+	Name string
+}
+
+func unpackGetClientTeamLogoParams(packed middleware.Parameters) (params GetClientTeamLogoParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "name",
+			In:   "path",
+		}
+		params.Name = packed[key].(string)
+	}
+	return params
+}
+
+func decodeGetClientTeamLogoParams(args [1]string, argsEscaped bool, r *http.Request) (params GetClientTeamLogoParams, _ error) {
+	// Decode path: name.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "name",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Name = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "name",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RestoreAdminBackupParams is parameters of restoreAdminBackup operation.
+type RestoreAdminBackupParams struct {
+	// Explicitly confirms that the destination's seeded competition data may be replaced.
+	XForcadConfirm RestoreAdminBackupXForcadConfirm
+}
+
+func unpackRestoreAdminBackupParams(packed middleware.Parameters) (params RestoreAdminBackupParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Forcad-Confirm",
+			In:   "header",
+		}
+		params.XForcadConfirm = packed[key].(RestoreAdminBackupXForcadConfirm)
+	}
+	return params
+}
+
+func decodeRestoreAdminBackupParams(args [0]string, argsEscaped bool, r *http.Request) (params RestoreAdminBackupParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-Forcad-Confirm.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Forcad-Confirm",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XForcadConfirm = RestoreAdminBackupXForcadConfirm(c)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := params.XForcadConfirm.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Forcad-Confirm",
+			In:   "header",
 			Err:  err,
 		}
 	}

@@ -58,7 +58,7 @@ func TestRuntimeRolePreservesDataAndRestrictsPrivileges(t *testing.T) {
 	var allowed, forbidden bool
 	if err := runtime.QueryRow(ctx, `SELECT
 		(SELECT bool_and(has_table_privilege(current_user, t.name, p.privilege))
-		 FROM (VALUES ('teams'),('checkerjobs')) t(name),
+		 FROM (VALUES ('teams'),('checkerjobs'),('backup_team_logos')) t(name),
 		 (VALUES ('SELECT'),('INSERT'),('UPDATE'),('DELETE')) p(privilege)),
 		has_table_privilege(current_user, 'goose_db_version', 'UPDATE')
 		OR has_table_privilege(current_user, 'teams', 'TRUNCATE')

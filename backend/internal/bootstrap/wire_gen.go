@@ -35,7 +35,7 @@ func initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (*A
 	auth := newAuth(cfg, store)
 	flags := newFlags(cfg, repository, gameStore, store, events, logger)
 	usecaseEvents := newEventFeed(repository, events, logger)
-	handler := newHandler(game, auth, flags, usecaseEvents)
+	handler := newHandler(game, auth, flags, usecaseEvents, pool)
 	broker := newBroker(cfg, logger)
 	metrics := prometheus.New(cfg, pool, store, broker)
 	teamTraffic, err := newTeamTraffic(cfg, metrics, gameStore, events, flags, logger)

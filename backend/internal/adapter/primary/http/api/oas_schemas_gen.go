@@ -1321,6 +1321,133 @@ func (s *AttackDataItem) init() AttackDataItem {
 	return m
 }
 
+// Ref: #/components/schemas/BackupArchiveEntry
+type BackupArchiveEntry struct {
+	Size   int64  `json:"size"`
+	SHA256 string `json:"sha256"`
+}
+
+// GetSize returns the value of Size.
+func (s *BackupArchiveEntry) GetSize() int64 {
+	return s.Size
+}
+
+// GetSHA256 returns the value of SHA256.
+func (s *BackupArchiveEntry) GetSHA256() string {
+	return s.SHA256
+}
+
+// SetSize sets the value of Size.
+func (s *BackupArchiveEntry) SetSize(val int64) {
+	s.Size = val
+}
+
+// SetSHA256 sets the value of SHA256.
+func (s *BackupArchiveEntry) SetSHA256(val string) {
+	s.SHA256 = val
+}
+
+// Ref: #/components/schemas/BackupManifest
+type BackupManifest struct {
+	FormatVersion BackupManifestFormatVersion `json:"format_version"`
+	ForcadVersion string                      `json:"forcad_version"`
+	Name          string                      `json:"name"`
+	CreatedAt     time.Time                   `json:"created_at"`
+	Round         int32                       `json:"round"`
+	// Archive members other than the manifest, indexed by relative archive path.
+	Files BackupManifestFiles `json:"files"`
+}
+
+// GetFormatVersion returns the value of FormatVersion.
+func (s *BackupManifest) GetFormatVersion() BackupManifestFormatVersion {
+	return s.FormatVersion
+}
+
+// GetForcadVersion returns the value of ForcadVersion.
+func (s *BackupManifest) GetForcadVersion() string {
+	return s.ForcadVersion
+}
+
+// GetName returns the value of Name.
+func (s *BackupManifest) GetName() string {
+	return s.Name
+}
+
+// GetCreatedAt returns the value of CreatedAt.
+func (s *BackupManifest) GetCreatedAt() time.Time {
+	return s.CreatedAt
+}
+
+// GetRound returns the value of Round.
+func (s *BackupManifest) GetRound() int32 {
+	return s.Round
+}
+
+// GetFiles returns the value of Files.
+func (s *BackupManifest) GetFiles() BackupManifestFiles {
+	return s.Files
+}
+
+// SetFormatVersion sets the value of FormatVersion.
+func (s *BackupManifest) SetFormatVersion(val BackupManifestFormatVersion) {
+	s.FormatVersion = val
+}
+
+// SetForcadVersion sets the value of ForcadVersion.
+func (s *BackupManifest) SetForcadVersion(val string) {
+	s.ForcadVersion = val
+}
+
+// SetName sets the value of Name.
+func (s *BackupManifest) SetName(val string) {
+	s.Name = val
+}
+
+// SetCreatedAt sets the value of CreatedAt.
+func (s *BackupManifest) SetCreatedAt(val time.Time) {
+	s.CreatedAt = val
+}
+
+// SetRound sets the value of Round.
+func (s *BackupManifest) SetRound(val int32) {
+	s.Round = val
+}
+
+// SetFiles sets the value of Files.
+func (s *BackupManifest) SetFiles(val BackupManifestFiles) {
+	s.Files = val
+}
+
+func (*BackupManifest) inspectAdminBackupRes() {
+}
+func (*BackupManifest) restoreAdminBackupRes() {
+}
+
+// Archive members other than the manifest, indexed by relative archive path.
+type BackupManifestFiles map[string]BackupArchiveEntry
+
+func (s *BackupManifestFiles) init() BackupManifestFiles {
+	m := *s
+	if m == nil {
+		m = map[string]BackupArchiveEntry{}
+		*s = m
+	}
+	return m
+}
+
+type BackupManifestFormatVersion int
+
+const (
+	BackupManifestFormatVersion1 BackupManifestFormatVersion = 1
+)
+
+// AllValues returns all BackupManifestFormatVersion values.
+func (BackupManifestFormatVersion) AllValues() []BackupManifestFormatVersion {
+	return []BackupManifestFormatVersion{
+		BackupManifestFormatVersion1,
+	}
+}
+
 type ChangeAdminGameStateAction string
 
 const (
@@ -1816,6 +1943,181 @@ func (*DeleteAdminTeamTaskForbidden) deleteAdminTeamTaskRes() {
 type DeleteAdminTeamTaskNotFound ApiError
 
 func (*DeleteAdminTeamTaskNotFound) deleteAdminTeamTaskRes() {
+}
+
+type ExportAdminBackupBadRequest ApiError
+
+func (*ExportAdminBackupBadRequest) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupConflict ApiError
+
+func (*ExportAdminBackupConflict) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupForbidden ApiError
+
+func (*ExportAdminBackupForbidden) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupInternalServerError ApiError
+
+func (*ExportAdminBackupInternalServerError) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupOK struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ExportAdminBackupOK) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// ExportAdminBackupOKHeaders wraps ExportAdminBackupOK with response headers.
+type ExportAdminBackupOKHeaders struct {
+	ContentDisposition OptString
+	Response           ExportAdminBackupOK
+}
+
+// GetContentDisposition returns the value of ContentDisposition.
+func (s *ExportAdminBackupOKHeaders) GetContentDisposition() OptString {
+	return s.ContentDisposition
+}
+
+// GetResponse returns the value of Response.
+func (s *ExportAdminBackupOKHeaders) GetResponse() ExportAdminBackupOK {
+	return s.Response
+}
+
+// SetContentDisposition sets the value of ContentDisposition.
+func (s *ExportAdminBackupOKHeaders) SetContentDisposition(val OptString) {
+	s.ContentDisposition = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ExportAdminBackupOKHeaders) SetResponse(val ExportAdminBackupOK) {
+	s.Response = val
+}
+
+// ExportAdminBackupOKRawApplicationGzip represents raw HTTP response for ExportAdminBackup application/gzip.
+type ExportAdminBackupOKRawApplicationGzip struct {
+	Response *http.Response `json:"-"`
+}
+
+// GetResponse returns the value of Response.
+func (s *ExportAdminBackupOKRawApplicationGzip) GetResponse() *http.Response {
+	return s.Response
+}
+
+// SetResponse sets the value of Response.
+func (s *ExportAdminBackupOKRawApplicationGzip) SetResponse(val *http.Response) {
+	s.Response = val
+}
+
+func (*ExportAdminBackupOKRawApplicationGzip) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupPartialContentApplicationGzip struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ExportAdminBackupPartialContentApplicationGzip) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// ExportAdminBackupPartialContentApplicationGzipHeaders wraps ExportAdminBackupPartialContentApplicationGzip with response headers.
+type ExportAdminBackupPartialContentApplicationGzipHeaders struct {
+	ContentRange OptString
+	Response     ExportAdminBackupPartialContentApplicationGzip
+}
+
+// GetContentRange returns the value of ContentRange.
+func (s *ExportAdminBackupPartialContentApplicationGzipHeaders) GetContentRange() OptString {
+	return s.ContentRange
+}
+
+// GetResponse returns the value of Response.
+func (s *ExportAdminBackupPartialContentApplicationGzipHeaders) GetResponse() ExportAdminBackupPartialContentApplicationGzip {
+	return s.Response
+}
+
+// SetContentRange sets the value of ContentRange.
+func (s *ExportAdminBackupPartialContentApplicationGzipHeaders) SetContentRange(val OptString) {
+	s.ContentRange = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ExportAdminBackupPartialContentApplicationGzipHeaders) SetResponse(val ExportAdminBackupPartialContentApplicationGzip) {
+	s.Response = val
+}
+
+func (*ExportAdminBackupPartialContentApplicationGzipHeaders) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupPartialContentMultipartByteranges struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s ExportAdminBackupPartialContentMultipartByteranges) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// ExportAdminBackupPartialContentMultipartByterangesHeaders wraps ExportAdminBackupPartialContentMultipartByteranges with response headers.
+type ExportAdminBackupPartialContentMultipartByterangesHeaders struct {
+	ContentRange OptString
+	Response     ExportAdminBackupPartialContentMultipartByteranges
+}
+
+// GetContentRange returns the value of ContentRange.
+func (s *ExportAdminBackupPartialContentMultipartByterangesHeaders) GetContentRange() OptString {
+	return s.ContentRange
+}
+
+// GetResponse returns the value of Response.
+func (s *ExportAdminBackupPartialContentMultipartByterangesHeaders) GetResponse() ExportAdminBackupPartialContentMultipartByteranges {
+	return s.Response
+}
+
+// SetContentRange sets the value of ContentRange.
+func (s *ExportAdminBackupPartialContentMultipartByterangesHeaders) SetContentRange(val OptString) {
+	s.ContentRange = val
+}
+
+// SetResponse sets the value of Response.
+func (s *ExportAdminBackupPartialContentMultipartByterangesHeaders) SetResponse(val ExportAdminBackupPartialContentMultipartByteranges) {
+	s.Response = val
+}
+
+func (*ExportAdminBackupPartialContentMultipartByterangesHeaders) exportAdminBackupRes() {
+}
+
+// ExportAdminBackupRequestedRangeNotSatisfiable is response for ExportAdminBackup operation.
+type ExportAdminBackupRequestedRangeNotSatisfiable struct{}
+
+func (*ExportAdminBackupRequestedRangeNotSatisfiable) exportAdminBackupRes() {
+}
+
+type ExportAdminBackupServiceUnavailable ApiError
+
+func (*ExportAdminBackupServiceUnavailable) exportAdminBackupRes() {
 }
 
 // Ref: #/components/schemas/FlagSubmissionResult
@@ -2403,6 +2705,133 @@ type GetClientEventsOKApplicationJSON []PublicEvent
 func (*GetClientEventsOKApplicationJSON) getClientEventsRes() {
 }
 
+type GetClientTeamLogoInternalServerError ApiError
+
+func (*GetClientTeamLogoInternalServerError) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoNotFound struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoNotFound) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetClientTeamLogoNotFound) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoOKImageGIF struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoOKImageGIF) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetClientTeamLogoOKImageGIF) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoOKImageJpeg struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoOKImageJpeg) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetClientTeamLogoOKImageJpeg) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoOKImagePNG struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoOKImagePNG) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetClientTeamLogoOKImagePNG) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoOKImageSvgXML struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoOKImageSvgXML) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+type GetClientTeamLogoOKImageWEBP struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s GetClientTeamLogoOKImageWEBP) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+func (*GetClientTeamLogoOKImageWEBP) getClientTeamLogoRes() {
+}
+
+// GetClientTeamLogoOKRawImageSvgXML represents raw HTTP response for GetClientTeamLogo image/svg+xml.
+type GetClientTeamLogoOKRawImageSvgXML struct {
+	Response *http.Response `json:"-"`
+}
+
+// GetResponse returns the value of Response.
+func (s *GetClientTeamLogoOKRawImageSvgXML) GetResponse() *http.Response {
+	return s.Response
+}
+
+// SetResponse sets the value of Response.
+func (s *GetClientTeamLogoOKRawImageSvgXML) SetResponse(val *http.Response) {
+	s.Response = val
+}
+
+func (*GetClientTeamLogoOKRawImageSvgXML) getClientTeamLogoRes() {
+}
+
+type GetClientTeamLogoServiceUnavailable ApiError
+
+func (*GetClientTeamLogoServiceUnavailable) getClientTeamLogoRes() {
+}
+
 // GetScoreboardOKRawApplicationJSON represents raw HTTP response for GetScoreboard application/json.
 type GetScoreboardOKRawApplicationJSON struct {
 	Response *http.Response `json:"-"`
@@ -2419,6 +2848,55 @@ func (s *GetScoreboardOKRawApplicationJSON) SetResponse(val *http.Response) {
 }
 
 func (*GetScoreboardOKRawApplicationJSON) getScoreboardRes() {
+}
+
+type InspectAdminBackupBadRequest ApiError
+
+func (*InspectAdminBackupBadRequest) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupConflict ApiError
+
+func (*InspectAdminBackupConflict) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupForbidden ApiError
+
+func (*InspectAdminBackupForbidden) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupInternalServerError ApiError
+
+func (*InspectAdminBackupInternalServerError) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupReq struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s InspectAdminBackupReq) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+type InspectAdminBackupRequestEntityTooLarge ApiError
+
+func (*InspectAdminBackupRequestEntityTooLarge) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupServiceUnavailable ApiError
+
+func (*InspectAdminBackupServiceUnavailable) inspectAdminBackupRes() {
+}
+
+type InspectAdminBackupUnsupportedMediaType ApiError
+
+func (*InspectAdminBackupUnsupportedMediaType) inspectAdminBackupRes() {
 }
 
 type Metrics struct {
@@ -3731,6 +4209,89 @@ func (s *PublicEventKind) UnmarshalText(data []byte) error {
 		return nil
 	case PublicEventKindAdminMessage:
 		*s = PublicEventKindAdminMessage
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type RestoreAdminBackupBadRequest ApiError
+
+func (*RestoreAdminBackupBadRequest) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupConflict ApiError
+
+func (*RestoreAdminBackupConflict) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupForbidden ApiError
+
+func (*RestoreAdminBackupForbidden) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupInternalServerError ApiError
+
+func (*RestoreAdminBackupInternalServerError) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupReq struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s RestoreAdminBackupReq) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+type RestoreAdminBackupRequestEntityTooLarge ApiError
+
+func (*RestoreAdminBackupRequestEntityTooLarge) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupServiceUnavailable ApiError
+
+func (*RestoreAdminBackupServiceUnavailable) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupUnsupportedMediaType ApiError
+
+func (*RestoreAdminBackupUnsupportedMediaType) restoreAdminBackupRes() {
+}
+
+type RestoreAdminBackupXForcadConfirm string
+
+const (
+	RestoreAdminBackupXForcadConfirmRestore RestoreAdminBackupXForcadConfirm = "restore"
+)
+
+// AllValues returns all RestoreAdminBackupXForcadConfirm values.
+func (RestoreAdminBackupXForcadConfirm) AllValues() []RestoreAdminBackupXForcadConfirm {
+	return []RestoreAdminBackupXForcadConfirm{
+		RestoreAdminBackupXForcadConfirmRestore,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s RestoreAdminBackupXForcadConfirm) MarshalText() ([]byte, error) {
+	switch s {
+	case RestoreAdminBackupXForcadConfirmRestore:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *RestoreAdminBackupXForcadConfirm) UnmarshalText(data []byte) error {
+	switch RestoreAdminBackupXForcadConfirm(data) {
+	case RestoreAdminBackupXForcadConfirmRestore:
+		*s = RestoreAdminBackupXForcadConfirmRestore
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)

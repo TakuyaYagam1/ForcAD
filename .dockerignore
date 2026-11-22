@@ -41,6 +41,8 @@
 /docker-compose-base.yml
 /config/config.yml
 /config/config_backup*.yml
+/forcad-*.tar.gz
+/.forcad-backup-*
 /config/runtime
 /infrastracture/settings.toml
 /infrastracture/runtime

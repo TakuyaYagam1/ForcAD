@@ -98,6 +98,9 @@ services:
         format: raw
       - path: ../../config/runtime/nats_environment.env
         format: raw
+    volumes:
+      - forcad-config:/run/forcad-config:ro
+      - ../../public/teams:/run/forcad-team-logos:ro
     deploy:
       replicas: ${FORCAD_API_REPLICAS:-4}
 
@@ -206,6 +209,8 @@ services:
     environment:
       PUBLIC_SCHEME: "${PUBLIC_SCHEME:-http}"
       TRUSTED_PROXY_CIDRS: "${TRUSTED_PROXY_CIDRS:-}"
+      FORCAD_ADMIN_CIDR: "${FORCAD_ADMIN_CIDR:-}"
+      FORCAD_ADMIN_DENY_CIDRS: "${FORCAD_ADMIN_DENY_CIDRS:-}"
     restart: on-failure
     cap_drop:
       - ALL

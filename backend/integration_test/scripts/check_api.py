@@ -36,6 +36,17 @@ def check_public(request, team_id):
             assert f'"{private_field}":' not in serialized, (
                 f"{path} exposes {private_field}"
             )
+    attack_data = request("/api/v1/client/attack_data/")
+    assert attack_data[0] == 200, "canonical attack_data endpoint is unavailable"
+    for path in (
+        "/attack_data",
+        "/attack_data/",
+        "/api/attack_data",
+        "/api/attack_data/",
+        "/api/v1/attack_data",
+        "/api/v1/attack_data/",
+    ):
+        assert request(path) == attack_data, f"{path} did not alias attack_data"
     for path in (
         "/api/v1/client/health/",
         "/api/v1/admin/health/",
@@ -197,3 +208,11 @@ def check_flag_input(request, token):
         token=token,
         extra_headers={"Content-Type": "text/plain"},
     )
+    for path in (
+        "/api/flags",
+        "/api/flags/",
+        "/api/v1/flags",
+        "/api/v1/flags/",
+    ):
+        expect(request, path, 400, ["invalid"], "PUT", token="invalid")
+        expect(request, path, 413, ["A" * 40000], "PUT", token=token)

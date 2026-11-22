@@ -57,6 +57,10 @@ type DeleteAdminTeamTaskRes interface {
 	deleteAdminTeamTaskRes()
 }
 
+type ExportAdminBackupRes interface {
+	exportAdminBackupRes()
+}
+
 type GetAdminGameSettingsRes interface {
 	getAdminGameSettingsRes()
 }
@@ -105,8 +109,20 @@ type GetClientEventsRes interface {
 	getClientEventsRes()
 }
 
+type GetClientTeamLogoRes interface {
+	getClientTeamLogoRes()
+}
+
 type GetScoreboardRes interface {
 	getScoreboardRes()
+}
+
+type InspectAdminBackupRes interface {
+	inspectAdminBackupRes()
+}
+
+type RestoreAdminBackupRes interface {
+	restoreAdminBackupRes()
 }
 
 type SubmitFlagsRes interface {

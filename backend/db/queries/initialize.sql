@@ -16,7 +16,7 @@ ON CONFLICT(team_id,task_id) DO NOTHING;
 
 -- name: ResetGameTables :exec
 TRUNCATE TABLE GameRoundSnapshots, CheckerJobs, DispatchRuns, PublicAnnouncements, StolenFlags, Flags,
-    TeamTasksLog, TeamTasks, ScheduleHistory, GameSession, GameConfig, Tasks, Teams;
+    TeamTasksLog, TeamTasks, ScheduleHistory, GameSession, GameConfig, Tasks, Teams, backup_team_logos;
 
 -- name: InitializeEmptySession :exec
 INSERT INTO GameSession(id) VALUES (1);

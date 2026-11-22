@@ -11,10 +11,19 @@ import (
 )
 
 var (
+	rn24AllowedHeaders = map[string]string{
+		"GET": "If-Range,Range",
+	}
+	rn57AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn60AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Forcad-Confirm",
+	}
 	rn11AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn24AllowedHeaders = map[string]string{
+	rn25AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
 	rn10AllowedHeaders = map[string]string{
@@ -47,10 +56,10 @@ var (
 	rn21AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn29AllowedHeaders = map[string]string{
+	rn30AllowedHeaders = map[string]string{
 		"GET": "If-None-Match",
 	}
-	rn54AllowedHeaders = map[string]string{
+	rn61AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,X-Team-Token",
 	}
 )
@@ -130,6 +139,95 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 					switch elem[0] {
+					case 'b': // Prefix: "backup/"
+
+						if l := len("backup/"); len(elem) >= l && elem[0:l] == "backup/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'e': // Prefix: "export/"
+
+							if l := len("export/"); len(elem) >= l && elem[0:l] == "export/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleExportAdminBackupRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "GET",
+										allowedHeaders: rn24AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'i': // Prefix: "inspect/"
+
+							if l := len("inspect/"); len(elem) >= l && elem[0:l] == "inspect/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleInspectAdminBackupRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn57AllowedHeaders,
+										acceptPost:     "application/gzip",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'r': // Prefix: "restore/"
+
+							if l := len("restore/"); len(elem) >= l && elem[0:l] == "restore/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleRestoreAdminBackupRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn60AllowedHeaders,
+										acceptPost:     "application/gzip",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						}
+
 					case 'e': // Prefix: "events/"
 
 						if l := len("events/"); len(elem) >= l && elem[0:l] == "events/" {
@@ -185,7 +283,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,PUT",
-										allowedHeaders: rn24AllowedHeaders,
+										allowedHeaders: rn25AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -768,7 +866,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn29AllowedHeaders,
+									allowedHeaders: rn30AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -1017,54 +1115,40 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 
-						case 'e': // Prefix: "eams/"
+						case 'e': // Prefix: "eam"
 
-							if l := len("eams/"); len(elem) >= l && elem[0:l] == "eams/" {
+							if l := len("eam"); len(elem) >= l && elem[0:l] == "eam" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
 							if len(elem) == 0 {
-								switch r.Method {
-								case "GET":
-									s.handleGetClientTeamsRequest([0]string{}, elemIsEscaped, w, r)
-								default:
-									s.notAllowed(w, r, notAllowedParams{
-										allowedMethods: "GET",
-										allowedHeaders: nil,
-										acceptPost:     "",
-										acceptPatch:    "",
-									})
-								}
-
-								return
-							}
-							// Param: "team_id"
-							// Match until "/"
-							idx := strings.IndexByte(elem, '/')
-							if idx < 0 {
-								idx = len(elem)
-							}
-							args[0] = elem[:idx]
-							elem = elem[idx:]
-
-							if len(elem) == 0 {
 								break
 							}
 							switch elem[0] {
-							case '/': // Prefix: "/"
+							case '-': // Prefix: "-logos/"
 
-								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								if l := len("-logos/"); len(elem) >= l && elem[0:l] == "-logos/" {
 									elem = elem[l:]
 								} else {
 									break
 								}
 
+								// Param: "name"
+								// Leaf parameter, slashes are prohibited
+								idx := strings.IndexByte(elem, '/')
+								if idx >= 0 {
+									break
+								}
+								args[0] = elem
+								elem = ""
+
 								if len(elem) == 0 {
+									// Leaf node.
 									switch r.Method {
 									case "GET":
-										s.handleGetClientTeamHistoryRequest([1]string{
+										s.handleGetClientTeamLogoRequest([1]string{
 											args[0],
 										}, elemIsEscaped, w, r)
 									default:
@@ -1078,54 +1162,118 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 									return
 								}
-								switch elem[0] {
-								case 't': // Prefix: "tasks/"
 
-									if l := len("tasks/"); len(elem) >= l && elem[0:l] == "tasks/" {
+							case 's': // Prefix: "s/"
+
+								if l := len("s/"); len(elem) >= l && elem[0:l] == "s/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								if len(elem) == 0 {
+									switch r.Method {
+									case "GET":
+										s.handleGetClientTeamsRequest([0]string{}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, notAllowedParams{
+											allowedMethods: "GET",
+											allowedHeaders: nil,
+											acceptPost:     "",
+											acceptPatch:    "",
+										})
+									}
+
+									return
+								}
+								// Param: "team_id"
+								// Match until "/"
+								idx := strings.IndexByte(elem, '/')
+								if idx < 0 {
+									idx = len(elem)
+								}
+								args[0] = elem[:idx]
+								elem = elem[idx:]
+
+								if len(elem) == 0 {
+									break
+								}
+								switch elem[0] {
+								case '/': // Prefix: "/"
+
+									if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
-									// Param: "task_id"
-									// Match until "/"
-									idx := strings.IndexByte(elem, '/')
-									if idx < 0 {
-										idx = len(elem)
-									}
-									args[1] = elem[:idx]
-									elem = elem[idx:]
-
 									if len(elem) == 0 {
-										break
+										switch r.Method {
+										case "GET":
+											s.handleGetClientTeamHistoryRequest([1]string{
+												args[0],
+											}, elemIsEscaped, w, r)
+										default:
+											s.notAllowed(w, r, notAllowedParams{
+												allowedMethods: "GET",
+												allowedHeaders: nil,
+												acceptPost:     "",
+												acceptPatch:    "",
+											})
+										}
+
+										return
 									}
 									switch elem[0] {
-									case '/': // Prefix: "/logs/"
+									case 't': // Prefix: "tasks/"
 
-										if l := len("/logs/"); len(elem) >= l && elem[0:l] == "/logs/" {
+										if l := len("tasks/"); len(elem) >= l && elem[0:l] == "tasks/" {
 											elem = elem[l:]
 										} else {
 											break
 										}
 
+										// Param: "task_id"
+										// Match until "/"
+										idx := strings.IndexByte(elem, '/')
+										if idx < 0 {
+											idx = len(elem)
+										}
+										args[1] = elem[:idx]
+										elem = elem[idx:]
+
 										if len(elem) == 0 {
-											// Leaf node.
-											switch r.Method {
-											case "GET":
-												s.handleGetClientCheckerLogsRequest([2]string{
-													args[0],
-													args[1],
-												}, elemIsEscaped, w, r)
-											default:
-												s.notAllowed(w, r, notAllowedParams{
-													allowedMethods: "GET",
-													allowedHeaders: nil,
-													acceptPost:     "",
-													acceptPatch:    "",
-												})
+											break
+										}
+										switch elem[0] {
+										case '/': // Prefix: "/logs/"
+
+											if l := len("/logs/"); len(elem) >= l && elem[0:l] == "/logs/" {
+												elem = elem[l:]
+											} else {
+												break
 											}
 
-											return
+											if len(elem) == 0 {
+												// Leaf node.
+												switch r.Method {
+												case "GET":
+													s.handleGetClientCheckerLogsRequest([2]string{
+														args[0],
+														args[1],
+													}, elemIsEscaped, w, r)
+												default:
+													s.notAllowed(w, r, notAllowedParams{
+														allowedMethods: "GET",
+														allowedHeaders: nil,
+														acceptPost:     "",
+														acceptPatch:    "",
+													})
+												}
+
+												return
+											}
+
 										}
 
 									}
@@ -1244,7 +1392,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "PUT",
-							allowedHeaders: rn54AllowedHeaders,
+							allowedHeaders: rn61AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -1406,6 +1554,95 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						break
 					}
 					switch elem[0] {
+					case 'b': // Prefix: "backup/"
+
+						if l := len("backup/"); len(elem) >= l && elem[0:l] == "backup/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case 'e': // Prefix: "export/"
+
+							if l := len("export/"); len(elem) >= l && elem[0:l] == "export/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = ExportAdminBackupOperation
+									r.summary = "Download a finished competition as a tar.gz archive."
+									r.operationID = "exportAdminBackup"
+									r.operationGroup = ""
+									r.pathPattern = "/api/v1/admin/backup/export/"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'i': // Prefix: "inspect/"
+
+							if l := len("inspect/"); len(elem) >= l && elem[0:l] == "inspect/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = InspectAdminBackupOperation
+									r.summary = "Validate a backup archive and preview its manifest without importing it."
+									r.operationID = "inspectAdminBackup"
+									r.operationGroup = ""
+									r.pathPattern = "/api/v1/admin/backup/inspect/"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'r': // Prefix: "restore/"
+
+							if l := len("restore/"); len(elem) >= l && elem[0:l] == "restore/" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = RestoreAdminBackupOperation
+									r.summary = "Restore a finished competition from a backup archive."
+									r.operationID = "restoreAdminBackup"
+									r.operationGroup = ""
+									r.pathPattern = "/api/v1/admin/backup/restore/"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+						}
+
 					case 'e': // Prefix: "events/"
 
 						if l := len("events/"); len(elem) >= l && elem[0:l] == "events/" {
@@ -2343,45 +2580,55 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								}
 							}
 
-						case 'e': // Prefix: "eams/"
+						case 'e': // Prefix: "eam"
 
-							if l := len("eams/"); len(elem) >= l && elem[0:l] == "eams/" {
+							if l := len("eam"); len(elem) >= l && elem[0:l] == "eam" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
 							if len(elem) == 0 {
-								switch method {
-								case "GET":
-									r.name = GetClientTeamsOperation
-									r.summary = "List teams visible to participants."
-									r.operationID = "getClientTeams"
-									r.operationGroup = ""
-									r.pathPattern = "/api/v1/client/teams/"
-									r.args = args
-									r.count = 0
-									return r, true
-								default:
-									return
-								}
-							}
-							// Param: "team_id"
-							// Match until "/"
-							idx := strings.IndexByte(elem, '/')
-							if idx < 0 {
-								idx = len(elem)
-							}
-							args[0] = elem[:idx]
-							elem = elem[idx:]
-
-							if len(elem) == 0 {
 								break
 							}
 							switch elem[0] {
-							case '/': // Prefix: "/"
+							case '-': // Prefix: "-logos/"
 
-								if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+								if l := len("-logos/"); len(elem) >= l && elem[0:l] == "-logos/" {
+									elem = elem[l:]
+								} else {
+									break
+								}
+
+								// Param: "name"
+								// Leaf parameter, slashes are prohibited
+								idx := strings.IndexByte(elem, '/')
+								if idx >= 0 {
+									break
+								}
+								args[0] = elem
+								elem = ""
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "GET":
+										r.name = GetClientTeamLogoOperation
+										r.summary = "Download a team logo restored from a backup."
+										r.operationID = "getClientTeamLogo"
+										r.operationGroup = ""
+										r.pathPattern = "/api/v1/client/team-logos/{name}"
+										r.args = args
+										r.count = 1
+										return r, true
+									default:
+										return
+									}
+								}
+
+							case 's': // Prefix: "s/"
+
+								if l := len("s/"); len(elem) >= l && elem[0:l] == "s/" {
 									elem = elem[l:]
 								} else {
 									break
@@ -2390,63 +2637,101 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								if len(elem) == 0 {
 									switch method {
 									case "GET":
-										r.name = GetClientTeamHistoryOperation
-										r.summary = "Get participant-visible task history for a team."
-										r.operationID = "getClientTeamHistory"
+										r.name = GetClientTeamsOperation
+										r.summary = "List teams visible to participants."
+										r.operationID = "getClientTeams"
 										r.operationGroup = ""
-										r.pathPattern = "/api/v1/client/teams/{team_id}/"
+										r.pathPattern = "/api/v1/client/teams/"
 										r.args = args
-										r.count = 1
+										r.count = 0
 										return r, true
 									default:
 										return
 									}
 								}
-								switch elem[0] {
-								case 't': // Prefix: "tasks/"
+								// Param: "team_id"
+								// Match until "/"
+								idx := strings.IndexByte(elem, '/')
+								if idx < 0 {
+									idx = len(elem)
+								}
+								args[0] = elem[:idx]
+								elem = elem[idx:]
 
-									if l := len("tasks/"); len(elem) >= l && elem[0:l] == "tasks/" {
+								if len(elem) == 0 {
+									break
+								}
+								switch elem[0] {
+								case '/': // Prefix: "/"
+
+									if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 										elem = elem[l:]
 									} else {
 										break
 									}
 
-									// Param: "task_id"
-									// Match until "/"
-									idx := strings.IndexByte(elem, '/')
-									if idx < 0 {
-										idx = len(elem)
-									}
-									args[1] = elem[:idx]
-									elem = elem[idx:]
-
 									if len(elem) == 0 {
-										break
+										switch method {
+										case "GET":
+											r.name = GetClientTeamHistoryOperation
+											r.summary = "Get participant-visible task history for a team."
+											r.operationID = "getClientTeamHistory"
+											r.operationGroup = ""
+											r.pathPattern = "/api/v1/client/teams/{team_id}/"
+											r.args = args
+											r.count = 1
+											return r, true
+										default:
+											return
+										}
 									}
 									switch elem[0] {
-									case '/': // Prefix: "/logs/"
+									case 't': // Prefix: "tasks/"
 
-										if l := len("/logs/"); len(elem) >= l && elem[0:l] == "/logs/" {
+										if l := len("tasks/"); len(elem) >= l && elem[0:l] == "tasks/" {
 											elem = elem[l:]
 										} else {
 											break
 										}
 
+										// Param: "task_id"
+										// Match until "/"
+										idx := strings.IndexByte(elem, '/')
+										if idx < 0 {
+											idx = len(elem)
+										}
+										args[1] = elem[:idx]
+										elem = elem[idx:]
+
 										if len(elem) == 0 {
-											// Leaf node.
-											switch method {
-											case "GET":
-												r.name = GetClientCheckerLogsOperation
-												r.summary = "Get public checker results for one team and service."
-												r.operationID = "getClientCheckerLogs"
-												r.operationGroup = ""
-												r.pathPattern = "/api/v1/client/teams/{team_id}/tasks/{task_id}/logs/"
-												r.args = args
-												r.count = 2
-												return r, true
-											default:
-												return
+											break
+										}
+										switch elem[0] {
+										case '/': // Prefix: "/logs/"
+
+											if l := len("/logs/"); len(elem) >= l && elem[0:l] == "/logs/" {
+												elem = elem[l:]
+											} else {
+												break
 											}
+
+											if len(elem) == 0 {
+												// Leaf node.
+												switch method {
+												case "GET":
+													r.name = GetClientCheckerLogsOperation
+													r.summary = "Get public checker results for one team and service."
+													r.operationID = "getClientCheckerLogs"
+													r.operationGroup = ""
+													r.pathPattern = "/api/v1/client/teams/{team_id}/tasks/{task_id}/logs/"
+													r.args = args
+													r.count = 2
+													return r, true
+												default:
+													return
+												}
+											}
+
 										}
 
 									}

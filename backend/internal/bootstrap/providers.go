@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	promclient "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/TakuyaYagam1/ForcAD/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/prometheus"
 	redisadapter "github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/redis"
+	"github.com/TakuyaYagam1/ForcAD/internal/backup"
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	checkerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/checker"
 	schedulerworker "github.com/TakuyaYagam1/ForcAD/internal/worker/scheduler"
@@ -62,8 +64,11 @@ func newHandler(
 	auth *usecase.Auth,
 	flags *usecase.Flags,
 	feed *usecase.Events,
+	pool *pgxpool.Pool,
 ) *httpv1.Handler {
-	return httpv1.NewHandler(game, auth, flags, feed)
+	handler := httpv1.NewHandler(game, auth, flags, feed)
+	handler.BackupHandler = httpv1.NewBackupHandler(backup.New(pool, teamLogosDirectory))
+	return handler
 }
 func newRouter(
 	cfg config.Config,

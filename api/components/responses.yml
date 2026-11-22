@@ -4,6 +4,12 @@ ApiError:
     application/json:
       schema:
         "$ref": "./schemas.yml#/ApiError"
+BackupManifest:
+  description: Validated backup manifest.
+  content:
+    application/json:
+      schema:
+        "$ref": "./schemas.yml#/BackupManifest"
 Health:
   description: Service is healthy.
   content:

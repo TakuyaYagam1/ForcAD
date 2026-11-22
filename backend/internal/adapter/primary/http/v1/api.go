@@ -1,6 +1,8 @@
 package v1
 
-import "github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
+import (
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
+)
 
 type Handler struct {
 	*authHandler
@@ -13,6 +15,7 @@ type Handler struct {
 	*healthHandler
 	*metricsHandler
 	*eventsHandler
+	*BackupHandler
 }
 
 func NewHandler(

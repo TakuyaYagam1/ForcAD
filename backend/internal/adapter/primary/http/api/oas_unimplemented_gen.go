@@ -142,6 +142,16 @@ func (UnimplementedHandler) DeleteAdminTeamTask(ctx context.Context, params Dele
 	return r, ht.ErrNotImplemented
 }
 
+// ExportAdminBackup implements exportAdminBackup operation.
+//
+// Export requires a finished game with no pending checker results. Treat the archive as sensitive
+// competition data.
+//
+// GET /api/v1/admin/backup/export/
+func (UnimplementedHandler) ExportAdminBackup(ctx context.Context, params ExportAdminBackupParams, w http.ResponseWriter) error {
+	return ht.ErrNotImplemented
+}
+
 // GetAdminGameSettings implements getAdminGameSettings operation.
 //
 // Read editable game settings and current lifecycle.
@@ -323,6 +333,15 @@ func (UnimplementedHandler) GetClientTeamHistory(ctx context.Context, params Get
 	return r, ht.ErrNotImplemented
 }
 
+// GetClientTeamLogo implements getClientTeamLogo operation.
+//
+// Download a team logo restored from a backup.
+//
+// GET /api/v1/client/team-logos/{name}
+func (UnimplementedHandler) GetClientTeamLogo(ctx context.Context, params GetClientTeamLogoParams, w http.ResponseWriter) error {
+	return ht.ErrNotImplemented
+}
+
 // GetClientTeams implements getClientTeams operation.
 //
 // List teams visible to participants.
@@ -368,6 +387,15 @@ func (UnimplementedHandler) GetScoreboard(ctx context.Context, w http.ResponseWr
 	return ht.ErrNotImplemented
 }
 
+// InspectAdminBackup implements inspectAdminBackup operation.
+//
+// Validate a backup archive and preview its manifest without importing it.
+//
+// POST /api/v1/admin/backup/inspect/
+func (UnimplementedHandler) InspectAdminBackup(ctx context.Context, req InspectAdminBackupReq) (r InspectAdminBackupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // OpenEventStream implements openEventStream operation.
 //
 // Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
@@ -375,6 +403,16 @@ func (UnimplementedHandler) GetScoreboard(ctx context.Context, w http.ResponseWr
 //
 // GET /api/v1/events/ws
 func (UnimplementedHandler) OpenEventStream(ctx context.Context) (r *OpenEventStreamSwitchingProtocols, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RestoreAdminBackup implements restoreAdminBackup operation.
+//
+// The destination must not have hosted a game and must have no announcements. Restore replaces its
+// seeded competition data.
+//
+// POST /api/v1/admin/backup/restore/
+func (UnimplementedHandler) RestoreAdminBackup(ctx context.Context, req RestoreAdminBackupReq, params RestoreAdminBackupParams) (r RestoreAdminBackupRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

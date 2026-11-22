@@ -11,6 +11,8 @@ x-runtime: &runtime
 services:
   api:
     <<: *runtime
+    volumes:
+      - ${FORCAD_TEST_PROJECT_ROOT:?required}/public/teams:/run/forcad-team-logos:ro
 
   receiver:
     <<: *runtime
@@ -50,6 +52,10 @@ services:
     image: ${FORCAD_TEST_IMAGE_PREFIX:?required}-nginx
     build:
       context: ${FORCAD_TEST_BUILD_ROOT:?required}
+    environment:
+      # Playwright and the host API smoke test reach this isolated stack over Docker.
+      # Keep the fixture independent of Docker's dynamically assigned IPv4 subnet.
+      FORCAD_ADMIN_CIDR: "0.0.0.0/0"
     ports: !override ["127.0.0.1::8080"]
     volumes: !override
       - ${FORCAD_TEST_PROJECT_ROOT:?required}/public/teams:/var/www/front/team-logos:ro

@@ -9,6 +9,12 @@ import (
 	"uuid"
 )
 
+type BackupTeamLogo struct {
+	Name        string `json:"name"`
+	ContentType string `json:"content_type"`
+	Content     []byte `json:"content"`
+}
+
 type CheckerActionEvent struct {
 	ID            uuid.UUID          `json:"id"`
 	ServiceID     uuid.UUID          `json:"service_id"`

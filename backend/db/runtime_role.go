@@ -18,6 +18,7 @@ var runtimeTables = []string{
 	"gameconfig", "teams", "tasks", "flags", "stolenflags", "teamtasks",
 	"teamtaskslog", "schedulehistory", "gamesession", "dispatchruns",
 	"checkerjobs", "gameroundsnapshots", "checkeractionlogs", "publicannouncements",
+	"backup_team_logos",
 }
 
 // ProvisionRuntimeRole runs only on the explicit initializer/migrate connection.

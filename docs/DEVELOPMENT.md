@@ -98,6 +98,10 @@ isolated deployment and checks its HTTP endpoints. `make -C frontend e2e`
 delegates to `make -C deployment e2e`, which also runs the Playwright flows in
 `frontend/e2e`. Both deployment targets require Docker Compose.
 
+The isolated deployment accepts admin requests from its Docker IPv4 network
+for the browser and API tests; Nginx is published only on host loopback.
+`scripts/test_nginx_image.sh` tests the admin CIDR restriction separately.
+
 The deployment API checks cover public reads, team/task CRUD, session login and
 logout, authorization and input errors, generation conflicts, pause/resume,
 batch submission and duplicate retries, WebSocket upgrades and private metrics.

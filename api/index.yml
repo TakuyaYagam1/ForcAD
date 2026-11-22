@@ -29,6 +29,8 @@ paths:
     "$ref": "./routes/client-status.yml"
   "/api/v1/client/scoreboard/":
     "$ref": "./routes/client-scoreboard.yml"
+  "/api/v1/client/team-logos/{name}":
+    "$ref": "./routes/client-team-logo.yml"
   "/api/v1/admin/teams/":
     "$ref": "./routes/admin-teams.yml"
   "/api/v1/admin/teams/activate/":
@@ -53,6 +55,12 @@ paths:
     "$ref": "./routes/admin-game-config.yml"
   "/api/v1/admin/game/{action}/":
     "$ref": "./routes/admin-game-by-action.yml"
+  "/api/v1/admin/backup/export/":
+    "$ref": "./routes/admin-backup-export.yml"
+  "/api/v1/admin/backup/inspect/":
+    "$ref": "./routes/admin-backup-inspect.yml"
+  "/api/v1/admin/backup/restore/":
+    "$ref": "./routes/admin-backup-restore.yml"
   "/api/v1/admin/login/":
     "$ref": "./routes/admin-login.yml"
   "/api/v1/admin/status/":

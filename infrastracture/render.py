@@ -877,6 +877,7 @@ def forcad_environment(config):
     values = {
         "COMPOSE_PROJECT_NAME": FORCAD_COMPOSE_PROJECT,
         "FORCAD_NGINX_BIND": env["public_host"],
+        "FORCAD_ADMIN_CIDR": config["network"]["admin_vpn"],
         "PUBLIC_ORIGIN": f"{env['public_scheme']}://{env['public_host']}",
         "PUBLIC_SCHEME": env["public_scheme"],
         "VITE_BRAND_NAME": env["brand_name"],
@@ -1102,6 +1103,7 @@ def fresh_forcad_files(config):
             + '"\nPUBLIC_SCHEME="'
             + config["env"]["public_scheme"]
             + '"\n'
+            + f'FORCAD_ADMIN_CIDR="{config["network"]["admin_vpn"]}"\n'
         ),
     }
     files.update(fresh_forcad_bundle(config))

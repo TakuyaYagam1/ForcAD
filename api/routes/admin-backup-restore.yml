@@ -1,0 +1,35 @@
+post:
+  operationId: restoreAdminBackup
+  tags:
+  - admin
+  summary: Restore a finished competition from a backup archive.
+  description: The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
+  security:
+  - sessionCookie: []
+  parameters:
+  - name: X-Forcad-Confirm
+    in: header
+    required: true
+    description: Explicitly confirms that the destination's seeded competition data may be replaced.
+    schema:
+      type: string
+      enum: [restore]
+  requestBody:
+    "$ref": "../components/request-bodies.yml#/BackupArchive"
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/BackupManifest"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"
+    '413':
+      "$ref": "../components/responses.yml#/ApiError"
+    '415':
+      "$ref": "../components/responses.yml#/ApiError"
+    '500':
+      "$ref": "../components/responses.yml#/ApiError"
+    '503':
+      "$ref": "../components/responses.yml#/ApiError"

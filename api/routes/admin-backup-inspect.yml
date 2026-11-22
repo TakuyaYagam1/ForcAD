@@ -1,0 +1,26 @@
+post:
+  operationId: inspectAdminBackup
+  tags:
+  - admin
+  summary: Validate a backup archive and preview its manifest without importing it.
+  security:
+  - sessionCookie: []
+  requestBody:
+    "$ref": "../components/request-bodies.yml#/BackupArchive"
+  responses:
+    '200':
+      "$ref": "../components/responses.yml#/BackupManifest"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"
+    '413':
+      "$ref": "../components/responses.yml#/ApiError"
+    '415':
+      "$ref": "../components/responses.yml#/ApiError"
+    '500':
+      "$ref": "../components/responses.yml#/ApiError"
+    '503':
+      "$ref": "../components/responses.yml#/ApiError"

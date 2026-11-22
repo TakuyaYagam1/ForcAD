@@ -1,0 +1,38 @@
+get:
+  operationId: getClientTeamLogo
+  tags:
+  - client
+  summary: Download a team logo restored from a backup.
+  security: []
+  parameters:
+  - name: name
+    in: path
+    required: true
+    description: Filename from the team's logo path.
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Restored team logo in its original image format.
+      content:
+        image/svg+xml:
+          x-ogen-raw-response: true
+          schema: {type: string, format: binary}
+        image/png:
+          schema: {type: string, format: binary}
+        image/jpeg:
+          schema: {type: string, format: binary}
+        image/gif:
+          schema: {type: string, format: binary}
+        image/webp:
+          schema: {type: string, format: binary}
+    '404':
+      description: No restored logo exists with that name.
+      content:
+        text/plain:
+          schema:
+            type: string
+    '500':
+      "$ref": "../components/responses.yml#/ApiError"
+    '503':
+      "$ref": "../components/responses.yml#/ApiError"

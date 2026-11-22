@@ -25,6 +25,8 @@ docker_volumes
 
 *config.yml
 config_backup*.yml
+/forcad-*.tar.gz
+/.forcad-backup-*
 
 checkers/*
 !checkers/requirements.txt

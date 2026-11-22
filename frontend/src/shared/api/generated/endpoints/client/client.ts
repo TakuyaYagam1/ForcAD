@@ -1455,3 +1455,128 @@ export function useGetScoreboard<TData = Awaited<ReturnType<typeof getScoreboard
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+/**
+ * @summary Download a team logo restored from a backup.
+ */
+export const getClientTeamLogo = (
+  name: string,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<Blob>(
+    {
+      url: `/api/v1/client/team-logos/${name}`,
+      method: 'GET',
+      responseType: 'blob',
+      signal
+    },
+  );
+}
+
+
+
+
+export const getGetClientTeamLogoQueryKey = (name: string,) => {
+  return [
+    `/api/v1/client/team-logos/${name}`
+  ] as const;
+}
+
+
+export const getGetClientTeamLogoQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeamLogo>>, TError = string | ApiError>(name: string, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData>>,
+}
+) => {
+
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClientTeamLogoQueryKey(name);
+
+
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeamLogo>>> = ({ signal }) => {
+    return getClientTeamLogo(name, signal)
+  };
+
+
+
+
+
+  return  {
+    queryKey,
+    queryFn,
+    enabled: name !== null && name !== undefined,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+}
+
+export type GetClientTeamLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getClientTeamLogo>>>
+export type GetClientTeamLogoQueryError = string | ApiError
+
+
+/** @summary Download a team logo restored from a backup. */
+export function useGetClientTeamLogo<TData = Awaited<ReturnType<typeof getClientTeamLogo>>, TError = string | ApiError>(
+ name: string, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientTeamLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getClientTeamLogo>>
+        > , 'initialData'
+      >,
+ }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Download a team logo restored from a backup. */
+export function useGetClientTeamLogo<TData = Awaited<ReturnType<typeof getClientTeamLogo>>, TError = string | ApiError>(
+ name: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientTeamLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getClientTeamLogo>>
+        > , 'initialData'
+      >,
+ }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Download a team logo restored from a backup. */
+export function useGetClientTeamLogo<TData = Awaited<ReturnType<typeof getClientTeamLogo>>, TError = string | ApiError>(
+ name: string, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData>>,
+ }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Download a team logo restored from a backup. */
+export function useGetClientTeamLogo<TData = Awaited<ReturnType<typeof getClientTeamLogo>>, TError = string | ApiError>(
+  name: string, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamLogo>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+
+  const queryOptions = getGetClientTeamLogoQueryOptions(name,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

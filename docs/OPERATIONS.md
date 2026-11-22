@@ -118,6 +118,31 @@ Game settings and disabled records survive ordinary restarts and `setup` while
 the database remains initialized. Explicit `reset` or `clean` clears game data;
 the next initialization imports initial values from the host `config.yml` again.
 
+### Competition backups
+
+Open **Game settings -> Backup**, or use the [control CLI](CONTROL.md#examples).
+Export is available after the final round is saved and checker work has settled.
+The `.tar.gz` holds a versioned `manifest.json`, one `data/*.ndjson` member per
+game table, and local team images in `team-logos/`.
+
+Import previews the event before confirmation. The destination must have the
+backup-capable schema and be initialized, with no started game, results or
+announcements. Use a future scheduled start to prevent a fresh board from
+automatically starting before import. The initial settings, teams and tasks
+are replaced in one database transaction with the finished competition.
+Imported logos are served from the database so they commit with the event;
+existing files in `public/teams/` are not overwritten.
+
+The `backup_team_logos` table is part of the initial schema (migration `1`).
+Goose does not replay it on a database that already applied an older copy of
+migration `1`; initialize a separate database for a restore target in that case.
+
+The archive does not contain admin credentials or sessions, checker
+executables, vulnbox data, broker queues, or host configuration. It is not a
+substitute for a PostgreSQL disaster recovery backup. Keep copies private:
+the archive includes team credentials, flags, and the private checker journal.
+Archive limits: 256 MiB compressed, 2 GiB unpacked, and 4 MiB per team logo.
+
 ### Database credentials and upgrades
 
 `setup` preserves `storages.db.user/password` as the database owner used only by

@@ -72,9 +72,9 @@ endpoints have no authentication; keep them private. `/drain` still requires
 | Dashboard | Use |
 | --- | --- |
 | ForcAD | Board overview plus Checker, Errors and Infrastructure sections |
-| Traffic | Board totals and game source → target activity, flows and capture health |
-| DDoS | Victim load, source-team fan-out and observed source → victim directions |
-| Relay | Denied direct vulnbox → configured vulnbox packets before SNAT |
+| Traffic | Board totals and game source -> target activity, flows and capture health |
+| DDoS | Victim load, source-team fan-out and observed source -> victim directions |
+| Relay | Denied direct vulnbox -> configured vulnbox packets before SNAT |
 
 The UIDs are `forcad-monitoring`, `forcad-traffic`, `forcad-ddos` and
 `forcad-relay`. Links preserve the time range. The ForcAD overview is expanded;

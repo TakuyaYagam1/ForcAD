@@ -58,6 +58,8 @@ func runCommand(args []string) int {
 		err = bootstrap.RunNetworkMetricsCommand(ctx, args[1:], os.Stdout)
 	case "control":
 		err = bootstrap.RunControlCommand(ctx, args[1:], os.Stdout)
+	case "backup", "restore-backup":
+		err = bootstrap.RunBackupCommand(ctx, args[0], args[1:], os.Stdin, os.Stdout)
 	case "reset", "clean", "reset-data":
 		err = bootstrap.RunMaintenanceCommand(ctx, args[0], args[1:], os.Stdout)
 	case "setup", "compose":

@@ -193,6 +193,29 @@ keep the application's per-IP limiter by default. Only list actual upstream
 proxies in `TRUSTED_PROXY_CIDRS`; never add player VPN ranges to trust
 unverified `X-Forwarded-For` values.
 
+To restrict `/admin`, `/api/v1/admin` and their subpaths, add one or both
+settings to `deployment/docker/.env`:
+
+```dotenv
+FORCAD_ADMIN_CIDR=10.20.30.0/24
+FORCAD_ADMIN_DENY_CIDRS="10.20.30.10 192.0.2.0/24"
+```
+
+`FORCAD_ADMIN_CIDR` allows one IP address or network. Leave it empty to use
+only the deny list. `FORCAD_ADMIN_DENY_CIDRS` accepts space-separated IPv4 or
+IPv6 addresses and CIDRs; it takes precedence over the allowed network.
+Blocked requests get `403`, including the admin login. Login and CSRF
+requirements still apply to allowed requests. Public routes and `/flags`
+are unaffected.
+
+The ACL uses Nginx's TCP peer address and ignores `X-Forwarded-For`. If an
+upstream reverse proxy connects to ForcAD on behalf of multiple users, enforce
+per-client IP rules at that proxy or connect directly through the admin VPN.
+The infrastructure renderer sets `FORCAD_ADMIN_CIDR` from `network.admin_vpn`;
+standalone deployments with both settings empty keep the existing behavior.
+For an existing deployment, set the variables in `.env` and recreate only
+the ingress with `./control.sh compose up -d --no-deps --build nginx`.
+
 Set `GRAFANA_ADMIN_PASSWORD` before starting the monitoring overlay. Grafana
 uses it only when initializing an empty Grafana data volume; changing it does
 not change an existing account password. See [Monitoring](MONITORING.md#start).

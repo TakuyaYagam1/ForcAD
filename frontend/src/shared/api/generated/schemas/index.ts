@@ -10,6 +10,7 @@ export * from './adminMessageEvent.zod';
 export * from './adminMessageEventPayload.zod';
 export * from './apiError.zod';
 export * from './apiErrorResponse.zod';
+export * from './backupManifestResponse.zod';
 export * from './flagNotification.zod';
 export * from './flagStolenEvent.zod';
 export * from './flagStolenEventPayload.zod';

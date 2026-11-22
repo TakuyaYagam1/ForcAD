@@ -87,9 +87,12 @@ def request(path, data=None, method="GET", token=None, extra_headers=None, csrf=
     ):
         headers["X-CSRF-Token"] = csrf_token
     headers.update(extra_headers or {})
+    body = data
+    if data is not None and not isinstance(data, bytes):
+        body = json.dumps(data).encode()
     req = urllib.request.Request(
         origin + path,
-        data=json.dumps(data).encode() if data is not None else None,
+        data=body,
         method=method,
         headers=headers,
     )
@@ -257,10 +260,68 @@ assert status == 200, "final did not finish"
 assert (
     request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410
 ), "finished game accepts flags"
+
+export_path = "/api/v1/admin/backup/export/?name=acceptance"
+backup_deadline = time.monotonic() + checker_timeout + 15
+while True:
+    status, archive = request(export_path)
+    if status != 409 or time.monotonic() >= backup_deadline:
+        break
+    time.sleep(0.25)
+assert status == 200 and archive.startswith(b"\x1f\x8b"), f"event export failed: HTTP {status}"
+backup_headers = {"Content-Type": "application/gzip"}
+status, body = request(
+    "/api/v1/admin/backup/inspect/", archive, "POST", extra_headers=backup_headers
+)
+assert status == 200 and json.loads(body)["name"] == "acceptance", "event preview failed"
+status, _ = request(
+    "/api/v1/admin/backup/restore/",
+    archive,
+    "POST",
+    extra_headers={**backup_headers, "X-Forcad-Confirm": "restore"},
+)
+assert status == 409, "restore must refuse a played board"
+
+# Restore onto a freshly seeded board inside this disposable Compose project.
+# Leave the session cookie intact: importing an event must not import admin auth.
+captured = query("SELECT flag_id::text || ':' || attacker_id::text FROM StolenFlags;")
+query(
+    """
+BEGIN;
+TRUNCATE GameRoundSnapshots, CheckerJobs, DispatchRuns, PublicAnnouncements,
+    StolenFlags, Flags, TeamTasksLog, ScheduleHistory, CheckerActionLogs;
+UPDATE GameConfig SET real_round = 0, start_time = '2050-01-01T00:00:00Z';
+UPDATE GameSession SET final_start = NULL, paused_at = NULL, snapshot_round = NULL, snapshot = NULL;
+UPDATE TeamTasks SET stolen = 0, lost = 0, checks = 0, checks_passed = 0;
+COMMIT;
+"""
+)
+status, _ = request(
+    "/api/v1/admin/backup/restore/",
+    archive,
+    "POST",
+    extra_headers={**backup_headers, "X-Forcad-Confirm": "restore"},
+)
+assert status == 200, f"event restore failed: HTTP {status}"
+assert query("SELECT flag_id::text || ':' || attacker_id::text FROM StolenFlags;") == captured, (
+    "restored capture does not match the exported game"
+)
+cli_archive = subprocess.run(
+    [*compose, "exec", "-T", "api", "forcad", "backup", "operator"],
+    capture_output=True,
+    check=True,
+    timeout=10,
+).stdout
+status, body = request(
+    "/api/v1/admin/backup/inspect/", cli_archive, "POST", extra_headers=backup_headers
+)
+assert status == 200 and json.loads(body)["name"] == "operator", "CLI backup format differs"
+
 expect(request, "/api/v1/admin/logout/", data={}, method="POST")
 csrf_token = ""
 expect(request, "/api/v1/admin/status/", 403)
 expect(request, "/api/v1/admin/logout/", 403, {}, "POST")
+assert request(export_path)[0] == 403, "unauthenticated backup export"
 print(
-    "Deployment checks passed: public reads, admin CRUD/auth/CSRF/validation, lifecycle, batch/retry, Python checker, WebSocket, and private metrics."
+    "Deployment checks passed: public reads, admin CRUD/auth/CSRF/validation, lifecycle, backup, batch/retry, Python checker, WebSocket, and private metrics."
 )

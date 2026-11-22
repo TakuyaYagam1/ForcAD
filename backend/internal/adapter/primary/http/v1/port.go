@@ -2,8 +2,10 @@ package v1
 
 import (
 	"context"
+	"io"
 	"uuid"
 
+	"github.com/TakuyaYagam1/ForcAD/internal/backup"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 )
@@ -44,4 +46,11 @@ type AuthService interface {
 
 type FlagService interface {
 	Submit(ctx context.Context, token string, values []string) ([]usecase.FlagResponse, error)
+}
+
+type BackupService interface {
+	Export(ctx context.Context, out io.Writer, name string) (backup.Manifest, error)
+	Inspect(ctx context.Context, input io.Reader) (backup.Manifest, error)
+	Restore(ctx context.Context, input io.Reader) (backup.Manifest, error)
+	Logo(ctx context.Context, name string) (string, []byte, error)
 }

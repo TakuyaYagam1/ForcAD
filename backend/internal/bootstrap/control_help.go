@@ -50,6 +50,8 @@ Game:
   set-round-limit       Change the round limit; requires --rounds N
   runtime-capacity      Report configured limits; accepts replica counts
   validate              Validate config/config.yml; --full also checks deployment settings
+  backup                Export the finished game and team logos to a private archive
+  restore-backup        Restore an event to a clean board; requires --confirm and an archive
   reset                 Reset game data; requires --confirm; --full removes local PostgreSQL
   clean                 Remove game data and generated credentials; requires --confirm
 
@@ -113,6 +115,8 @@ func controlUsage(command string) (string, bool) {
 		"set-round-limit":  "set-round-limit --rounds N (0 removes the limit)",
 		"runtime-capacity": "runtime-capacity [--api-replicas N] [--receiver-replicas N] [--worker-replicas N] [--ticker-replicas N]",
 		"validate":         "validate [--full] [--config PATH]",
+		"backup":           "backup [--name EVENT] [--output PATH.tar.gz]",
+		"restore-backup":   "restore-backup --confirm PATH.tar.gz",
 		"reset":            "reset --confirm [--full] [--fast]",
 		"clean":            "clean --confirm [--fast]",
 	}

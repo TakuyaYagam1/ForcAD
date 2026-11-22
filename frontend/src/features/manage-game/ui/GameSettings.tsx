@@ -32,6 +32,7 @@ import {
   setQuerySnapshot,
 } from "@/shared/lib/queryClient";
 import { useAdminNotification } from "@/shared/ui/admin-notification/useAdminNotification";
+import { GameBackup } from "./GameBackup";
 
 type GameMode = "classic" | "blitz";
 type FieldName =
@@ -807,6 +808,17 @@ export function GameSettings() {
                 </Button>
               </DialogFooter>
             </form>
+          )}
+          {open && settings && (
+            <GameBackup
+              canExport={settings.runtime.phase === "finished" && !settings.runtime.practice && !settings.runtime.results_pending}
+              canImport={canEditAll}
+              onRestored={() => {
+                close();
+                refreshGameQueries(queryClient);
+                notify(t("gameBackup.restored"));
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>

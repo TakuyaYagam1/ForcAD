@@ -21,6 +21,8 @@ without connecting to Docker or storage.
 | `resume` | Resume the paused game, accounting for elapsed pause time. Does not reset scores or revive a finished game. |
 | `validate` / `validate-config` | Validate `config/config.yml` without changing it or connecting to storage. `--full` also requires valid admin and storage settings; `--config PATH` selects another file. |
 | `print_tokens` / `print-tokens` / `tokens` | Print team UUIDs, names and tokens from PostgreSQL. Share each team only its own token. |
+| `backup` | Export a finished competition and its local team logos as a private `.tar.gz`. Accepts `--name EVENT` and `--output PATH`. |
+| `restore-backup --confirm ARCHIVE.tar.gz` | Restore a portable competition archive on a clean, started board. Replaces its seed config, teams, and tasks. Never overwrites a played game. |
 | `reset --confirm` | Stop the project, clear PostgreSQL game tables and the configured Redis database, remove Compose volumes (including the built-in NATS stream), and leave the project stopped. Configuration, credentials and checkers remain. External NATS is not purged. `--full` also removes verified local PostgreSQL data. |
 | `clean --confirm` | Perform a full reset and remove generated runtime credentials and the external-storage Compose file. Preserve the game YAML and checkers; run `setup` before starting again. External NATS is not purged. |
 | `rd` / `compose` | Run arbitrary Compose arguments with the correct project paths and external-storage configuration. |
@@ -58,6 +60,17 @@ enabled, use [monitoring commands](MONITORING.md#start) for recreation/scaling.
 ./control.sh print_tokens
 ./control.sh rd logs --tail 100 ticker
 ```
+
+Move a completed event between ForcAD installations:
+
+```sh
+./control.sh backup --name liga-ctf --output forcad-liga-ctf.tar.gz
+# On the destination, after initialization and before starting a game:
+./control.sh restore-backup --confirm forcad-liga-ctf.tar.gz
+```
+
+The archive contains team tokens, flags, and private checker data. Transfer
+and store it as a secret. See [competition backups](OPERATIONS.md#competition-backups).
 
 To add a worker host, first copy the initialized `config/config.yml` and the
 checkers from the main deployment over a trusted channel. The existing storage

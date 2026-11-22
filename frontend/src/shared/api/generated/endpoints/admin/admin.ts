@@ -41,12 +41,17 @@ import type {
   AdminTeamUpdate,
   AnnouncementCreate,
   ApiError,
+  BackupArchiveBody,
+  BackupManifest,
   DeleteAdminTask200,
   DeleteAdminTeam200,
+  ExportAdminBackupHeaders,
+  ExportAdminBackupParams,
   GameActionRequest,
   GameRuntimeStatus,
   GetAdminTeamTaskHistoryParams,
   PublicEvent,
+  RestoreAdminBackupHeaders,
   StatusResponse
 } from '../../schemas';
 
@@ -2361,6 +2366,342 @@ export const useChangeAdminGameState = <TError = ApiError,
         TContext
       > => {
   return useMutation(getChangeAdminGameStateMutationOptions(options), queryClient);
+}
+/**
+ * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+ * @summary Download a finished competition as a tar.gz archive.
+ */
+export const exportAdminBackup = (
+  params?: ExportAdminBackupParams,
+  headers?: ExportAdminBackupHeaders,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<Blob>(
+    {
+      url: `/api/v1/admin/backup/export/`,
+      method: 'GET',
+      headers,
+      params,
+      responseType: 'blob',
+      signal
+    },
+  );
+}
+
+
+
+
+export const getExportAdminBackupQueryKey = (params?: ExportAdminBackupParams,) => {
+  return [
+    `/api/v1/admin/backup/export/`, ...(params ? [params] : [])
+  ] as const;
+}
+
+
+export const getExportAdminBackupQueryOptions = <TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(params?: ExportAdminBackupParams,
+  headers?: ExportAdminBackupHeaders, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData>>,
+  }
+) => {
+
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportAdminBackupQueryKey(params);
+
+
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAdminBackup>>> = ({ signal }) => {
+    return exportAdminBackup(params,headers, signal)
+  };
+
+
+
+
+
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+}
+
+export type ExportAdminBackupQueryResult = NonNullable<Awaited<ReturnType<typeof exportAdminBackup>>>
+export type ExportAdminBackupQueryError = ApiError | void
+
+
+/**
+ * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+ * @summary Download a finished competition as a tar.gz archive.
+ */
+export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
+ params: undefined |  ExportAdminBackupParams,
+    headers: undefined |  ExportAdminBackupHeaders, options: {
+      query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportAdminBackup>>,
+          TError,
+          Awaited<ReturnType<typeof exportAdminBackup>>
+        > , 'initialData'
+      >,
+    }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/**
+ * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+ * @summary Download a finished competition as a tar.gz archive.
+ */
+export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
+ params?: ExportAdminBackupParams,
+    headers?: ExportAdminBackupHeaders, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportAdminBackup>>,
+          TError,
+          Awaited<ReturnType<typeof exportAdminBackup>>
+        > , 'initialData'
+      >,
+    }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/**
+ * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+ * @summary Download a finished competition as a tar.gz archive.
+ */
+export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
+ params?: ExportAdminBackupParams,
+    headers?: ExportAdminBackupHeaders, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData>>,
+    }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/**
+ * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+ * @summary Download a finished competition as a tar.gz archive.
+ */
+export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
+  params?: ExportAdminBackupParams,
+  headers?: ExportAdminBackupHeaders, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportAdminBackup>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+
+  const queryOptions = getExportAdminBackupQueryOptions(params,headers,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Validate a backup archive and preview its manifest without importing it.
+ */
+export const inspectAdminBackup = (
+  backupArchiveBody: BackupArchiveBody,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<BackupManifest>(
+    {
+      url: `/api/v1/admin/backup/inspect/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/gzip',
+      },
+      data: backupArchiveBody,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getInspectAdminBackupMutationKey = () => {
+  return ['inspectAdminBackup'] as const
+};
+
+export const getInspectAdminBackupMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof inspectAdminBackup>>, TError,InspectAdminBackupMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof inspectAdminBackup>>, TError,InspectAdminBackupMutationVariables, TContext> => {
+
+  const mutationKey = getInspectAdminBackupMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof inspectAdminBackup>>, InspectAdminBackupMutationVariables> = (props) => {
+    const {data} = props ?? {};
+
+    return  inspectAdminBackup(data,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type InspectAdminBackupMutationResult = NonNullable<Awaited<ReturnType<typeof inspectAdminBackup>>>
+export type InspectAdminBackupMutationBody = BackupArchiveBody
+export type InspectAdminBackupMutationError = ApiError
+export type InspectAdminBackupMutationVariables = {
+  data: BackupArchiveBody
+}
+
+/** @summary Validate a backup archive and preview its manifest without importing it. */
+export const useInspectAdminBackup = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof inspectAdminBackup>>, TError,InspectAdminBackupMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof inspectAdminBackup>>,
+        TError,
+        InspectAdminBackupMutationVariables,
+        TContext
+      > => {
+  return useMutation(getInspectAdminBackupMutationOptions(options), queryClient);
+}
+/**
+ * The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
+ * @summary Restore a finished competition from a backup archive.
+ */
+export const restoreAdminBackup = (
+  backupArchiveBody: BackupArchiveBody,
+  headers: RestoreAdminBackupHeaders,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<BackupManifest>(
+    {
+      url: `/api/v1/admin/backup/restore/`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/gzip',
+        ...headers
+      },
+      data: backupArchiveBody,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getRestoreAdminBackupMutationKey = () => {
+  return ['restoreAdminBackup'] as const
+};
+
+export const getRestoreAdminBackupMutationOptions = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,RestoreAdminBackupMutationVariables, TContext>,
+    }
+  ): UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,RestoreAdminBackupMutationVariables, TContext> => {
+
+  const mutationKey = getRestoreAdminBackupMutationKey();
+  const {mutation: mutationOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {
+        ...options,
+        mutation: {
+          ...options.mutation,
+          mutationKey
+        }
+      }
+    : {
+      mutation: {
+        mutationKey,
+      }
+    };
+
+
+
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreAdminBackup>>, RestoreAdminBackupMutationVariables> = (props) => {
+    const {data,headers} = props ?? {};
+
+    return  restoreAdminBackup(data,headers,)
+  }
+
+
+
+
+
+
+  return  {
+    mutationFn,
+    ...mutationOptions
+  }
+}
+
+export type RestoreAdminBackupMutationResult = NonNullable<Awaited<ReturnType<typeof restoreAdminBackup>>>
+export type RestoreAdminBackupMutationBody = BackupArchiveBody
+export type RestoreAdminBackupMutationError = ApiError
+export type RestoreAdminBackupMutationVariables = {
+  data: BackupArchiveBody;
+  headers: RestoreAdminBackupHeaders
+}
+
+/**
+ * The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
+ * @summary Restore a finished competition from a backup archive.
+ */
+export const useRestoreAdminBackup = <TError = ApiError,
+    TContext = unknown>(options?: {
+      mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,RestoreAdminBackupMutationVariables, TContext>,
+    }
+    , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restoreAdminBackup>>,
+        TError,
+        RestoreAdminBackupMutationVariables,
+        TContext
+      > => {
+  return useMutation(getRestoreAdminBackupMutationOptions(options), queryClient);
 }
 /**
  * Creates an HttpOnly session and returns its CSRF token. Requires application/json and rejects cross-origin browser requests. Responses are Cache-Control no-store.

@@ -1,0 +1,8 @@
+BackupArchive:
+  required: true
+  description: Raw ForcAD tar.gz archive, up to 256 MiB. Do not use multipart encoding.
+  content:
+    application/gzip:
+      schema:
+        type: string
+        format: binary

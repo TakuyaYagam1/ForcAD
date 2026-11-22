@@ -74,6 +74,15 @@ confirmed service failure, the observation is `CHECK_FAILED` and SLA counters do
 not change. Extra jobs never perform PUT or GET; CHECK must support concurrent
 calls on the same service.
 
+## API path aliases
+
+For compatibility, NGINX rewrites these paths internally:
+
+- `GET /attack_data` and `/attack_data/`, `/api/attack_data` and `/api/attack_data/`, and `/api/v1/attack_data` and `/api/v1/attack_data/` route to `/api/v1/client/attack_data/`.
+- `PUT /api/flags` and `/api/flags/`, and `/api/v1/flags` and `/api/v1/flags/` route to `/flags/`.
+
+The rewrite preserves the request method, body and query string.
+
 ## Execution and limits
 
 In classic mode CHECK runs first. If it succeeds, the PUT and GET branches can

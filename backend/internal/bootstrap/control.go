@@ -34,6 +34,8 @@ func RunControlCommand(ctx context.Context, args []string, out io.Writer) (runEr
 		return runWorkerCommand(ctx, root, args[1:], out, execOperatorCommand)
 	}
 	switch args[0] {
+	case "backup", "restore-backup":
+		return controlBackup(ctx, root, args[0], args[1:], out)
 	case "network-config":
 		return RunNetworkConfigCommand(ctx, append([]string{"--config", filepath.Join(root, "config", "config.yml")}, args[1:]...), out)
 	case "network-rules":

@@ -1,0 +1,38 @@
+schemas:
+  BackupManifest:
+    type: object
+    additionalProperties: false
+    required: [format_version, forcad_version, name, created_at, round, files]
+    properties:
+      format_version:
+        type: integer
+        enum: [1]
+      forcad_version:
+        type: string
+      name:
+        type: string
+        pattern: '^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$'
+      created_at:
+        type: string
+        format: date-time
+      round:
+        type: integer
+        format: int32
+        minimum: 1
+      files:
+        type: object
+        description: Archive members other than the manifest, indexed by relative archive path.
+        additionalProperties:
+          "$ref": "#/schemas/BackupArchiveEntry"
+  BackupArchiveEntry:
+    type: object
+    additionalProperties: false
+    required: [size, sha256]
+    properties:
+      size:
+        type: integer
+        format: int64
+        minimum: 0
+      sha256:
+        type: string
+        pattern: '^[a-f0-9]{64}$'

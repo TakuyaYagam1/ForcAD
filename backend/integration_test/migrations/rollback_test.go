@@ -61,6 +61,10 @@ func TestInitialMigrationRollbackAndReapply(t *testing.T) {
 	if err := fixture.conn.QueryRow(fixture.ctx, `SELECT count(*) FROM GameSession WHERE id = 1`).Scan(&sessions); err != nil || sessions != 1 {
 		t.Fatalf("sessions after reapply = %d, error = %v; want 1", sessions, err)
 	}
+	var backupLogoTable bool
+	if err := fixture.conn.QueryRow(fixture.ctx, `SELECT to_regclass('backup_team_logos') IS NOT NULL`).Scan(&backupLogoTable); err != nil || !backupLogoTable {
+		t.Fatalf("reapplied schema missing backup_team_logos: present=%t, error=%v", backupLogoTable, err)
+	}
 	if _, err := fixture.conn.Exec(fixture.ctx, `
 		INSERT INTO Teams (name, ip, token, kind)
 		VALUES ('NPC', '127.0.0.2', 'fedcba9876543210', 'npc')`); err != nil {

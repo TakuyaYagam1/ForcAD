@@ -414,6 +414,8 @@ class RenderTests(unittest.TestCase):
         self.assertIn("define router_ip = 192.168.10.1", files["vpn/firewall.nft"])
         self.assertIn("172.25.2.1:9911", files["forcad/game-sensors.yml"])
         self.assertIn("172.25.2.1:9109", files["router/network-metrics.service"])
+        for name in ("forcad/.env", "forcad/host/environment.env"):
+            self.assertIn('FORCAD_ADMIN_CIDR="172.26.201.0/24"\n', files[name])
         host = json.loads(files["forcad/host.json"])
         self.assertEqual(
             host["checks"]["forcad_url"],

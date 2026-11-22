@@ -233,6 +233,12 @@ type Handler interface {
 	//
 	// GET /api/v1/http-receiver/metrics
 	GetReceiverMetrics(ctx context.Context) (Metrics, error)
+	// InspectAdminBackup implements inspectAdminBackup operation.
+	//
+	// Validate a backup archive and preview its manifest without importing it.
+	//
+	// POST /api/v1/admin/backup/inspect/
+	InspectAdminBackup(ctx context.Context, req InspectAdminBackupReq) (InspectAdminBackupRes, error)
 	// OpenEventStream implements openEventStream operation.
 	//
 	// Upgrade this request to WebSocket. Each text message is a RealtimeEvent JSON object. The stream is
@@ -240,6 +246,13 @@ type Handler interface {
 	//
 	// GET /api/v1/events/ws
 	OpenEventStream(ctx context.Context) (*OpenEventStreamSwitchingProtocols, error)
+	// RestoreAdminBackup implements restoreAdminBackup operation.
+	//
+	// The destination must not have hosted a game and must have no announcements. Restore replaces its
+	// seeded competition data.
+	//
+	// POST /api/v1/admin/backup/restore/
+	RestoreAdminBackup(ctx context.Context, req RestoreAdminBackupReq, params RestoreAdminBackupParams) (RestoreAdminBackupRes, error)
 	// SubmitFlags implements submitFlags operation.
 	//
 	// Both /flags and /flags/ are accepted by the backend.
@@ -275,12 +288,25 @@ type Handler interface {
 
 // RawHandler handles raw response operations described by OpenAPI v3 specification.
 type RawHandler interface {
+	// ExportAdminBackup implements exportAdminBackup operation.
+	//
+	// Export requires a finished game with no pending checker results. Treat the archive as sensitive
+	// competition data.
+	//
+	// GET /api/v1/admin/backup/export/
+	ExportAdminBackup(ctx context.Context, params ExportAdminBackupParams, w http.ResponseWriter) error
 	// GetClientAttackData implements getClientAttackData operation.
 	//
 	// Get public flag data grouped by task and team address.
 	//
 	// GET /api/v1/client/attack_data/
 	GetClientAttackData(ctx context.Context, params GetClientAttackDataParams, w http.ResponseWriter) error
+	// GetClientTeamLogo implements getClientTeamLogo operation.
+	//
+	// Download a team logo restored from a backup.
+	//
+	// GET /api/v1/client/team-logos/{name}
+	GetClientTeamLogo(ctx context.Context, params GetClientTeamLogoParams, w http.ResponseWriter) error
 	// GetScoreboard implements getScoreboard operation.
 	//
 	// Used to initialize and resynchronize clients after event-stream reconnects.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/api"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/middleware"
+	"github.com/TakuyaYagam1/ForcAD/internal/backup"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 	"github.com/TakuyaYagam1/ForcAD/internal/usecase"
 	"github.com/ogen-go/ogen/ogenerrors"
@@ -53,6 +54,14 @@ func commonRequestError(err error) (int, string, bool) {
 		return http.StatusForbidden, "Invalid CSRF token", true
 	case errors.Is(err, usecase.ErrUnauthorized):
 		return http.StatusForbidden, "Invalid credentials or session", true
+	case errors.Is(err, backup.ErrInvalid):
+		return http.StatusBadRequest, "Invalid or incompatible backup", true
+	case errors.Is(err, backup.ErrSource):
+		return http.StatusConflict, backup.ErrSource.Error(), true
+	case errors.Is(err, backup.ErrTarget):
+		return http.StatusConflict, backup.ErrTarget.Error(), true
+	case errors.Is(err, backup.ErrBusy):
+		return http.StatusConflict, backup.ErrBusy.Error(), true
 	case errors.Is(err, domain.ErrTeamTokenInvalid):
 		return http.StatusBadRequest, "Invalid team token", true
 	case errors.Is(err, domain.ErrNotFound):

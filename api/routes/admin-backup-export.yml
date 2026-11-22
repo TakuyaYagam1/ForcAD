@@ -1,0 +1,60 @@
+get:
+  operationId: exportAdminBackup
+  tags:
+  - admin
+  summary: Download a finished competition as a tar.gz archive.
+  description: Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+  security:
+  - sessionCookie: []
+  parameters:
+  - name: name
+    in: query
+    description: Event name used in the manifest and archive filename.
+    schema:
+      type: string
+      default: event
+      pattern: '^(?:[a-zA-Z0-9][a-zA-Z0-9_-]{0,63})?$'
+  - name: Range
+    in: header
+    schema:
+      type: string
+  - name: If-Range
+    in: header
+    schema:
+      type: string
+  responses:
+    '200':
+      description: Complete backup archive.
+      headers:
+        Content-Disposition:
+          schema:
+            type: string
+      content:
+        application/gzip:
+          x-ogen-raw-response: true
+          schema:
+            type: string
+            format: binary
+    '206':
+      description: Requested range of the backup archive.
+      headers:
+        Content-Range:
+          schema:
+            type: string
+      content:
+        application/gzip:
+          schema: {type: string, format: binary}
+        multipart/byteranges:
+          schema: {type: string, format: binary}
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"
+    '409':
+      "$ref": "../components/responses.yml#/ApiError"
+    '416':
+      description: Requested range cannot be served.
+    '500':
+      "$ref": "../components/responses.yml#/ApiError"
+    '503':
+      "$ref": "../components/responses.yml#/ApiError"

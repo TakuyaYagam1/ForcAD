@@ -71,7 +71,9 @@ container_id="$(docker run --detach \
     --publish "127.0.0.1:${host_port}:8080" \
     --mount "type=bind,src=$logo_fixture_dir,dst=/var/www/front/team-logos,readonly" \
     --env PUBLIC_SCHEME=https \
-    --env TRUSTED_PROXY_CIDRS=127.0.0.1/32 \
+    --env TRUSTED_PROXY_CIDRS=127.0.0.0/8 \
+    --env FORCAD_ADMIN_CIDR=127.0.0.0/8 \
+    --env 'FORCAD_ADMIN_DENY_CIDRS=127.0.0.2 127.0.0.4/30' \
     "$image_tag")"
 
 container_state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
@@ -90,7 +92,7 @@ docker exec "$container_id" sh -ec '
     test -w /tmp/forcad-proxy-proto
     test -w /tmp/forcad-trusted-proxies.conf
     grep -Fx "proxy_set_header X-Forwarded-Proto https;" /tmp/forcad-proxy-proto
-    grep -Fx "set_real_ip_from 127.0.0.1/32;" /tmp/forcad-trusted-proxies.conf
+    grep -Fx "set_real_ip_from 127.0.0.0/8;" /tmp/forcad-trusted-proxies.conf
 '
 
 base_url="http://127.0.0.1:${host_port}"
@@ -138,4 +140,40 @@ if [[ "$missing_status" != 404 ]]; then
     exit 1
 fi
 
-echo "nginx verified team logos, asset headers, the teams page, and build-time branding."
+for route in /admin /admin/ /admin/teams /ADMIN/ /api/v1/admin /api/v1/admin/status/; do
+    status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+        --max-time 5 "$base_url$route")"
+    if [[ "$status" != 403 ]]; then
+        printf 'Expected 403 on %s outside the admin network, got %s\n' "$route" "$status" >&2
+        exit 1
+    fi
+done
+
+status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --max-time 5 --header 'Content-Type: application/json' --data '{}' \
+    "$base_url/api/v1/admin/login/")"
+if [[ "$status" != 403 ]]; then
+    printf 'Expected 403 on admin login outside the admin network, got %s\n' "$status" >&2
+    exit 1
+fi
+
+for source in 127.0.0.2 127.0.0.5; do
+    status="$(docker exec "$container_id" curl --silent --show-error --max-time 5 \
+        --interface "$source" --header 'X-Forwarded-For: 127.0.0.1' \
+        --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8080/admin/)"
+    if [[ "$status" != 403 ]]; then
+        printf 'Expected 403 on admin page from denied IP %s, got %s\n' "$source" "$status" >&2
+        exit 1
+    fi
+done
+
+docker exec "$container_id" curl --fail --silent --show-error --max-time 5 \
+    --interface 127.0.0.2 http://127.0.0.1:8080/ > "$test_dir/public.html"
+cmp "$test_dir/index.html" "$test_dir/public.html"
+
+docker exec "$container_id" curl --fail --silent --show-error --max-time 5 \
+    --header 'X-Forwarded-For: 127.0.0.2' \
+    http://127.0.0.1:8080/admin/ > "$test_dir/admin.html"
+cmp "$test_dir/index.html" "$test_dir/admin.html"
+
+echo "nginx verified public assets, the admin network and denied admin IPs."

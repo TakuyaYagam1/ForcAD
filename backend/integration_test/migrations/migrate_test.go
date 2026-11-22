@@ -35,7 +35,7 @@ func TestMigrateFreshSchema(t *testing.T) {
 		          AND relname IN ('gameconfig', 'teams', 'tasks', 'flags', 'stolenflags',
 		                          'teamtasks', 'teamtaskslog', 'schedulehistory', 'gamesession',
 		                          'dispatchruns', 'checkerjobs', 'gameroundsnapshots',
-		                          'checkeractionlogs', 'publicannouncements')),
+		                          'checkeractionlogs', 'publicannouncements', 'backup_team_logos')),
 		       (SELECT count(*) FROM GameSession WHERE id = 1),
 		       (SELECT count(*) FROM GameRoundSnapshots),
 	       (SELECT count(*) FROM information_schema.columns
@@ -98,7 +98,7 @@ func TestMigrateFreshSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != 1 || tables != 14 || sessions != 1 || snapshots != 0 || dispatchColumns != 3 ||
+	if version != 1 || tables != 15 || sessions != 1 || snapshots != 0 || dispatchColumns != 3 ||
 		uuidColumns != 21 || uuidDefaults != 8 || !actionNullable || !snapshotIndex || !historyIndex ||
 		!checkerIndex || !feedIndex || !deltaColumn ||
 		!configSingleton || !integerSession || !teamKindColumn || !teamKindConstraint ||
@@ -313,6 +313,7 @@ func migrationSchemaState(t *testing.T, fixture *migrationFixture) string {
 		    'ledger', (SELECT jsonb_agg(v ORDER BY v.id) FROM goose_db_version AS v),
 		    'action_logs_table', to_regclass('checkeractionlogs') IS NOT NULL,
 		    'announcements_table', to_regclass('publicannouncements') IS NOT NULL,
+		    'backup_logos_table', to_regclass('backup_team_logos') IS NOT NULL,
 		    'attacker_delta', EXISTS (
 		        SELECT 1 FROM information_schema.columns
 		        WHERE table_schema = current_schema()

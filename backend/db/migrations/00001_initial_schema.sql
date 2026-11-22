@@ -271,6 +271,13 @@ CREATE TABLE PublicAnnouncements
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT clock_timestamp()
 );
 
+CREATE TABLE backup_team_logos
+(
+    name         TEXT PRIMARY KEY,
+    content_type TEXT NOT NULL CHECK (content_type IN ('image/svg+xml', 'image/png', 'image/jpeg', 'image/gif', 'image/webp')),
+    content      BYTEA NOT NULL CHECK (octet_length(content) BETWEEN 1 AND 4194304)
+);
+
 INSERT INTO GameSession (id) VALUES (1);
 
 CREATE UNIQUE INDEX teams_single_npc
@@ -313,6 +320,7 @@ WHERE action = 'put' AND status = 101 AND public_message <> 'PUT completed';
 -- +goose Down
 
 -- This rollback drops the full schema and all application data.
+DROP TABLE backup_team_logos;
 DROP TABLE PublicAnnouncements;
 DROP VIEW checker_teams;
 DROP VIEW checker_services;
