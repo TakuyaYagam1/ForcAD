@@ -29,7 +29,7 @@ x-network: &network
     net.ipv4.ping_group_range: "0 10001"
     net.ipv6.conf.all.disable_ipv6: "1"
 
-x-team: &team
+x-team:
   <<: *network
   command: [team]
   cap_add: [NET_ADMIN, SETUID, SETGID, SETPCAP, DAC_OVERRIDE, CHOWN]

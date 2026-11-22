@@ -1,0 +1,7 @@
+{
+  "yaml.customTags": [
+    "!reset sequence",
+    "!reset mapping",
+    "!override sequence"
+  ]
+}
