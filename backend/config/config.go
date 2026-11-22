@@ -159,7 +159,7 @@ func Load(lookup LookupEnv) (Config, error) {
 	c.ShutdownTimeout = duration("SHUTDOWN_TIMEOUT", 30*time.Second)
 	c.RequestTimeout = duration("REQUEST_TIMEOUT", 10*time.Second)
 	c.FlagRate = integer("FLAG_RATE", 200, 1, 1000000)
-	c.FlagBurst = integer("FLAG_BURST", 400, 1, 1000000)
+	c.FlagBurst = integer("FLAG_BURST", 500, 1, 1000000)
 	errs = append(errs, poolErr, httpErr, c.Validate())
 	errs = append(errs, c.configurePooler())
 	errs = append(errs, validateDatabaseTLS(c.DatabaseURL, value("FORCAD_DATABASE_REQUIRE_TLS", "0")))

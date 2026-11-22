@@ -284,7 +284,7 @@ limits with `FORCAD_API_HTTP_MAX_INFLIGHT` and `FORCAD_RECEIVER_HTTP_MAX_INFLIGH
 before starting or recreating containers. These are concurrency limits, not RPS.
 Native processes fall back to `HTTP_MAX_INFLIGHT` (128) when no role override is set.
 Workers default to 8 checker actions and a 1024 MiB address-space ceiling per
-checker on Linux. Redis enforces 200 flags/s with a burst of 400 per team across
+checker on Linux. Redis enforces 200 flags/s with a burst of 500 per team across
 replicas; a batch of 100 costs 100.
 
 All application roles connect through PgBouncer in transaction mode. Each role

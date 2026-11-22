@@ -163,7 +163,7 @@ The current Nginx configuration limits REST traffic to 150 requests/s per IP
 (burst 60); the archived 2026-10-13 runs predate that limit. This harness uses
 Nginx too, so the historical command does not establish current end-to-end
 capacity. Flag submissions have a separate 200 values/s budget per team
-(burst 400), including all values in a batch; 4,000 values/s across 20 teams
+(burst 500), including all values in a batch; 4,000 values/s across 20 teams
 is 40 full batches/s, not 4,000 HTTP requests/s.
 
 ## Recorded runs on 2026-10-13

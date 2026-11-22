@@ -197,7 +197,9 @@ Nginx admits `/flags` and its aliases **before** token lookup or database access
 `FORCAD_FLAGS_IP_RPS` (default `400`) and `FORCAD_FLAGS_TOTAL_RPS` (`2000`) are
 requests per second per client IP and across this ingress, respectively; each
 allows one extra second of burst. A batch of up to 100 flags costs one request.
-The authenticated per-team `FLAG_RATE` and `FLAG_BURST` still count individual flags.
+After authentication, each team shares one Redis quota across all receivers:
+`FLAG_RATE` refills it at 200 flags/s by default; `FLAG_BURST` holds 500 flags,
+enough for five full batches when the quota is full.
 `FORCAD_WS_PER_IP` (`128`) limits simultaneous board WebSockets per client IP,
 across all API replicas behind this ingress. Excess requests return `429` with
 `Retry-After`. Spectators or farms sharing a NAT share an IP budget; size these
