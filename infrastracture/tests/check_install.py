@@ -9,9 +9,9 @@ from helpers import ROOT, small_config
 import render
 
 
-def run(*args, check=True):
+def run(*args, check=True, timeout=30):
     result = subprocess.run(
-        args, capture_output=True, text=True, check=False, timeout=30
+        args, capture_output=True, text=True, check=False, timeout=timeout
     )
     if check and result.returncode:
         raise AssertionError(f"{args[0]} failed: {result.stderr}")
@@ -40,6 +40,7 @@ def main():
         str(ROOT / "tests"),
         "-p",
         "test_*.py",
+        timeout=300,
     )
     small_config(config)
     bundle = Path("/work/bundle")

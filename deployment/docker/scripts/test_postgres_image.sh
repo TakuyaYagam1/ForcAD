@@ -148,6 +148,8 @@ echo "PASS: legacy flat data is preserved."
 finish_case
 
 start_case previous-major
+# Variables expand in the container shell, not on the host.
+# shellcheck disable=SC2016
 expect_refusal "Legacy PostgreSQL data" '
     old=/var/lib/postgresql/18/docker
     mkdir -p "$old"

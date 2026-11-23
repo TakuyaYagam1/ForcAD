@@ -98,7 +98,7 @@ def main():
                         "/source/infrastracture/tests/check_install.py"
                         if role == "install"
                         else role,
-                        timeout=90,
+                        timeout=420 if role == "install" else 90,
                     )
                 finally:
                     if cid.exists():

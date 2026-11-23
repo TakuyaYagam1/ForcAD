@@ -106,11 +106,7 @@ def main():
         for path in dashboard_paths
         if "panels" in (document := json.loads(path.read_text()))
     }
-    expected_uids = {
-        f"forcad-{name}{suffix}"
-        for name in ("monitoring", "traffic", "ddos", "relay")
-        for suffix in ("", "-ru")
-    }
+    expected_uids = {"forcad-monitoring", "forcad-traffic", "forcad-ddos", "forcad-relay"}
     assert set(dashboards) == expected_uids, (
         f"Unexpected dashboard inventory: {sorted(set(dashboards) ^ expected_uids)}"
     )

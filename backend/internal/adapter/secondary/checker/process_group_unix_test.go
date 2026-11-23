@@ -4,7 +4,6 @@ package checker
 
 import (
 	"bytes"
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,40 +20,49 @@ func TestRunnerTimeoutStopsCheckerProcessGroup(t *testing.T) {
 
 func testRunnerStopsProcessGroup(t *testing.T, mode string) {
 	t.Helper()
-	executable, executableDir := testExecutable(t)
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
 	heartbeat := filepath.Join(t.TempDir(), "child-heartbeat")
 	t.Setenv(fixtureModeEnv, mode)
 	t.Setenv(fixtureHeartbeatEnv, heartbeat)
 
-	runner := testRunner(0)
-	runner.options.TerminateTimeout = 75 * time.Millisecond
-	started := time.Now()
-	result, err := runner.Run(context.Background(), Request{
-		Executable: executable,
-		Action:     ActionCheck,
-		TeamIP:     "192.0.2.1",
-		Timeout:    150 * time.Millisecond,
-		EnvPath:    executableDir,
-	})
+	process, err := startChecker(executable, []string{"check", "192.0.2.1"}, os.Environ(), DefaultOptions().MaxOutputBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.TimedOut || !result.Killed || time.Since(started) > 2*time.Second {
-		t.Fatalf("process group was not stopped promptly: elapsed=%s result=%+v", time.Since(started), result)
-	}
-
+	// The child only writes after installing its TERM handler. Do not charge
+	// process startup on a busy builder against the timeout under test.
 	childHeartbeat := heartbeat + ".child"
-	var before []byte
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		before, err = os.ReadFile(childHeartbeat)
-		if err == nil {
+	startupDeadline := time.Now().Add(10 * time.Second)
+	var readyErr error
+	for {
+		_, readyErr = os.Stat(childHeartbeat)
+		if !os.IsNotExist(readyErr) || time.Now().After(startupDeadline) {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	started := time.Now()
+	var result Result
+	wait := waitForChecker(t.Context(), 150*time.Millisecond, 75*time.Millisecond, process, &result)
+	result, err = finishCheckerResult(Request{
+		Action: ActionCheck,
+	}, result, wait)
+	if readyErr != nil {
+		t.Fatalf("fixture child did not start: %v", readyErr)
+	}
 	if err != nil {
-		t.Fatalf("fixture child did not start: %v", err)
+		t.Fatal(err)
+	}
+	if !result.TimedOut || !result.Killed || !result.ProcessReaped || !result.OutputComplete || time.Since(started) > 2*time.Second {
+		t.Fatalf("process group was not stopped promptly: elapsed=%s result=%+v", time.Since(started), result)
+	}
+
+	before, err := os.ReadFile(childHeartbeat)
+	if err != nil {
+		t.Fatal(err)
 	}
 	time.Sleep(100 * time.Millisecond)
 	after, err := os.ReadFile(childHeartbeat)
