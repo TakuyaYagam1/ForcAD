@@ -117,7 +117,7 @@ func TestScheduledStartRechecksEligibilityAfterWaitingForStateLock(t *testing.T)
 
 	// The committed state says start is due. Wait until the actual transition
 	// requests the lock, then postpone the start in the concurrent transaction.
-	waitForSchedulerStateLock(t, pool, blockerPID)
+	waitForBlockedTransaction(t, pool, blockerPID)
 	postponed := start.Add(time.Hour)
 	if _, err := tx.Exec(t.Context(), `UPDATE GameConfig SET start_time=$1 WHERE id=1`, postponed); err != nil {
 		t.Fatal(err)
@@ -181,7 +181,7 @@ func TestSchedulerMaintenanceRechecksSnapshotAfterWaitingForStateLock(t *testing
 
 	// A matching snapshot_round alone is insufficient while the snapshot is
 	// SQL NULL. Another maintainer can fill it before we acquire the state lock.
-	waitForSchedulerStateLock(t, pool, blockerPID)
+	waitForBlockedTransaction(t, pool, blockerPID)
 	if _, err := tx.Exec(t.Context(), `UPDATE GameSession SET snapshot_round=1,
 		snapshot='{"round":1,"round_start":0,"team_tasks":[],"marker":"concurrent"}'::JSONB WHERE id=1`); err != nil {
 		t.Fatal(err)
@@ -209,7 +209,7 @@ func TestSchedulerMaintenanceRechecksSnapshotAfterWaitingForStateLock(t *testing
 	}
 }
 
-func waitForSchedulerStateLock(t *testing.T, pool *pgxpool.Pool, blockerPID int32) {
+func waitForBlockedTransaction(t *testing.T, pool *pgxpool.Pool, blockerPID int32) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
@@ -220,7 +220,6 @@ func waitForSchedulerStateLock(t *testing.T, pool *pgxpool.Pool, blockerPID int3
 		err := pool.QueryRow(ctx, `SELECT EXISTS (
 			SELECT 1 FROM pg_stat_activity
 			WHERE $1::INTEGER = ANY(pg_blocking_pids(pid))
-			  AND query LIKE '-- name: LockSchedulerGame%'
 		)`, blockerPID).Scan(&waiting)
 		if err != nil {
 			t.Fatal(err)
@@ -230,7 +229,7 @@ func waitForSchedulerStateLock(t *testing.T, pool *pgxpool.Pool, blockerPID int3
 		}
 		select {
 		case <-ctx.Done():
-			t.Fatal("scheduled transition did not wait for concurrent state lock")
+			t.Fatalf("no transaction waited on PostgreSQL backend %d", blockerPID)
 		case <-ticker.C:
 		}
 	}

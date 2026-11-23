@@ -154,6 +154,10 @@ backup-capable schema and be initialized, with no started game, results or
 announcements. Use a future scheduled start to prevent a fresh board from
 automatically starting before import. The initial settings, teams and tasks
 are replaced in one database transaction with data from the archive.
+Import waits up to two seconds for an active ticker or another transaction to
+release the game configuration. If it cannot lock the destination, it returns
+HTTP 409 without changing the board; retry after the competing operation ends.
+The scoreboard remains readable during import.
 Imported logos are served from the database so they commit with the event;
 existing files in `public/teams/` are not overwritten.
 

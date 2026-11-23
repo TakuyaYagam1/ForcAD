@@ -2,16 +2,19 @@ package postgres_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TakuyaYagam1/ForcAD/integration_test/testutil"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
+	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres/sqlc"
 	"github.com/TakuyaYagam1/ForcAD/internal/backup"
 	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
@@ -114,6 +117,74 @@ func TestBackupRoundZero(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBackupRestoreDuringOutboxPoll(t *testing.T) {
+	pool, _ := testutil.Database(t)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	game := postgres.NewGameStore(pool)
+	if _, err := game.Initialize(ctx, gameDocument(t)); err != nil {
+		t.Fatal(err)
+	}
+	store := backup.New(pool, t.TempDir())
+	var archive bytes.Buffer
+	if _, err := store.Export(ctx, &archive, "waiting"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Pause ClaimPending between its lifecycle reads and its outbox update.
+	poll, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer poll.Rollback(t.Context())
+	q := sqlc.New(poll)
+	if _, err := q.LockGameForAttack(ctx); err != nil {
+		t.Fatal(err)
+	}
+	session, err := q.LockSessionForAttack(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := make(chan error, 1)
+	go func() {
+		defer close(restored)
+		_, err := store.Restore(ctx, &archive)
+		restored <- err
+	}()
+	t.Cleanup(func() {
+		<-restored
+	})
+	waitForBlockedTransaction(t, pool, int32(poll.Conn().PgConn().PID()))
+
+	now := time.Now()
+	owner := "ticker"
+	jobs, err := q.ClaimOutboxJobs(ctx, sqlc.ClaimOutboxJobsParams{
+		OwnerToken: &owner,
+		ClaimedAt: pgtype.Timestamptz{
+			Time:  now,
+			Valid: true,
+		},
+		ClaimDeadline: pgtype.Timestamptz{
+			Time:  now.Add(time.Minute),
+			Valid: true,
+		},
+		JobLimit: 1,
+	})
+	if err != nil || len(jobs) != 0 {
+		t.Fatalf("poll on waiting board during restore: %d jobs, %v", len(jobs), err)
+	}
+	if err := poll.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-restored; err != nil {
+		t.Fatal(err)
+	}
+	life, err := game.Lifecycle(ctx)
+	if err != nil || life.Session.Generation != session.Generation+1 {
+		t.Fatalf("restore did not fence the previous generation: %+v, %v", life.Session, err)
 	}
 }
 

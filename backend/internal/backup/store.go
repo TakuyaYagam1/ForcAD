@@ -203,12 +203,15 @@ func exportTable(
 
 func restoreBundle(ctx context.Context, tx pgx.Tx, b *bundle) error {
 	const location = "backup.restoreBundle"
-	if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '10min'"); err != nil {
+	if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '10min'; SET LOCAL lock_timeout = '2s'"); err != nil {
 		return fmt.Errorf("%s - configure restore deadline: %w", location, err)
 	}
-	const guard = `LOCK TABLE gameconfig, gamesession, teams, tasks, flags, stolenflags, teamtasks,
+	// Drain lifecycle readers before taking any table they may still write.
+	// EXCLUSIVE fences SELECT FOR SHARE/UPDATE but leaves plain reads available.
+	const guard = `LOCK TABLE gameconfig IN EXCLUSIVE MODE;
+LOCK TABLE gamesession, teams, tasks, flags, stolenflags, teamtasks,
 teamtaskslog, schedulehistory, dispatchruns, checkerjobs, gameroundsnapshots, checkeractionlogs,
-publicannouncements, backup_team_logos IN SHARE ROW EXCLUSIVE MODE NOWAIT`
+publicannouncements, backup_team_logos IN EXCLUSIVE MODE NOWAIT`
 	if _, err := tx.Exec(ctx, guard); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "55P03" {
