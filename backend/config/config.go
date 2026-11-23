@@ -362,7 +362,7 @@ func (c Config) validateEndpoints() error {
 }
 
 func validateNATSEndpoint(raw string) error {
-	const location = "config.Config.validateEndpoints"
+	const location = "config.validateNATSEndpoint"
 	broker, err := url.Parse(raw)
 	if err != nil || (broker.Scheme != "nats" && broker.Scheme != "tls") || broker.Hostname() == "" || broker.Path != "" || broker.RawQuery != "" || broker.Fragment != "" {
 		return fmt.Errorf("%s - NATS_URL must be a NATS or TLS URL without a path", location)

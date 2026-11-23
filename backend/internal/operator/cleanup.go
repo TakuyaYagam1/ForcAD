@@ -228,7 +228,7 @@ func verifyFullResetSupport(project composeProject) error {
 }
 
 func verifyResetStorageVolumes(project composeProject) error {
-	const location = "operator.verifyFullResetSupport"
+	const location = "operator.verifyResetStorageVolumes"
 	for name, volume := range project.Volumes {
 		if volume.External || (name != "forcad-config" && name != "forcad-nats") ||
 			(volume.Name != "" && volume.Name != project.Name+"_"+name) {

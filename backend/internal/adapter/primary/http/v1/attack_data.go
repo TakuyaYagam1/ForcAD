@@ -21,7 +21,7 @@ func writeAttackData(
 	ifNoneMatch string,
 	w http.ResponseWriter,
 ) error {
-	const location = "httpv1.gameHandler.GetClientAttackData"
+	const location = "httpv1.writeAttackData"
 	data, err := game.AttackData(ctx, service)
 	if err != nil {
 		return fmt.Errorf("%s - load public attack data: %w", location, err)
