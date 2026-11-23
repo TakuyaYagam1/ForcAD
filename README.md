@@ -7,7 +7,7 @@ Compose project, ports, runtime configuration and database.
 teams, but uses placeholder TEST-NET IPs and no tokens. Replace them in the
 private `config/config.yml` before game day.
 
-![ForcAD](public/ForcAD.png)
+![Final scoreboard: Чемпионат России, round 240](public/ForcAD.png)
 
 ForcAD is a capture-the-flag attack-defense platform.
 
