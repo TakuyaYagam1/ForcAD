@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -151,7 +152,7 @@ func DecodeDocument(reader io.Reader) (Document, error) {
 	if err := validateScalarTypes(&tree); err != nil {
 		return Document{}, fmt.Errorf("%s - validate scalar types: %w", location, err)
 	}
-	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&d); err != nil {
 		return Document{}, fmt.Errorf("%s - invalid YAML configuration or field type", location)
@@ -205,8 +206,7 @@ func defaultPointer[T any](value *T, fallback T) *T {
 	return value
 }
 
-// yaml.v3 accepts a floating-point scalar when decoding an int. Reject that
-// coercion for round counts and limits, where silently truncating is unsafe.
+// Reject fractional round counts and limits before typed decoding can truncate them.
 func validateScalarTypes(node *yaml.Node) error {
 	const location = "config.validateScalarTypes"
 	if node.Kind == yaml.AliasNode {
