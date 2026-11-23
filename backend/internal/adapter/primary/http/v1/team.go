@@ -3,7 +3,6 @@ package v1
 import (
 	"context"
 	"fmt"
-	"uuid"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/primary/http/v1/response"
 
@@ -67,10 +66,7 @@ func (h *teamsHandler) DeleteAdminTeam(ctx context.Context, params api.DeleteAdm
 
 func (h *teamsHandler) ActivateAdminTeams(ctx context.Context, req *api.AdminBulkActivateRequest) (api.ActivateAdminTeamsRes, error) {
 	const location = "httpv1.teamsHandler.ActivateAdminTeams"
-	ids := make([]uuid.UUID, len(req.Ids))
-	for i, id := range req.Ids {
-		ids[i] = uuid.UUID(id)
-	}
+	ids := request.DomainUUIDs(req.Ids)
 	activated, err := h.game.ActivateTeams(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("%s - activate teams: %w", location, err)
@@ -82,10 +78,7 @@ func (h *teamsHandler) ActivateAdminTeams(ctx context.Context, req *api.AdminBul
 
 func (h *teamsHandler) DeactivateAdminTeams(ctx context.Context, req *api.AdminBulkDeactivateRequest) (api.DeactivateAdminTeamsRes, error) {
 	const location = "httpv1.teamsHandler.DeactivateAdminTeams"
-	ids := make([]uuid.UUID, len(req.Ids))
-	for i, id := range req.Ids {
-		ids[i] = uuid.UUID(id)
-	}
+	ids := request.DomainUUIDs(req.Ids)
 	deactivated, err := h.game.DeactivateTeams(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("%s - deactivate teams: %w", location, err)

@@ -695,16 +695,7 @@ func buildSchedulerJobs(
 	const location = "postgres.buildSchedulerJobs"
 	jobs := make([]schedulerJobRecord, 0, len(teams)*len(tasks))
 	for _, teamRow := range teams {
-		team := domain.Team{
-			ID:          teamRow.ID,
-			Name:        teamRow.Name,
-			IP:          teamRow.Ip,
-			Token:       teamRow.Token,
-			Kind:        teamRow.Kind,
-			Highlighted: teamRow.Highlighted,
-			Active:      teamRow.Active,
-			LogoPath:    teamRow.LogoPath,
-		}
+		team := domainTeam(teamRow)
 		for _, taskRow := range tasks {
 			if taskID != nil && taskRow.ID != *taskID {
 				continue
@@ -712,20 +703,7 @@ func buildSchedulerJobs(
 			if workflow == domain.JobActionPutsOnly && taskRow.Puts == 0 {
 				continue
 			}
-			task := domain.Task{
-				ID:             taskRow.ID,
-				Name:           taskRow.Name,
-				Checker:        taskRow.Checker,
-				EnvPath:        taskRow.EnvPath,
-				Gets:           taskRow.Gets,
-				Puts:           taskRow.Puts,
-				Places:         taskRow.Places,
-				CheckerTimeout: taskRow.CheckerTimeout,
-				CheckerType:    taskRow.CheckerType,
-				GetPeriod:      taskRow.GetPeriod,
-				DefaultScore:   taskRow.DefaultScore,
-				Active:         taskRow.Active,
-			}
+			task := domainTask(taskRow)
 			payload, err := json.Marshal(domain.JobPayload{
 				Team:       team,
 				Task:       task,

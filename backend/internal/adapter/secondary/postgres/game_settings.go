@@ -33,7 +33,7 @@ func (g *GameStore) UpdateGameSettings(ctx context.Context, input domain.GameSet
 			ExtraChecks:      input.ExtraChecks,
 			Mode:             input.Mode,
 			Timezone:         input.Timezone,
-			StartTime:        gameStamp(input.StartTime),
+			StartTime:        timestamp(input.StartTime),
 		})
 		if err != nil {
 			return fmt.Errorf("%s - update game configuration: %w", location, err)

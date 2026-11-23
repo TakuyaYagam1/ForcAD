@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -101,12 +102,20 @@ func TestAdminBulkDeactivationRoutes(t *testing.T) {
 		"Cookie":       "session=valid",
 		"X-CSRF-Token": strings.Repeat("c", 64),
 	}
+	teamIDs := []uuid.UUID{
+		httpTeamID,
+		uuid.MustParse("01912345-6789-7000-8000-000000000022"),
+	}
+	taskIDs := []uuid.UUID{
+		httpTaskID,
+		uuid.MustParse("01912345-6789-7000-8000-000000000032"),
+	}
 	for _, tc := range []struct {
 		path string
 		want []uuid.UUID
 	}{
-		{"/api/v1/admin/teams/deactivate/", []uuid.UUID{httpTeamID}},
-		{"/api/v1/admin/tasks/deactivate/", []uuid.UUID{httpTaskID}},
+		{"/api/v1/admin/teams/deactivate/", teamIDs},
+		{"/api/v1/admin/tasks/deactivate/", taskIDs},
 	} {
 		body, err := json.Marshal(map[string][]uuid.UUID{
 			"ids": tc.want,
@@ -120,11 +129,17 @@ func TestAdminBulkDeactivationRoutes(t *testing.T) {
 			t.Fatalf("CSRF guard %s: %d %s", tc.path, got.Code, got.Body.String())
 		}
 		got := performRequest(router, http.MethodPost, tc.path, string(body), headers)
-		if got.Code != http.StatusOK || !strings.Contains(got.Body.String(), `"deactivated":1`) {
+		if got.Code != http.StatusOK || !strings.Contains(got.Body.String(), `"deactivated":2`) {
 			t.Fatalf("deactivation %s: %d %s", tc.path, got.Code, got.Body.String())
 		}
 	}
-	if len(game.teams) != 1 || game.teams[0] != httpTeamID || len(game.tasks) != 1 || game.tasks[0] != httpTaskID || game.calls != 2 {
-		t.Fatalf("batch calls: teams=%v tasks=%v count=%d", game.teams, game.tasks, game.calls)
+	if got := game.teams; !slices.Equal(got, teamIDs) {
+		t.Fatalf("team ids: got %v, want %v", got, teamIDs)
+	}
+	if got := game.tasks; !slices.Equal(got, taskIDs) {
+		t.Fatalf("task ids: got %v, want %v", got, taskIDs)
+	}
+	if game.calls != 2 {
+		t.Fatalf("batch calls: %d, want 2", game.calls)
 	}
 }

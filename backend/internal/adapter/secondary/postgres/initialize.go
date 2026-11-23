@@ -95,7 +95,7 @@ func initializeGameConfig(
 		Rounds:           rounds,
 		Mode:             new(game.Mode),
 		Timezone:         new(game.Timezone),
-		StartTime:        gameStamp(start),
+		StartTime:        timestamp(start),
 		ExtraChecks:      extraChecks,
 	})
 	if err != nil {

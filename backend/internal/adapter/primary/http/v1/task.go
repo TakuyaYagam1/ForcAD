@@ -75,10 +75,7 @@ func (h *tasksHandler) DeleteAdminTask(ctx context.Context, params api.DeleteAdm
 
 func (h *tasksHandler) ActivateAdminTasks(ctx context.Context, req *api.AdminBulkActivateRequest) (api.ActivateAdminTasksRes, error) {
 	const location = "httpv1.tasksHandler.ActivateAdminTasks"
-	ids := make([]uuid.UUID, len(req.Ids))
-	for i, id := range req.Ids {
-		ids[i] = uuid.UUID(id)
-	}
+	ids := request.DomainUUIDs(req.Ids)
 	activated, err := h.game.ActivateTasks(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("%s - activate tasks: %w", location, err)
@@ -90,10 +87,7 @@ func (h *tasksHandler) ActivateAdminTasks(ctx context.Context, req *api.AdminBul
 
 func (h *tasksHandler) DeactivateAdminTasks(ctx context.Context, req *api.AdminBulkDeactivateRequest) (api.DeactivateAdminTasksRes, error) {
 	const location = "httpv1.tasksHandler.DeactivateAdminTasks"
-	ids := make([]uuid.UUID, len(req.Ids))
-	for i, id := range req.Ids {
-		ids[i] = uuid.UUID(id)
-	}
+	ids := request.DomainUUIDs(req.Ids)
 	deactivated, err := h.game.DeactivateTasks(ctx, ids)
 	if err != nil {
 		return nil, fmt.Errorf("%s - deactivate tasks: %w", location, err)

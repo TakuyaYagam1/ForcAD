@@ -172,6 +172,21 @@ func TestBuildSchedulerJobsIncludesNPC(t *testing.T) {
 	playerID := uuid.MustParse("01912345-6789-7000-8000-000000000001")
 	npcID := uuid.MustParse("01912345-6789-7000-8000-000000000002")
 	taskID := uuid.MustParse("01912345-6789-7000-8000-000000000003")
+
+	npc := sqlc.ListGameTeamsRow{
+		ID:     npcID,
+		Ip:     "192.0.2.12",
+		Kind:   domain.TeamKindNPC,
+		Active: true,
+	}
+	task := sqlc.ListGameTasksRow{
+		ID:             taskID,
+		Checker:        "http_checker.py",
+		Gets:           2,
+		Puts:           3,
+		CheckerTimeout: 15,
+		Active:         true,
+	}
 	jobs, err := buildSchedulerJobs(
 		uuid.MustParse("01912345-6789-7000-8000-000000000004"),
 		7,
@@ -184,16 +199,9 @@ func TestBuildSchedulerJobsIncludesNPC(t *testing.T) {
 				Kind:   domain.TeamKindPlayer,
 				Active: true,
 			},
-			{
-				ID:     npcID,
-				Kind:   domain.TeamKindNPC,
-				Active: true,
-			},
+			npc,
 		},
-		[]sqlc.ListGameTasksRow{{
-			ID:     taskID,
-			Active: true,
-		}},
+		[]sqlc.ListGameTasksRow{task},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -205,7 +213,19 @@ func TestBuildSchedulerJobsIncludesNPC(t *testing.T) {
 	if err := json.Unmarshal(jobs[1].Payload, &npcPayload); err != nil {
 		t.Fatal(err)
 	}
-	if npcPayload.Team.ID != npcID || npcPayload.Team.Kind != domain.TeamKindNPC {
-		t.Fatalf("NPC checker payload = %+v", npcPayload.Team)
+	if got := npcPayload.Team; got.ID != npc.ID || got.Kind != npc.Kind {
+		t.Fatalf("NPC checker payload identity = %v/%s, want %v/%s", got.ID, got.Kind, npc.ID, npc.Kind)
+	}
+	if got := npcPayload.Team.IP; got != npc.Ip {
+		t.Fatalf("NPC checker payload IP = %q, want %q", got, npc.Ip)
+	}
+	if got := npcPayload.Task; got.ID != task.ID || got.Checker != task.Checker {
+		t.Fatalf("NPC checker payload task identity = %v/%q, want %v/%q", got.ID, got.Checker, task.ID, task.Checker)
+	}
+	if got := npcPayload.Task; got.Gets != task.Gets || got.Puts != task.Puts {
+		t.Fatalf("NPC checker payload attempt counts = %d/%d, want %d/%d", got.Gets, got.Puts, task.Gets, task.Puts)
+	}
+	if got := npcPayload.Task.CheckerTimeout; got != task.CheckerTimeout {
+		t.Fatalf("NPC checker payload timeout = %d, want %d", got, task.CheckerTimeout)
 	}
 }

@@ -22,6 +22,36 @@ func domainFlag(row sqlc.Flag) domain.Flag {
 	}
 }
 
+func domainTeam(row sqlc.ListGameTeamsRow) domain.Team {
+	return domain.Team{
+		ID:          row.ID,
+		Name:        row.Name,
+		IP:          row.Ip,
+		Token:       row.Token,
+		Kind:        row.Kind,
+		Highlighted: row.Highlighted,
+		Active:      row.Active,
+		LogoPath:    row.LogoPath,
+	}
+}
+
+func domainTask(row sqlc.ListGameTasksRow) domain.Task {
+	return domain.Task{
+		ID:             row.ID,
+		Name:           row.Name,
+		Checker:        row.Checker,
+		EnvPath:        row.EnvPath,
+		Gets:           row.Gets,
+		Puts:           row.Puts,
+		Places:         row.Places,
+		CheckerTimeout: row.CheckerTimeout,
+		CheckerType:    row.CheckerType,
+		GetPeriod:      row.GetPeriod,
+		DefaultScore:   row.DefaultScore,
+		Active:         row.Active,
+	}
+}
+
 func nullableTime(value pgtype.Timestamptz) *time.Time {
 	if !value.Valid {
 		return nil

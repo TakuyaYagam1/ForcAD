@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres/sqlc"
@@ -32,19 +31,6 @@ func NewGameStore(pool *pgxpool.Pool) *GameStore {
 	return &GameStore{
 		pool:    pool,
 		queries: sqlc.New(pool),
-	}
-}
-
-func gameTime(t pgtype.Timestamptz) *time.Time {
-	if !t.Valid {
-		return nil
-	}
-	return new(t.Time)
-}
-func gameStamp(t time.Time) pgtype.Timestamptz {
-	return pgtype.Timestamptz{
-		Time:  t,
-		Valid: true,
 	}
 }
 
@@ -71,14 +57,14 @@ func readLifecycle(ctx context.Context, q *sqlc.Queries, withSnapshot bool) (dom
 			StartTime:        row.StartTime.Time,
 		},
 		Session: domain.Session{
-			PracticeStart:         gameTime(row.PracticeStart),
-			FinalStart:            gameTime(row.FinalStart),
+			PracticeStart:         nullableTime(row.PracticeStart),
+			FinalStart:            nullableTime(row.FinalStart),
 			ResetPending:          row.ResetPending,
 			Generation:            row.Generation,
-			PausedAt:              gameTime(row.PausedAt),
+			PausedAt:              nullableTime(row.PausedAt),
 			PausedSeconds:         row.PausedSeconds,
 			SchedulePausedSeconds: row.SchedulePausedSeconds,
-			RoundStartedAt:        gameTime(row.RoundStartedAt),
+			RoundStartedAt:        nullableTime(row.RoundStartedAt),
 			SnapshotRound:         row.SnapshotRound,
 			Snapshot:              row.Snapshot,
 		},
@@ -115,16 +101,7 @@ func readTeams(ctx context.Context, q *sqlc.Queries, active bool) ([]domain.Team
 	}
 	result := make([]domain.Team, 0, len(rows))
 	for _, r := range rows {
-		result = append(result, domain.Team{
-			ID:          r.ID,
-			Name:        r.Name,
-			IP:          r.Ip,
-			Token:       r.Token,
-			Kind:        r.Kind,
-			Highlighted: r.Highlighted,
-			Active:      r.Active,
-			LogoPath:    r.LogoPath,
-		})
+		result = append(result, domainTeam(r))
 	}
 	return result, nil
 }
@@ -146,20 +123,7 @@ func readTasks(ctx context.Context, q *sqlc.Queries, active bool) ([]domain.Task
 	}
 	result := make([]domain.Task, 0, len(rows))
 	for _, r := range rows {
-		result = append(result, domain.Task{
-			ID:             r.ID,
-			Name:           r.Name,
-			Checker:        r.Checker,
-			EnvPath:        r.EnvPath,
-			Gets:           r.Gets,
-			Puts:           r.Puts,
-			Places:         r.Places,
-			CheckerTimeout: r.CheckerTimeout,
-			CheckerType:    r.CheckerType,
-			GetPeriod:      r.GetPeriod,
-			DefaultScore:   r.DefaultScore,
-			Active:         r.Active,
-		})
+		result = append(result, domainTask(r))
 	}
 	return result, nil
 }
@@ -555,9 +519,9 @@ func startGameSession(
 	}
 	params := sqlc.StartGameSessionParams{}
 	if action == "start_final" {
-		params.FinalStart = gameStamp(now)
+		params.FinalStart = timestamp(now)
 	} else if early {
-		params.PracticeStart = gameStamp(now)
+		params.PracticeStart = timestamp(now)
 	}
 	if err := q.StartGameSession(ctx, params); err != nil {
 		return fmt.Errorf("%s - start game session: %w", location, err)
@@ -590,10 +554,10 @@ func changeActiveGameSession(
 		})
 	}
 	if action == "resume" {
-		if err := q.ResumeExtraChecks(ctx, gameStamp(now)); err != nil {
+		if err := q.ResumeExtraChecks(ctx, timestamp(now)); err != nil {
 			return fmt.Errorf("%s - resume delayed checks: %w", location, err)
 		}
-		if _, err := q.ResumeSession(ctx, gameStamp(now)); err != nil {
+		if _, err := q.ResumeSession(ctx, timestamp(now)); err != nil {
 			return fmt.Errorf("%s - resume game session: %w", location, err)
 		}
 		return nil
@@ -603,7 +567,7 @@ func changeActiveGameSession(
 			return fmt.Errorf("%s - finish game: %w", location, err)
 		}
 	}
-	if _, err := q.PauseSession(ctx, gameStamp(now)); err != nil {
+	if _, err := q.PauseSession(ctx, timestamp(now)); err != nil {
 		return fmt.Errorf("%s - pause game session: %w", location, err)
 	}
 	return nil
