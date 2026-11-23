@@ -8,6 +8,7 @@
 import * as zod from 'zod';
 
 export const backupManifestNameRegExp = new RegExp('^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$');
+export const backupManifestRoundMin = 0;
 
 export const backupManifestFilesSizeMin = 0;
 
@@ -20,7 +21,7 @@ export const BackupManifest = zod.object({
   "created_at": zod.iso.datetime({
     "offset":true
   }),
-  "round": zod.int().min(1),
+  "round": zod.int().min(backupManifestRoundMin),
   "files": zod.record(zod.string(), zod.object({
     "size": zod.int().min(backupManifestFilesSizeMin),
     "sha256": zod.string().regex(backupManifestFilesSha256RegExp)

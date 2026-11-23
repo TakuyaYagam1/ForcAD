@@ -12,6 +12,8 @@ import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
 import {
   AdminBulkDeactivateRequest,
   AdminGameSettingsUpdate,
+  GetAdminCheckerStatsParams,
+  type AdminCheckerStats,
 } from "@/shared/api/generated/schemas";
 import { api, http } from "@/shared/lib/axios";
 import {
@@ -927,6 +929,46 @@ function handleAdminEntityRequest(
   return makeResponse(config, savedRecord, method === "POST" ? 201 : 200);
 }
 
+function demoCheckerStats(config: InternalAxiosRequestConfig): DemoResponse {
+  const parsed = GetAdminCheckerStatsParams.safeParse(config.params);
+  if (!parsed.success) {
+    fail(config, 400, "Expected a team ID and a non-negative round");
+  }
+  const { team_id, round: requestedRound } = parsed.data;
+  const active = teams.some((team) => {
+    return team.active && team.id === team_id
+  });
+  const result: AdminCheckerStats = {
+    team_id,
+    round: requestedRound,
+    tasks: [],
+  };
+  // The offline board has scoreboard snapshots, but no checker jobs or action logs.
+  const count = (configured: number) => {
+    return {
+      maximum: requestedRound === 0 ? configured : 0,
+      reported: 0,
+      failed: 0,
+      no_result: 0,
+    }
+  };
+  if (active) {
+    for (const task of tasks) {
+      if (task.active && task.id !== null) {
+        const checksEnabled = demoGameSettings.mode !== "blitz" || task.get_period >= 0;
+        result.tasks.push({
+          task_id: task.id,
+          name: task.name,
+          check: count(checksEnabled ? 1 + demoGameSettings.extra_checks : 0),
+          put: count(task.puts),
+          get: count(checksEnabled ? task.gets : 0),
+        });
+      }
+    }
+  }
+  return makeResponse(config, result);
+}
+
 function handleAdminTeamTaskLogRequest(
   config: InternalAxiosRequestConfig,
   requestPath: string,
@@ -1020,6 +1062,13 @@ const demoAdapter: AxiosAdapter = async (config) => {
   );
   if (entityResponse) {
     return entityResponse;
+  }
+
+  if (requestPath === "/admin/checker-stats") {
+    if (method !== "GET") {
+      fail(config, 405, "Checker statistics require GET");
+    }
+    return demoCheckerStats(config);
   }
 
   const logResponse = handleAdminTeamTaskLogRequest(config, requestPath);

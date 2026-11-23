@@ -91,6 +91,13 @@ failed GET. In blitz mode, PUT-only and CHECK/GET workflows are scheduled
 separately. Checkers must not rely on a shared process or in-memory state between
 actions. Missing flags in a selected GET round skip that retrieval.
 
+The admin scoreboard shows CHECK, PUT and GET separately for the selected team's
+server and the current round. For example, `PUT 5/5` means five recorded outcomes
+out of five scheduled PUTs for that service, regardless of how many teams play.
+Failed actions count as replies and are marked separately. A finished job can
+have fewer replies than its maximum, for example when no flag was available for
+a GET. Before round 1, the panel shows configuration limits, not completed work.
+
 The default worker allows 8 concurrent checker processes, 1 MiB combined output
 per action, and a 1024 MiB address-space limit per process on Linux. The task's
 per-action timeout and the worker's total workflow deadline are separate limits.

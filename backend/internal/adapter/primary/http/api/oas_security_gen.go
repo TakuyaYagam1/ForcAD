@@ -54,6 +54,7 @@ var operationRolesSessionCookie = map[string][]string{
 	DeleteAdminTeamOperation:         []string{},
 	DeleteAdminTeamTaskOperation:     []string{},
 	ExportAdminBackupOperation:       []string{},
+	GetAdminCheckerStatsOperation:    []string{},
 	GetAdminGameSettingsOperation:    []string{},
 	GetAdminSessionStatusOperation:   []string{},
 	GetAdminTaskOperation:            []string{},

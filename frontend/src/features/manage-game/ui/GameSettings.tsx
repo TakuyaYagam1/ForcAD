@@ -811,7 +811,6 @@ export function GameSettings() {
           )}
           {open && settings && (
             <GameBackup
-              canExport={settings.runtime.phase === "finished" && !settings.runtime.practice && !settings.runtime.results_pending}
               canImport={canEditAll}
               onRestored={() => {
                 close();

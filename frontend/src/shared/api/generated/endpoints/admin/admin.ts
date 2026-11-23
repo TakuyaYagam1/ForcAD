@@ -29,6 +29,7 @@ import type {
   AdminBulkActivateResult,
   AdminBulkDeactivateRequest,
   AdminBulkDeactivateResult,
+  AdminCheckerStats,
   AdminGameSettings,
   AdminGameSettingsUpdate,
   AdminLoginRequest,
@@ -49,6 +50,7 @@ import type {
   ExportAdminBackupParams,
   GameActionRequest,
   GameRuntimeStatus,
+  GetAdminCheckerStatsParams,
   GetAdminTeamTaskHistoryParams,
   PublicEvent,
   RestoreAdminBackupHeaders,
@@ -1516,6 +1518,130 @@ export const useDeleteAdminTask = <TError = ApiError,
   return useMutation(getDeleteAdminTaskMutationOptions(options), queryClient);
 }
 /**
+ * @summary Count checker actions for one team and round in the current game session.
+ */
+export const getAdminCheckerStats = (
+  params: GetAdminCheckerStatsParams,
+  signal?: AbortSignal
+) => {
+
+
+  return axiosMutator<AdminCheckerStats>(
+    {
+      url: `/api/v1/admin/checker-stats/`,
+      method: 'GET',
+      params,
+      signal
+    },
+  );
+}
+
+
+
+
+export const getGetAdminCheckerStatsQueryKey = (params?: GetAdminCheckerStatsParams,) => {
+  return [
+    `/api/v1/admin/checker-stats/`, ...(params ? [params] : [])
+  ] as const;
+}
+
+
+export const getGetAdminCheckerStatsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminCheckerStats>>, TError = ApiError>(params: GetAdminCheckerStatsParams, options?: {
+  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData>>,
+}
+) => {
+
+  const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminCheckerStatsQueryKey(params);
+
+
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminCheckerStats>>> = ({ signal }) => {
+    return getAdminCheckerStats(params, signal)
+  };
+
+
+
+
+
+  return  {
+    queryKey,
+    queryFn,
+    ...queryOptions
+  } as UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+}
+
+export type GetAdminCheckerStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminCheckerStats>>>
+export type GetAdminCheckerStatsQueryError = ApiError
+
+
+/** @summary Count checker actions for one team and round in the current game session. */
+export function useGetAdminCheckerStats<TData = Awaited<ReturnType<typeof getAdminCheckerStats>>, TError = ApiError>(
+ params: GetAdminCheckerStatsParams, options: {
+   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminCheckerStats>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminCheckerStats>>
+        > , 'initialData'
+      >,
+ }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Count checker actions for one team and round in the current game session. */
+export function useGetAdminCheckerStats<TData = Awaited<ReturnType<typeof getAdminCheckerStats>>, TError = ApiError>(
+ params: GetAdminCheckerStatsParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminCheckerStats>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminCheckerStats>>
+        > , 'initialData'
+      >,
+ }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Count checker actions for one team and round in the current game session. */
+export function useGetAdminCheckerStats<TData = Awaited<ReturnType<typeof getAdminCheckerStats>>, TError = ApiError>(
+ params: GetAdminCheckerStatsParams, options?: {
+   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData>>,
+ }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  }
+/** @summary Count checker actions for one team and round in the current game session. */
+export function useGetAdminCheckerStats<TData = Awaited<ReturnType<typeof getAdminCheckerStats>>, TError = ApiError>(
+  params: GetAdminCheckerStatsParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminCheckerStats>>, TError, TData>>,
+  }
+  , queryClient?: QueryClient
+):  UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+
+  const queryOptions = getGetAdminCheckerStatsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
  * @summary Get checker history for a team and task pair.
  */
 export const getAdminTeamTaskHistory = (
@@ -2368,8 +2494,8 @@ export const useChangeAdminGameState = <TError = ApiError,
   return useMutation(getChangeAdminGameStateMutationOptions(options), queryClient);
 }
 /**
- * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
- * @summary Download a finished competition as a tar.gz archive.
+ * Export does not pause or change the game. Treat the archive as sensitive competition data.
+ * @summary Download a snapshot of an initialized competition as a tar.gz archive.
  */
 export const exportAdminBackup = (
   params?: ExportAdminBackupParams,
@@ -2434,8 +2560,8 @@ export type ExportAdminBackupQueryError = ApiError | void
 
 
 /**
- * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
- * @summary Download a finished competition as a tar.gz archive.
+ * Export does not pause or change the game. Treat the archive as sensitive competition data.
+ * @summary Download a snapshot of an initialized competition as a tar.gz archive.
  */
 export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
  params: undefined |  ExportAdminBackupParams,
@@ -2453,8 +2579,8 @@ export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdm
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
- * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
- * @summary Download a finished competition as a tar.gz archive.
+ * Export does not pause or change the game. Treat the archive as sensitive competition data.
+ * @summary Download a snapshot of an initialized competition as a tar.gz archive.
  */
 export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
  params?: ExportAdminBackupParams,
@@ -2472,8 +2598,8 @@ export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdm
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
- * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
- * @summary Download a finished competition as a tar.gz archive.
+ * Export does not pause or change the game. Treat the archive as sensitive competition data.
+ * @summary Download a snapshot of an initialized competition as a tar.gz archive.
  */
 export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
  params?: ExportAdminBackupParams,
@@ -2485,8 +2611,8 @@ export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdm
     queryKey: DataTag<QueryKey, TData, TError>
   }
 /**
- * Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
- * @summary Download a finished competition as a tar.gz archive.
+ * Export does not pause or change the game. Treat the archive as sensitive competition data.
+ * @summary Download a snapshot of an initialized competition as a tar.gz archive.
  */
 export function useExportAdminBackup<TData = Awaited<ReturnType<typeof exportAdminBackup>>, TError = ApiError | void>(
   params?: ExportAdminBackupParams,
@@ -2605,8 +2731,8 @@ export const useInspectAdminBackup = <TError = ApiError,
   return useMutation(getInspectAdminBackupMutationOptions(options), queryClient);
 }
 /**
- * The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
- * @summary Restore a finished competition from a backup archive.
+ * Restore replaces seeded data on a board that has not hosted a game and has no announcements. Running games are restored paused. The configured start time still governs automatic starts and rehearsal cleanup.
+ * @summary Restore a competition snapshot from a backup archive.
  */
 export const restoreAdminBackup = (
   backupArchiveBody: BackupArchiveBody,
@@ -2688,8 +2814,8 @@ export type RestoreAdminBackupMutationVariables = {
 }
 
 /**
- * The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
- * @summary Restore a finished competition from a backup archive.
+ * Restore replaces seeded data on a board that has not hosted a game and has no announcements. Running games are restored paused. The configured start time still governs automatic starts and rehearsal cleanup.
+ * @summary Restore a competition snapshot from a backup archive.
  */
 export const useRestoreAdminBackup = <TError = ApiError,
     TContext = unknown>(options?: {

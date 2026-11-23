@@ -112,6 +112,99 @@ func (*AdminBulkDeactivateResult) deactivateAdminTasksRes() {
 func (*AdminBulkDeactivateResult) deactivateAdminTeamsRes() {
 }
 
+// Ref: #/components/schemas/AdminCheckerActionCount
+type AdminCheckerActionCount struct {
+	// Maximum invocations from jobs scheduled so far. In the round zero preview, the configured count per
+	// workflow instead.
+	Maximum int64 `json:"maximum"`
+	// Persisted action outcomes, including failures.
+	Reported int64 `json:"reported"`
+	// Reported outcomes other than UP.
+	Failed int64 `json:"failed"`
+	// Nominal invocations in finished jobs without a persisted outcome, including skipped actions.
+	NoResult int64 `json:"no_result"`
+}
+
+// GetMaximum returns the value of Maximum.
+func (s *AdminCheckerActionCount) GetMaximum() int64 {
+	return s.Maximum
+}
+
+// GetReported returns the value of Reported.
+func (s *AdminCheckerActionCount) GetReported() int64 {
+	return s.Reported
+}
+
+// GetFailed returns the value of Failed.
+func (s *AdminCheckerActionCount) GetFailed() int64 {
+	return s.Failed
+}
+
+// GetNoResult returns the value of NoResult.
+func (s *AdminCheckerActionCount) GetNoResult() int64 {
+	return s.NoResult
+}
+
+// SetMaximum sets the value of Maximum.
+func (s *AdminCheckerActionCount) SetMaximum(val int64) {
+	s.Maximum = val
+}
+
+// SetReported sets the value of Reported.
+func (s *AdminCheckerActionCount) SetReported(val int64) {
+	s.Reported = val
+}
+
+// SetFailed sets the value of Failed.
+func (s *AdminCheckerActionCount) SetFailed(val int64) {
+	s.Failed = val
+}
+
+// SetNoResult sets the value of NoResult.
+func (s *AdminCheckerActionCount) SetNoResult(val int64) {
+	s.NoResult = val
+}
+
+// Ref: #/components/schemas/AdminCheckerStats
+type AdminCheckerStats struct {
+	TeamID UUID                    `json:"team_id"`
+	Round  int32                   `json:"round"`
+	Tasks  []AdminTaskCheckerStats `json:"tasks"`
+}
+
+// GetTeamID returns the value of TeamID.
+func (s *AdminCheckerStats) GetTeamID() UUID {
+	return s.TeamID
+}
+
+// GetRound returns the value of Round.
+func (s *AdminCheckerStats) GetRound() int32 {
+	return s.Round
+}
+
+// GetTasks returns the value of Tasks.
+func (s *AdminCheckerStats) GetTasks() []AdminTaskCheckerStats {
+	return s.Tasks
+}
+
+// SetTeamID sets the value of TeamID.
+func (s *AdminCheckerStats) SetTeamID(val UUID) {
+	s.TeamID = val
+}
+
+// SetRound sets the value of Round.
+func (s *AdminCheckerStats) SetRound(val int32) {
+	s.Round = val
+}
+
+// SetTasks sets the value of Tasks.
+func (s *AdminCheckerStats) SetTasks(val []AdminTaskCheckerStats) {
+	s.Tasks = val
+}
+
+func (*AdminCheckerStats) getAdminCheckerStatsRes() {
+}
+
 // Ref: #/components/schemas/AdminGameSettings
 type AdminGameSettings struct {
 	Config      GameConfig        `json:"config"`
@@ -606,6 +699,65 @@ func (*AdminTask) createAdminTaskRes() {
 func (*AdminTask) getAdminTaskRes() {
 }
 func (*AdminTask) updateAdminTaskRes() {
+}
+
+// Ref: #/components/schemas/AdminTaskCheckerStats
+type AdminTaskCheckerStats struct {
+	TaskID UUID                    `json:"task_id"`
+	Name   string                  `json:"name"`
+	Check  AdminCheckerActionCount `json:"check"`
+	Put    AdminCheckerActionCount `json:"put"`
+	Get    AdminCheckerActionCount `json:"get"`
+}
+
+// GetTaskID returns the value of TaskID.
+func (s *AdminTaskCheckerStats) GetTaskID() UUID {
+	return s.TaskID
+}
+
+// GetName returns the value of Name.
+func (s *AdminTaskCheckerStats) GetName() string {
+	return s.Name
+}
+
+// GetCheck returns the value of Check.
+func (s *AdminTaskCheckerStats) GetCheck() AdminCheckerActionCount {
+	return s.Check
+}
+
+// GetPut returns the value of Put.
+func (s *AdminTaskCheckerStats) GetPut() AdminCheckerActionCount {
+	return s.Put
+}
+
+// GetGet returns the value of Get.
+func (s *AdminTaskCheckerStats) GetGet() AdminCheckerActionCount {
+	return s.Get
+}
+
+// SetTaskID sets the value of TaskID.
+func (s *AdminTaskCheckerStats) SetTaskID(val UUID) {
+	s.TaskID = val
+}
+
+// SetName sets the value of Name.
+func (s *AdminTaskCheckerStats) SetName(val string) {
+	s.Name = val
+}
+
+// SetCheck sets the value of Check.
+func (s *AdminTaskCheckerStats) SetCheck(val AdminCheckerActionCount) {
+	s.Check = val
+}
+
+// SetPut sets the value of Put.
+func (s *AdminTaskCheckerStats) SetPut(val AdminCheckerActionCount) {
+	s.Put = val
+}
+
+// SetGet sets the value of Get.
+func (s *AdminTaskCheckerStats) SetGet(val AdminCheckerActionCount) {
+	s.Get = val
 }
 
 // Ref: #/components/schemas/AdminTaskWrite
@@ -2581,6 +2733,16 @@ func (s *GameState) SetRound(val int32) {
 // SetTeamTasks sets the value of TeamTasks.
 func (s *GameState) SetTeamTasks(val []ScoreboardTeamTask) {
 	s.TeamTasks = val
+}
+
+type GetAdminCheckerStatsBadRequest ApiError
+
+func (*GetAdminCheckerStatsBadRequest) getAdminCheckerStatsRes() {
+}
+
+type GetAdminCheckerStatsForbidden ApiError
+
+func (*GetAdminCheckerStatsForbidden) getAdminCheckerStatsRes() {
 }
 
 type GetAdminTaskForbidden ApiError

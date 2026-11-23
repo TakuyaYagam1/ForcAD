@@ -85,7 +85,6 @@ func (s *Store) Export(ctx context.Context, out io.Writer, name string) (Manifes
 	b.manifest.Version = formatVersion
 	b.manifest.ForcAD = buildVersion()
 	b.manifest.Name = name
-	b.manifest.CreatedAt = time.Now().UTC()
 	err = pgx.BeginTxFunc(ctx, s.pool, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
@@ -93,11 +92,17 @@ func (s *Store) Export(ctx context.Context, out io.Writer, name string) (Manifes
 		if _, err := tx.Exec(ctx, "SET LOCAL TIME ZONE 'UTC'; SET LOCAL statement_timeout = '10min'"); err != nil {
 			return err
 		}
-		round, err := finishedRound(ctx, tx)
-		if err != nil {
+		// The first SELECT takes the MVCC snapshot. Record its database time,
+		// not when the archive started staging or finished compressing.
+		const query = `SELECT g.real_round, statement_timestamp()
+FROM gameconfig g JOIN gamesession s USING (id) WHERE g.id = 1 AND g.real_round >= 0`
+		if err := tx.QueryRow(ctx, query).Scan(&b.manifest.Round, &b.manifest.CreatedAt); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrSource
+			}
 			return err
 		}
-		b.manifest.Round = round
+		b.manifest.CreatedAt = b.manifest.CreatedAt.UTC()
 		for _, table := range tables {
 			if err := b.add(table.member(), func(w io.Writer) error {
 				return exportTable(ctx, tx, table, w)
@@ -167,22 +172,6 @@ func buildVersion() string {
 	return "development"
 }
 
-func finishedRound(ctx context.Context, tx pgx.Tx) (int32, error) {
-	const location = "backup.finishedRound"
-	const query = `SELECT g.real_round FROM gameconfig g JOIN gamesession s USING (id)
-WHERE NOT g.game_running AND g.real_round > 0 AND NOT s.reset_pending
-AND s.practice_start IS NULL AND s.snapshot_round = g.real_round AND s.snapshot IS NOT NULL
-AND NOT EXISTS (SELECT 1 FROM checkerjobs WHERE finished_at IS NULL)`
-	var round int32
-	if err := tx.QueryRow(ctx, query).Scan(&round); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return 0, ErrSource
-		}
-		return 0, fmt.Errorf("%s - read finalized round: %w", location, err)
-	}
-	return round, nil
-}
-
 func exportTable(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -241,16 +230,48 @@ publicannouncements, backup_team_logos IN SHARE ROW EXCLUSIVE MODE NOWAIT`
 			return fmt.Errorf("%s - restore %s: %w: %w", location, table.archive, ErrInvalid, err)
 		}
 	}
-	round, err := finishedRound(ctx, tx)
-	if err != nil || round != b.manifest.Round {
-		return fmt.Errorf("%s - archive does not contain the advertised finished round: %w", location, ErrInvalid)
-	}
 	if err := importLogos(ctx, tx, b); err != nil {
 		return err
 	}
-	// Fence mutations created against the destination before it was restored.
-	if _, err := tx.Exec(ctx, `UPDATE gamesession SET generation = GREATEST(generation, $1) + 1 WHERE id = 1`, generation); err != nil {
-		return fmt.Errorf("%s - update restored generation: %w", location, err)
+	return prepareRestoredSession(ctx, tx, b.manifest, generation)
+}
+
+func prepareRestoredSession(
+	ctx context.Context,
+	tx pgx.Tx,
+	m Manifest,
+	targetGeneration int64,
+) error {
+	const location = "backup.prepareRestoredSession"
+	// Preserve existing pauses. ResumeSession uses paused_at to exclude
+	// downtime from both the current round and the scheduler clock.
+	const session = `UPDATE gamesession s SET generation = GREATEST(s.generation, $1) + 1,
+paused_at = CASE WHEN g.game_running THEN COALESCE(s.paused_at, $2) ELSE s.paused_at END
+FROM gameconfig g WHERE s.id = 1 AND g.id = s.id AND g.real_round = $3
+AND NOT EXISTS (SELECT 1 FROM checkerjobs j WHERE j.finished_at IS NULL
+    AND (j.payload->'generation' IS DISTINCT FROM to_jsonb(s.generation)
+         OR (j.sent_at IS NULL AND (j.claim_token IS NOT NULL OR j.put_started_at IS NOT NULL))))`
+	tag, err := tx.Exec(ctx, session, targetGeneration, m.CreatedAt, m.Round)
+	if err != nil {
+		return fmt.Errorf("%s - fence restored session: %w", location, err)
+	}
+	if tag.RowsAffected() != 1 {
+		return fmt.Errorf("%s - inconsistent archive round, session or unfinished jobs: %w", location, ErrInvalid)
+	}
+
+	// The broker and worker leases aren't portable. Unsent work can be
+	// published after resume; never replay a delivery the source may have
+	// executed. Let normal expiry settle it (including grouped results).
+	// A paused extra CHECK's deadline moves on resume, so expire it at or
+	// before the original pause, not at destination wall time.
+	const jobs = `UPDATE checkerjobs j SET
+payload = jsonb_set(j.payload, '{generation}', to_jsonb(s.generation)),
+publish_token = NULL, publish_deadline_at = NULL, claim_token = NULL, claim_deadline_at = NULL,
+deadline_at = CASE WHEN j.sent_at IS NOT NULL THEN LEAST(j.deadline_at, s.paused_at, $1::timestamptz, statement_timestamp())
+                   ELSE j.deadline_at END
+FROM gamesession s WHERE s.id = 1 AND j.finished_at IS NULL`
+	if _, err := tx.Exec(ctx, jobs, m.CreatedAt); err != nil {
+		return fmt.Errorf("%s - recover unfinished jobs: %w", location, err)
 	}
 	return nil
 }

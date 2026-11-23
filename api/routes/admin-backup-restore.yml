@@ -2,8 +2,8 @@ post:
   operationId: restoreAdminBackup
   tags:
   - admin
-  summary: Restore a finished competition from a backup archive.
-  description: The destination must not have hosted a game and must have no announcements. Restore replaces its seeded competition data.
+  summary: Restore a competition snapshot from a backup archive.
+  description: Restore replaces seeded data on a board that has not hosted a game and has no announcements. Running games are restored paused. The configured start time still governs automatic starts and rehearsal cleanup.
   security:
   - sessionCookie: []
   parameters:

@@ -6,13 +6,212 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TakuyaYagam1/ForcAD/integration_test/testutil"
 	"github.com/TakuyaYagam1/ForcAD/internal/adapter/secondary/postgres"
 	"github.com/TakuyaYagam1/ForcAD/internal/backup"
+	"github.com/TakuyaYagam1/ForcAD/internal/domain"
 )
+
+func restoreBackup(t *testing.T, source *pgxpool.Pool) (*pgxpool.Pool, backup.Manifest) {
+	t.Helper()
+	ctx := t.Context()
+	target, _ := testutil.Database(t)
+	if _, err := postgres.NewGameStore(target).Initialize(ctx, gameDocument(t)); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	exported, err := backup.New(source, t.TempDir()).Export(ctx, &buf, "event")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := backup.New(target, t.TempDir())
+	if m, err := reader.Inspect(ctx, bytes.NewReader(buf.Bytes())); err != nil || m.Round != exported.Round || !m.CreatedAt.Equal(exported.CreatedAt) {
+		t.Fatalf("inspect: %+v, %v", m, err)
+	}
+	if _, err := reader.Restore(ctx, &buf); err != nil {
+		t.Fatal(err)
+	}
+	return target, exported
+}
+
+func TestBackupRoundZero(t *testing.T) {
+	for _, tc := range []struct {
+		name, phase string
+		practice    bool
+		actions     []string
+	}{
+		{
+			name:  "waiting",
+			phase: "waiting",
+		},
+		{
+			name:     "rehearsal",
+			phase:    "paused",
+			practice: true,
+			actions:  []string{"start_practice"},
+		},
+		{
+			name:    "paused final",
+			phase:   "paused",
+			actions: []string{"start_final", "pause"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			source, _ := testutil.Database(t)
+			if tc.phase == "waiting" {
+				if _, err := backup.New(source, t.TempDir()).Export(ctx, &bytes.Buffer{}, "empty"); !errors.Is(err, backup.ErrSource) {
+					t.Fatalf("uninitialized export: %v", err)
+				}
+			}
+			doc := gameDocument(t)
+			doc.Teams[0].Name = "Archived team"
+			game := postgres.NewGameStore(source)
+			if _, err := game.Initialize(ctx, doc); err != nil {
+				t.Fatal(err)
+			}
+			for _, action := range tc.actions {
+				if err := game.ChangeState(ctx, action, nil, time.Now().UTC()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			target, m := restoreBackup(t, source)
+			board, err := postgres.NewGameStore(target).Board(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			life := board.Lifecycle
+			status := life.Runtime(time.Now())
+			if m.Round != 0 || life.Config.RealRound != 0 || status.Phase != tc.phase ||
+				status.Practice != tc.practice || life.Session.SnapshotRound == nil ||
+				*life.Session.SnapshotRound != 0 || len(life.Session.Snapshot) == 0 ||
+				len(board.Teams) != 2 || len(board.Cells) != 2 {
+				t.Fatalf("restored round zero: %+v", life)
+			}
+			var name string
+			if err := target.QueryRow(ctx, `SELECT name FROM teams WHERE token='0000000000000001'`).Scan(&name); err != nil || name != "Archived team" {
+				t.Fatalf("team not restored: %q, %v", name, err)
+			}
+			original, err := game.Lifecycle(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !life.Config.StartTime.Equal(original.Config.StartTime) || life.Session.Generation <= original.Session.Generation {
+				t.Fatal("restore changed schedule or failed to fence the destination")
+			}
+			switch tc.name {
+			case "rehearsal":
+				if original.Session.PausedAt != nil || life.Session.PausedAt == nil || !life.Session.PausedAt.Equal(m.CreatedAt) {
+					t.Fatal("running rehearsal was not paused at snapshot time on the destination only")
+				}
+			case "paused final":
+				if original.Session.PausedAt == nil || life.Session.PausedAt == nil || !life.Session.PausedAt.Equal(*original.Session.PausedAt) {
+					t.Fatal("restoring a paused final changed its clock")
+				}
+			}
+		})
+	}
+}
+
+func TestBackupRecoversRunningJobs(t *testing.T) {
+	ctx := t.Context()
+	source, _ := testutil.Database(t)
+	game := postgres.NewGameStore(source)
+	if _, err := game.Initialize(ctx, gameDocument(t)); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now().UTC().Truncate(time.Microsecond).Add(-10 * time.Second)
+	if err := game.ChangeState(ctx, "start_final", nil, start); err != nil {
+		t.Fatal(err)
+	}
+	repo := postgres.New(source)
+	run, err := repo.Prepare(ctx, domain.ScheduleRequest{
+		ScheduleID:    "classic_rounds",
+		At:            start,
+		StartAt:       start,
+		Interval:      time.Minute,
+		AdvancesRound: true,
+		Workflow:      domain.JobActionClassic,
+	})
+	if err != nil || run == nil {
+		t.Fatalf("prepare: %v, %v", run, err)
+	}
+	deadline := start.Add(time.Hour)
+	jobs, err := repo.ClaimPending(ctx, "publisher", start, deadline, 2)
+	if err != nil || len(jobs) != 2 {
+		t.Fatalf("outbox: %d, %v", len(jobs), err)
+	}
+	if ok, err := repo.MarkPublished(ctx, jobs[0].ID, "publisher", start, deadline); err != nil || !ok {
+		t.Fatalf("publish: %t, %v", ok, err)
+	}
+	if _, err := repo.Claim(ctx, jobs[0].ID, "source", start, deadline); err != nil {
+		t.Fatal(err)
+	}
+	target, m := restoreBackup(t, source)
+	dest := postgres.New(target)
+	life, err := postgres.NewGameStore(target).Lifecycle(ctx)
+	if err != nil || m.Round != 1 || life.Session.PausedAt == nil || !life.Session.PausedAt.Equal(m.CreatedAt) ||
+		life.Session.RoundStartedAt == nil || !life.Session.RoundStartedAt.Equal(start) {
+		t.Fatalf("restored clock: %+v, %v", life, err)
+	}
+	if jobs, err := dest.ClaimPending(ctx, "destination", m.CreatedAt, deadline, 2); err != nil || len(jobs) != 0 {
+		t.Fatalf("paused outbox: %d, %v", len(jobs), err)
+	}
+	if ok, err := dest.Expire(ctx, jobs[0].ID, m.CreatedAt); err != nil || !ok {
+		t.Fatalf("lost broker delivery did not expire: %t, %v", ok, err)
+	}
+	resumed := m.CreatedAt.Add(24 * time.Hour)
+	session, err := dest.SetPaused(ctx, false, resumed)
+	if err != nil || session.PausedSeconds != 86400 || session.SchedulePausedSeconds != 86400 {
+		t.Fatalf("resumed clock: %+v, %v", session, err)
+	}
+	pending, err := dest.ClaimPending(ctx, "destination", resumed, resumed.Add(time.Minute), 2)
+	if err != nil || len(pending) != 1 || pending[0].ID != jobs[1].ID {
+		t.Fatalf("only never-published job should return to outbox: %+v, %v", pending, err)
+	}
+	if state, err := repo.State(ctx, jobs[0].ID); err != nil || state.FinishedAt != nil || state.PutStartedAt == nil {
+		t.Fatalf("export changed source job: %+v, %v", state, err)
+	}
+}
+
+func TestBackupRecoversFinishedChecks(t *testing.T) {
+	ctx := t.Context()
+	f := newExtraCheckFixture(t)
+	main := f.claim(t, f.start, 1)[0]
+	const down = 104
+	f.complete(t, main, f.start.Add(time.Second), down)
+	extras := f.claim(t, f.start.Add(49*time.Second), 2)
+	if err := postgres.NewGameStore(f.pool).ChangeState(ctx, "finish", nil, f.start.Add(50*time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	target, _ := restoreBackup(t, f.pool)
+	dest := postgres.New(target)
+	at := f.start.Add(time.Minute)
+	ids, err := dest.ExpiredJobIDs(ctx, at, 10)
+	if err != nil || len(ids) != len(extras) {
+		t.Fatalf("lost published checks not eligible for recovery: %v, %v", ids, err)
+	}
+	for _, id := range ids {
+		if ok, err := dest.Expire(ctx, id, at); err != nil || !ok {
+			t.Fatalf("expire: %t, %v", ok, err)
+		}
+	}
+	restored := extraCheckFixture{
+		pool: target,
+	}
+	restored.assertScore(t, down, 1, 0)
+	if ok, err := dest.Maintain(ctx, at); err != nil || !ok {
+		t.Fatalf("final scoreboard did not settle: %t, %v", ok, err)
+	}
+	life, err := postgres.NewGameStore(target).Lifecycle(ctx)
+	if err != nil || !life.Finished() || life.Pending || life.Session.SnapshotRound == nil || *life.Session.SnapshotRound != 1 {
+		t.Fatalf("restored final: %+v, %v", life, err)
+	}
+}
 
 func TestBackupRestoresFinishedBoard(t *testing.T) {
 	source, _ := testutil.Database(t)
@@ -29,9 +228,6 @@ func TestBackupRestoresFinishedBoard(t *testing.T) {
 		t.Fatal(err)
 	}
 	writer := backup.New(source, logos)
-	if _, err := writer.Export(ctx, &bytes.Buffer{}, "finals"); !errors.Is(err, backup.ErrSource) {
-		t.Fatalf("export while waiting: %v", err)
-	}
 	if _, err := source.Exec(ctx, `
 UPDATE teams SET name = 'Restored team', logo_path = '/team-logos/first.svg' WHERE token = '0000000000000001';
 UPDATE gameconfig SET real_round = 2;

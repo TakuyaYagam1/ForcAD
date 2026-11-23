@@ -23,6 +23,7 @@ type GameService interface {
 		beforeID *uuid.UUID,
 		limit int32,
 	) (domain.CheckerLogPage, error)
+	CheckerStats(ctx context.Context, teamID uuid.UUID, round int32) ([]domain.TaskCheckerStats, error)
 	Scoreboard(ctx context.Context) (domain.Scoreboard, error)
 	Standings(ctx context.Context) ([]usecase.Standing, error)
 	AttackData(ctx context.Context, service *string) (map[string]map[string][]string, error)

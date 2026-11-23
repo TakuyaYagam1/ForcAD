@@ -21,6 +21,7 @@ const (
 	DeleteAdminTeamOperation            OperationName = "DeleteAdminTeam"
 	DeleteAdminTeamTaskOperation        OperationName = "DeleteAdminTeamTask"
 	ExportAdminBackupOperation          OperationName = "ExportAdminBackup"
+	GetAdminCheckerStatsOperation       OperationName = "GetAdminCheckerStats"
 	GetAdminGameSettingsOperation       OperationName = "GetAdminGameSettings"
 	GetAdminHealthOperation             OperationName = "GetAdminHealth"
 	GetAdminMetricsOperation            OperationName = "GetAdminMetrics"

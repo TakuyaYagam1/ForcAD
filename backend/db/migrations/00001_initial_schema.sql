@@ -291,6 +291,7 @@ CREATE UNIQUE INDEX dispatch_pending_schedule
 CREATE INDEX checker_jobs_pending
     ON CheckerJobs (round) WHERE finished_at IS NULL;
 CREATE INDEX checker_jobs_run ON CheckerJobs (run_id);
+CREATE INDEX checker_jobs_team_round ON CheckerJobs (team_id, round);
 CREATE INDEX checker_jobs_deadline
     ON CheckerJobs (deadline_at) WHERE finished_at IS NULL;
 CREATE INDEX checker_jobs_publish_deadline
@@ -305,6 +306,7 @@ CREATE INDEX game_round_snapshots_created
     ON GameRoundSnapshots (created_at, round);
 CREATE INDEX idx_checker_action_logs_team_task_id
     ON CheckerActionLogs (team_id, task_id, id DESC);
+CREATE INDEX checker_action_logs_team_round ON CheckerActionLogs (team_id, round);
 CREATE INDEX idx_stolenflags_public_feed
     ON StolenFlags (submit_time DESC, flag_id DESC, attacker_id DESC)
     WHERE submit_time IS NOT NULL;

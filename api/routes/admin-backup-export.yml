@@ -2,8 +2,8 @@ get:
   operationId: exportAdminBackup
   tags:
   - admin
-  summary: Download a finished competition as a tar.gz archive.
-  description: Export requires a finished game with no pending checker results. Treat the archive as sensitive competition data.
+  summary: Download a snapshot of an initialized competition as a tar.gz archive.
+  description: Export does not pause or change the game. Treat the archive as sensitive competition data.
   security:
   - sessionCookie: []
   parameters:

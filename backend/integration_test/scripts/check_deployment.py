@@ -178,6 +178,23 @@ assert status == 200, "admin login failed"
 csrf_token = json.loads(body)["csrf_token"]
 check_admin(request, csrf_token)
 
+stats_path = f"/api/v1/admin/checker-stats/?team_id={team_two_id}&round=0"
+status, body = request(stats_path)
+assert status == 200, f"checker configuration preview failed: HTTP {status}"
+preview = json.loads(body)
+assert preview["team_id"] == team_two_id and preview["round"] == 0
+example = next(task for task in preview["tasks"] if task["name"] == "example")
+assert example["put"] == {"maximum": 1, "reported": 0, "failed": 0, "no_result": 0}
+
+export_path = "/api/v1/admin/backup/export/?name=acceptance"
+backup_headers = {"Content-Type": "application/gzip"}
+status, waiting = request(export_path)
+assert status == 200 and waiting.startswith(b"\x1f\x8b"), f"pregame export failed: HTTP {status}"
+status, body = request(
+    "/api/v1/admin/backup/inspect/", waiting, "POST", extra_headers=backup_headers
+)
+assert status == 200 and json.loads(body)["round"] == 0, "pregame archive has the wrong round"
+
 # The optional browser flow runs first and returns the game to waiting. Read the
 # current generation from persisted state instead of assuming prior transitions.
 status, _ = request(
@@ -261,15 +278,8 @@ assert (
     request("/flags", [flag], "PUT", credentials["FORCAD_E2E_TEAM_ONE_TOKEN"])[0] == 410
 ), "finished game accepts flags"
 
-export_path = "/api/v1/admin/backup/export/?name=acceptance"
-backup_deadline = time.monotonic() + checker_timeout + 15
-while True:
-    status, archive = request(export_path)
-    if status != 409 or time.monotonic() >= backup_deadline:
-        break
-    time.sleep(0.25)
+status, archive = request(export_path)
 assert status == 200 and archive.startswith(b"\x1f\x8b"), f"event export failed: HTTP {status}"
-backup_headers = {"Content-Type": "application/gzip"}
 status, body = request(
     "/api/v1/admin/backup/inspect/", archive, "POST", extra_headers=backup_headers
 )
@@ -288,8 +298,10 @@ captured = query("SELECT flag_id::text || ':' || attacker_id::text FROM StolenFl
 query(
     """
 BEGIN;
+SELECT id FROM GameConfig WHERE id=1 FOR UPDATE;
+SELECT id FROM GameSession WHERE id=1 FOR UPDATE;
 TRUNCATE GameRoundSnapshots, CheckerJobs, DispatchRuns, PublicAnnouncements,
-    StolenFlags, Flags, TeamTasksLog, ScheduleHistory, CheckerActionLogs;
+    StolenFlags, Flags, TeamTasksLog, ScheduleHistory, CheckerActionLogs, backup_team_logos;
 UPDATE GameConfig SET real_round = 0, start_time = '2050-01-01T00:00:00Z';
 UPDATE GameSession SET final_start = NULL, paused_at = NULL, snapshot_round = NULL, snapshot = NULL;
 UPDATE TeamTasks SET stolen = 0, lost = 0, checks = 0, checks_passed = 0;

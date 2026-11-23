@@ -195,7 +195,8 @@ SELECT id
 FROM CheckerJobs
 WHERE finished_at IS NULL AND deadline_at <= sqlc.arg(at)
   AND (action IS DISTINCT FROM 'check_only' OR EXISTS (
-      SELECT 1 FROM GameSession WHERE id = 1 AND paused_at IS NULL
+      SELECT 1 FROM GameSession s JOIN GameConfig g USING (id)
+      WHERE s.id = 1 AND (s.paused_at IS NULL OR NOT g.game_running)
   ))
 ORDER BY deadline_at, id
 LIMIT sqlc.arg(job_limit);

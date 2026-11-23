@@ -61,6 +61,10 @@ type ExportAdminBackupRes interface {
 	exportAdminBackupRes()
 }
 
+type GetAdminCheckerStatsRes interface {
+	getAdminCheckerStatsRes()
+}
+
 type GetAdminGameSettingsRes interface {
 	getAdminGameSettingsRes()
 }

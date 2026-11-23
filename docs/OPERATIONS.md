@@ -144,7 +144,8 @@ the next initialization imports initial values from the host `config.yml` again.
 ### Competition backups
 
 Open **Game settings -> Backup**, or use the [control CLI](CONTROL.md#examples).
-Export is available after the final round is saved and checker work has settled.
+Export is available before the first round, during play and after the final.
+The game keeps running during export; database rows come from a single read-only snapshot.
 The `.tar.gz` holds a versioned `manifest.json`, one `data/*.ndjson` member per
 game table, and local team images in `team-logos/`.
 
@@ -152,9 +153,13 @@ Import previews the event before confirmation. The destination must have the
 backup-capable schema and be initialized, with no started game, results or
 announcements. Use a future scheduled start to prevent a fresh board from
 automatically starting before import. The initial settings, teams and tasks
-are replaced in one database transaction with the finished competition.
+are replaced in one database transaction with data from the archive.
 Imported logos are served from the database so they commit with the event;
 existing files in `public/teams/` are not overwritten.
+
+A running game is restored paused at the snapshot time. The original final start
+time still applies: a waiting board can start immediately, and an overdue final
+replaces a restored practice game. A finished final cannot be resumed.
 
 The `backup_team_logos` table is part of the initial schema (migration `1`).
 Goose does not replay it on a database that already applied an older copy of
@@ -469,10 +474,11 @@ already applied version 1; back up and migrate those separately before running
 the NPC-capable services.
 
 Compatible databases retain their existing Goose ledger, including development
-versions 2-4; the initializer does not renumber or replay them. Those version
-numbers remain reserved for future
-migrations, which must start above 4. The historical PUT-log cleanup is included
-in the consolidated initial migration and is a no-op on a fresh empty table;
+versions 2-4; the initializer does not renumber or replay them. If an existing
+version-1 database lacks `checker_jobs_team_round` and `checker_action_logs_team_round`,
+create the missing indexes from the [initial schema](../backend/db/migrations/00001_initial_schema.sql)
+during maintenance, without changing the ledger.
+The historical PUT-log cleanup is a no-op on a fresh empty table;
 it is not rerun for databases that already applied version 1. Current workers
 redact successful PUT logs on write, and public HTTP responses also redact old
 stored output. Back up PostgreSQL before updates. Released schema changes

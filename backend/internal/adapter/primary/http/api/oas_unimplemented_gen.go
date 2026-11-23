@@ -144,12 +144,20 @@ func (UnimplementedHandler) DeleteAdminTeamTask(ctx context.Context, params Dele
 
 // ExportAdminBackup implements exportAdminBackup operation.
 //
-// Export requires a finished game with no pending checker results. Treat the archive as sensitive
-// competition data.
+// Export does not pause or change the game. Treat the archive as sensitive competition data.
 //
 // GET /api/v1/admin/backup/export/
 func (UnimplementedHandler) ExportAdminBackup(ctx context.Context, params ExportAdminBackupParams, w http.ResponseWriter) error {
 	return ht.ErrNotImplemented
+}
+
+// GetAdminCheckerStats implements getAdminCheckerStats operation.
+//
+// Count checker actions for one team and round in the current game session.
+//
+// GET /api/v1/admin/checker-stats/
+func (UnimplementedHandler) GetAdminCheckerStats(ctx context.Context, params GetAdminCheckerStatsParams) (r GetAdminCheckerStatsRes, _ error) {
+	return r, ht.ErrNotImplemented
 }
 
 // GetAdminGameSettings implements getAdminGameSettings operation.
@@ -408,8 +416,9 @@ func (UnimplementedHandler) OpenEventStream(ctx context.Context) (r *OpenEventSt
 
 // RestoreAdminBackup implements restoreAdminBackup operation.
 //
-// The destination must not have hosted a game and must have no announcements. Restore replaces its
-// seeded competition data.
+// Restore replaces seeded data on a board that has not hosted a game and has no announcements. Running
+// games are restored paused. The configured start time still governs automatic starts and rehearsal
+// cleanup.
 //
 // POST /api/v1/admin/backup/restore/
 func (UnimplementedHandler) RestoreAdminBackup(ctx context.Context, req RestoreAdminBackupReq, params RestoreAdminBackupParams) (r RestoreAdminBackupRes, _ error) {

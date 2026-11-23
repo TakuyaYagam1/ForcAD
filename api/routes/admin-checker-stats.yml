@@ -1,0 +1,32 @@
+get:
+  operationId: getAdminCheckerStats
+  tags:
+  - admin
+  summary: Count checker actions for one team and round in the current game session.
+  security:
+  - sessionCookie: []
+  parameters:
+  - name: team_id
+    in: query
+    required: true
+    schema:
+      "$ref": "../components/schemas.yml#/Uuid"
+  - name: round
+    in: query
+    required: true
+    description: A positive round, or zero for a configuration preview before play.
+    schema:
+      type: integer
+      format: int32
+      minimum: 0
+  responses:
+    '200':
+      description: One entry per active service. No action messages or job payloads are returned.
+      content:
+        application/json:
+          schema:
+            "$ref": "../components/schemas.yml#/AdminCheckerStats"
+    '400':
+      "$ref": "../components/responses.yml#/ApiError"
+    '403':
+      "$ref": "../components/responses.yml#/ApiError"

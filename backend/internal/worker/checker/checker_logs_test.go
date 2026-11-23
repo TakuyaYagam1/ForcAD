@@ -106,19 +106,32 @@ func TestFailedFlagActionRedactsPublicVerdictAndHistory(t *testing.T) {
 				task.Puts, task.Gets = 0, 1
 				workflow = domain.JobActionCheckGets
 			}
-			flag := domain.Flag{Value: "synthetic-flag", PrivateData: "synthetic-private-data"}
-			flags := &fakeFlagStore{byRound: map[int32]domain.Flag{5: flag, 6: flag, 7: flag}}
+			flag := domain.Flag{
+				Value:       "synthetic-flag",
+				PrivateData: "synthetic-private-data",
+			}
+			flags := &fakeFlagStore{
+				byRound: map[int32]domain.Flag{
+					5: flag,
+					6: flag,
+					7: flag,
+				},
+			}
 			repo := newFakeRepository(payloadJSON(t, "", task), workflow)
-			runner := &fakeRunner{fn: func(_ context.Context, req processchecker.Request) (processchecker.Result, error) {
-				if req.Action != action {
-					return processchecker.Result{Status: processchecker.StatusUp}, nil
-				}
-				return processchecker.Result{
-					Status:         processchecker.StatusCorrupt,
-					PublicMessage:  "missing " + req.Flag + " at " + req.PrivateFlagData + ", got " + strings.Repeat("A", 31) + "=",
-					PrivateMessage: "organizer diagnostic",
-				}, nil
-			}}
+			runner := &fakeRunner{
+				fn: func(_ context.Context, req processchecker.Request) (processchecker.Result, error) {
+					if req.Action != action {
+						return processchecker.Result{
+							Status: processchecker.StatusUp,
+						}, nil
+					}
+					return processchecker.Result{
+						Status:         processchecker.StatusCorrupt,
+						PublicMessage:  "missing " + req.Flag + " at " + req.PrivateFlagData + ", got " + strings.Repeat("A", 31) + "=",
+						PrivateMessage: "organizer diagnostic",
+					}, nil
+				},
+			}
 			if err := makeWorker(t, repo, flags, runner, Options{}).Handle(t.Context(), testJobID); err != nil {
 				t.Fatal(err)
 			}

@@ -8,7 +8,6 @@ import type { BackupManifest } from "@/shared/api/generated/schemas/admin/backup
 import { api } from "@/shared/lib/axios";
 
 interface GameBackupProps {
-  canExport: boolean;
   canImport: boolean;
   onRestored: () => void;
 }
@@ -16,7 +15,7 @@ interface GameBackupProps {
 const transferTimeout = 10 * 60 * 1000;
 const maxArchiveSize = 256 * 1024 * 1024;
 
-export function GameBackup({ canExport, canImport, onRestored }: GameBackupProps) {
+export function GameBackup({ canImport, onRestored }: GameBackupProps) {
   const { t, i18n } = useTranslation("admin");
   const id = useId();
   const [name, setName] = useState("");
@@ -106,17 +105,15 @@ export function GameBackup({ canExport, canImport, onRestored }: GameBackupProps
     <section className="mt-5 space-y-3 rounded-md border p-3" aria-labelledby={`${id}-heading`}>
       <h3 id={`${id}-heading`} className="font-medium">{t("gameBackup.title")}</h3>
       <p className="text-sm text-muted-foreground">{t("gameBackup.description")}</p>
-      {canExport && (
-        <div className="space-y-1">
-          <Label htmlFor={`${id}-name`}>{t("gameBackup.name")}</Label>
-          <Input id={`${id}-name`} value={name} maxLength={64} placeholder="event"
-            disabled={pending} onChange={(event) => {
-              setName(event.currentTarget.value);
-            }} />
-        </div>
-      )}
+      <div className="space-y-1">
+        <Label htmlFor={`${id}-name`}>{t("gameBackup.name")}</Label>
+        <Input id={`${id}-name`} value={name} maxLength={64} placeholder="event"
+          disabled={pending} onChange={(event) => {
+            setName(event.currentTarget.value);
+          }} />
+      </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="outline" disabled={!canExport || pending || !/^(?:[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$/.test(name.trim())}
+        <Button type="button" variant="outline" disabled={pending || !/^(?:[A-Za-z0-9][A-Za-z0-9_-]{0,63})?$/.test(name.trim())}
           onClick={() => {
             void exportArchive();
           }}>{t("gameBackup.export")}</Button>

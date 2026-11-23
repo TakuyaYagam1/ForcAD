@@ -1,0 +1,55 @@
+schemas:
+  AdminCheckerStats:
+    type: object
+    additionalProperties: false
+    required: [team_id, round, tasks]
+    properties:
+      team_id:
+        "$ref": "#/schemas/Uuid"
+      round:
+        type: integer
+        format: int32
+      tasks:
+        type: array
+        items:
+          "$ref": "#/schemas/AdminTaskCheckerStats"
+  AdminTaskCheckerStats:
+    type: object
+    additionalProperties: false
+    required: [task_id, name, check, put, get]
+    properties:
+      task_id:
+        "$ref": "#/schemas/Uuid"
+      name:
+        type: string
+      check:
+        "$ref": "#/schemas/AdminCheckerActionCount"
+      put:
+        "$ref": "#/schemas/AdminCheckerActionCount"
+      get:
+        "$ref": "#/schemas/AdminCheckerActionCount"
+  AdminCheckerActionCount:
+    type: object
+    additionalProperties: false
+    required: [maximum, reported, failed, no_result]
+    properties:
+      maximum:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Maximum invocations from jobs scheduled so far. In the round zero preview, the configured count per workflow instead.
+      reported:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Persisted action outcomes, including failures.
+      failed:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Reported outcomes other than UP.
+      no_result:
+        type: integer
+        format: int64
+        minimum: 0
+        description: Nominal invocations in finished jobs without a persisted outcome, including skipped actions.

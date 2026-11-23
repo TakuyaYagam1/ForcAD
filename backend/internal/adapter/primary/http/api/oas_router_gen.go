@@ -14,16 +14,16 @@ var (
 	rn24AllowedHeaders = map[string]string{
 		"GET": "If-Range,Range",
 	}
-	rn57AllowedHeaders = map[string]string{
+	rn58AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn60AllowedHeaders = map[string]string{
+	rn61AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Forcad-Confirm",
 	}
 	rn11AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn25AllowedHeaders = map[string]string{
+	rn26AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
 	rn10AllowedHeaders = map[string]string{
@@ -56,10 +56,10 @@ var (
 	rn21AllowedHeaders = map[string]string{
 		"PUT": "Content-Type",
 	}
-	rn30AllowedHeaders = map[string]string{
+	rn31AllowedHeaders = map[string]string{
 		"GET": "If-None-Match",
 	}
-	rn61AllowedHeaders = map[string]string{
+	rn62AllowedHeaders = map[string]string{
 		"PUT": "Content-Type,X-Team-Token",
 	}
 )
@@ -192,7 +192,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn57AllowedHeaders,
+										allowedHeaders: rn58AllowedHeaders,
 										acceptPost:     "application/gzip",
 										acceptPatch:    "",
 									})
@@ -217,7 +217,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn60AllowedHeaders,
+										allowedHeaders: rn61AllowedHeaders,
 										acceptPost:     "application/gzip",
 										acceptPatch:    "",
 									})
@@ -226,6 +226,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								return
 							}
 
+						}
+
+					case 'c': // Prefix: "checker-stats/"
+
+						if l := len("checker-stats/"); len(elem) >= l && elem[0:l] == "checker-stats/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "GET":
+								s.handleGetAdminCheckerStatsRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "GET",
+									allowedHeaders: nil,
+									acceptPost:     "",
+									acceptPatch:    "",
+								})
+							}
+
+							return
 						}
 
 					case 'e': // Prefix: "events/"
@@ -283,7 +308,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "GET,PUT",
-										allowedHeaders: rn25AllowedHeaders,
+										allowedHeaders: rn26AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -866,7 +891,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn30AllowedHeaders,
+									allowedHeaders: rn31AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -1392,7 +1417,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "PUT",
-							allowedHeaders: rn61AllowedHeaders,
+							allowedHeaders: rn62AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -1579,7 +1604,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								switch method {
 								case "GET":
 									r.name = ExportAdminBackupOperation
-									r.summary = "Download a finished competition as a tar.gz archive."
+									r.summary = "Download a snapshot of an initialized competition as a tar.gz archive."
 									r.operationID = "exportAdminBackup"
 									r.operationGroup = ""
 									r.pathPattern = "/api/v1/admin/backup/export/"
@@ -1629,7 +1654,7 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								switch method {
 								case "POST":
 									r.name = RestoreAdminBackupOperation
-									r.summary = "Restore a finished competition from a backup archive."
+									r.summary = "Restore a competition snapshot from a backup archive."
 									r.operationID = "restoreAdminBackup"
 									r.operationGroup = ""
 									r.pathPattern = "/api/v1/admin/backup/restore/"
@@ -1641,6 +1666,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								}
 							}
 
+						}
+
+					case 'c': // Prefix: "checker-stats/"
+
+						if l := len("checker-stats/"); len(elem) >= l && elem[0:l] == "checker-stats/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "GET":
+								r.name = GetAdminCheckerStatsOperation
+								r.summary = "Count checker actions for one team and round in the current game session."
+								r.operationID = "getAdminCheckerStats"
+								r.operationGroup = ""
+								r.pathPattern = "/api/v1/admin/checker-stats/"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
 						}
 
 					case 'e': // Prefix: "events/"

@@ -31,7 +31,7 @@ const (
 
 var (
 	ErrInvalid  = errors.New("invalid or incompatible backup")
-	ErrSource   = errors.New("backup requires a finished game with no pending results")
+	ErrSource   = errors.New("backup requires an initialized game")
 	ErrTarget   = errors.New("restore requires a board that has not hosted a game and has no announcements")
 	ErrBusy     = errors.New("another backup operation is in progress")
 	namePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`)
@@ -241,9 +241,11 @@ func (b *bundle) checkManifest() error {
 	if err != nil {
 		return fmt.Errorf("%s - read staged manifest: %w", location, err)
 	}
-	var m Manifest
+	m := Manifest{
+		Round: -1,
+	} // Round zero is valid, but an omitted or null round is not.
 	if err := json.Unmarshal(data, &m); err != nil || m.Version != formatVersion || m.ForcAD == "" ||
-		!ValidName(m.Name) || m.CreatedAt.IsZero() || m.Round < 1 || len(m.Files) != len(b.files)-1 {
+		!ValidName(m.Name) || m.CreatedAt.IsZero() || m.Round < 0 || len(m.Files) != len(b.files)-1 {
 		return fmt.Errorf("%s - incompatible manifest: %w", location, ErrInvalid)
 	}
 	delete(b.manifest.Files, manifestName)

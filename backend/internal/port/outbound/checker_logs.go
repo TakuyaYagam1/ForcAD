@@ -14,4 +14,5 @@ type CheckerLogRepository interface {
 		beforeID *uuid.UUID,
 		limit int32,
 	) ([]domain.CheckerLog, error)
+	CheckerStats(ctx context.Context, teamID uuid.UUID, round int32) ([]domain.TaskCheckerStats, error)
 }

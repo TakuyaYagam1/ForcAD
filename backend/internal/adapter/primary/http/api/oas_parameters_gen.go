@@ -479,6 +479,133 @@ func decodeExportAdminBackupParams(args [0]string, argsEscaped bool, r *http.Req
 	return params, nil
 }
 
+// GetAdminCheckerStatsParams is parameters of getAdminCheckerStats operation.
+type GetAdminCheckerStatsParams struct {
+	TeamID UUID
+	// A positive round, or zero for a configuration preview before play.
+	Round int32
+}
+
+func unpackGetAdminCheckerStatsParams(packed middleware.Parameters) (params GetAdminCheckerStatsParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "team_id",
+			In:   "query",
+		}
+		params.TeamID = packed[key].(UUID)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "round",
+			In:   "query",
+		}
+		params.Round = packed[key].(int32)
+	}
+	return params
+}
+
+func decodeGetAdminCheckerStatsParams(args [0]string, argsEscaped bool, r *http.Request) (params GetAdminCheckerStatsParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: team_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "team_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotTeamIDVal uuid.UUID
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := uuid.Parse(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotTeamIDVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.TeamID = UUID(paramsDotTeamIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "team_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: round.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "round",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt32(val)
+				if err != nil {
+					return err
+				}
+
+				params.Round = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           0,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(params.Round)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "round",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetAdminTaskParams is parameters of getAdminTask operation.
 type GetAdminTaskParams struct {
 	TaskID uuid.UUID

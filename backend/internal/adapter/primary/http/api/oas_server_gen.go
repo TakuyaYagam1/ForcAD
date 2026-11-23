@@ -94,6 +94,12 @@ type Handler interface {
 	//
 	// DELETE /api/v1/admin/teamtasks/{teamtask_id}/
 	DeleteAdminTeamTask(ctx context.Context, params DeleteAdminTeamTaskParams) (DeleteAdminTeamTaskRes, error)
+	// GetAdminCheckerStats implements getAdminCheckerStats operation.
+	//
+	// Count checker actions for one team and round in the current game session.
+	//
+	// GET /api/v1/admin/checker-stats/
+	GetAdminCheckerStats(ctx context.Context, params GetAdminCheckerStatsParams) (GetAdminCheckerStatsRes, error)
 	// GetAdminGameSettings implements getAdminGameSettings operation.
 	//
 	// Read editable game settings and current lifecycle.
@@ -248,8 +254,9 @@ type Handler interface {
 	OpenEventStream(ctx context.Context) (*OpenEventStreamSwitchingProtocols, error)
 	// RestoreAdminBackup implements restoreAdminBackup operation.
 	//
-	// The destination must not have hosted a game and must have no announcements. Restore replaces its
-	// seeded competition data.
+	// Restore replaces seeded data on a board that has not hosted a game and has no announcements. Running
+	// games are restored paused. The configured start time still governs automatic starts and rehearsal
+	// cleanup.
 	//
 	// POST /api/v1/admin/backup/restore/
 	RestoreAdminBackup(ctx context.Context, req RestoreAdminBackupReq, params RestoreAdminBackupParams) (RestoreAdminBackupRes, error)
@@ -290,8 +297,7 @@ type Handler interface {
 type RawHandler interface {
 	// ExportAdminBackup implements exportAdminBackup operation.
 	//
-	// Export requires a finished game with no pending checker results. Treat the archive as sensitive
-	// competition data.
+	// Export does not pause or change the game. Treat the archive as sensitive competition data.
 	//
 	// GET /api/v1/admin/backup/export/
 	ExportAdminBackup(ctx context.Context, params ExportAdminBackupParams, w http.ResponseWriter) error

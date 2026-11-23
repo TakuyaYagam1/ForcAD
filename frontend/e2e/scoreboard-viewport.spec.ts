@@ -232,7 +232,7 @@ test("large flag counts fit inside narrow desktop service cells without an unkno
   }
 });
 
-test("admin scoreboard moves the round timeline into the header", async ({ browser }) => {
+test("admin scoreboard keeps the timeline in the header and centers game settings", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();
   const credentials = await readAdminCredentials();
@@ -243,6 +243,15 @@ test("admin scoreboard moves the round timeline into the header", async ({ brows
 
   try {
     await loginAsAdmin(page, credentials);
+    const settings = page.getByTestId("game-settings-trigger");
+    const offset = await settings.evaluate((button) => {
+      const contents = document.createRange();
+      contents.selectNodeContents(button);
+      const textAndIcon = contents.getBoundingClientRect();
+      const box = button.getBoundingClientRect();
+      return Math.abs((textAndIcon.left - box.left) - (box.right - textAndIcon.right));
+    });
+    expect(offset).toBeLessThanOrEqual(2);
     const header = page.locator(".site-header");
     const [brandBox, progressBox, headerBox, dashboardBox] = await Promise.all([
       header.locator(".brand-lockup").boundingBox(),

@@ -56,7 +56,11 @@ func generateFlag(
 	}, nil
 }
 
-func flagForStorage(flag domain.Flag, task domain.Task, stdout, stderr string) domain.Flag {
+func flagForStorage(
+	flag domain.Flag,
+	task domain.Task,
+	stdout, stderr string,
+) domain.Flag {
 	switch {
 	case hasTag(task.CheckerType, "nfr"):
 		flag.PublicData = ""

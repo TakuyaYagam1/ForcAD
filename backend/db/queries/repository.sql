@@ -321,9 +321,9 @@ WHERE CheckerJobs.id = sqlc.arg(job_id)
   AND finished_at IS NULL
   AND deadline_at <= sqlc.arg(finished_at)
   AND EXISTS (
-      SELECT 1 FROM GameSession AS session
+      SELECT 1 FROM GameSession AS session JOIN GameConfig AS game USING (id)
       WHERE session.id = 1 AND NOT session.reset_pending
-        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL)
+        AND (CheckerJobs.action IS DISTINCT FROM 'check_only' OR session.paused_at IS NULL OR NOT game.game_running)
         AND (CheckerJobs.payload ->> 'generation')::BIGINT = session.generation
   )
 RETURNING CheckerJobs.team_id, CheckerJobs.task_id,

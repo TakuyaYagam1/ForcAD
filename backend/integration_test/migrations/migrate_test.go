@@ -108,6 +108,16 @@ func TestMigrateFreshSchema(t *testing.T) {
 			snapshotIndex, historyIndex, checkerIndex, feedIndex, deltaColumn,
 			configSingleton, integerSession, teamKindColumn, teamKindConstraint, singleNPCIndex, scheduleHistoryText)
 	}
+
+	var statsIndexes int
+	if err := fixture.conn.QueryRow(fixture.ctx, `
+		SELECT count(*) FROM pg_indexes
+		WHERE schemaname = current_schema() AND indexdef LIKE '% USING btree (team_id, round)'
+		  AND (tablename, indexname) IN (('checkerjobs', 'checker_jobs_team_round'),
+		                                ('checkeractionlogs', 'checker_action_logs_team_round'))
+	`).Scan(&statsIndexes); err != nil || statsIndexes != 2 {
+		t.Fatalf("checker statistics indexes on fresh schema: got %d, want 2; err=%v", statsIndexes, err)
+	}
 }
 
 func TestUUIDv7DefaultsAndRelationships(t *testing.T) {

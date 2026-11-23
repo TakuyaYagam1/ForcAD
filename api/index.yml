@@ -47,6 +47,8 @@ paths:
     "$ref": "./routes/admin-tasks-deactivate.yml"
   "/api/v1/admin/tasks/{task_id}/":
     "$ref": "./routes/admin-tasks-by-task-id.yml"
+  "/api/v1/admin/checker-stats/":
+    "$ref": "./routes/admin-checker-stats.yml"
   "/api/v1/admin/teamtasks/":
     "$ref": "./routes/admin-teamtasks.yml"
   "/api/v1/admin/teamtasks/{teamtask_id}/":

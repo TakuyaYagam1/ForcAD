@@ -50,7 +50,7 @@ Game:
   set-round-limit       Change the round limit; requires --rounds N
   runtime-capacity      Report configured limits; accepts replica counts
   validate              Validate config/config.yml; --full also checks deployment settings
-  backup                Export the finished game and team logos to a private archive
+  backup                Export the current game and team logos to a private archive
   restore-backup        Restore an event to a clean board; requires --confirm and an archive
   reset                 Reset game data; requires --confirm; --full removes local PostgreSQL
   clean                 Remove game data and generated credentials; requires --confirm
