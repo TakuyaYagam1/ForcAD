@@ -35,7 +35,6 @@
 **/.env
 **/.env.*
 **/*.env
-!/frontend/.env.example
 /config.yml
 /config_backup*.yml
 /docker-compose-base.yml

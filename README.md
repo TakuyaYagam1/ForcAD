@@ -16,7 +16,7 @@ For a self-contained rehearsal, use the [local WireGuard demo](deployment/demo/R
 
 ```sh
 cp -n config/config.yml.example config/config.yml
-cp -n frontend/.env.example deployment/docker/.env
+cp -n deployment/docker/.env.example deployment/docker/.env
 ```
 
 1. Set the schedule, teams and services in `config/config.yml`. It seeds a new database; PostgreSQL owns the game state after initialization.

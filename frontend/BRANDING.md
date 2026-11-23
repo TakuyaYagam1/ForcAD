@@ -1,19 +1,22 @@
 # Branding
 
-From the repository root, copy the Compose environment sample, then edit its
-`VITE_BRAND_*` values:
+The first four settings in [the Compose sample](../deployment/docker/.env.example)
+control the frontend brand. From the repository root:
 
 ```sh
-cp -n frontend/.env.example deployment/docker/.env
+cp -n deployment/docker/.env.example deployment/docker/.env
 ```
 
-Compose reads `deployment/docker/.env` from its project directory and passes
-the values as image build arguments. Keep the example values to use the ForcAD
-brand.
+Edit the `VITE_BRAND_*` values in `deployment/docker/.env`. Compose passes them
+to the nginx image build; restarting an existing container does not change the
+brand. To rebuild and apply just the frontend:
 
-For local Vite development, put values in `frontend/.env.local`. Vite compiles
-them into the bundle, so changing nginx runtime variables does not change the
-brand. Rebuild the frontend image after changing the Compose `.env` file.
+```sh
+./control.sh compose up -d --no-deps --build nginx
+```
+
+For `pnpm dev` without Docker, export only the `VITE_BRAND_*` values you want
+to override before starting Vite. Do not copy the deployment `.env` into `frontend/`.
 
 | Variable | Effect |
 | --- | --- |

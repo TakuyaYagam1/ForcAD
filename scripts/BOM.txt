@@ -10,7 +10,6 @@ frontend/Dockerfile
 frontend/e2e
 frontend/eslint.config.js
 frontend/.gitignore
-frontend/.env.example
 frontend/index.html
 frontend/Makefile
 frontend/package.json

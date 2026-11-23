@@ -152,9 +152,10 @@ across the consumer; `WORKER_CONCURRENCY` still caps each worker. The
 
 ## Compose environment
 
-`deployment/docker/.env` starts from `frontend/.env.example` for build-time
-branding and may also hold Compose settings such as `PUBLIC_ORIGIN` and
-`GRAFANA_ADMIN_PASSWORD`.
+Copy [deployment/docker/.env.example](../deployment/docker/.env.example) to
+`deployment/docker/.env`. The first four settings control frontend branding at
+build time. All other settings are commented so Compose keeps its defaults.
+Uncomment only the overrides you need; keep `.env` private if it contains secrets.
 
 Set `PUBLIC_ORIGIN` to the exact browser origin, including scheme and port but
 no path, for example `https://game.example`. A mismatch returns `403`. If a

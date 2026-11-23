@@ -58,9 +58,12 @@ test("invalid colors and logo paths fall back to safe defaults", () => {
   );
 });
 
-test("quoted example colors survive Vite dotenv parsing", () => {
+test("quoted branding colors from the Compose sample survive Vite dotenv parsing", () => {
   const fixtureDirectory = mkdtempSync(join(tmpdir(), "forcad-brand-env-"));
-  const example = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+  const example = readFileSync(
+    new URL("../../deployment/docker/.env.example", import.meta.url),
+    "utf8",
+  );
   writeFileSync(join(fixtureDirectory, ".env.test"), example);
 
   const keys = ["VITE_BRAND_PRIMARY", "VITE_BRAND_ACCENT"] as const;
