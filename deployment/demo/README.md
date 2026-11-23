@@ -1,132 +1,65 @@
 # Local network demo
 
-The Docker Compose demo runs twenty notes services, flag farms, participant and
-admin WireGuard, generated router rules, Zeek, ForcAD, Prometheus, and Grafana.
-Published ports bind to localhost. Demo services intentionally expose
-`/demo/flags` to their farms. The diagram shows two of the twenty team segments.
+Use this demo to check ForcAD's network rules and monitoring on a Linux Docker Engine host. Its 20-team sample runs in an isolated Compose project; published ports bind to loopback.
 
-The sensor runs the router's `zeek-9.0-core` package and generated Zeek policy.
-The demo and packet tests build the same [Debian 13 image](../docker/zeek/Dockerfile);
-neither needs the upstream plugin manager or development tools.
-The simulated teams and network nodes use the production worker's Python
-base and the same ForcAD binary as the application. Network tools and fixture
-services are added only to the [`demo` build target](../../backend/Dockerfile).
-
-The board has five service columns. Only `example_service` writes flags. The
-other four services return fixed CORRUPT, CHECK FAILED, MUMBLE, and DOWN
-statuses so every board color is visible.
-
-```mermaid
-flowchart LR
-    P1[Player 1 / farm] -->|WireGuard| R[Router WAN]
-    P2[Player 2 / farm] -->|WireGuard| R
-    A[Admin] -->|Admin WireGuard| R
-    R -->|UDP forwarding| VPN[VPN server]
-    VPN -->|Original peer IP| R
-    R -->|SNAT to 10.183.101.1| V1[Vulnbox 1: 10.183.101.2]
-    R -->|SNAT to 10.183.102.1| V2[Vulnbox 2: 10.183.102.2]
-    F[ForcAD / checker: 10.183.2.10] --> R
-    R -.->|nftables counters| M[Prometheus]
-    R -.->|Passive capture before SNAT| Z[Zeek]
-    Z -.->|HTTP / WS / TCP / UDP metrics| M
-    M --> G[Grafana]
-```
+The demo includes the ForcAD board, router, participant and admin WireGuard clients, sample services, Zeek, Prometheus, and Grafana. Only the dedicated network setup configures routes and firewall rules; application containers do not receive `NET_ADMIN`. Zeek runs as UID 10001 with `NET_RAW`. The notes fixture is for local checks, not a competition service.
 
 ## Requirements
 
-Run on the Linux Docker Engine host with kernel WireGuard, `wg` and `iproute2`.
-The demo also requires Compose 2.36 or later for `interface_name`, Go, Make,
-Python 3.11+, Node.js, and pnpm. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
+Use a Linux host with kernel WireGuard, `wg`, and `iproute2`. The demo also requires Compose 2.36 or later, Go, Make, Python 3.11 or later, Node.js, and pnpm. See [toolchain versions](../../docs/DEVELOPMENT.md#toolchain).
 
 ## Start
 
-The demo uses the `forcad-demo` Compose project and keeps its configuration
-and credentials in `.demo/`. Tournament commands use `forcad` and `config/`.
-Before recreating containers, `up` checks its fixed bridge subnets against host
-routes and stops if they overlap anything other than the demo's own bridges.
+The demo owns the `forcad-demo` Compose project and keeps generated configuration, keys, and credentials in `.demo/`. Tournament commands use a separate `forcad` project and `config/`. Before recreating containers, `up` checks its bridge subnets against host routes and stops on an overlap with a non-demo route.
 
-Edit [settings.toml](settings.toml) to set teams, the game, and tasks. A fresh
-demo generates its own `.demo/config/config.yml` and team tokens. From the
-repository root, run:
+Edit [settings.toml](settings.toml) to change the game or team inventory. From the repository root:
 
 ```sh
 make -C backend sync-codegen
 bash deployment/docker/scripts/demo.sh up
 ```
 
-`up` prepares the demo configuration, creates missing VPN keys, writes private
-network files under `.demo/network/`, rebuilds the stack, and recreates
-its containers while retaining volumes. The settings use the same schema as
-the infrastructure renderer.
-The demo PostgreSQL data lives in `forcad-demo_demo-postgres-data`; `demo.sh
-down` preserves it. Older `forcad_demo-*` volumes and `config/runtime/demo/`
-are not attached, migrated or deleted. To keep an old demo's scores, retain
-its matching configuration and private database backup for an explicit restore.
+`up` prepares `.demo/config/config.yml`, creates missing VPN keys, writes private network files under `.demo/network/`, rebuilds the stack, and recreates containers while retaining volumes. The demo supports 2 to 32 teams; the sample has 20. Add teams only by appending to `teams.entries`. Reordering or removing teams, changing an existing entry, or editing the topology requires a separate demo.
 
-All three host ports bind to loopback. To change them, set `FORCAD_DEMO_HTTP_PORT`,
-`FORCAD_DEMO_GRAFANA_PORT` or `FORCAD_DEMO_PROMETHEUS_PORT` in `.demo/compose.env`.
+The fresh demo starts with router access in `game`, but `up` starts containers only, not a board session. Start a local practice session separately in the admin panel. `bash deployment/docker/scripts/demo.sh phase game` enables game routing; `bash deployment/docker/scripts/demo.sh phase pre-game` restores pre-game routing. These commands change router policy, not session state.
 
-The demo supports 2 to 32 teams. Append entries to `teams.entries` to add teams
-through the admin API and extend the VPN without rotating existing keys.
-Existing teams, scores, and tokens stay in place. Reordering or removing teams,
-changing an existing entry, or editing the topology requires a separate demo.
-Use `demo.sh` for this stack so every Compose overlay remains enabled.
+All published ports bind to `127.0.0.1`. Set `FORCAD_DEMO_HTTP_PORT`, `FORCAD_DEMO_GRAFANA_PORT`, or `FORCAD_DEMO_PROMETHEUS_PORT` in `.demo/compose.env` to change their port numbers.
 
-| Service | URL | Credentials |
+| Role or service | Address | Credential file |
 | --- | --- | --- |
-| Board and admin | [localhost:18080](http://localhost:18080/) / [admin login](http://localhost:18080/admin/login) | `.demo/config/runtime/admin.env` |
-| Grafana dashboards | [ForcAD](http://localhost:13000/d/forcad-monitoring) / [Traffic](http://localhost:13000/d/forcad-traffic) / [DDoS](http://localhost:13000/d/forcad-ddos) / [Relay](http://localhost:13000/d/forcad-relay) | `admin`; password in `.demo/compose.env` |
-| Prometheus targets | [localhost:19090/targets](http://localhost:19090/targets) | None |
+| Board administrator | [127.0.0.1:18080](http://127.0.0.1:18080/) and [admin login](http://127.0.0.1:18080/admin/login) | `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.demo/config/runtime/admin.env` |
+| Grafana administrator | [127.0.0.1:13000](http://127.0.0.1:13000/) | User `admin`; `GRAFANA_ADMIN_PASSWORD` in `.demo/compose.env` |
+| Prometheus targets | [127.0.0.1:19090/targets](http://127.0.0.1:19090/targets) | None |
+| Participant VPN | Per-player config under `.demo/network/players/` | Give each player only its own config |
+| Admin VPN | `.demo/network/wireguard/admins/admin-01.conf` | Admin config only |
 
-Start practice in the board admin panel. Allow two rounds for checker results
-and about one minute for rates. Each farm reads flags from the next team's
-`/demo/flags` endpoint, submits them to the board, and generates HTTP,
-WebSocket, TCP, and UDP traffic. In **Traffic**, sort active directions by
-load and select a team name to inspect a pair; **All teams** clears both
-filters. **DDoS** highlights load by victim and source; **Relay** counts
-direct vulnbox-to-vulnbox packets dropped by the Router. External paths remain
-outside this direct-relay counter; vulnbox Internet access stays enabled.
+`.demo/compose.env` also contains `GRAFANA_CHECKER_DB_PASSWORD` for the read-only checker data source; it is not the Grafana login password. These generated credentials are for the local demo, not production. Team tokens are stored under `.demo/network/`. Treat `.demo/` and VPN configs as private; share only each user's role-specific VPN config and do not commit these files.
 
 ## Exercise the network
 
+From the repository root:
+
 ```sh
 bash deployment/docker/scripts/demo.sh test
-bash deployment/docker/scripts/demo.sh phase pre-game
 bash deployment/docker/scripts/demo.sh phase game
 bash deployment/docker/scripts/demo.sh load 1 --rps 20 --seconds 45 --ws 5
+bash deployment/docker/scripts/demo.sh phase pre-game
 api/.venv/bin/python deployment/demo/timing.py --rounds 5
 ```
 
-`test` checks WireGuard routes, SNAT, team isolation, management and metrics
-access, pre-game policy, vulnbox filtering, and Prometheus attribution. It
-temporarily changes the router phase and adds an nftables test filter, then
-removes the filter and restores the saved phase. Farms may time out during
-pre-game.
+`test` checks WireGuard routes, SNAT, team isolation, management and metrics access, pre-game policy, vulnbox filtering, and Prometheus attribution. It temporarily changes the router phase and installs an nftables test filter, then removes the filter and restores the saved phase. Farms may time out during pre-game.
 
-`timing.py` reads completed checker jobs from PostgreSQL and saves their sent,
-dispatch-delay, and completion offsets to
-`.demo/network/timing.json`. It does not change game state. The offsets
-describe whole checker jobs, not individual CHECK, PUT, or GET calls, and do not
-test resistance to service-availability manipulation.
+`load` sends health requests to a fixed local fixture only. It does not submit flags or call the board API; limits are 100 requests/s, 300 seconds, and 20 WebSockets. `timing.py` reads completed checker jobs from PostgreSQL and writes offsets to `.demo/network/timing.json`; it does not change game state, measure individual CHECK, PUT, or GET calls, or test resistance to service-availability manipulation.
 
 ## Availability experiment
 
-The demo sets `[game] extra_checks = 0` in `settings.toml` so the board shows
-each main CHECK result as soon as it completes. To exercise the availability
-experiment, set this value to `2` before creating a fresh demo. In classic
-mode, this schedules two additional CHECK-only jobs per team, task, and round.
-They run at random times outside the main workflow and do not add flag writes.
-All three jobs count toward the round result, so a later UP cannot clear an
-earlier failure. The board receives the aggregate result after all three jobs
-finish.
+The sample sets `[game] extra_checks = 0`, so the board shows each main CHECK result as soon as it completes. Set `extra_checks = 2` in `settings.toml` before creating a fresh demo to run the availability experiment.
 
-Normal installations default to `0`, so extra checks are opt-in. They add
-checker load and make the round SLA stricter. The twenty-team demo does not show
-that `2` is a suitable general default; test real checkers at the expected
-team and service count before enabling them. See
-[configuration](../../docs/CONFIGURATION.md#game) for limits and setup.
+In classic mode, this adds two CHECK-only jobs per team, task, and round at random times outside the main workflow. These extra jobs do not add flag writes. The main workflow and both extra jobs determine the round result; a later UP cannot clear an earlier failure. The board reports the aggregate when all three jobs finish.
 
-With a running practice session, 60-second rounds, and `extra_checks = 2`, run:
+Normal installations default to `0`. Extra checks increase checker load and make the round SLA stricter. The 20-team demo does not establish `2` as a suitable general default; test real checkers at the expected team and service count before enabling them. See [configuration](../../docs/CONFIGURATION.md#game).
+
+With a local practice session running, 60-second rounds, and `extra_checks = 2`, run:
 
 ```sh
 api/.venv/bin/python deployment/demo/availability.py healthy --rounds 3
@@ -134,36 +67,11 @@ api/.venv/bin/python deployment/demo/availability.py fault --rounds 5
 api/.venv/bin/python deployment/demo/availability.py pause
 ```
 
-`healthy` checks that every team passes. `fault` blocks team 3's notes port for
-22 seconds after each 15-second available interval. The fault schedule does
-not read checker timing; all other configured teams act as controls. The script
-removes its temporary nftables table on exit. `pause` pauses through the admin
-API, restarts the ticker and worker, resumes the game, and checks that pending
-job IDs and times survive the restart and that the jobs complete. Reports are
-written to `.demo/network/availability-*.json`.
+`healthy` checks that every team passes. `fault` blocks team 3's notes port for 22 seconds after each 15-second available interval; the other teams are controls. The script removes its temporary nftables table on exit.
 
-These are local fault tests, not production-capacity tests or proof of
-continuous uptime. See the [recorded experiment](availability.md) for results
-and the default decision.
+`pause` pauses through the admin API, restarts the ticker and worker, resumes the game, and checks that pending job IDs and times survive and the jobs complete. Reports are written to `.demo/network/availability-*.json`.
 
-## Router phase and bounded load
-
-`phase` changes router access independently of the board session. A fresh demo
-starts in `game` and saves later phase changes. The host installer defaults to
-`pre-game`.
-
-`load N` runs traffic from player N's farm to the next team's vulnbox; the last
-team targets team 1. It accepts at most 100 requests per second, 300 seconds,
-and 20 WebSockets. It sends health requests only, with no flags or board API
-requests. Targets are fixed local fixtures.
-
-| Port | Fixture |
-| --- | --- |
-| TCP/8080 | Notes, public demo flags, and `/health` with the observed source IP |
-| TCP/8081 | WebSocket echo at `/ws` |
-| TCP/9001 | TCP echo |
-| UDP/9000 | UDP echo |
-| TCP/22 | Management ACL probe; no SSH service |
+These are local fault checks, not capacity tests or proof of continuous uptime. See the [recorded experiment](availability.md) for results and the default decision.
 
 ## Manage the stack
 
@@ -175,35 +83,14 @@ bash deployment/docker/scripts/demo.sh start
 bash deployment/docker/scripts/demo.sh down
 ```
 
-`down` preserves database, notes, and monitoring volumes. Runtime keys and
-credentials live under `.demo/`; do not commit them.
+`down` preserves the PostgreSQL, notes, and monitoring volumes. `up` replaces containers while retaining volumes.
 
-The old team pairs `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` migrate
-during `up`. The script saves `.demo/config/config_backup_demo_network.yml`, updates
-matching database records, retains VPN keys, and saves the prior bundle in
-`.demo/network/wireguard-before-network/`. VPN expansion keeps a
-`wireguard-before-N-peers/` backup. If a team addition is interrupted, rerun
-`up`; its private journal prevents duplicate creation. The demo refuses
-unrecognized database teams.
-Before replacing old ephemeral notes containers, save their SQLite database
-if needed. `.demo/network/seeds/team1/note.db` and
-`.demo/network/seeds/team2/note.db` populate empty notes volumes once;
-later starts use the persistent volumes.
+The PostgreSQL volume is `forcad-demo_demo-postgres-data`. Old `forcad_demo-*` volumes and `config/runtime/demo/` are not attached, migrated, or deleted. To retain an old demo's scores, keep its matching configuration and private database backup for an explicit restore.
+
+During `up`, the old team addresses `172.30.240.11`/`.12` and `10.101.0.2`/`10.102.0.2` can be migrated. The script updates matching database records, retains VPN keys, and backs up the old config and VPN bundle under `.demo/`.
+
+If adding a team is interrupted, rerun `up`; its private journal prevents duplicate creation. The demo refuses unrecognized database teams. Back up old ephemeral notes databases before replacing their containers. `.demo/network/seeds/team1/note.db` and `team2/note.db` initialize empty notes volumes once; later starts use persistent volumes.
 
 ## Limits
 
-- Generated host rules define router and VPN behavior. Internal Docker bridges
-  model VLANs, but the demo does not test 802.1Q tags. Interfaces are named
-  `eth3.101` through `eth3.110`. VPN transit uses `/29` to accommodate the
-  Docker bridge gateway.
-- Nginx, one worker, and Prometheus share the ForcAD namespace. Setup routes
-  traffic through the router and redirects TCP/80 to Nginx on port 8080. Worker
-  metrics use port 9091. Application containers do not have `NET_ADMIN`.
-- Zeek shares the router namespace as UID 10001 with `NET_RAW`. The demo uses
-  Zeek's `-C` option for veth checksum offload; the host unit keeps checksum
-  validation enabled.
-- This tests functionality, not capacity, physical VLAN isolation, Debian boot
-  order, or hardware MTU. HTTP metrics cover plaintext HTTP/1. Direct vulnbox
-  relays are blocked; indirect external relays remain possible.
-
-See [monitoring](../../docs/MONITORING.md) for metric definitions and limits.
+Router rules and VPN behavior come from generated host configuration. Docker bridges model VLANs, but the demo does not test 802.1Q tags, physical VLAN isolation, host boot order, hardware MTU, or capacity. HTTP metrics cover plaintext HTTP/1. Direct vulnbox-to-vulnbox relays are blocked, but external relay paths are outside that counter and vulnboxes retain Internet access. See [monitoring](../../docs/MONITORING.md) for metric definitions and limits.

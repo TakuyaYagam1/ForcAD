@@ -1,22 +1,12 @@
 # Development
 
-See the [README documentation index](../README.md#documentation) for the other
-project guides.
+See the [README documentation index](../README.md#documentation) for the other project guides.
 
 ## Toolchain
 
-Use the Go version declared in [backend/go.mod](../backend/go.mod). CI uses Node
-26.13.1 and Python 3.15.2 ([test workflow](../.github/workflows/tests.yml)); pnpm
-12.21.0 is declared in the [API](../api/package.json) and
-[frontend](../frontend/package.json) manifests. Python supports code generation,
-test tools and checkers; the backend runtime is Go. Infrastructure rendering
-requires Python 3.11 or newer; generated host installers support Debian 12/13.
-GNU Make is required. Docker with the Compose plugin is required for integration
-and deployment checks.
+Use the Go version in [backend/go.mod](../backend/go.mod). CI uses Node 26.13.1, Python 3.15.2, and pnpm 12.21.0; pnpm is declared in the [API](../api/package.json) and [frontend](../frontend/package.json) manifests. Python supports code generation, test tools, and checkers. Infrastructure rendering requires Python 3.11 or later; generated host installers support Debian 12 and 13. GNU Make is required. Docker with the Compose plugin is required for integration and deployment checks.
 
-Frontend builds and browser-test type checks use the native TypeScript 7
-compiler (`typescript-compiler`). ESLint uses the TypeScript 6 JavaScript API
-required by `typescript-eslint`; keep these separate until its parser supports 7.
+Frontend builds and browser-test type checks use the native TypeScript 7 compiler (`typescript-compiler`). ESLint uses the TypeScript 6 JavaScript API required by `typescript-eslint`; keep these versions separate until its parser supports 7.
 
 ## Install dependencies
 
@@ -27,50 +17,28 @@ make -C backend sync
 make -C frontend sync
 ```
 
-This creates `api/.venv`, installs the version-pinned schema-generation dependency,
-downloads Go modules, installs backend linters, and installs the API and frontend
-pnpm lockfiles.
+Backend sync prepares `api/.venv`, installs the pinned schema-generation tools, downloads Go modules, and installs backend linters. Frontend sync installs its code-generation tools and frozen pnpm lockfile.
 
 ## Code generation
 
-Author the API contract in `api/index.yml`, `api/routes/`, and `api/components/`.
-From the repository root, choose a focused generator when changing one client,
-or run the full generation target before reviewing generated output:
+Author the API contract in `api/index.yml`, `api/routes/`, and `api/components/`. From the repository root, run the focused target for one client or the full target before reviewing generated files:
 
 | Command | Generated code |
 | --- | --- |
 | `make -C backend oapi-generate` | Go server |
 | `make -C frontend oapi-generate` | Frontend API client |
-| `make -C backend generate` | Go server, sqlc queries and Wire wiring |
+| `make -C backend generate` | Go server, sqlc queries, and Wire wiring |
 | `make -C frontend generate` | Frontend API client |
 
-Run both components' `generate` targets after a shared contract change.
-
-The OpenAPI generator bundles the contract before running ogen and Orval. It
-removes the temporary `api/openapi.yml` and `api/components/schemas.yml` files
-when generation exits. Review generated changes under
-`backend/internal/adapter/primary/http/api`,
-`backend/internal/adapter/secondary/postgres/sqlc`,
-`backend/internal/bootstrap/wire_gen.go`, and
-`frontend/src/shared/api/generated`.
+Run both components' `generate` targets after a shared contract change. The OpenAPI generator bundles the contract for ogen and Orval, then removes temporary `api/openapi.yml` and `api/components/schemas.yml` files. Review output under `backend/internal/adapter/primary/http/api`, `backend/internal/adapter/secondary/postgres/sqlc`, `backend/internal/bootstrap/wire_gen.go`, and `frontend/src/shared/api/generated`.
 
 ## Backend
 
-The Go module is in `backend/`. `cmd/forcad` contains the CLI entry point;
-`internal` holds domain logic, use cases, adapters, and application wiring.
-Database migrations and sqlc queries live in `backend/db/`. From the repository
-root, run focused targets as `make -C backend build`, `make -C backend test`,
-`make -C backend race`, or `make -C backend vet`.
+The Go module is in `backend/`: `cmd/forcad` is the CLI entry point, `internal` contains application logic and adapters, and `db/` holds migrations and sqlc queries. From the repository root, use `make -C backend build`, `test`, `race`, or `vet` for focused checks.
 
 ## Frontend development
 
-From the repository root, `make -C frontend dev` starts Vite. Its `/api` and
-`/api/v1/events/ws` proxies use `FORCAD_BACKEND_URL`, defaulting to
-`http://127.0.0.1:8080`. To run the frontend with local demo fixtures and its
-in-memory API adapter, use `pnpm --dir frontend dev:demo`; the demo login is
-`demo` / `demo`.
-The [frontend application](../frontend/) contains its source and package
-scripts. See [BRANDING.md](../frontend/BRANDING.md) for theme settings.
+From the repository root, `make -C frontend dev` starts Vite. Its `/api` and `/api/v1/events/ws` proxies use `FORCAD_BACKEND_URL`, defaulting to `http://127.0.0.1:8080`. To use the in-memory API fixture, run `pnpm --dir frontend dev:demo`; its demo login is `demo` / `demo`. See the [frontend source](../frontend/) and [theme settings](../frontend/BRANDING.md).
 
 ## Tests
 
@@ -78,52 +46,25 @@ From the repository root:
 
 ```sh
 make -C backend lint race test-contracts
+make -C backend test-checker
 make -C frontend lint test
 make -C deployment test
 make -C deployment e2e
 ```
 
-Backend `lint` runs GolangCI-Lint and SQLFluff. Frontend `lint` runs ESLint and
-TypeScript checks for the app and browser tests.
-Backend rules live in `backend/.golangci.yml` and `backend/.sqlfluff`;
-SQL checks cover migrations and sqlc queries. Generated Go code is excluded.
-Use `make -C backend lint-go` or `lint-sql` for a focused check, and
-`make -C backend fmt` to apply Go formatting. Go tool versions are locked in
-`backend/go.mod`; SQLFluff dependencies are locked in `backend/requirements.txt`
-and installed into the ignored `backend/.cache/sqlfluff` environment.
+Backend `lint` runs Go, SQL, and Python style checks. `test` runs Go unit tests; `race` enables the race detector; `test-contracts` checks shared API tooling. `test-checker` runs the [reference checker](../checkers/examples/README.md) through the Go runner. These backend targets do not start containers or run browser tests. See the [checker protocol](CHECKERS.md) for the worker contract.
 
-Backend `test` runs Go unit tests; `race` enables the race detector and
-`test-contracts` checks the shared API tooling. Frontend `test` runs Node tests.
-These targets do not start containers or run browser tests.
+Frontend `lint` runs ESLint and TypeScript checks for the app and browser tests; `test` runs Node tests. `make -C deployment test` runs backend integration tests against isolated PostgreSQL, PgBouncer, Redis, and NATS JetStream containers, then builds an isolated deployment and checks its HTTP API. `make -C deployment e2e` also requires Docker Compose and runs Playwright flows in `frontend/e2e`.
 
-`make -C deployment test` runs the backend integration suite against isolated
-PostgreSQL, PgBouncer, Redis, and NATS JetStream containers, then builds an
-isolated deployment and checks its HTTP endpoints. `make -C frontend e2e`
-delegates to `make -C deployment e2e`, which also runs the Playwright flows in
-`frontend/e2e`. Both deployment targets require Docker Compose.
+The isolated deployment accepts admin requests from its Docker IPv4 network for browser and API tests; Nginx is published only on host loopback. `scripts/test_nginx_image.sh` checks the admin CIDR restriction separately. Deployment API tests cover reads, CRUD, login/logout, authorization, validation, conflicts, pause/resume, submissions, WebSocket upgrades, and private metrics.
 
-The isolated deployment accepts admin requests from its Docker IPv4 network
-for the browser and API tests; Nginx is published only on host loopback.
-`scripts/test_nginx_image.sh` tests the admin CIDR restriction separately.
+`make -C deployment test-monitoring` checks Grafana dashboards, replica discovery, and N/A values after source failure. `make -C deployment test-network` checks generated nftables rules and the exporter in a disposable container. See the [infrastructure checks](../infrastracture/COMMANDS.md#workstation) for host firewall, Zeek, and dashboard queries.
 
-The deployment API checks cover public reads, team/task CRUD, session login and
-logout, authorization and input errors, generation conflicts, pause/resume,
-batch submission and duplicate retries, WebSocket upgrades and private metrics.
-Reserved team-task CRUD methods are checked for their documented 404 response.
-
-`make -C deployment test-monitoring` also checks the Grafana dashboard, replica
-discovery and N/A values after source failure. `make -C deployment test-network`
-checks generated nftables rules and the exporter in a disposable container.
-
-Network firewalls, the Zeek sensor and dashboard queries have separate
-[infrastructure checks](../infrastracture/COMMANDS.md#workstation). The
-[network demo](../deployment/demo/README.md) exercises twenty team segments by
-default and supports 2 to 32 teams. It is separate from Vite's in-memory demo
-and the backend load suite.
-
-For local security checks and their exact coverage, see [security/README.md](../security/README.md).
+The [network demo](../deployment/demo/README.md) defaults to 20 team segments and supports 2 to 32. It is separate from Vite's in-memory demo and the backend load suite. For local security checks and their coverage, see [security/README.md](../security/README.md).
 
 ## Focused benchmarks
+
+Run the runtime benchmark from `backend/`; the publisher benchmark starts its isolated test dependencies:
 
 ```sh
 cd backend
@@ -131,20 +72,8 @@ go test -run='^$' -bench='^BenchmarkRuntimeConcurrent$' -benchmem -count=3 ./int
 ./integration_test/scripts/run_tests.sh -run='^$' -bench='^BenchmarkPublishBatch$' -benchtime=3x -count=3
 ```
 
-The runtime benchmark uses a delayed fake repository to measure overlapping
-read suppression (`repo_calls/op`). The publisher benchmark uses isolated
-NATS JetStream, includes connection setup and excludes test stream setup. The runner
-enables the race detector; use identical settings for comparisons. Neither
-benchmark establishes production capacity. Check frontend chunks with
-`make -C frontend build` and recovery flows with `make -C frontend e2e`.
+The runtime benchmark uses a delayed fake repository and reports overlapping-read suppression as `repo_calls/op`. The publisher benchmark includes NATS JetStream connection setup but excludes test stream setup. The integration runner enables the race detector. Use identical settings for comparisons; neither benchmark establishes production capacity.
 
 ## Load regression
 
-From the repository root, `make -C backend test-load` runs Vegeta against an
-isolated production stack with 20 teams, three fixture services with Python
-checkers, flag farms, and reconnecting WebSocket spectators. Profiles cover
-smoke, sustained load, spikes, endpoint steps up to 10000 offered RPS, and a
-four-hour soak. Reports distinguish actual delivery from requested load and
-reconcile flag responses with the database.
-See [load testing](../backend/load_test/README.md) for commands, thresholds and
-measurement limits. `make -C deployment test-load` runs the same suite.
+From the repository root, `make -C backend test-load` runs Vegeta against an isolated production-like stack with synthetic teams, fixture services, Python checkers, and WebSocket observers. Profiles measure smoke, sustained load, spikes, endpoint steps up to 10,000 offered RPS, and a four-hour soak. Reports distinguish delivered traffic from requested load and reconcile flag responses with the database. `make -C deployment test-load` runs the same suite. See [load testing](../backend/load_test/README.md) for commands, thresholds, and measurement limits.

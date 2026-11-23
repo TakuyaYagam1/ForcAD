@@ -1,6 +1,5 @@
 # UI primitives
 
-This directory holds reusable base components: badge, button, card, checkbox,
-dialog, form, input, label, scroll area, separator, table, and tabs. Keep their
-props and styles consistent with the existing components. Compose components
-shared across the app in [shared UI](../../shared/ui/README.md).
+Use these controls for buttons, forms, dialogs and tables. Keep game rules and page-specific behavior out of the primitives.
+
+For components that combine controls across pages, use [shared UI](../../shared/ui/README.md).

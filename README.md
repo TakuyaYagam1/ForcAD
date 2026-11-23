@@ -1,108 +1,45 @@
 # ForcAD
 
-> [!IMPORTANT]
-> **Planning an event?** Start with [hardware sizing](docs/OPERATIONS.md#sizing-the-forcad-host)
-> and the [full Router, VPN and ForcAD setup](infrastracture/README.md). For
-> about 10 teams, start rehearsals at **8–12 vCPU and 16 GiB RAM** on the
-> ForcAD VM. Actual requirements depend on your services, checkers and round time.
->
-> **Russian Championship final:** A **24 vCPU / 32 GiB** ForcAD VM with
-> **4 workers × 8 checker slots** served 21 competing teams and one NPC for
-> exploit testing. Over 240 minutes, teams submitted more than 100,000 flags;
-> `daywave.` alone submitted about 25,000 on one service. The organizers
-> reported 100% uptime and no HTTP 5xx responses.
->
-> **Physical host for that VM (not a minimum requirement):** 2 ×
-> [AMD EPYC 7662](https://www.amd.com/en/support/downloads/drivers.html/processors/epyc/epyc-7002-series/amd-epyc-7662.html)
-> (64 cores / 128 threads, 2.0 GHz base, up to 3.3 GHz boost, 225 W TDP each);
-> 240 GiB DDR4 ECC RAM (15 × 16 GiB); and 2 × 2 TB Intel SSD DC P4510
-> (2.5-inch U.2) in RAID 1.
+ForcAD runs attack-defense CTFs: it schedules service checks, accepts flags and publishes the scoreboard.
 
-![ForcAD](public/ForcAD.png)
+## Plan an event
 
-ForcAD is a capture-the-flag attack-defense platform.
+For a 10-team rehearsal, start with **8-12 vCPU and 16 GiB RAM** for the ForcAD VM. Size it for the number of services, checker duration and round time. See [hardware sizing](docs/OPERATIONS.md#sizing-the-forcad-host) and the [Router, VPN and ForcAD installation guide](infrastracture/README.md).
 
-## Choose a setup
+At the Russian Championship final, a **24 vCPU / 32 GiB VM** ran four workers with eight checker slots each for 21 competing teams and one NPC. Teams submitted over 100,000 flags in 240 minutes; `daywave.` submitted about 25,000 on one service. The organizers reported 100% uptime and no HTTP 5xx responses.
 
-- **Manual application:** run ForcAD and its dependencies with Docker Compose on one host. Follow this guide.
-- **Full infrastructure:** generate and install separate Debian Router, VPN and ForcAD hosts with the [infrastructure guide](infrastracture/README.md).
-- **Local network demo:** run the [WireGuard competition demo](deployment/demo/README.md) on a Linux workstation.
+The physical host (not a VM requirement) had two AMD EPYC 7662 CPUs (64 cores / 128 threads, 2.0 GHz base, up to 3.3 GHz, 225 W each), 240 GiB DDR4 ECC (15 x 16 GiB) and two 2 TB Intel DC P4510 U.2 SSDs in RAID 1.
 
 ## Manual application setup
 
-Install Go matching [backend/go.mod](backend/go.mod), GNU Make, Docker and the
-Docker Compose v2 plugin. From the repository root, create the config files:
+For a self-contained rehearsal, use the [local WireGuard demo](deployment/demo/README.md). To run the application on one host instead, install the [project's Go version](backend/go.mod), GNU Make, Docker and the Compose v2 plugin. From the repository root:
 
 ```sh
 cp -n config/config.yml.example config/config.yml
 cp -n frontend/.env.example deployment/docker/.env
 ```
 
-Edit `config/config.yml` with the game schedule, teams, tasks and service
-settings. It seeds a new database; PostgreSQL is authoritative after
-initialization. Add executable checkers under `checkers/` and list their Python
-dependencies in `checkers/requirements.txt`. Start with the
-[reference checker](checkers/examples/README.md).
-
-If players will use a public hostname or reverse proxy, set `PUBLIC_ORIGIN` in
-`deployment/docker/.env` to the exact browser origin, including scheme and port
-when present, with no path. Admin mutations reject a different origin. See
-[Configuration](docs/CONFIGURATION.md#compose-environment) for proxy settings.
-
-Run setup and start the containers:
+1. Set the schedule, teams and services in `config/config.yml`. It seeds a new database; PostgreSQL owns the game state after initialization.
+2. Put executable checkers under `checkers/` and their Python dependencies in `checkers/requirements.txt`. See the [reference checker](checkers/examples/README.md).
+3. For a public hostname or reverse proxy, set `PUBLIC_ORIGIN` in `deployment/docker/.env` to the exact browser origin (scheme, host and port, no path). See [proxy settings](docs/CONFIGURATION.md#compose-environment).
 
 ```sh
 ./control.sh setup
 ./control.sh start
 ```
 
-`start` does not start a game session. Open the board at
-<http://127.0.0.1:8080/> and the admin panel at
-<http://127.0.0.1:8080/admin/>. Start a practice or final session from the
-admin panel, or let the configured schedule start the final. Setup writes the
-admin credentials to the private `config/runtime/admin.env` file.
-
-Use `./control.sh compose ...` (alias `./control.sh rd ...`) for raw Compose
-commands so external storage settings are included. See
-[Control CLI](docs/CONTROL.md) for the full command list and
-[Operations](docs/OPERATIONS.md) before updates or resets.
-
-## Monitoring
-
-Set `GRAFANA_ADMIN_PASSWORD` and a separate
-`GRAFANA_CHECKER_DB_PASSWORD` of at least 32 lowercase hexadecimal characters
-in `deployment/docker/.env`, then run from the repository root:
-
-```sh
-./control.sh monitoring up -d
-```
-
-Grafana and Prometheus listen on localhost on the ForcAD host. See
-[Monitoring](docs/MONITORING.md) for the SSH tunnel, dashboards and the separate
-Router exporter setup for game traffic metrics.
-
-![Grafana game traffic dashboard](public/grafana.png)
+Open the [scoreboard](http://127.0.0.1:8080/) or sign in to [admin](http://127.0.0.1:8080/admin/) with the credentials in `config/runtime/admin.env`. Starting containers does not start a game: use the admin panel for practice or a final, or let the final start on schedule.
 
 ## Documentation
 
-| Guide | Contents |
+| Task | Guide |
 | --- | --- |
-| [Configuration](docs/CONFIGURATION.md) | Game fields, credentials and settings that change after initialization |
-| [Control CLI](docs/CONTROL.md) | Operator commands and compatibility aliases |
-| [Operations](docs/OPERATIONS.md) | Scaling, resource limits, updates and resets |
-| [Monitoring](docs/MONITORING.md) | Application metrics, network traffic, dashboards and access |
-| [Checkers](docs/CHECKERS.md) | Checker arguments, output and status contract |
-| [Architecture](docs/ARCHITECTURE.md) | Process roles, data flow and backend layout |
-| [Development](docs/DEVELOPMENT.md) | Toolchain, code generation, tests and benchmarks |
-| [Frontend](frontend/) and [branding](frontend/BRANDING.md) | React source and public theme settings |
-| [Security checks](security/README.md) | Source, dependency and image checks |
+| Configure the event or operate the board | [Configuration](docs/CONFIGURATION.md), [control commands](docs/CONTROL.md), [operations and backups](docs/OPERATIONS.md) |
+| Monitor services and network traffic | [Prometheus, Grafana and Zeek](docs/MONITORING.md) |
+| Write a service checker | [Checker protocol](docs/CHECKERS.md) |
+| Work on ForcAD | [Architecture](docs/ARCHITECTURE.md), [build and tests](docs/DEVELOPMENT.md), [frontend branding](frontend/BRANDING.md) |
+| Check dependencies, source and images | [Security checks](security/README.md) |
 
-Prepare a development checkout with:
+Screenshots: [scoreboard](public/ForcAD.png), [Grafana](public/grafana.png).
 
-```sh
-make -C backend sync
-make -C frontend sync
-```
-
-See the [development guide](docs/DEVELOPMENT.md#tests) for build and test
-commands.
+[GNU General Public License v3](LICENSE)

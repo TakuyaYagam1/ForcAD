@@ -1,74 +1,79 @@
 # Commands
 
-Run workstation commands from `infrastracture/` in the source tree. Run host
-commands from the root of the extracted role directory. Each archive includes
-this file.
+Run workstation commands from `infrastracture/` in the source tree and host
+commands from the extracted role directory. Each archive contains this
+reference, `APPLY.txt` and `UNINSTALL.txt`.
 
 ## Workstation
 
-These commands require the source tree.
-
-| Command | Action |
+| Action | Command |
 | --- | --- |
-| `cp -n settings.example.toml settings.toml` | Create local settings without replacing an existing file. Edit it before rendering. |
-| `python3 render.py` | Read `settings.toml`, build the Router exporter, generate WireGuard configs and write bundles and archives under `runtime/`. |
-| `python3 render.py --router-arch arm64` | Build the Router exporter for Linux/ARM64. The default is Linux/amd64. |
-| `python3 render.py --config settings.toml --output runtime-next` | Render from the named config into a new output directory. This creates fresh WireGuard keys. |
-| `python3 render.py --monitoring --config settings.toml --output monitoring-update` | Create three add-on archives using the deployed inventory. No server or member keys, game secrets, or changes to the original runtime. |
-| `make test` | Run infrastructure unit tests. Uses the API virtualenv when present, otherwise `python3`. Override `PYTHON` to use another interpreter with PyYAML. |
-| `make test-network`, `make test-game`, `make test-dashboards` | Run the isolated network, game and dashboard checks. |
-| `make test-dependencies` | Check Debian package setup, Python bootstrap and interrupted cleanup recovery in Docker. |
+| Copy settings without overwriting | `cp -n settings.example.toml settings.toml` |
+| Render a new deployment to `runtime/` | `python3 render.py` |
+| Build ARM64 Router exporter | `python3 render.py --router-arch arm64` |
+| Render monitoring add-on to a new directory | `python3 render.py --monitoring --config settings.toml --output monitoring-update` |
+| Extend admins in an existing runtime | `python3 render.py --extend-admins --config settings.toml --output runtime` |
+| Refresh Router WAN SSH in an existing runtime | `python3 render.py --refresh-router` |
+| Run unit tests | `make test` |
+| Run isolated checks | `make test-network`, `make test-game`, `make test-dashboards`, `make test-dependencies` |
 
-The render output directory must not exist. A normal render creates a new
-deployment with new keys; `--monitoring` does not. To reinstall the same VPN deployment, preserve its
-server configs and pass their directory to `install.sh --wireguard-dir PATH`.
+Normal and `--monitoring` renders require a new output directory. Normal
+rendering creates fresh keys; `--monitoring` uses deployed inventory and adds
+no keys, game secrets or changes to the original runtime. For
+`--extend-admins`, increase only top-level `admins` in `settings.toml` and use
+the matching existing snapshot, admin server config and peer files. It adds
+peers without rotating keys, updates `host.json` and the snapshot, and rebuilds
+only `vpn.tar.gz`; it does not change live hosts. `--refresh-router` changes
+only `router.wan_ssh_sources` or `router.wan_ssh_public`, updating the Router
+nft file, archive and snapshot without key changes. Both update modes require
+the existing runtime directory. `make test` uses the API virtualenv when
+present, otherwise `python3`; set `PYTHON` to select another interpreter with
+PyYAML.
 
-## Extract an archive
+## Extract and install
 
-Each archive contains its role directory. For example:
+On each host, validate and extract its archive, then install and test from the
+role directory. For Router:
 
 ```sh
 gzip -t router.tar.gz
 tar -xzf router.tar.gz
 cd router
+sudo bash install.sh
+sudo bash test.sh
 ```
 
-Use `vpn.tar.gz` and `forcad.tar.gz` for the other hosts. Install in this order:
-Router, VPN, ForcAD.
-
-Run installation with `sudo` from the account that will manage the host.
-Router/VPN managed files and the ForcAD checkout are assigned to `SUDO_USER`;
-direct root installs remain root-owned, and reinstalls retain the owner recorded
-by the first install. Secret files use mode `0600`; `/etc/wireguard` uses mode
-`0700`. Service-owned database and container storage remain excluded.
+Repeat in order for `vpn.tar.gz`, then `forcad.tar.gz`. Run `sudo` from the
+managing account. Managed files belong to `SUDO_USER`; direct root installs
+remain root-owned. Secret files use mode `0600`; `/etc/wireguard` uses `0700`.
+Keep console access during Router/VPN changes.
 
 ## Router
 
-Router install applies network settings, sysctl, firewall and selected
-exporters. The firewall starts in pre-game mode. Reinstalling without exporter
-flags retains exporters selected by the preceding install.
-
-| Command | Action |
+| Action | Command |
 | --- | --- |
-| `sudo bash install.sh` | Install prerequisites and apply Router settings. On reinstall, keep previously selected exporters. |
-| `sudo bash install.sh --network-metrics` | Enable the bundled network exporter on port 9109. |
-| `sudo bash install.sh --game-metrics` | Ensure Zeek 9 or newer at `/opt/zeek`, create `forcad-sensor` if needed, and enable game metrics on port 9911. |
-| `sudo bash install.sh --network-metrics --game-metrics` | Enable both exporters. |
-| `sudo bash install.sh --monitoring` | On an existing Router, enable/update both exporters without reinstalling networking or changing the game phase. |
-| `sudo bash install.sh --files-only` | Stage files without applying network settings or managed services. Prerequisites and requested metrics packages may still be installed. |
-| `sudo bash test.sh` | Check files and live Router state, including addresses, routes, services and configured connectivity. |
-| `sudo bash test.sh --files-only` | Check staged files without checking live state. |
-| `sudo bash uninstall.sh --dry-run` | Preview removal. |
-| `sudo bash uninstall.sh` | Restore saved files and live host state. |
-| `sudo bash uninstall.sh --resume --dry-run` / `sudo bash uninstall.sh --resume` | Preview or continue an interrupted live Router uninstall with a valid journal and file manifest. |
+| Install/update | `sudo bash install.sh` |
+| Enable network exporter (9109) | `sudo bash install.sh --network-metrics` |
+| Enable Zeek exporter (9911) | `sudo bash install.sh --game-metrics` |
+| Enable both exporters | `sudo bash install.sh --network-metrics --game-metrics` |
+| Refresh exporters only | `sudo bash install.sh --monitoring` |
+| Stage files only | `sudo bash install.sh --files-only` |
+| Test live / files only | `sudo bash test.sh` / `sudo bash test.sh --files-only` |
+| Preview / run removal | `sudo bash uninstall.sh --dry-run` / `sudo bash uninstall.sh` |
+| Resume interrupted removal | `sudo bash uninstall.sh --resume --dry-run` / `sudo bash uninstall.sh --resume` |
 
-Pre-game permits only participant ICMP echo to vulnboxes. Game mode
-additionally permits configured game ports and each player team's own
-management access; see the [Router guide](router/README.md#firewall-and-removal)
-for the unchanged isolation and egress policy.
+`--game-metrics` ensures Zeek 9 or newer at `/opt/zeek` and creates
+`forcad-sensor`. `--monitoring` manages only the monitoring table and exporter
+services; it does not reapply base networking, keys, game phase or base
+firewall/NAT. Reinstalling without flags retains selected exporters.
 
-To switch to game mode, validate the file, change the active include and reload
-the firewall:
+Pre-game permits participant ICMP echo only; game mode adds configured game
+ports and each team's own management access. Both modes block inter-VLAN
+traffic and direct vulnbox relays. Admin VPN has general Router forwarding;
+participants have no general WAN egress. WAN forwards only configured
+WireGuard UDP ports; non-public forwarded ranges are blocked.
+
+To switch to game mode:
 
 ```sh
 sudo nft -c -f /etc/forcad/router/game.nft
@@ -80,99 +85,102 @@ Use `pre-game.nft` in the same steps to switch back.
 
 ## VPN
 
-The standard bundle contains `server/wg-attack.conf` and `server/wg-admin.conf`.
-Keep those files private. Client configs stay under `runtime/wireguard/` on the
-workstation; give each client only its own config.
+Keep server configs private; client configs and `assignments.csv` stay on the
+workstation. Give each client only its own config. For the same deployment,
+preserve `wg-attack.conf` and `wg-admin.conf` and pass their directory with
+`--wireguard-dir`; peer allocations must match. The installer may adopt
+matching `/etc/wireguard` configs if none are selected, but refuses different
+keys. Uninstall removes both managed server configs even when adopted.
 
-| Command | Action |
+| Action | Command |
 | --- | --- |
-| `sudo bash install.sh` | Install prerequisites, apply networking and firewall, then start both tunnels. |
-| `sudo bash install.sh --wireguard-dir /path/to/server` | Use existing server configs for the same deployment. Peer addresses must match the rendered allocation. |
-| `sudo bash install.sh --files-only` | Stage files without applying network settings or managed services. Prerequisites are still installed. |
-| `sudo bash install.sh --pcap` | Install the optional bounded capture on `wg-attack`, independent of the scoreboard. |
-| `sudo bash install.sh --wg-endpoints` | Install the private WG endpoint history. Can be combined with `--pcap`; neither flag reinstalls the VPN. |
-| `sudo bash test.sh` | Check files, tunnels, routes and configured connectivity. |
-| `sudo bash test.sh --files-only` | Check staged files only. |
-| `sudo wg show` | Check WireGuard status and client handshakes. |
-| `sudo bash uninstall.sh --dry-run` | Preview removal. |
-| `sudo bash uninstall.sh` | Stop the managed tunnels, remove their server configs and restore saved host state. |
+| Install and start tunnels | `sudo bash install.sh` |
+| Reuse server configs | `sudo bash install.sh --wireguard-dir /path/to/server` |
+| Stage files only | `sudo bash install.sh --files-only` |
+| Install stopped pcap / endpoint observer | `sudo bash install.sh --pcap` / `sudo bash install.sh --wg-endpoints` |
+| Test files / live state | `sudo bash test.sh` / `sudo bash test.sh --live` |
+| Test staged files only | `sudo bash test.sh --files-only` |
+| Check status / preview removal | `sudo wg show` / `sudo bash uninstall.sh --dry-run` |
+| Remove tunnels and server configs | `sudo bash uninstall.sh` |
+| Start/stop installed pcap | `sudo systemctl start forcad-vpn-pcap.service` / `sudo systemctl stop forcad-vpn-pcap.service` |
+| Start/stop installed endpoint history | `sudo systemctl start forcad-wg-endpoints.service` / `sudo systemctl stop forcad-wg-endpoints.service` |
+| Check pcap status | `sudo python3 /usr/lib/forcad/vpn/vpnlib/observers.py pcap-status` |
+| Forward private history viewer | `ssh -N -L 127.0.0.1:9837:/run/forcad-wg-history.sock operator@vpn-host` |
 
-The VPN flags install **stopped**, optional observers. Start either one manually;
-no cron and no ForcAD start/stop hook. Provision the capture filesystem at
-`/var/lib/forcad-vpn-pcap` first. Configure the venue's actual egress networks
-(one CIDR per line, main and backup) in `/etc/forcad/vpn/endpoint-venues.txt`.
-Without them the venue classification is `unknown`.
+Observer flags stage stopped units and reload systemd only; they do not start
+services, restart WireGuard, regenerate keys or apply networking. Pcap captures
+both directions on `wg-attack` only between known peers and exact inventory
+vulnboxes. The root-only ring in `/var/lib/forcad-vpn-pcap/` keeps up to 96
+current and 96 prior files; it rotates every 300 seconds or at 4,000,000 kB per file. At 100 Mbit/s
+it can store 3.75 GB per five minutes; total use can reach 786.5 GB / 732 GiB,
+including file overshoot. Preflight requires about 377 GiB / 405 GB free,
+including 512 MiB for exports and a 10 GiB reserve. Failure neither starts
+capture nor prunes segments.
+
+Export one TCP/UDP 5-tuple using inclusive UTC epoch milliseconds (six hours maximum):
 
 ```sh
-sudo systemctl start forcad-vpn-pcap.service forcad-wg-endpoints.service
-sudo systemctl is-active forcad-vpn-pcap.service forcad-wg-endpoints.service
-observer=/usr/lib/forcad/vpn/vpnlib/observers.py
-sudo python3 "$observer" pcap-status
-sudo python3 "$observer" pcap-extract --name incident-01 --protocol tcp \
-  --source "$PEER_IP" --source-port "$PEER_PORT" --destination "$BOX_IP" \
-  --destination-port "$SERVICE_PORT" --from-ms "$FROM_MS" --to-ms "$TO_MS"
-sudo systemctl stop forcad-vpn-pcap.service forcad-wg-endpoints.service
+sudo python3 /usr/lib/forcad/vpn/vpnlib/observers.py pcap-extract \
+  --protocol tcp --source "$PEER_IP" --source-port "$PEER_PORT" \
+  --destination "$BOX_IP" --destination-port "$SERVICE_PORT" \
+  --from-ms "$FROM_MS" --to-ms "$TO_MS" --name incident-01
 ```
 
-Times are Unix epoch **milliseconds**. The private extract is under
-`/var/lib/forcad-vpn-pcap/exports/`; keep case files off participant systems.
-On a judge workstation forward the history viewer separately from Grafana:
-`ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:9837:/run/forcad-wg-history.sock judge@vpn`.
+Exports allow 64 MiB each and eight files / 512 MiB total; existing exports
+are not auto-deleted. No match is an error, not an empty file. Non-initial
+fragments cannot match ports; packets above the 262,144-byte snap length are
+truncated. A live segment may lack trailing frames; check completed segments
+and drop counters.
 
-Without bundled or selected server configs, install may reuse `/etc/wireguard/`.
-Uninstall removes `wg-attack.conf` and `wg-admin.conf` even when it reused them.
-Other WireGuard configs are preserved.
-
-The VPN firewall allows participant peers to reach peers in their own team's
-VPN block and the Router transit, but blocks participant traffic between team
-blocks and to the admin VPN. The Router applies game access and WAN policy.
+Endpoint history polls every five seconds and records only inventory `/32`
+peers with a valid endpoint and handshake no older than 180 seconds. `baseline`
+records a snapshot, `first` a newly seen endpoint and `change` an IP change;
+same-IP port rebinding is not a change. Stable peers refresh daily. Venue CIDRs
+come from `/etc/forcad/vpn/endpoint-venues.txt`; missing, empty or invalid data
+is `unknown`, and an IP outside valid venue ranges is `outside`. This is not
+geolocation. It stores endpoint IP only, not port or keys. The root-only
+database retains 30 days / 100,000 rows and 64 MiB; external IPs are absent
+from stdout and metrics. The private viewer socket is `root:adm`, mode `0660`;
+forward it as a member of remote `adm`, then open <http://127.0.0.1:9837/>.
+Uninstall preserves captures and `/var/lib/forcad-wg-endpoints/history.sqlite3`.
 
 ## ForcAD
 
-Use the top-level scripts. Scripts under `host/` are helpers called by the
-installer.
-
-| Command | Action |
+| Action | Command |
 | --- | --- |
-| `sudo bash install.sh` | Install prerequisites, clone the configured revision, initialize the game configuration, and start the application. If rendered `monitoring` is `true`, also start Prometheus and Grafana. |
-| `sudo bash install.sh --monitoring` | Enable/update Grafana, Prometheus, their router targets and checker read-only views on the existing managed deployment. Preserve credentials; do not restart game services. |
-| `sudo bash test.sh` | Validate the game configuration and check host files, services and the rendered monitoring selection. |
-| `sudo bash uninstall.sh --confirm` | Permanently delete the managed game, database and volumes, then ask whether to purge installer-added dependencies and owned Docker data. |
-| `sudo bash uninstall.sh --confirm --keep-packages` | Delete the deployment and keep system packages and Docker images/build cache. |
-| `sudo bash uninstall.sh --confirm --purge-packages` | Delete the deployment and remove installer-added packages and install-owned Docker data, subject to ownership checks. |
+| Fresh install (no options) | `sudo bash install.sh` |
+| Update monitoring on existing managed host | `sudo bash install.sh --monitoring` |
+| Test install | `sudo bash test.sh` |
+| Remove deployment | `sudo bash uninstall.sh --confirm` |
+| Remove but keep packages/cache | `sudo bash uninstall.sh --confirm --keep-packages` |
+| Remove and purge owned packages/data | `sudo bash uninstall.sh --confirm --purge-packages` |
 
-ForcAD has no uninstall dry-run. Pre-existing packages are never removed. Purge
-stops if unrelated Docker resources make ownership unclear. The downloaded Go
-toolchain and caches are inside the managed checkout and are removed in either
-package mode.
+The install path must be unused; Docker must have no `forcad` project
+resources. The live address and gateway must match settings; installation does
+not restart networking. Fresh `[env] monitoring = true` starts Prometheus and
+Grafana; Router metrics settings add targets, not exporters.
 
-For a fresh install the rendered `[env]` settings control monitoring. Set
-`monitoring` to `true` to start Prometheus and Grafana. `router_metrics` and
-`game_metrics` add their scrape targets on ForcAD but do not install the Router
-exporters; use the Router install flags separately.
+The monitoring add-on preserves passwords and does not restart game services.
+It requires a compatible managed checkout and does not migrate the game schema
+or upgrade its binary. If Compose fails after staging, fix the error and rerun
+`--monitoring`; staged passwords and targets are reused.
 
-For an existing deployment run `--monitoring` on **both** Router and ForcAD, using
-the archive for each host. The ForcAD flag explicitly enables both scrape targets.
-Open the [judge runbook](../docs/MONITORING.md#judge-evidence) for VPN history,
-selective failures, and what evidence is needed before acting on a warning.
+ForcAD removal has no dry-run and permanently deletes the checkout, database
+and Compose volumes. Pre-existing packages are kept; purge stops if unrelated
+Docker resources make ownership unclear. Do not prune the host.
 
 ## Router/VPN uninstall options
 
 | Option | Effect |
 | --- | --- |
-| `--dry-run` | Preview file and live-state removal. |
-| `--files-only` | For install, stage files without applying live settings. For test, check files only. For uninstall, remove files without reverting manually applied live changes. Use only for a staged install without a live recovery journal. |
-| `--force` | Back up and restore a pre-existing shared file changed after installation. This does not bypass ownership or recovery checks. |
-| `--discard-backups` | Remove completed rollback backups after a successful forced uninstall. |
-| `--resume` | Continue a live Router uninstall with a valid journal and installed file manifest. Router only. |
-| `--keep-packages` | Keep installer-added packages without prompting. Ownership records remain for a later purge. |
-| `--purge-packages` | Remove installer-added packages and recorded data without prompting. The purge is refused if APT would remove an unowned package. |
+| `--dry-run` | Preview Router/VPN removal. |
+| `--files-only` | Stage/test files only; uninstall files without reverting manual live changes. |
+| `--force` | Back up later edits to pre-existing shared files and restore originals. |
+| `--discard-backups` | Remove rollback backups after forced uninstall. |
+| `--resume` | Continue interrupted live Router uninstall with valid journal and manifest. |
+| `--keep-packages` | Keep installer-added packages without prompting. |
+| `--purge-packages` | Remove installer-added data; refuse unowned APT removals. |
 
-New files created by Router or VPN install are removed during normal uninstall,
-including edited copies. Pre-existing shared files are restored from their
-install backup. The VPN-owned `wg-attack.conf` and `wg-admin.conf` files are
-removed even when adopted from `/etc/wireguard`; keep copies if you may
-reinstall. Router and VPN ask whether to purge installer-added dependencies
-when no package option is given; the default is to keep them. Pre-existing
-packages are not recorded for removal. A failed setup or purge leaves ownership
-records for retry. Keep the records until cleanup succeeds.
+Normal removal deletes newly created Router/VPN files, including edited copies,
+and restores shared files from backup. Package prompts default to keep; failed
+setup or purge retains ownership records. Keep records until cleanup succeeds.

@@ -3,64 +3,54 @@
 [Documentation index](../README.md#documentation)
 
 Copy [config/config.yml.example](../config/config.yml.example) to
-`config/config.yml`, edit it, then run `./control.sh setup` from the repository root.
-Setup validates the YAML and creates the private runtime environment files.
-Unknown fields and invalid values are rejected.
-The parser accepts one YAML document up to 1 MiB. It rejects unknown fields,
-YAML aliases, extra documents, invalid scalar types, and values outside the
-ranges below.
+`config/config.yml`, edit it, then run `./control.sh setup` from the repository
+root. Setup validates YAML and writes private runtime files. Unknown fields and
+invalid values are rejected. The parser accepts one document up to 1 MiB; it
+rejects aliases, extra documents, invalid scalar types and out-of-range values.
 
 ## Game
 
 | Field | Meaning |
 | --- | --- |
-| `mode` | `classic` runs a full checker workflow each round; `blitz` schedules puts by round and checks/gets by task interval. Default: `classic`. |
-| `start_time` | Required scheduled final start. Accepts a local date and time or RFC 3339. |
-| `timezone` | Time zone for a start time without an offset. Default: `UTC`. |
+| `mode` | `classic` runs the full checker workflow each round; `blitz` schedules PUTs by round and CHECK/GETs by task interval. Default: `classic`. |
+| `start_time` | Required scheduled final start; local date/time or RFC 3339. |
+| `timezone` | Zone for a start time without offset. Default: `UTC`. |
 | `round_time` | Required round duration in seconds. |
-| `extra_checks` | Experimental additional CHECKs per team/task/round, `0..8`. Default: `0`; positive values require `classic`. |
-| `rounds` | Positive round limit, or `null`/omitted for no configured limit. |
+| `extra_checks` | Experimental extra CHECKs per team/task/round, `0..8`. Default: `0`; positive values require `classic`. |
+| `rounds` | Positive round limit, or `null`/omitted for no limit. |
 | `flag_lifetime` | Required flag lifetime in rounds. |
 | `default_score` | Default task score. Default: `2500`. |
 | `game_hardness` | Finite scoring value greater than 1. Default: `10`. |
 | `inflation` | Enables score inflation. Default: `true`. |
 | `volga_attacks_mode` | Requires the attacker's matching service to be UP. Default: `false`. |
-| `checkers_path` | Base checker directory in the worker. Default: `/checkers/`. |
+| `checkers_path` | Worker checker directory. Default: `/checkers/`. |
 | `env_path` | Default checker environment path. Default: `/opt/checkers/bin`. |
-| `get_period` | Default CHECK/GET interval in seconds in `blitz` mode. If omitted, uses `round_time`. |
+| `get_period` | Default CHECK/GET interval in `blitz`, seconds; omitted uses `round_time`. |
 
 With `extra_checks > 0`, each additional CHECK runs at a random time in a
-separate part of the round. Times are persisted in PostgreSQL and shifted on
-resume after a pause. `round_time` must exceed every task's `checker_timeout + 3`.
-CHECK must tolerate concurrent invocation alongside the main workflow.
-PUT, GET and flag lifetime remain unchanged.
+separate part of the round. Times persist in PostgreSQL and shift on resume
+after a pause. `round_time` must exceed every task's `checker_timeout + 3`;
+CHECK must tolerate concurrent calls alongside the main workflow. PUT, GET and
+flag lifetime are unchanged.
 
-The main workflow and extra CHECKs produce one SLA observation per team/task/round.
-Every required job must finish before the result is applied. A confirmed
-service failure survives later UP results. An incomplete observation caused by
-queue/execution expiry produces CHECK_FAILED without changing the SLA counters,
-unless another job confirmed a service failure.
+The main workflow and extra CHECKs produce one SLA observation per
+team/task/round. Every required job must finish before results apply. A
+confirmed service failure survives later UP results. Queue or execution expiry
+produces `CHECK_FAILED` without changing SLA counters unless another job
+confirmed a failure.
 
-Set this field before initial installation. Editing YAML does not overwrite an
-existing game's database settings. It stays disabled by default pending
-event-scale validation; the demo explicitly enables two extra CHECKs.
-
-The single initial migration includes all extra-CHECK columns and the NPC team
-kind and index. It creates a fresh schema; it does not upgrade an older applied
-initial schema. The initializer rejects databases missing required columns or
-indexes without changing data.
-
-Back up an existing game before changing versions. The initial migration's
-`Down` removes all application tables and data; it does not just disable CHECKs.
-
-See [operations](OPERATIONS.md#reset) for explicit reset commands.
+Set `extra_checks` before initial setup; YAML does not update an initialized game.
+The demo sets it to `0`; `2` is a separate experiment, not the demo default.
+Migration 1 includes extra-CHECK columns and NPC kind/index but does not upgrade
+older schemas. Missing objects are rejected without changing data. Back up
+before upgrades: migration `Down` removes all application tables. See
+[reset details](OPERATIONS.md#reset).
 
 ## Teams
 
-Configure at least one player team. `name` and an IPv4 or IPv6 `ip` are required;
-`highlighted` defaults to `false`.
-
-An optional `kind` is `player` (default) or `npc`. Configure at most one NPC:
+Configure at least one player team. `name` and IPv4 or IPv6 `ip` are required;
+`highlighted` defaults to `false`. `kind` defaults to `player`; configure at
+most one NPC:
 
 ```yaml
 teams:
@@ -71,183 +61,164 @@ teams:
     kind: npc
 ```
 
-Give the NPC its own reachable vulnbox and run the same services on it. The
-checker puts fresh NPC flags on every round just as it does for player teams;
-players submit them through the usual endpoint. The first accepted submission
-per attacker returns the per-flag message `[FLAG] Flag accepted (NPC test). No
-points awarded.` (where `FLAG` is the submitted value); repeated submissions
-return the ordinary duplicate verdict. NPC captures do not affect
-scores, stolen/lost counters, rankings or the public event stream. The public
-teams page lists the NPC separately as a test target with its service IP.
-Do not distribute the NPC's flag-submission token to participants.
+Give the NPC a reachable vulnbox running the same services. The checker puts
+fresh flags there every round; participants submit them through the usual
+endpoint. The first accepted submission per attacker returns
+`[FLAG] Flag accepted (NPC test). No points awarded.`; repeats get the normal
+duplicate verdict. NPC captures do not affect scores, stolen/lost counters,
+rankings or the public event stream. The public teams page lists the NPC
+separately with its service IP. Never give participants its submission token.
 
-`traffic_cidrs` optionally lists the team's service, VPN and farm networks for
-monitoring attribution. It defaults to the exact `ip` address. Explicit CIDRs
-replace that default, must be canonical and must not overlap another entry.
-Validated flag tokens take priority over source IPs. These networks are read
-from the staged YAML at API and receiver startup. After changing them, run
-`setup`, then recreate the stack so `config-loader` stages the updated file:
+`traffic_cidrs` optionally lists service, VPN and farm networks for monitoring
+attribution. It defaults to the exact `ip`; explicit canonical CIDRs replace
+that default and must not overlap. Validated flag tokens take priority over
+source IPs. API and receiver read staged YAML at startup. After changes, run
+`setup`, then recreate the stack from the repository root:
 
 ```sh
 ./control.sh setup
 ./control.sh compose up -d --force-recreate
 ```
 
-If the monitoring overlay is active, use:
+With the monitoring overlay active, use:
 
 ```sh
 ./control.sh monitoring up -d --force-recreate
 ```
 
-Game and task settings still come from PostgreSQL after initialization. See
+Game and task settings come from PostgreSQL after initialization. See
 [Monitoring](MONITORING.md).
 
-`logo_path` is optional. It accepts a safe root-relative path or an HTTP(S) URL.
-For a local image, put the file under `public/teams/` and use a path such as
-`/team-logos/team-1.svg`. Without a logo, the scoreboard uses its default avatar.
-
+`logo_path` accepts a safe root-relative path or HTTP(S) URL. For a local image,
+put it under `public/teams/` and use a path such as
+`/team-logos/team-1.svg`. Without one, the scoreboard uses its default avatar.
 An optional `token` must be a unique 16-character lowercase hexadecimal string.
-Omit it or set it to `null` to generate a token during initial database setup.
+Omit it or set it to `null` to generate a token during initial setup.
 Configured tokens are imported as written; generated tokens are stored in
 PostgreSQL.
 
 ## Tasks and checkers
 
-Configure at least one task. Each task needs a `name` and `checker`. To generate
-PUT flags, the task name must start with an ASCII letter or digit; that
-character becomes the flag prefix. Configuration validation does not check
-this prefix, so an invalid name fails when the worker generates a PUT flag. A
-relative checker path is resolved under `game.checkers_path`; an absolute path
-is used as written. Compose mounts the host's `checkers/` directory read-only
-in the worker.
+Configure at least one task. Each needs `name` and `checker`. The first
+character of the task name becomes the PUT flag prefix and must be an ASCII
+letter or digit; validation does not check it, so an invalid prefix fails when
+a worker generates a PUT flag. Relative checker paths resolve under
+`game.checkers_path`; absolute paths are used as written. Compose mounts host
+`checkers/` read-only in workers.
 
 | Field | Meaning |
 | --- | --- |
-| `checker_type` | `_`-separated output-contract tags. Default: `hackerdom`; `pfr` and `nfr` change successful PUT storage as described in [CHECKERS.md](./CHECKERS.md). |
-| `checker_timeout` | Positive seconds allowed for each checker action. Default: `10`. |
-| `puts`, `gets` | Nonnegative action counts. Default: `1` each; their sum cannot exceed `1024`. |
-| `places` | Number of flag locations. Default: `1`; must be positive. |
+| `checker_type` | `_`-separated output-contract tags. Default: `hackerdom`; `pfr` and `nfr` change PUT storage. See [CHECKERS.md](./CHECKERS.md). |
+| `checker_timeout` | Positive seconds allowed per action. Default: `10`. |
+| `puts`, `gets` | Nonnegative action counts. Default: `1` each; sum at most `1024`. |
+| `places` | Positive number of flag locations. Default: `1`. |
 | `env_path` | Task override for `game.env_path`. |
-| `default_score` | Nonnegative task override for `game.default_score`. |
-| `get_period` | Positive task override for the CHECK/GET interval in `blitz` mode; otherwise inherits the game value. |
+| `default_score` | Nonnegative override for `game.default_score`. |
+| `get_period` | Positive task CHECK/GET interval in `blitz`; otherwise inherits the game value. |
 
-See [CHECKERS.md](./CHECKERS.md) for the executable arguments, output and status
+See [CHECKERS.md](./CHECKERS.md) for executable arguments, output and status
 contract.
 
 ## Admin and storage credentials
 
-`admin` has `username` and `password`. If the whole section is absent, setup uses
-the username `forcad` and generates a password. If the section is present, both
-fields are required, the username must not be empty, and the password must be
-at least 16 characters.
+`admin` has `username` and `password`. If absent, setup uses username `forcad`
+and generates a password. If present, both are required, the username must not
+be empty and the password must be at least 16 characters.
 
-Setup generates storage sections and passwords only when the whole `storages`
-section is absent. In that case it uses database `postgres:5432/forcad`,
-NATS `nats:4222`, and Redis `redis:6379` with database `0`. The generated database
-and NATS users match the admin username.
+Setup generates storage sections and passwords only if all of `storages` is
+absent. Defaults are database `postgres:5432/forcad`, NATS `nats:4222` and
+Redis `redis:6379`, database `0`; generated database and NATS users match the
+admin username. If `storages` is present, it must include
+`db.user/password`, `nats.user/password` and `redis.password`; setup does not
+fill in missing credentials. Omitted endpoints default to those above.
 
-If `storages` is present, it must include `db.user`, `db.password`,
-`nats.user`, `nats.password`, and `redis.password`. Setup does not fill
-in missing storage credentials. It defaults only omitted endpoint fields:
-database host, port and name to `postgres`, `5432` and `forcad`; NATS host and
-port to `nats` and `4222`; Redis host, port and
-database index to `redis`, `6379` and `0`.
+The storage fields are:
 
-The storage sections are `db` (`host`, `port`, `user`, `password`, `dbname`),
-`nats` (`host`, `port`, `user`, `password`) and `redis` (`host`,
-`port`, `password`, `db`). Treat `config/config.yml` and `config/runtime/` as
-private because they contain credentials.
-Custom storage hosts must not be empty, ports must be in `1..65535`, and the
-Redis database index must be in `0..1024`. Database user/name and NATS
-user/password values must not be empty.
+- `db`: `host`, `port`, `user`, `password`, `dbname`, and setup-managed
+  `runtime.username/password`.
+- `nats`: `host`, `port`, `user`, `password`.
+- `redis`: `host`, `port`, `password`, `db`.
 
-Checker delivery uses NATS JetStream with persistent file storage. Setup writes
-`NATS_USER`, `NATS_PASSWORD` and a URL-escaped `NATS_URL` to the private
-`config/runtime/nats_environment.env`. All ticker and worker replicas must use
-the same `NATS_STREAM` (default `FORCAD_CHECKERS`), `NATS_SUBJECT` (default
-`forcad.checker.jobs`) and `NATS_CONSUMER` (default `forcad-workers`).
-`NATS_MAX_ACK_PENDING` defaults to 1024 and caps unacknowledged deliveries across
-the shared consumer; `WORKER_CONCURRENCY` still caps execution per worker.
-The Compose `forcad-nats` volume retains messages across broker restarts.
+Treat `config/config.yml` and `config/runtime/` as private. Storage hosts cannot
+be empty; ports are `1..65535`, Redis database is `0..1024`, and database
+user/name and NATS user/password cannot be empty.
+
+Setup writes `NATS_USER`, `NATS_PASSWORD` and URL-escaped `NATS_URL` to private
+`config/runtime/nats_environment.env`. Ticker and workers must share
+`NATS_STREAM` (`FORCAD_CHECKERS`), `NATS_SUBJECT` (`forcad.checker.jobs`) and
+`NATS_CONSUMER` (`forcad-workers`). `NATS_MAX_ACK_PENDING` defaults to 1024
+across the consumer; `WORKER_CONCURRENCY` still caps each worker. The
+`forcad-nats` volume retains messages across broker restarts.
 
 ## Compose environment
 
-`deployment/docker/.env` starts from `frontend/.env.example` and supplies
-frontend build-time branding values. It can also hold Compose settings such as
-`PUBLIC_ORIGIN` and `GRAFANA_ADMIN_PASSWORD`.
+`deployment/docker/.env` starts from `frontend/.env.example` for build-time
+branding and may also hold Compose settings such as `PUBLIC_ORIGIN` and
+`GRAFANA_ADMIN_PASSWORD`.
 
-Set `PUBLIC_ORIGIN` to the exact origin users open in their browser, including
-the scheme and port when present, for example `https://game.example`. Do not
-include a path. ForcAD checks this origin on admin mutations; a mismatch returns
-403. If a reverse proxy terminates TLS, set `TRUSTED_PROXY_CIDRS` to that
-proxy's source CIDR so ForcAD can recognize HTTPS requests. Keep the proxy list
-limited to trusted proxies. `PUBLIC_ORIGIN` may also be exported in the
-environment before running Compose.
+Set `PUBLIC_ORIGIN` to the exact browser origin, including scheme and port but
+no path, for example `https://game.example`. A mismatch returns `403`. If a
+reverse proxy terminates TLS, set `TRUSTED_PROXY_CIDRS` to its source CIDR;
+keep the list limited to trusted proxies. `PUBLIC_ORIGIN` may also be exported
+before Compose.
 
-The default Compose Nginx limits `POST /api/v1/admin/login/` by the client IP
-seen at ingress (1 request/second, burst 5). Compose sets
-`FORCAD_LOGIN_RATE_LIMIT_AT_PROXY=true` on API replicas to avoid a single
-backend bucket shared by every client behind Nginx. Do not enable that setting
-when running the API without an ingress login limiter: direct API deployments
-keep the application's per-IP limiter by default. Only list actual upstream
-proxies in `TRUSTED_PROXY_CIDRS`; never add player VPN ranges to trust
-unverified `X-Forwarded-For` values.
+Nginx limits admin login to 1 request/second per client IP with a burst of 5.
+Compose sets `FORCAD_LOGIN_RATE_LIMIT_AT_PROXY=true` so backend replicas do not
+share one bucket behind ingress. Do not enable it without an ingress limiter;
+direct API deployments keep their per-IP limit. Trust only actual upstream
+proxies, never player VPN ranges or unverified `X-Forwarded-For`.
 
-Nginx admits `/flags` and its aliases **before** token lookup or database access.
-`FORCAD_FLAGS_IP_RPS` (default `400`) and `FORCAD_FLAGS_TOTAL_RPS` (`2000`) are
-requests per second per client IP and across this ingress, respectively; each
-allows one extra second of burst. A batch of up to 100 flags costs one request.
-After authentication, each team shares one Redis quota across all receivers:
-`FLAG_RATE` refills it at 200 flags/s by default; `FLAG_BURST` holds 500 flags,
-enough for five full batches when the quota is full.
-`FORCAD_WS_PER_IP` (`128`) limits simultaneous board WebSockets per client IP,
-across all API replicas behind this ingress. Excess requests return `429` with
-`Retry-After`. Spectators or farms sharing a NAT share an IP budget; size these
-settings for that group, or preserve real client IPs through a trusted proxy.
-Do not expose API or receiver ports around the ingress.
+Nginx admits `/flags` and aliases before token lookup or database access.
+`FORCAD_FLAGS_IP_RPS` defaults to `400` per client IP and
+`FORCAD_FLAGS_TOTAL_RPS` to `2000` across ingress; both allow one extra second
+of burst. A batch of up to 100 flags costs one request. After authentication,
+each team shares a Redis quota across receivers: `FLAG_RATE` defaults to
+200 flags/s and `FLAG_BURST` to 500. `FORCAD_WS_PER_IP` defaults to 128
+simultaneous board WebSockets per client IP across API replicas. Shared NAT
+users share an IP budget; size for the group or preserve client IPs through a
+trusted proxy. Do not expose API or receiver ports around ingress.
 
-Backup transfers share four slots. Nginx streams the request to the API without
-spooling the archive to disk; the API checks the admin session before decoding
-the upload. The 256 MiB archive limit and the admin VPN ACL still apply.
+Backup transfers share four slots. Nginx streams uploads to the API without
+spooling archives to disk; the API checks the admin session before decoding.
+The 256 MiB archive limit and admin VPN ACL still apply.
 
-To restrict `/admin`, `/api/v1/admin` and their subpaths, add one or both
-settings to `deployment/docker/.env`:
+To restrict `/admin`, `/api/v1/admin` and their subpaths, set one or both
+variables in `deployment/docker/.env`:
 
 ```dotenv
 FORCAD_ADMIN_CIDR=10.20.30.0/24
 FORCAD_ADMIN_DENY_CIDRS="10.20.30.10 192.0.2.0/24"
 ```
 
-`FORCAD_ADMIN_CIDR` allows one IP address or network. Leave it empty to use
-only the deny list. `FORCAD_ADMIN_DENY_CIDRS` accepts space-separated IPv4 or
-IPv6 addresses and CIDRs; it takes precedence over the allowed network.
-Blocked requests get `403`, including the admin login. Login and CSRF
-requirements still apply to allowed requests. Public routes and `/flags`
-are unaffected.
+`FORCAD_ADMIN_CIDR` allows one address or network; leave it empty to use only
+the deny list. `FORCAD_ADMIN_DENY_CIDRS` accepts space-separated IPv4/IPv6
+addresses and CIDRs and takes precedence. Blocked requests, including login,
+get `403`; allowed requests still need login and CSRF. Public routes and
+`/flags` are unaffected.
 
 The ACL uses Nginx's TCP peer address and ignores `X-Forwarded-For`. If an
-upstream reverse proxy connects to ForcAD on behalf of multiple users, enforce
-per-client IP rules at that proxy or connect directly through the admin VPN.
-The infrastructure renderer sets `FORCAD_ADMIN_CIDR` from `network.admin_vpn`;
-standalone deployments with both settings empty keep the existing behavior.
-For an existing deployment, set the variables in `.env` and recreate only
-the ingress with `./control.sh compose up -d --no-deps --build nginx`.
+upstream proxy represents multiple users, enforce per-client rules there or
+connect through the admin VPN. The infrastructure renderer sets
+`FORCAD_ADMIN_CIDR` from `network.admin_vpn`; standalone deployments with both
+settings empty keep existing behavior. For an existing deployment, set `.env`
+and recreate only Nginx from the repository root:
+
+```sh
+./control.sh compose up -d --no-deps --build nginx
+```
 
 Set `GRAFANA_ADMIN_PASSWORD` before starting the monitoring overlay. Grafana
-uses it only when initializing an empty Grafana data volume; changing it does
-not change an existing account password. See [Monitoring](MONITORING.md#start).
+uses it only when initializing an empty data volume; changing it does not
+change an existing password. See [Monitoring](MONITORING.md#start).
 
 ## Initialization and lifecycle
 
-`forcad init` imports the game, teams and tasks from this file only when the
-database has no initialized game. Repeating initialization preserves existing
-game data. PostgreSQL is the source of truth after initialization; editing the
-YAML does not update an existing game. Use the admin panel for team, task and
-lifecycle changes. Use the round-limit command in [OPERATIONS.md](./OPERATIONS.md)
-to change an existing game's limit.
+`forcad init` imports game, teams and tasks only when the database has no
+initialized game. PostgreSQL is the source of truth afterward; YAML edits do
+not update an existing game. Use the admin panel for team, task and lifecycle
+changes. See [round-limit instructions](OPERATIONS.md#round-limit-and-scaling).
 
-The configured start time schedules the final. An administrator can start a
-practice session before that time or start a final directly. At the scheduled
-final time, practice stops; once no unfinished scheduler jobs remain, practice
-scores, flags, history and snapshots are cleared. The `rounds` limit applies to
-practice and final sessions.
+The configured start time schedules the final. An administrator can start
+practice earlier or start a final directly. At the scheduled final time,
+practice stops; after unfinished scheduler jobs finish, practice scores, flags,
+history and snapshots are cleared. `rounds` applies to practice and final.

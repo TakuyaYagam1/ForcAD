@@ -1,15 +1,13 @@
 # Infrastructure
 
-The deployment flow is `settings.toml` -> render -> three host archives ->
-install Router, VPN and ForcAD. Hosts must run Debian 12 or 13. Prepare their
-network interfaces and VLANs for the configured address plan.
+For event operators provisioning Debian 12 or 13 hosts: render Router, VPN
+and ForcAD bundles from `settings.toml`, then install them in that order.
 
-[Command reference](COMMANDS.md) | [Router](router/README.md) |
+[Commands](COMMANDS.md#workstation) | [Router](router/README.md) |
 [VPN](vpn/README.md) | [ForcAD](forcad/README.md)
 
-Before provisioning the VMs, [size the ForcAD host for your event](../docs/OPERATIONS.md#sizing-the-forcad-host).
-The championship example covers the game host; budget the Router, VPN and
-each team's vulnbox separately.
+Before provisioning, [size the ForcAD host](../docs/OPERATIONS.md#sizing-the-forcad-host).
+Budget Router, VPN and each team's vulnbox separately.
 
 ## Configure and render
 
@@ -18,121 +16,69 @@ From the repository root:
 ```sh
 cd infrastracture
 cp -n settings.example.toml settings.toml
-# Edit settings.toml, then render.
+# Edit settings.toml first. The default output directory, runtime/, must not exist.
 python3 render.py
 ```
 
-Use [settings.example.toml](settings.example.toml) for field descriptions. Set
-the addresses, interfaces, game settings, tasks, teams and monitoring options
-for your deployment. Team order assigns consecutive VLANs and one /24 network
-per entry. Configure 1-32 entries, with at least one player team and at most one
-NPC. Player teams receive one /29 participant VPN block for up to five members
-or one /28 block for six or seven members. An NPC receives a VLAN and vulnbox
-address in sequence, but no participant VPN block or client identities. Size
-the participant VPN pool for player teams only and keep it separate from the
-admin VPN. Deploy the same services on an NPC vulnbox and ensure participants
-can reach its service IP through the attack VPN. Put logos under
-`public/teams/` or `public/brand/`, and checkers under `checkers/`. Leave a logo
-value empty when none is needed.
+Use [settings.example.toml](settings.example.toml) for field descriptions.
+Configure 1-32 entries, with at least one player team and at most one NPC.
+Team order assigns consecutive VLANs and one /24 per entry. Player teams get a
+/29 VPN block for up to five members or a /28 for six or seven. An NPC gets a
+VLAN and vulnbox address, but no participant VPN block or client identities.
+Size the participant pool for player teams only, separate from the admin VPN.
+Put logos under `public/teams/` or `public/brand/` and checkers under
+`checkers/`; leave a logo value empty when unused.
 
-Rendering requires Python 3.11 or newer, Go at the version specified in
-`backend/go.mod`, and `wireguard-tools`. It builds the Router exporter for
-Linux/amd64 by default; use `--router-arch arm64` for an ARM64 Router. Rendering
-does not change a host.
+Rendering needs Python 3.11+, Go at the version in `backend/go.mod` and
+`wireguard-tools`. The Router exporter defaults to Linux/amd64; use
+`--router-arch arm64` for ARM64. Rendering does not change a host. Normal
+renders create new WireGuard keys and require an output directory that does
+not exist.
 
-The output directory must not exist. Normal rendering creates fresh WireGuard
-keys. For **already installed hosts**, use `python3 render.py --monitoring
---config settings.toml --output monitoring-update` with the original settings.
-These three add-on archives contain no VPN keys, checker code or game credentials.
-Do not replace your original runtime or run the base install again.
+For an existing runtime, use:
 
-For an existing deployment, set `router.wan_ssh_sources` to exact management
-IPs or enable `router.wan_ssh_public` for direct public SSH in `settings.toml`,
-then run `python3 render.py --refresh-router`. Only these WAN SSH settings may
-change: this updates `runtime/router/common.nft`, `runtime/router.tar.gz` and
-the input snapshot without regenerating WireGuard keys or other archives.
+- `python3 render.py --monitoring --config settings.toml --output monitoring-update`
+  creates three add-on archives in a new directory, without keys, game secrets
+  or changes to the original runtime.
+- `python3 render.py --extend-admins --config settings.toml --output runtime`
+  adds admin peers to the existing runtime. Increase only top-level `admins`;
+  retain matching snapshot, server config and old peer files. Keys are not
+  rotated, only `vpn.tar.gz` is rebuilt, and live hosts are unchanged.
+- `python3 render.py --refresh-router` updates only Router WAN SSH settings in
+  the existing runtime. Only `router.wan_ssh_sources` or
+  `router.wan_ssh_public` may change; keys and other archives are unchanged.
 
-| Output | Contents |
-| --- | --- |
-| `runtime/router.tar.gz` | Router bundle: network and firewall files, exporter, inventory and sensor files |
-| `runtime/vpn.tar.gz` | VPN bundle with `wg-attack` and `wg-admin` server configs |
-| `runtime/forcad.tar.gz` | ForcAD config, environment, checkers, logos and monitoring targets |
-| `runtime/wireguard/` | Server and individual client configs; `assignments.csv` lists team, member and VPN addresses |
-| `runtime/settings.toml`, `runtime/teams.json` | Input snapshot and allocated team addresses |
+See the [command reference](COMMANDS.md#workstation) for exact render options.
+The output contains three role archives, a settings snapshot, team allocations
+and `runtime/wireguard/` with server and individual client configs.
+`assignments.csv` maps teams, members and VPN addresses. Each archive extracts
+into its role directory and includes `COMMANDS.md`, `APPLY.txt` and
+`UNINSTALL.txt`. Keep archives and keys private; give each client only its own
+VPN config. The VPN archive contains server configs, not client configs.
 
-Each archive extracts into its role directory and includes `COMMANDS.md`,
-`APPLY.txt` and `UNINSTALL.txt`. Keep runtime output, archives and keys private.
-Give each client only its own VPN config. The VPN archive contains server
-configs, not client configs.
+## Deploy
 
-## Install and test
+Copy and extract the archives to their hosts. Use the
+[installation steps](COMMANDS.md#extract-and-install), keeping console access while
+Router/VPN networking changes are applied. ForcAD needs an unused install path,
+no existing `forcad` Docker resources and a live address/gateway matching the
+rendered settings; its installer does not restart networking.
 
-Copy each archive to its host and extract it. The archive creates `router/`,
-`vpn/` or `forcad/`. Install Router first, then VPN, then ForcAD. Run each
-role's `test.sh` after its dependencies are reachable. See
-[COMMANDS.md](COMMANDS.md) for exact commands and options.
+Run `sudo` from the account that manages the host. Managed files belong to
+`SUDO_USER`; direct root installs remain root-owned. Secrets use mode `0600`
+and `/etc/wireguard` uses `0700`. See [ForcAD monitoring access](../docs/MONITORING.md#start).
 
-Router and VPN apply network settings, so keep console access during
-installation. ForcAD requires an unused install path and no existing ForcAD
-Docker project or volumes. Its live address and gateway must
-already match the rendered settings; the installer does not restart networking.
+## Update and remove
 
-Run installation with `sudo` from the account that will manage the host. The
-installer assigns managed Router/VPN files and the ForcAD checkout, including
-WireGuard keys, to `SUDO_USER`. Reinstalls retain the recorded owner; a direct
-root install remains root-owned. Secret files use mode `0600`, and
-`/etc/wireguard` uses `0700`. Database/container storage and recovery records
-retain service or root ownership.
-The Router network metrics inventory (`/etc/forcad/monitoring/network.json`)
-contains team addresses, not credentials, and uses mode `0644` so its
-capability-restricted exporter can read it.
+For monitoring, set `[env] monitoring = true`. `router_metrics` and
+`game_metrics` add ForcAD scrape targets; they do not install Router exporters.
+See [monitoring](../docs/MONITORING.md) and the
+[ForcAD](forcad/README.md#install-and-test) and
+[Router exporter](router/README.md#exporters) instructions.
 
-Router and VPN install missing host prerequisites automatically. If Python is
-absent, their shell wrappers bootstrap it. `--files-only` still installs
-prerequisites and requested metrics dependencies, but stages files without
-applying network settings or managed services.
-
-## Monitoring
-
-In `[env]`, set `monitoring = true` to generate a Grafana password and start the
-Prometheus/Grafana overlay on ForcAD. Set `router_metrics` or `game_metrics` only
-when that Router exporter will also be installed: these settings add the
-corresponding Prometheus target on ForcAD, but do not change the Router.
-
-Enable the exporters separately on the Router with
-`install.sh --network-metrics` and/or `install.sh --game-metrics`. The network
-exporter is bundled. Game metrics use Zeek 9 or newer at `/opt/zeek`; the
-installer adds Zeek when needed and creates the `forcad-sensor` account. Both
-exporters listen on the Router address facing ForcAD. The Router explicitly
-permits the ForcAD host to reach those ports; admin VPN clients already have
-general Router access. Prometheus and Grafana bind to localhost on ForcAD. See
-[monitoring access](../docs/MONITORING.md).
-
-## Default traffic policy
-
-The Router starts in pre-game mode and forwards only the configured WireGuard
-UDP ports from WAN. Direct inter-vulnbox forwarding stays blocked, while
-vulnboxes retain public WAN egress. See the [Router firewall
-policy](router/README.md#firewall-and-removal).
-
-## Re-render and uninstall
-
-To render changed settings, use a new output directory, such as
-`python3 render.py --output runtime-next`. This creates new WireGuard identities
-and does not update a running game or reuse keys from an existing output
-directory. For the same deployment, keep the deployed server configs and select
-their directory with `--wireguard-dir` when installing the VPN bundle.
-
-Router and VPN uninstallers restore recorded shared host files and state. The
-VPN uninstaller removes `wg-attack` and `wg-admin` configs even when it
-adopted them from `/etc/wireguard`; keep copies if you may reinstall.
-Package removal is optional and limited to dependencies added by that
-installer; pre-existing packages are kept. A staged `--files-only` install
-does not record manual live changes for automatic removal.
-
-ForcAD uninstall requires `--confirm`, has no dry-run, and permanently deletes
-the managed checkout, database and Compose volumes. Package and Docker cleanup
-is optional. Pre-existing packages are kept; purge stops if unrelated Docker
-resources make ownership unclear. See the command reference for cleanup options.
-
-The source-tree checks are listed in [COMMANDS.md](COMMANDS.md#workstation).
+To reinstall the same VPN deployment, preserve deployed server configs and
+pass their directory with `install.sh --wireguard-dir PATH`. VPN uninstall
+removes those configs even when adopted from `/etc/wireguard`; keep private
+copies. ForcAD removal requires `--confirm`, has no dry-run and permanently
+deletes the managed checkout, database and Compose volumes. See
+[COMMANDS.md](COMMANDS.md) for cleanup options.
