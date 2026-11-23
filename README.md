@@ -40,6 +40,10 @@ Open the [scoreboard](http://127.0.0.1:8080/) or sign in to [admin](http://127.0
 | Work on ForcAD | [Architecture](docs/ARCHITECTURE.md), [build and tests](docs/DEVELOPMENT.md), [frontend branding](frontend/BRANDING.md) |
 | Check dependencies, source and images | [Security checks](security/README.md) |
 
-Screenshots: [scoreboard](public/ForcAD.png), [Grafana](public/grafana.png).
+## Screenshots
+
+![ForcAD scoreboard](public/ForcAD.png)
+
+![Grafana monitoring dashboard](public/grafana.png)
 
 [GNU General Public License v3](LICENSE)
