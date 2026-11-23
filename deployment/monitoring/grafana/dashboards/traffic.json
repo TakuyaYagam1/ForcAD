@@ -22,14 +22,6 @@
   "links": [
     {
       "type": "link",
-      "title": "Русский",
-      "url": "/d/forcad-traffic-ru",
-      "keepTime": true,
-      "includeVars": true,
-      "targetBlank": false
-    },
-    {
-      "type": "link",
       "title": "All teams",
       "url": "/d/forcad-traffic?var-source=All&var-target=All",
       "keepTime": true,

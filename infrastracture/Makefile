@@ -15,7 +15,6 @@ test-game:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_game.py
 
 test-dashboards:
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) ../deployment/monitoring/grafana/localize.py --check
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) tests/run_dashboards.py
 
 test-dependencies:

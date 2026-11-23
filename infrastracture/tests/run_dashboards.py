@@ -212,15 +212,20 @@ def main():
                             "$team": ".*",
                         }.items():
                             expression = expression.replace(name, value)
-                        response = get(
-                            "http://127.0.0.1:9090/api/v1/query?"
-                            + urllib.parse.urlencode({"query": expression})
-                        )
+                        endpoint = "query"
+                        params = {"query": expression}
+                        if target.get("range"):
+                            endpoint = "query_range"
+                            params.update(start="3540", end="3600", step="15")
+                        response = get(f"http://127.0.0.1:9090/api/v1/{endpoint}?" + urllib.parse.urlencode(params))
                         assert response["status"] == "success", (
                             path.name,
                             panel["title"],
                             response,
                         )
+                        if target.get("range"):
+                            notes = response.get("infos", []) + response.get("warnings", [])
+                            assert not any("sort" in note.lower() for note in notes), (path.name, panel["title"], notes)
                         queries += 1
             print(
                 f"Provisioned {len(dashboards)} dashboards and evaluated {queries} PromQL queries."

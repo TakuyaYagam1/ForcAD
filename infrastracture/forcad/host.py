@@ -76,10 +76,10 @@ class Bundle(BundleBase):
                     0o644,
                 )
         if (self.directory / "monitoring").is_dir():
-            from monitoring import ASSETS, stage_asset
+            from monitoring import stage_assets
 
-            for name in ASSETS:
-                stage_asset(self, project, repo, name, None)
+            installed = json.loads(regular(self.manifest).read_text()) if self.manifest.exists() else {}
+            stage_assets(self, project, repo, installed)
 
     def validate_role(self, work):
         repo = Path(self.options["repo"])

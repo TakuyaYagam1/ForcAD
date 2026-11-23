@@ -43,6 +43,10 @@ class BundleBase(FileOperations):
         target = regular(self.path(destination))
         self.changes[target] = (data, mode)
 
+    def remove(self, destination):
+        """Record an absent file in the same install and rollback transaction."""
+        self.changes[regular(self.path(destination))] = (None, 0)
+
     def copy(self, name, destination, mode=0o600):
         self.put(destination, regular(self.directory / name).read_bytes(), mode)
 
@@ -195,6 +199,10 @@ class BundleBase(FileOperations):
             )
         for item in installed["files"]:
             path = regular(self.path(item["path"]))
+            if item.get("existed") is False:
+                if path.exists():
+                    raise ValueError(f"Retired file exists: {path}")
+                continue
             data = path.read_bytes()
             active = item[
                 "path"
@@ -217,6 +225,7 @@ class BundleBase(FileOperations):
                 item["mode"],
             )
             for item in installed["files"]
+            if item.get("existed") is not False
         }
         if live:
             self.test_live()

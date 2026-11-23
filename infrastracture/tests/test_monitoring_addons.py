@@ -74,6 +74,8 @@ class MonitoringAddons(unittest.TestCase):
         bundle = source_bundle('forcad', self.bundle_dir / 'release', self.root)
         bundle.options = {'repo': repo, 'network_metrics': False, 'game_metrics': False}
         bundle.put(f'{repo}/config/config.yml', b'game settings')
+        retired = f'{repo}/deployment/monitoring/grafana/dashboards/relay.ru.json'
+        bundle.put(retired, b'old provisioned dashboard', 0o644)
         bundle.install_files()
         project = self.root / 'opt/game'
         env = b'GRAFANA_ADMIN_PASSWORD="my-existing-secret"\nCUSTOM=preserve\n'
@@ -91,12 +93,17 @@ class MonitoringAddons(unittest.TestCase):
             path = project / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(value)
+        custom = project / 'deployment/monitoring/grafana/dashboards/operator.json'
+        custom.write_bytes(b'operator dashboard')
         bundle.changes.clear()
         prepare(bundle, repo, url)
         bundle.install_files(extend=True)
         after = (project / 'deployment/docker/.env').read_bytes()
         self.assertTrue(after.startswith(env))
         self.assertEqual((project / 'config/config.yml').read_bytes(), b'game settings')
+        self.assertFalse(bundle.path(retired).exists())
+        self.assertEqual(custom.read_bytes(), b'operator dashboard')
+        self.assertFalse(bundle.preflight_uninstall()['conflicts'])
         self.assertEqual((project / '.forcad-monitoring').read_bytes(), b'true\n')
         self.assertIn(hashlib.sha256(b'true\n').hexdigest(), (project / '.forcad-fresh-install').read_text())
         for target in ('10.0.0.8:9109', '10.0.0.1:9109'):
@@ -109,6 +116,14 @@ class MonitoringAddons(unittest.TestCase):
         bundle.install_files(extend=True)
         self.assertEqual(bundle.manifest.read_bytes(), manifest)
         self.assertEqual((project / 'deployment/docker/.env').read_bytes(), after)
+        bundle.path(retired).write_bytes(b'new operator dashboard')
+        bundle.changes.clear()
+        with self.assertRaisesRegex(ValueError, 'Locally modified'):
+            prepare(bundle, repo, url)
+        self.assertEqual(bundle.path(retired).read_bytes(), b'new operator dashboard')
+        with self.assertRaisesRegex(ValueError, 'Files changed'):
+            bundle.preflight_uninstall()
+        bundle.path(retired).unlink()
         local = project / 'deployment/monitoring/grafana/dashboards/relay.json'
         local.write_bytes(b'operator-edited dashboard')
         bundle.changes.clear()
@@ -132,7 +147,9 @@ class MonitoringAddons(unittest.TestCase):
     def test_monitoring_bundle_contains_evidence_ui_not_game_secrets(self):
         data = render.monitoring_bundle(self.config)
         self.assertIn('vpn/vpnlib/history.py', data)
-        self.assertIn('forcad/monitoring/grafana/dashboards/relay.json', data)
+        dashboard_dir = 'forcad/monitoring/grafana/dashboards/'
+        self.assertEqual({name.removeprefix(dashboard_dir) for name in data if name.startswith(dashboard_dir)},
+                         {'forcad.json', 'traffic.json', 'ddos.json', 'relay.json'})
         self.assertIn('router/game-metrics.zeek', data)
         self.assertFalse(any(k in data for k in ['forcad/.env', 'forcad/config.yml', 'settings.toml']))
         self.assertFalse(any('wireguard/' in key or '/server/' in key for key in data))

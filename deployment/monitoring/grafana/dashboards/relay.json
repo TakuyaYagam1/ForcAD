@@ -45,14 +45,6 @@
       "targetBlank": false
     },
     {
-      "type": "link",
-      "title": "Русский",
-      "url": "/d/forcad-relay-ru",
-      "keepTime": true,
-      "includeVars": true,
-      "targetBlank": false
-    },
-    {
       "type": "dashboards",
       "title": "ForcAD dashboards",
       "tags": [
@@ -66,29 +58,13 @@
   ],
   "panels": [
     {
-      "id": 1,
-      "type": "text",
-      "title": "Selective outcomes and coverage",
-      "description": "Outcome shares require at least 10 selected attempts/responses. Comparator is all other observed peers on the exact same target IP, service port and time range; it is explicitly marked N/A when fewer than 10 control observations exist. TCP resets are post-establishment; HTTP 403/429 are not intent claims. Counters have no phase label, and client retries are separate attempts.",
-      "gridPos": {
-        "x": 0,
-        "y": 0,
-        "w": 24,
-        "h": 3
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "## Profile → target/service outcome triage\n\nRanks observed TCP no-reply/refused and HTTP 403/429 shares with same-target/service peer controls. No comparison means fewer than 10 other observations. Evidence only; keep the time range within one game phase."
-      }
-    },
-    {
       "id": 2,
       "type": "stat",
       "title": "Router capture status",
       "description": "Ready only when the router exporter is reachable and the bounded relay-counter scrape succeeds. Missing data stays N/A.",
       "gridPos": {
         "x": 0,
-        "y": 3,
+        "y": 0,
         "w": 6,
         "h": 4
       },
@@ -166,7 +142,7 @@
       "description": "Live unique profile metadata from healthy Zeek; it exists independently of sparse outcome events and does not depend on board API inventory.",
       "gridPos": {
         "x": 6,
-        "y": 3,
+        "y": 0,
         "w": 12,
         "h": 4
       },
@@ -287,7 +263,7 @@
       "description": "Historical direct router-denied packets from team vulnbox → target vulnbox, using the router's source_team_ip counter and ignoring player/WG profile selection. Counted after source-spoof checks and before the deny rule; it is not a successful relay. N/A means router metrics are unavailable.",
       "gridPos": {
         "x": 18,
-        "y": 3,
+        "y": 0,
         "w": 6,
         "h": 4
       },
@@ -352,7 +328,7 @@
       "description": "Ranks observed tcp_no_reply/tcp_refused shares per uniquely mapped profile → target IP/service. Peer denominator must be >=10 attempts. Controls are all other observed peers on the same target IP/service port/time range; the selected peer is subtracted. No comparison is explicitly labeled when the control denominator is <10. tcp_reset is excluded because it occurs after establishment.",
       "gridPos": {
         "x": 0,
-        "y": 7,
+        "y": 4,
         "w": 12,
         "h": 14
       },
@@ -504,7 +480,7 @@
       "description": "Ranks observed HTTP 403/429 response shares per uniquely mapped profile → target IP/service. Peer denominator must be >=10 observed HTTP responses (403/429/other). Controls are all other observed peers on the same target IP/service port/time range, with the selected peer subtracted. No comparison is explicitly labeled when the control denominator is <10. Status shares are observations, not abuse or policy-violation claims.",
       "gridPos": {
         "x": 12,
-        "y": 7,
+        "y": 4,
         "w": 12,
         "h": 14
       },
@@ -656,7 +632,7 @@
       "description": "Observed 403/429/other plaintext HTTP response counts and response denominators over the selected range. Other peers are aggregated across all source teams, but only for the same target IP and service port; the selected profile is excluded.",
       "gridPos": {
         "x": 0,
-        "y": 21,
+        "y": 18,
         "w": 24,
         "h": 14
       },
@@ -791,7 +767,7 @@
       "description": "TCP attempts are established/no-reply/refused. tcp_reset is a separate reset-after-handshake count; it is excluded from attempt denominators and compared with established-connection denominators. Other peers are aggregated across all source teams at the same target IP/service port; the selected profile is excluded.",
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 32,
         "w": 24,
         "h": 14
       },
@@ -926,7 +902,7 @@
       "description": "Healthy-sensor observations with no unique source-profile mapping. Shows only the observed WG peer IP, target IP, service port, outcome and count; no team/member is inferred. Empty/unavailable counters are N/A, not proof of no traffic.",
       "gridPos": {
         "x": 0,
-        "y": 49,
+        "y": 46,
         "w": 24,
         "h": 10
       },
@@ -1031,7 +1007,7 @@
       "description": "Recent checker CHECK outcomes from the restricted checker_action_events view. Status counts describe checker-reported service availability; duration is checker runtime, not network or HTTP request latency, and is not attributed to a peer.",
       "gridPos": {
         "x": 0,
-        "y": 59,
+        "y": 56,
         "w": 24,
         "h": 12
       },

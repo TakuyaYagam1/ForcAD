@@ -133,6 +133,9 @@ class FileOperations:
             if path == self.manifest:
                 continue
             regular(path)
+            if data is None:
+                records.append({"path": "/" + str(path.relative_to(self.root)), "existed": False})
+                continue
             owner = path if path.exists() else path.parent
             while not owner.exists():
                 owner = owner.parent
@@ -167,13 +170,13 @@ class FileOperations:
         changed = [
             (path, data, mode)
             for path, (data, mode) in self.changes.items()
-            if not path.exists()
-            or path.read_bytes() != data
-            or stat.S_IMODE(path.stat().st_mode) != mode
-            or (
-                self.owner
-                and (path.stat().st_uid, path.stat().st_gid)
-                != (self.owner["uid"], self.owner["gid"])
+            if (
+                path.exists() if data is None else (
+                    not path.exists()
+                    or path.read_bytes() != data
+                    or stat.S_IMODE(path.stat().st_mode) != mode
+                    or (self.owner and (path.stat().st_uid, path.stat().st_gid) != (self.owner["uid"], self.owner["gid"]))
+                )
             )
         ]
         directories = self.directory_changes(list(self.changes))
@@ -235,6 +238,10 @@ class FileOperations:
                 path.chmod(0o755)
             for path in paths:
                 data, mode = self.changes[path]
+                if data is None:
+                    written.append(path)
+                    regular(path).unlink(missing_ok=True)
+                    continue
                 record = next(
                     (item for item in records if self.path(item["path"]) == path), None
                 )
@@ -476,7 +483,7 @@ class FileOperations:
                         b'include "/etc/forcad/router/pre-game.nft"',
                     )
                 )
-                if (
+                if (wanted.get("existed") is False and current["existed"]) or (
                     original["existed"]
                     and not all(current.get(key) == original.get(key) for key in fields)
                     and any(

@@ -12,11 +12,8 @@ from pathlib import Path
 
 from hostlib.common import dump_yaml, merge_targets, read_yaml, regular
 
-ASSETS = tuple(
-    f'grafana/dashboards/{name}{locale}.json'
-    for name in ('forcad', 'traffic', 'ddos', 'relay')
-    for locale in ('', '.ru')
-) + ('rules/game.yml',)
+DASHBOARDS = ('forcad', 'traffic', 'ddos', 'relay')
+ASSETS = tuple(f'grafana/dashboards/{name}.json' for name in DASHBOARDS) + ('rules/game.yml',)
 
 
 def credentials(original: bytes, *, create=True) -> bytes:
@@ -35,21 +32,39 @@ def credentials(original: bytes, *, create=True) -> bytes:
     return original + (b"\n" if original and not original.endswith(b"\n") else b"") + b"".join(additions)
 
 
-def stage_asset(bundle, project, repo, name, expected_hash):
-    relative = 'deployment/monitoring/' + name
-    packaged = regular(bundle.directory / 'monitoring' / name).read_bytes()
-    current = regular(project / relative)
-    if current.exists():
-        content = current.read_bytes()
-        if content != packaged and hashlib.sha256(content).hexdigest() != expected_hash:
-            # First upgrade from a checkout: replace the shipped file only.
-            upstream = subprocess.run(
-                ['git', '-c', f'safe.directory={project}', '-C', str(project), 'cat-file', 'blob', f'HEAD:{relative}'],
-                check=False, capture_output=True, timeout=10,
-            )
-            if upstream.returncode or content != upstream.stdout:
-                raise ValueError(f'Locally modified monitoring file; save it separately before updating: {relative}')
-    bundle.put(f'{repo}/{relative}', packaged, 0o644)
+def check_asset(project, relative, content, expected_hash):
+    if hashlib.sha256(content).hexdigest() == expected_hash:
+        return
+    # A first install may adopt the unchanged file from the managed checkout.
+    upstream = subprocess.run(
+        ['git', '-c', f'safe.directory={project}', '-C', str(project), 'cat-file', 'blob', f'HEAD:{relative}'],
+        check=False, capture_output=True, timeout=10,
+    )
+    if upstream.returncode or content != upstream.stdout:
+        raise ValueError(f'Locally modified monitoring file; save it separately before updating: {relative}')
+
+
+def stage_assets(bundle, project, repo, installed):
+    known = {row['path']: row.get('sha256') for row in installed.get('files', [])}
+    for name in ASSETS:
+        relative = 'deployment/monitoring/' + name
+        dest = f'{repo}/{relative}'
+        packaged = regular(bundle.directory / 'monitoring' / name).read_bytes()
+        current = regular(project / relative)
+        if current.exists():
+            content = current.read_bytes()
+            if content != packaged:
+                check_asset(project, relative, content, known.get(dest))
+        bundle.put(dest, packaged, 0o644)
+    for name in DASHBOARDS:
+        relative = f'deployment/monitoring/grafana/dashboards/{name}.ru.json'
+        dest = f'{repo}/{relative}'
+        current = regular(project / relative)
+        if current.exists():
+            check_asset(project, relative, current.read_bytes(), known.get(dest))
+        elif dest not in known:
+            continue
+        bundle.remove(dest)
 
 
 def prepare(bundle, repo, repository_url):
@@ -87,10 +102,7 @@ def prepare(bundle, repo, repository_url):
         merged = merge_targets(groups, target)
         content = current.read_bytes() if current.exists() and len(merged) == before else dump_yaml(merged)
         bundle.put(path, content, 0o644)
-    known = {row['path']: row['sha256'] for row in installed['files']}
-    for name in ASSETS:
-        dest = f'{repo}/deployment/monitoring/{name}'
-        stage_asset(bundle, project, repo, name, known.get(dest))
+    stage_assets(bundle, project, repo, installed)
     if state == b'false\n':
         # Update the checksummed teardown mode in the same backed-up transaction.
         enabled = b'true\n'

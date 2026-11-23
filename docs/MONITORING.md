@@ -82,17 +82,9 @@ authentication; keep them private. `/drain` still requires `ControlToken`.
 | DDoS | HTTP rate, large observed request bodies and traffic volume by team, WG member, victim and service |
 | Relay | Selective failure symptoms for peer → service; confirmed router VLAN drops are shown separately |
 
-English is the default. The original UIDs are `forcad-monitoring`,
-`forcad-traffic`, `forcad-ddos` and `forcad-relay`. On any of them choose
-**Русский** for the Russian dashboard, or **English** to switch back. The
-language link preserves the selected time range and filters; Russian UIDs
-end in `-ru`. To change Grafana's own menus, set **Profile → Preferences →
-Language**; that preference does not translate user-authored [panel text](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/configure-panel-options/).
-
-Edit the English dashboard and its `deployment/monitoring/grafana/i18n/*.ru.json`
-catalog, then run `python3 deployment/monitoring/grafana/localize.py`. Do not
-edit the generated `dashboards/*.ru.json`. Both languages use identical
-PromQL, SQL, thresholds and stored data.
+The four dashboards are provisioned in English from
+`deployment/monitoring/grafana/dashboards/`. Their UIDs are `forcad-monitoring`,
+`forcad-traffic`, `forcad-ddos` and `forcad-relay`.
 
 The ForcAD overview is expanded; its other sections can be expanded by
 heading. Team selectors support searching.

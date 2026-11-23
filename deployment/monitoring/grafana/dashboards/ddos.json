@@ -53,14 +53,6 @@
       "targetBlank": false
     },
     {
-      "type": "link",
-      "title": "Русский",
-      "url": "/d/forcad-ddos-ru",
-      "keepTime": true,
-      "includeVars": true,
-      "targetBlank": false
-    },
-    {
       "type": "dashboards",
       "title": "ForcAD dashboards",
       "tags": [
@@ -1245,28 +1237,13 @@
     }
     ,
     {
-      "id": 15,
-      "type": "text",
-      "title": "Interpretation and coverage",
-      "gridPos": {
-        "x": 0,
-        "y": 50,
-        "w": 24,
-        "h": 4
-      },
-      "options": {
-        "mode": "markdown",
-        "content": "## Interpret signals, not intent\n\nGame HTTP request and body measurements cover plaintext HTTP/1 only. TLS is not inspected: encrypted traffic appears only in TCP/flow and router postfilter packet/byte counts; never infer an encrypted request-body size. More than 100 observed HTTP requests/s is a warning threshold, not a DDoS or rule-violation verdict. Source IP is the inner WireGuard peer address. Missing/ambiguous profile mappings are labeled Unmapped; no WAN address or player identity is inferred. Router counters cover traffic surviving the current router filter, not denied traffic. Sensor, capture-loss and router-counter panels must be healthy before treating low counts as evidence of no traffic."
-      }
-    },
-    {
       "id": 16,
       "type": "stat",
       "title": "Postfilter bytes in selected range",
       "description": "Aggregate bytes from existing postfilter nft source counters for mapped peers in the selected source team and target IP over the dashboard range. Unmapped peers remain in the detailed table; N/A means router collection is unavailable.",
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 50,
         "w": 6,
         "h": 4
       },
@@ -1319,7 +1296,7 @@
       "description": "Count of measured bodies at least 1 MiB observed by the plaintext HTTP/1 parser for peers mapped to the selected source team. Unmapped peers remain in the event table. This is not an estimate for encrypted traffic.",
       "gridPos": {
         "x": 6,
-        "y": 54,
+        "y": 50,
         "w": 6,
         "h": 4
       },
@@ -1372,7 +1349,7 @@
       "description": "Strictly greater than 100 decoded plaintext HTTP requests/s over one minute. Includes Unmapped peers and uses only healthy sensors. Source team filters mapped profile rows; unclassifiable peers remain visible without inferred attribution.",
       "gridPos": {
         "x": 0,
-        "y": 58,
+        "y": 54,
         "w": 24,
         "h": 12
       },
@@ -1516,7 +1493,7 @@
       "description": "Packet/s and byte/s for each original WireGuard peer → target pair over the rate interval. These nft counters include only traffic that passed the existing router filters. Source team filters mapped peers; Unmapped peers remain visible. An unhealthy sensor or router makes the view N/A.",
       "gridPos": {
         "x": 0,
-        "y": 70,
+        "y": 66,
         "w": 24,
         "h": 12
       },
@@ -1648,7 +1625,7 @@
       "description": "Latest observed body size for each source/target/service whose event timestamp is within the selected range. Filtered to the selected source team when mapped; Unmapped peers remain visible. This is one measured plaintext HTTP/1 body, not TLS or all traffic.",
       "gridPos": {
         "x": 0,
-        "y": 90,
+        "y": 86,
         "w": 24,
         "h": 12
       },
@@ -1786,7 +1763,7 @@
       "description": "Timestamp from the same per-source/target/service event as the body-size table, shown in UTC milliseconds. Filtered to the selected source team when mapped; Unmapped peers remain visible.",
       "gridPos": {
         "x": 0,
-        "y": 102,
+        "y": 98,
         "w": 24,
         "h": 12
       },
@@ -1924,7 +1901,7 @@
       "description": "Plots the latest observed large-body size for 60 seconds after the event, independently per source/target/service. This is a pulse, not a request count; source selection filters mapped profiles, while Unmapped events remain visible. Exact size and UTC event time are in the tables below.",
       "gridPos": {
         "x": 0,
-        "y": 82,
+        "y": 78,
         "w": 24,
         "h": 8
       },
@@ -1965,7 +1942,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sort_desc(((max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\")))",
+          "expr": "(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) * on (source_ip) group_left (source_team_ip, source_team_name, member) forcad:game_profile_info{source_team_ip=~\"${source:regex}\"}) or on (source_ip, team_ip, service_port) label_replace(label_replace(max by (source_ip, team_ip, service_port) (((forcad_game_http_last_large_body_bytes{team_ip=~\"${target:regex}\"} >= 1048576) and on (source_ip, team_ip, service_port, job, instance) (forcad_game_http_last_large_body_timestamp_seconds >= ${__from:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds <= ${__to:date:seconds} and forcad_game_http_last_large_body_timestamp_seconds > time() - 60)) and on (job, instance) forcad:game_sensor_ready) unless on (source_ip) forcad:game_profile_info, \"source_team_name\", \"Unmapped\", \"source_ip\", \".+\"), \"member\", \"Unmapped\", \"source_ip\", \".+\")",
           "legendFormat": "{{source_team_name}} / {{member}} ({{source_ip}}) -> {{team_ip}}:{{service_port}}",
           "refId": "A",
           "range": true,
@@ -1981,7 +1958,7 @@
       "description": "Recent checker CHECK outcomes from the restricted checker_action_events view. Status counts describe checker-reported service availability; measured duration is checker runtime, not HTTP request latency. Independent of packet/flow observations.",
       "gridPos": {
         "x": 0,
-        "y": 114,
+        "y": 110,
         "w": 24,
         "h": 12
       },
