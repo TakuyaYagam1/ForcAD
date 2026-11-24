@@ -38,7 +38,7 @@ checkers/*
 *.env
 /docker-compose-base.yml
 
-node_modules/
+node_modules
 /front/dist/
 /front-vue/dist/
 /front.zip

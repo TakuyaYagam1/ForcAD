@@ -31,6 +31,7 @@ import type {
   GetClientAttackDataParams,
   GetClientCheckerLogsParams,
   GetClientEventsParams,
+  GetClientTeamHistoryParams,
   ParticipantTask,
   ParticipantTeam,
   ParticipantTeamTaskHistory,
@@ -570,10 +571,12 @@ export function useGetClientAttackData<TData = Awaited<ReturnType<typeof getClie
 
 
 /**
+ * With task_id, returns up to 50 latest published rounds containing that team/service, newest first. through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the latest 50 team snapshots.
  * @summary Get participant-visible task history for a team.
  */
 export const getClientTeamHistory = (
   teamId: string,
+  params?: GetClientTeamHistoryParams,
   signal?: AbortSignal
 ) => {
 
@@ -582,6 +585,7 @@ export const getClientTeamHistory = (
     {
       url: `/api/v1/client/teams/${teamId}/`,
       method: 'GET',
+      params,
       signal
     },
   );
@@ -590,26 +594,28 @@ export const getClientTeamHistory = (
 
 
 
-export const getGetClientTeamHistoryQueryKey = (teamId: string,) => {
+export const getGetClientTeamHistoryQueryKey = (teamId: string,
+  params?: GetClientTeamHistoryParams,) => {
   return [
-    `/api/v1/client/teams/${teamId}/`
+    `/api/v1/client/teams/${teamId}/`, ...(params ? [params] : [])
   ] as const;
 }
 
 
-export const getGetClientTeamHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(teamId: string, options?: {
-  query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
-}
+export const getGetClientTeamHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(teamId: string,
+  params?: GetClientTeamHistoryParams, options?: {
+    query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
+  }
 ) => {
 
   const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetClientTeamHistoryQueryKey(teamId);
+  const queryKey =  queryOptions?.queryKey ?? getGetClientTeamHistoryQueryKey(teamId,params);
 
 
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientTeamHistory>>> = ({ signal }) => {
-    return getClientTeamHistory(teamId, signal)
+    return getClientTeamHistory(teamId,params, signal)
   };
 
 
@@ -630,48 +636,64 @@ export type GetClientTeamHistoryQueryResult = NonNullable<Awaited<ReturnType<typ
 export type GetClientTeamHistoryQueryError = unknown
 
 
-/** @summary Get participant-visible task history for a team. */
+/**
+ * With task_id, returns up to 50 latest published rounds containing that team/service, newest first. through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the latest 50 team snapshots.
+ * @summary Get participant-visible task history for a team.
+ */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options: {
-   query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
+ teamId: string,
+    params: undefined |  GetClientTeamHistoryParams, options: {
+      query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeamHistory>>,
           TError,
           Awaited<ReturnType<typeof getClientTeamHistory>>
         > , 'initialData'
       >,
- }
+    }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/** @summary Get participant-visible task history for a team. */
+/**
+ * With task_id, returns up to 50 latest published rounds containing that team/service, newest first. through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the latest 50 team snapshots.
+ * @summary Get participant-visible task history for a team.
+ */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options?: {
-   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
+ teamId: string,
+    params?: GetClientTeamHistoryParams, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getClientTeamHistory>>,
           TError,
           Awaited<ReturnType<typeof getClientTeamHistory>>
         > , 'initialData'
       >,
- }
+    }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/** @summary Get participant-visible task history for a team. */
+/**
+ * With task_id, returns up to 50 latest published rounds containing that team/service, newest first. through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the latest 50 team snapshots.
+ * @summary Get participant-visible task history for a team.
+ */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
- teamId: string, options?: {
-   query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
- }
+ teamId: string,
+    params?: GetClientTeamHistoryParams, options?: {
+      query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
+    }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>
   }
-/** @summary Get participant-visible task history for a team. */
+/**
+ * With task_id, returns up to 50 latest published rounds containing that team/service, newest first. through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the latest 50 team snapshots.
+ * @summary Get participant-visible task history for a team.
+ */
 export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getClientTeamHistory>>, TError = unknown>(
-  teamId: string, options?: {
+  teamId: string,
+  params?: GetClientTeamHistoryParams, options?: {
     query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getClientTeamHistory>>, TError, TData>>,
   }
   , queryClient?: QueryClient
@@ -679,7 +701,7 @@ export function useGetClientTeamHistory<TData = Awaited<ReturnType<typeof getCli
   queryKey: DataTag<QueryKey, TData, TError>
 } {
 
-  const queryOptions = getGetClientTeamHistoryQueryOptions(teamId,options)
+  const queryOptions = getGetClientTeamHistoryQueryOptions(teamId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>

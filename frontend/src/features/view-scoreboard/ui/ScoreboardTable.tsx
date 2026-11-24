@@ -102,29 +102,19 @@ export function ScoreboardTable({
           <caption className="sr-only">
             {t("scoreboard.table.caption")}
           </caption>
-          <colgroup>
-            <col style={{
-              width: onCellClick ? "74px" : "var(--scoreboard-place-width, 74px)"
-            }} />
-            <col style={{
-              width: onCellClick ? "18rem" : "15%"
-            }} />
-            <col style={{
-              width: onCellClick ? "9rem" : "6%"
-            }} />
-            {tasks.map((task) => {
-              return (
-                <col
-                  key={task.id}
-                  style={{
-                    width: onCellClick
-                      ? `calc((100% - 506px) / ${tasks.length})`
-                      : `calc((79% - var(--scoreboard-place-width, 74px)) / ${tasks.length})`,
-                  }}
-                />
-              )
-            })}
-          </colgroup>
+          {onCellClick && (
+            <colgroup>
+              <col style={{
+                width: "74px"
+              }} />
+              <col style={{
+                width: "18rem"
+              }} />
+              <col style={{
+                width: "9rem"
+              }} />
+            </colgroup>
+          )}
 
           <thead>
             <tr>
@@ -173,6 +163,7 @@ export function ScoreboardTable({
                     <button
                       type="button"
                       className="team-identity"
+                      title={team.name}
                       onClick={() => {
                         return onTeamClick
                           ? onTeamClick(team.id)
@@ -198,6 +189,8 @@ export function ScoreboardTable({
                       <td key={task.id} className="service-column">
                         <span className="service-cell-name">{task.name}</span>
                         <ServiceCell
+                          teamId={team.id}
+                          taskId={task.id}
                           value={
                             previewLarge && rank === 1 && taskIndex === 0 && value
                               ? {

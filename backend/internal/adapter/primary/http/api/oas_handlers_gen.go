@@ -6154,7 +6154,9 @@ func (s *Server) handleGetClientTasksRequest(
 
 // handleGetClientTeamHistoryRequest handles getClientTeamHistory operation.
 //
-// Get participant-visible task history for a team.
+// With task_id, returns up to 50 latest published rounds containing that team/service, newest first.
+// through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the
+// latest 50 team snapshots.
 //
 // GET /api/v1/client/teams/{team_id}/
 func (s *Server) handleGetClientTeamHistoryRequest(
@@ -6264,6 +6266,14 @@ func (s *Server) handleGetClientTeamHistoryRequest(
 					Name: "team_id",
 					In:   "path",
 				}: params.TeamID,
+				{
+					Name: "task_id",
+					In:   "query",
+				}: params.TaskID,
+				{
+					Name: "through_round",
+					In:   "query",
+				}: params.ThroughRound,
 			},
 			Raw: r,
 		}

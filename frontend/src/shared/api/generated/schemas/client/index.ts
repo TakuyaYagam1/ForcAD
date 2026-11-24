@@ -15,6 +15,7 @@ export * from './getClientAttackDataHeaders.zod';
 export * from './getClientAttackDataParams.zod';
 export * from './getClientCheckerLogsParams.zod';
 export * from './getClientEventsParams.zod';
+export * from './getClientTeamHistoryParams.zod';
 export * from './participantTask.zod';
 export * from './participantTeam.zod';
 export * from './participantTeamTaskHistory.zod';

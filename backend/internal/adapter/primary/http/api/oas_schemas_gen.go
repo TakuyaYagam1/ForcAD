@@ -3300,6 +3300,53 @@ func (o NilInt32) Or(d int32) int32 {
 	return d
 }
 
+// NewNilInt64 returns new NilInt64 with value set to v.
+func NewNilInt64(v int64) NilInt64 {
+	return NilInt64{
+		Value: v,
+	}
+}
+
+// NilInt64 is nullable int64.
+type NilInt64 struct {
+	Value int64
+	Null  bool
+}
+
+// SetTo sets value to v.
+func (o *NilInt64) SetTo(v int64) {
+	o.Null = false
+	o.Value = v
+}
+
+// IsNull returns true if value is Null.
+func (o NilInt64) IsNull() bool {
+	return o.Null
+}
+
+// SetToNull sets value to null.
+func (o *NilInt64) SetToNull() {
+	o.Null = true
+	var v int64
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o NilInt64) Get() (v int64, ok bool) {
+	if o.Null {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o NilInt64) Or(d int64) int64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewNilString returns new NilString with value set to v.
 func NewNilString(v string) NilString {
 	return NilString{
@@ -4030,18 +4077,22 @@ func (s *ParticipantTeam) SetLogoPath(val string) {
 
 // Ref: #/components/schemas/ParticipantTeamTaskHistory
 type ParticipantTeamTaskHistory struct {
-	TeamID          UUID      `json:"team_id"`
-	TaskID          UUID      `json:"task_id"`
-	Round           int32     `json:"round"`
-	Status          int32     `json:"status"`
-	Stolen          int32     `json:"stolen"`
-	Lost            int32     `json:"lost"`
-	Score           float64   `json:"score"`
-	Checks          int32     `json:"checks"`
-	ChecksPassed    int32     `json:"checks_passed"`
-	Timestamp       string    `json:"timestamp"`
-	Message         NilString `json:"message"`
-	AdditionalProps ParticipantTeamTaskHistoryAdditional
+	TeamID             UUID       `json:"team_id"`
+	TaskID             UUID       `json:"task_id"`
+	Round              int32      `json:"round"`
+	Status             int32      `json:"status"`
+	Stolen             int32      `json:"stolen"`
+	Lost               int32      `json:"lost"`
+	RoundFlagsLost     NilInt64   `json:"round_flags_lost"`
+	RoundFlagsCaptured NilInt64   `json:"round_flags_captured"`
+	RoundOpponentFp    NilFloat64 `json:"round_opponent_fp"`
+	RoundFpGained      NilFloat64 `json:"round_fp_gained"`
+	Score              float64    `json:"score"`
+	Checks             int32      `json:"checks"`
+	ChecksPassed       int32      `json:"checks_passed"`
+	Timestamp          string     `json:"timestamp"`
+	Message            NilString  `json:"message"`
+	AdditionalProps    ParticipantTeamTaskHistoryAdditional
 }
 
 // GetTeamID returns the value of TeamID.
@@ -4072,6 +4123,26 @@ func (s *ParticipantTeamTaskHistory) GetStolen() int32 {
 // GetLost returns the value of Lost.
 func (s *ParticipantTeamTaskHistory) GetLost() int32 {
 	return s.Lost
+}
+
+// GetRoundFlagsLost returns the value of RoundFlagsLost.
+func (s *ParticipantTeamTaskHistory) GetRoundFlagsLost() NilInt64 {
+	return s.RoundFlagsLost
+}
+
+// GetRoundFlagsCaptured returns the value of RoundFlagsCaptured.
+func (s *ParticipantTeamTaskHistory) GetRoundFlagsCaptured() NilInt64 {
+	return s.RoundFlagsCaptured
+}
+
+// GetRoundOpponentFp returns the value of RoundOpponentFp.
+func (s *ParticipantTeamTaskHistory) GetRoundOpponentFp() NilFloat64 {
+	return s.RoundOpponentFp
+}
+
+// GetRoundFpGained returns the value of RoundFpGained.
+func (s *ParticipantTeamTaskHistory) GetRoundFpGained() NilFloat64 {
+	return s.RoundFpGained
 }
 
 // GetScore returns the value of Score.
@@ -4132,6 +4203,26 @@ func (s *ParticipantTeamTaskHistory) SetStolen(val int32) {
 // SetLost sets the value of Lost.
 func (s *ParticipantTeamTaskHistory) SetLost(val int32) {
 	s.Lost = val
+}
+
+// SetRoundFlagsLost sets the value of RoundFlagsLost.
+func (s *ParticipantTeamTaskHistory) SetRoundFlagsLost(val NilInt64) {
+	s.RoundFlagsLost = val
+}
+
+// SetRoundFlagsCaptured sets the value of RoundFlagsCaptured.
+func (s *ParticipantTeamTaskHistory) SetRoundFlagsCaptured(val NilInt64) {
+	s.RoundFlagsCaptured = val
+}
+
+// SetRoundOpponentFp sets the value of RoundOpponentFp.
+func (s *ParticipantTeamTaskHistory) SetRoundOpponentFp(val NilFloat64) {
+	s.RoundOpponentFp = val
+}
+
+// SetRoundFpGained sets the value of RoundFpGained.
+func (s *ParticipantTeamTaskHistory) SetRoundFpGained(val NilFloat64) {
+	s.RoundFpGained = val
 }
 
 // SetScore sets the value of Score.

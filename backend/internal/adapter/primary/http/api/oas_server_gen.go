@@ -211,7 +211,9 @@ type Handler interface {
 	GetClientTasks(ctx context.Context) ([]ParticipantTask, error)
 	// GetClientTeamHistory implements getClientTeamHistory operation.
 	//
-	// Get participant-visible task history for a team.
+	// With task_id, returns up to 50 latest published rounds containing that team/service, newest first.
+	// through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the
+	// latest 50 team snapshots.
 	//
 	// GET /api/v1/client/teams/{team_id}/
 	GetClientTeamHistory(ctx context.Context, params GetClientTeamHistoryParams) ([]ParticipantTeamTaskHistory, error)

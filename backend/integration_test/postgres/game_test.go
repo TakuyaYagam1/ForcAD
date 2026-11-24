@@ -172,7 +172,7 @@ func TestPublicHistoryIncludesOnlyCompletedRoundSnapshots(t *testing.T) {
 	if _, err := pool.Exec(ctx, `INSERT INTO GameRoundSnapshots(round,round_start,snapshot) VALUES(1,1700000000,$1)`, snapshot); err != nil {
 		t.Fatal(err)
 	}
-	public, err := store.PublicHistory(ctx, teams[0])
+	public, err := store.PublicHistory(ctx, teams[0], nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,6 +193,190 @@ func TestPublicHistoryIncludesOnlyCompletedRoundSnapshots(t *testing.T) {
 	}
 	if len(filtered) != 1 || filtered[0].Round != 2 {
 		t.Fatalf("task-filtered organizer history: %+v", filtered)
+	}
+}
+
+func TestPublicHistoryPagesMatchingCompletedRounds(t *testing.T) {
+	pool, _ := testutil.Database(t)
+	ctx := t.Context()
+	store := postgres.NewGameStore(pool)
+	document := gameDocument(t)
+	otherTask := document.Tasks[0]
+	otherTask.Name = "other"
+	document.Tasks = append(document.Tasks, otherTask)
+	if _, err := store.Initialize(ctx, document); err != nil {
+		t.Fatal(err)
+	}
+
+	lookupID := func(query string) uuid.UUID {
+		t.Helper()
+		var id uuid.UUID
+		if err := pool.QueryRow(ctx, query).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	teamID := lookupID(`SELECT id FROM Teams WHERE name = 'first'`)
+	otherTeamID := lookupID(`SELECT id FROM Teams WHERE name = 'second'`)
+	taskID := lookupID(`SELECT id FROM Tasks WHERE name = 'example'`)
+	otherTaskID := lookupID(`SELECT id FROM Tasks WHERE name = 'other'`)
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO GameRoundSnapshots (round, round_start, snapshot)
+		SELECT round_number, start_epoch::DOUBLE PRECISION,
+		       jsonb_build_object(
+		           'round', round_number,
+		           'round_start', start_epoch,
+		           'team_tasks',
+		           jsonb_build_array(
+		               jsonb_build_object(
+		                   'team_id', $1::UUID, 'task_id', $2::UUID,
+		                   'status', 101, 'score', 2500
+		               ),
+		               jsonb_build_object(
+		                   'team_id', $3::UUID, 'task_id', $4::UUID,
+		                   'status', 102, 'score', 2400
+		               )
+		           ) || CASE WHEN round_number % 3 = 0 THEN
+		               jsonb_build_array(jsonb_build_object(
+		                   'team_id', $5::UUID, 'task_id', $6::UUID,
+		                   'status', 101, 'score', 2500
+		               ))
+		           ELSE '[]'::JSONB END
+		       )
+		FROM (
+		    SELECT round_number, 1700000000 + round_number * 60 AS start_epoch
+		    FROM generate_series(1, 420) AS rounds(round_number)
+		) AS snapshot_data`,
+		teamID, otherTaskID, otherTeamID, taskID, teamID, taskID,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO DispatchRuns (schedule_id, round, is_round, completed, round_start)
+		SELECT 'public-history', round_number, TRUE, round_number <= 420,
+		       (1700000000 + round_number * 60)::DOUBLE PRECISION
+		FROM generate_series(1, 421) AS rounds(round_number)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO TeamTasksLog (team_id, task_id, round, status, public_message, private_message, command)
+		VALUES ($1, $2, 0, 103, 'unfinished', 'private diagnostic', 'private command'),
+		       ($1, $2, 421, 103, 'unfinished', 'private diagnostic', 'private command')`,
+		teamID, taskID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	var capturedFlagID, lostFlagID uuid.UUID
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO Flags (team_id, task_id, round, flag, public_flag_data, private_flag_data)
+		VALUES ($1, $2, 300, 'history-captured', '', '')
+		RETURNING id`, otherTeamID, taskID).Scan(&capturedFlagID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO Flags (team_id, task_id, round, flag, public_flag_data, private_flag_data)
+		VALUES ($1, $2, 300, 'history-lost', '', '')
+		RETURNING id`, teamID, taskID).Scan(&lostFlagID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO StolenFlags (flag_id, attacker_id, submit_time, attacker_delta)
+		VALUES ($1, $2, to_timestamp($3::DOUBLE PRECISION + 1), 7.5),
+		       ($4, $5, to_timestamp($3::DOUBLE PRECISION + 2), 3.25)`,
+		capturedFlagID, teamID, 1700000000+300*60, lostFlagID, otherTeamID,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := pool.Exec(ctx, `UPDATE Teams SET active = FALSE WHERE id = $1`, teamID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE Tasks SET active = FALSE WHERE id = $1`, taskID); err != nil {
+		t.Fatal(err)
+	}
+
+	defaultHistory, err := store.PublicHistory(ctx, teamID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defaultRounds := make(map[int32]struct{}, 50)
+	targetRows := 0
+	for _, row := range defaultHistory {
+		if row.TeamID != teamID || row.Round < 371 || row.Round > 420 {
+			t.Fatalf("default history escaped the latest 50 team snapshots: %+v", row)
+		}
+		defaultRounds[row.Round] = struct{}{}
+		if row.TaskID == taskID {
+			targetRows++
+		}
+	}
+	if len(defaultRounds) != 50 || len(defaultHistory) != 67 || targetRows != 17 {
+		t.Fatalf("default history: rounds=%d rows=%d matching service=%d", len(defaultRounds), len(defaultHistory), targetRows)
+	}
+	if defaultHistory[0].Round != 420 || defaultHistory[len(defaultHistory)-1].Round != 371 {
+		t.Fatalf("default history not newest first: first=%d last=%d", defaultHistory[0].Round, defaultHistory[len(defaultHistory)-1].Round)
+	}
+
+	readServicePage := func(throughRound *int32) []domain.PublicCell {
+		t.Helper()
+		rows, err := store.PublicHistory(ctx, teamID, &taskID, throughRound)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return rows
+	}
+	assertServicePage := func(
+		name string,
+		rows []domain.PublicCell,
+		wantCount, wantFirst, wantLast int32,
+	) {
+		t.Helper()
+		if len(rows) != int(wantCount) {
+			t.Fatalf("%s page size = %d, want %d", name, len(rows), wantCount)
+		}
+		for i, row := range rows {
+			if row.TeamID != teamID || row.TaskID != taskID || row.Round == 0 || row.Round > 420 {
+				t.Fatalf("%s page exposed a non-snapshot/non-service row: %+v", name, row)
+			}
+			if i > 0 && rows[i-1].Round-row.Round != 3 {
+				t.Fatalf("%s page rounds are not unique, descending sparse rounds: %d then %d",
+					name, rows[i-1].Round, row.Round)
+			}
+		}
+		if rows[0].Round != wantFirst || rows[len(rows)-1].Round != wantLast {
+			t.Fatalf("%s page range = %d..%d, want %d..%d",
+				name, rows[0].Round, rows[len(rows)-1].Round, wantFirst, wantLast)
+		}
+	}
+
+	firstPage := readServicePage(nil)
+	assertServicePage("first", firstPage, 50, 420, 273)
+	cursor := firstPage[len(firstPage)-1].Round - 1
+	secondPage := readServicePage(&cursor)
+	assertServicePage("second", secondPage, 50, 270, 123)
+	if firstPage[len(firstPage)-1].Round-secondPage[0].Round < 2 {
+		t.Fatalf("cursor crossed fewer than two round numbers: %d then %d",
+			firstPage[len(firstPage)-1].Round, secondPage[0].Round)
+	}
+	cursor = secondPage[len(secondPage)-1].Round - 1
+	thirdPage := readServicePage(&cursor)
+	assertServicePage("third", thirdPage, 40, 120, 3)
+	cursor = thirdPage[len(thirdPage)-1].Round - 1
+	if remaining := readServicePage(&cursor); len(remaining) != 0 {
+		t.Fatalf("history remained below the final cursor: %+v", remaining)
+	}
+
+	inclusiveRound := int32(300)
+	inclusivePage := readServicePage(&inclusiveRound)
+	assertServicePage("inclusive", inclusivePage, 50, 300, 153)
+	round300 := firstPage[(420-300)/3]
+	if round300.Round != 300 || round300.RoundFlagsCaptured == nil || *round300.RoundFlagsCaptured != 1 ||
+		round300.RoundFPGained == nil || *round300.RoundFPGained != 7.5 ||
+		round300.RoundFlagsLost == nil || *round300.RoundFlagsLost != 1 ||
+		round300.RoundOpponentFP == nil || *round300.RoundOpponentFP != 3.25 {
+		t.Fatalf("round 300 FP projection changed: %+v", round300)
 	}
 }
 

@@ -109,17 +109,21 @@ type Cell struct {
 }
 
 type PublicCell struct {
-	TeamID       uuid.UUID `json:"team_id"`
-	TaskID       uuid.UUID `json:"task_id"`
-	Status       int32     `json:"status"`
-	Stolen       int32     `json:"stolen"`
-	Lost         int32     `json:"lost"`
-	Score        float64   `json:"score"`
-	Checks       int32     `json:"checks"`
-	ChecksPassed int32     `json:"checks_passed"`
-	Message      string    `json:"message"`
-	Round        int32     `json:"round"`
-	Timestamp    string    `json:"timestamp,omitempty"`
+	TeamID             uuid.UUID `json:"team_id"`
+	TaskID             uuid.UUID `json:"task_id"`
+	Status             int32     `json:"status"`
+	Stolen             int32     `json:"stolen"`
+	Lost               int32     `json:"lost"`
+	RoundFlagsLost     *int64    `json:"round_flags_lost,omitempty"`
+	RoundFlagsCaptured *int64    `json:"round_flags_captured,omitempty"`
+	RoundOpponentFP    *float64  `json:"round_opponent_fp,omitempty"`
+	RoundFPGained      *float64  `json:"round_fp_gained,omitempty"`
+	Score              float64   `json:"score"`
+	Checks             int32     `json:"checks"`
+	ChecksPassed       int32     `json:"checks_passed"`
+	Message            string    `json:"message"`
+	Round              int32     `json:"round"`
+	Timestamp          string    `json:"timestamp,omitempty"`
 }
 
 func (c Cell) Public() PublicCell {

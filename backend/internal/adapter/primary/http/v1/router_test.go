@@ -89,9 +89,12 @@ var (
 type testGame struct {
 	GameService
 
-	changed     string
-	historyTeam uuid.UUID
-	historyTask *uuid.UUID
+	changed                   string
+	historyTeam               uuid.UUID
+	historyTask               *uuid.UUID
+	publicHistoryTeam         uuid.UUID
+	publicHistoryTask         *uuid.UUID
+	publicHistoryThroughRound *int32
 }
 
 func (*testGame) Teams(context.Context, bool) ([]domain.Team, error) {
@@ -125,7 +128,15 @@ func (g *testGame) History(_ context.Context, teamID uuid.UUID, taskID *uuid.UUI
 		Timestamp:      "1-0",
 	}}, nil
 }
-func (*testGame) PublicHistory(context.Context, uuid.UUID) ([]domain.PublicCell, error) {
+func (g *testGame) PublicHistory(
+	_ context.Context,
+	teamID uuid.UUID,
+	taskID *uuid.UUID,
+	throughRound *int32,
+) ([]domain.PublicCell, error) {
+	g.publicHistoryTeam = teamID
+	g.publicHistoryTask = taskID
+	g.publicHistoryThroughRound = throughRound
 	return []domain.PublicCell{{
 		TeamID:    httpTeamID,
 		TaskID:    httpTaskID,
@@ -476,7 +487,8 @@ func TestPublicResponsesExcludePrivateData(t *testing.T) {
 }
 
 func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
-	router := testRouter(t, "api", &testGame{}, testAuth{}, &testFlags{})
+	game := &testGame{}
+	router := testRouter(t, "api", game, testAuth{}, &testFlags{})
 	response := performRequest(router, http.MethodGet, "/api/v1/client/teams/"+httpTeamID.String()+"/", "", nil)
 	if response.Code != http.StatusOK {
 		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
@@ -490,6 +502,27 @@ func TestPublicHistoryUsesSnapshotIdentity(t *testing.T) {
 	}
 	if rows[0]["team_id"] != httpTeamID.String() || rows[0]["task_id"] != httpTaskID.String() {
 		t.Fatalf("snapshot entity IDs: %+v", rows[0])
+	}
+	if game.publicHistoryTeam != httpTeamID || game.publicHistoryTask != nil || game.publicHistoryThroughRound != nil {
+		t.Fatalf("unfiltered history params: team=%s task=%v through=%v",
+			game.publicHistoryTeam, game.publicHistoryTask, game.publicHistoryThroughRound)
+	}
+}
+
+func TestPublicHistoryForwardsServiceCursor(t *testing.T) {
+	game := &testGame{}
+	router := testRouter(t, "api", game, testAuth{}, &testFlags{})
+	path := "/api/v1/client/teams/" + httpTeamID.String() +
+		"/?task_id=" + httpTaskID.String() + "&through_round=120"
+	response := performRequest(router, http.MethodGet, path, "", nil)
+	if response.Code != http.StatusOK {
+		t.Fatalf("history response: %d %s", response.Code, response.Body.String())
+	}
+	if game.publicHistoryTeam != httpTeamID || game.publicHistoryTask == nil ||
+		*game.publicHistoryTask != httpTaskID || game.publicHistoryThroughRound == nil ||
+		*game.publicHistoryThroughRound != 120 {
+		t.Fatalf("history params: team=%s task=%v through=%v",
+			game.publicHistoryTeam, game.publicHistoryTask, game.publicHistoryThroughRound)
 	}
 }
 

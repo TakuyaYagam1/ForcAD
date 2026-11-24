@@ -172,9 +172,14 @@ func (g *Game) History(ctx context.Context, team uuid.UUID, task *uuid.UUID) ([]
 	}
 	return history, nil
 }
-func (g *Game) PublicHistory(ctx context.Context, team uuid.UUID) ([]domain.PublicCell, error) {
+func (g *Game) PublicHistory(
+	ctx context.Context,
+	team uuid.UUID,
+	taskID *uuid.UUID,
+	throughRound *int32,
+) ([]domain.PublicCell, error) {
 	const location = "usecase.Game.PublicHistory"
-	history, err := g.repo.PublicHistory(ctx, team)
+	history, err := g.repo.PublicHistory(ctx, team, taskID, throughRound)
 	if err != nil {
 		return history, fmt.Errorf("%s - read public checker history: %w", location, err)
 	}

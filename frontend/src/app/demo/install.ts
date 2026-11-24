@@ -1,11 +1,15 @@
 import { validateTeam, validateTask } from "@/shared/lib/adminValidation";
 import { refreshGameQueries } from "@/shared/lib/queryClient";
+import { randomHex, randomUuid } from "@/shared/lib/random";
 import { AxiosError, AxiosHeaders } from "axios";
 import type { AxiosAdapter, InternalAxiosRequestConfig } from "axios";
 import type { Team } from "@/entities/team/model/types";
 import type { Task } from "@/entities/task/model/types";
 import type { TeamTaskLogEntry } from "@/entities/team-task/model/types";
-import type { TeamTaskStateRaw } from "@/entities/team-scoreboard/api";
+import {
+  TEAM_HISTORY_PAGE_SIZE,
+  type TeamTaskStateRaw,
+} from "@/entities/team-scoreboard/api";
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import type { GameRuntimeStatus, RawTeamTask } from "@/entities/scoreboard/model/store";
 import { useLiveScoreboardStore } from "@/entities/live-scoreboard/model/store";
@@ -16,12 +20,15 @@ import {
   type AdminCheckerStats,
 } from "@/shared/api/generated/schemas";
 import { api, http } from "@/shared/lib/axios";
+import { STATUS_OK } from "@/shared/config/statuses";
 import {
   createDemoTeams,
   createDemoTasks,
   createDemoTeamTasks,
   createDemoHistory,
   DEMO_DEFAULT_SCORE,
+  DEMO_INITIAL_CAPTURE_EVENTS,
+  type DemoCaptureSeed,
   demoUuid,
   DEMO_INITIAL_ROUND,
   DEMO_ROUND_TIME,
@@ -31,6 +38,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 const DEMO_SESSION_STORAGE_KEY = "forcad-demo-auth";
 const DEMO_REQUEST_DELAY_MS = 100;
+const DEMO_ADMIN_LOG_LIMIT = 10;
 const DEMO_ADMIN_USERNAME = "demo";
 const DEMO_ADMIN_PASSWORD = "demo";
 const DEMO_CAPTURE_DELTA = 185;
@@ -39,55 +47,10 @@ const MIN_DEMO_CAPTURE_PASS_RATE = 0.01;
 const GAME_ACTION_PATH =
   /^\/admin\/game\/(start|start_practice|start_final|pause|resume|finish)$/;
 const UUID_PATH = "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+const UUID_PATTERN = new RegExp(`^${UUID_PATH}$`, "i");
 const ADMIN_ENTITY_PATH = new RegExp(`^/admin/(teams|tasks)(?:/(${UUID_PATH}))?$`, "i");
 const ADMIN_BULK_PATH = /^\/admin\/(teams|tasks)\/(activate|deactivate)$/;
 const CLIENT_TEAM_HISTORY_PATH = new RegExp(`^/client/teams/(${UUID_PATH})$`, "i");
-
-interface DemoCaptureSeed {
-  attackerId: string;
-  victimId: string;
-  taskId: string;
-  delta: number;
-}
-
-const INITIAL_CAPTURE_EVENTS: DemoCaptureSeed[] = [
-  {
-    attackerId: demoUuid(2),
-    victimId: demoUuid(1),
-    taskId: demoUuid(1001),
-    delta: 185,
-  },
-  {
-    attackerId: demoUuid(3),
-    victimId: demoUuid(5),
-    taskId: demoUuid(1002),
-    delta: 122.5
-  },
-  {
-    attackerId: demoUuid(1),
-    victimId: demoUuid(4),
-    taskId: demoUuid(1003),
-    delta: 210
-  },
-  {
-    attackerId: demoUuid(5),
-    victimId: demoUuid(7),
-    taskId: demoUuid(1004),
-    delta: 96.75
-  },
-  {
-    attackerId: demoUuid(4),
-    victimId: demoUuid(2),
-    taskId: demoUuid(1001),
-    delta: 154
-  },
-  {
-    attackerId: demoUuid(6),
-    victimId: demoUuid(8),
-    taskId: demoUuid(1002),
-    delta: 88.25
-  },
-];
 
 const initialDemoGameSettings = (): Omit<AdminGameSettingsUpdate, "generation" | "start_time"> => {
   return {
@@ -187,6 +150,30 @@ function getParticipantTasks() {
     });
 }
 
+function demoCheckerMessage(status: number) {
+  switch (status) {
+    case STATUS_OK:
+      return "OK";
+    case 102:
+      return "Stored data is missing or corrupted";
+    case 103:
+      return "The service returned an invalid response";
+    case 104:
+      return "Service unavailable: connection refused";
+    case 110:
+      return "The checker could not complete the check";
+    default:
+      return "";
+  }
+}
+
+function withDemoCheckerMessage<T extends RawTeamTask>(cell: T) {
+  return {
+    ...cell,
+    message: demoCheckerMessage(cell.status),
+  };
+}
+
 function getDemoScoreboard() {
   const participantTeams = getParticipantTeams();
   const participantTasks = getParticipantTasks();
@@ -205,7 +192,7 @@ function getDemoScoreboard() {
         (cell) => {
           return teamIds.has(cell.team_id) && taskIds.has(cell.task_id)
         },
-      ),
+      ).map(withDemoCheckerMessage),
     },
     teams: participantTeams,
     tasks: participantTasks,
@@ -216,16 +203,7 @@ function getDemoScoreboard() {
 
 function publishState() {
   const scoreboard = useScoreboardStore.getState();
-  scoreboard.handleInitScoreboardMessage({
-    teams: getParticipantTeams(),
-    tasks: getParticipantTasks(),
-    state: {
-      round,
-      round_start: roundStart,
-      team_tasks: rawTeamTasks
-    },
-    runtime: getRuntime(),
-  });
+  scoreboard.handleInitScoreboardMessage(getDemoScoreboard());
   scoreboard.setRoundTime(demoGameSettings.round_time);
   scoreboard.setConnected(true);
   refreshGameQueries();
@@ -233,9 +211,7 @@ function publishState() {
 
 function rememberSession(value: boolean) {
   isLoggedIn = value;
-  demoCsrfToken = value
-    ? crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")
-    : "";
+  demoCsrfToken = value ? randomHex(32) : "";
   try {
     if (value) {
       sessionStorage.setItem(DEMO_SESSION_STORAGE_KEY, "on");
@@ -266,11 +242,26 @@ export function resetDemoData() {
   publishState();
 
   const scoreboard = useScoreboardStore.getState();
-  const seededEvents = INITIAL_CAPTURE_EVENTS.map(
-    ({ attackerId, victimId, taskId, delta }, index) => {
+  const captureCounts = new Map<number, number>();
+  for (const event of DEMO_INITIAL_CAPTURE_EVENTS) {
+    captureCounts.set(
+      event.roundOffset,
+      (captureCounts.get(event.roundOffset) ?? 0) + 1,
+    );
+  }
+  const capturePositions = new Map<number, number>();
+  const seededEvents = DEMO_INITIAL_CAPTURE_EVENTS.map(
+    ({ attackerId, victimId, taskId, delta, roundOffset }, index) => {
+      const capturePosition = capturePositions.get(roundOffset) ?? 0;
+      capturePositions.set(roundOffset, capturePosition + 1);
+      const captureCount = captureCounts.get(roundOffset)!;
+      const roundEnd =
+        roundStart + demoGameSettings.round_time * (1 - roundOffset);
+      const secondsBeforeRoundEnd =
+        ((capturePosition + 1) / (captureCount + 1)) * demoGameSettings.round_time;
       return {
         id: demoUuid(300_000 + index),
-        ts: Date.now() - (index * 43 + 12) * 1000,
+        ts: Math.floor(roundEnd - secondsBeforeRoundEnd) * 1000,
         attackerId,
         victimId,
         taskId,
@@ -319,19 +310,55 @@ export function prepareDemoGame() {
   publishState();
 }
 
-function recordSnapshot() {
-  const now = Math.floor(Date.now() / 1000);
-  teamTaskHistory.unshift(
-    ...rawTeamTasks.map((teamTask) => {
-      return {
-        ...teamTask,
-        round,
-        timestamp: `${now}-${tasks.findIndex((task) => {
-          return task.id === teamTask.task_id
-        }) + 1}`,
+function recordSnapshot(
+  capture?: Pick<
+    DemoCaptureSeed,
+    "attackerId" | "victimId" | "taskId" | "delta"
+  >,
+) {
+  const snapshotRound = round > 0 ? round : getRuntime().round;
+  let previousSnapshots: Map<string, TeamTaskStateRaw> | undefined;
+  if (teamTaskHistory[0]?.round === snapshotRound) {
+    previousSnapshots = new Map();
+    for (const entry of teamTaskHistory) {
+      if (entry.round !== snapshotRound) {
+        break;
       }
-    }),
-  );
+      previousSnapshots.set(`${entry.team_id}:${entry.task_id}`, entry);
+    }
+  }
+  const creditedDelta = capture?.delta ?? 0;
+  const now = Math.floor(Date.now() / 1000);
+  const snapshots = rawTeamTasks.map((teamTask) => {
+    const key = `${teamTask.team_id}:${teamTask.task_id}`;
+    const previous = previousSnapshots?.get(key);
+    const capturedFlag = capture !== undefined &&
+      teamTask.team_id === capture.attackerId &&
+      teamTask.task_id === capture.taskId;
+    const lostFlag = capture !== undefined &&
+      teamTask.team_id === capture.victimId &&
+      teamTask.task_id === capture.taskId;
+    return {
+      ...teamTask,
+      round: snapshotRound,
+      round_flags_captured:
+        (previous?.round_flags_captured ?? 0) + (capturedFlag ? 1 : 0),
+      round_fp_gained:
+        (previous?.round_fp_gained ?? 0) + (capturedFlag ? creditedDelta : 0),
+      round_flags_lost:
+        (previous?.round_flags_lost ?? 0) + (lostFlag ? 1 : 0),
+      round_opponent_fp:
+        (previous?.round_opponent_fp ?? 0) + (lostFlag ? creditedDelta : 0),
+      timestamp: `${now}-${tasks.findIndex((task) => {
+        return task.id === teamTask.task_id
+      }) + 1}`,
+    }
+  });
+  if (previousSnapshots) {
+    teamTaskHistory.splice(0, previousSnapshots.size, ...snapshots);
+  } else {
+    teamTaskHistory.unshift(...snapshots);
+  }
 }
 
 export function simulateDemoCapture(promote = false) {
@@ -388,19 +415,25 @@ export function simulateDemoCapture(promote = false) {
   pausedSeconds = 0;
   refreshGameQueries();
   roundStart = Math.floor(Date.now() / 1000) - demoGameSettings.round_time;
-  recordSnapshot();
+  const capture = {
+    attackerId: attacker.id!,
+    victimId: victim.id!,
+    taskId: attackerCell.task_id,
+    delta,
+  };
+  recordSnapshot(capture);
   useScoreboardStore.getState().setRuntime(getRuntime());
   useScoreboardStore.getState().handleUpdateScoreboardMessage({
     round,
     round_start: roundStart,
-    team_tasks: rawTeamTasks,
+    team_tasks: rawTeamTasks.map(withDemoCheckerMessage),
   });
   useLiveScoreboardStore.getState().pushNotification({
     generation,
-    attacker_id: attacker.id!,
-    victim_id: victim.id!,
-    task_id: attackerCell.task_id,
-    attacker_delta: delta,
+    attacker_id: capture.attackerId,
+    victim_id: capture.victimId,
+    task_id: capture.taskId,
+    attacker_delta: capture.delta,
   });
 }
 
@@ -495,25 +528,30 @@ function addMissingCells() {
 }
 
 function demoLogs(teamId: string, taskId: string): TeamTaskLogEntry[] {
-  return teamTaskHistory
-    .filter((entry) => {
-      return entry.team_id === teamId && entry.task_id === taskId
-    })
-    .slice(0, 15)
-    .map((entry) => {
-      return {
-        ...entry,
-        id: getDemoAdminLogId(entry),
-        team_id: teamId,
-        task_id: taskId,
-        ts: Number(entry.timestamp.slice(0, entry.timestamp.indexOf("-"))),
-        public_message: entry.message || "OK",
-        private_message: "Demo entry: check completed",
-        command: `python demo/checker.py check ${teams.find((team) => {
-          return team.id === teamId
-        })?.ip ?? "10.10.14.8"}`,
-      }
-    });
+  const entries: TeamTaskStateRaw[] = [];
+  for (const entry of teamTaskHistory) {
+    if (entry.team_id !== teamId || entry.task_id !== taskId) {
+      continue;
+    }
+    entries.push(entry);
+    if (entries.length >= DEMO_ADMIN_LOG_LIMIT) {
+      break;
+    }
+  }
+  return entries.map((entry) => {
+    return {
+      ...entry,
+      id: getDemoAdminLogId(entry),
+      team_id: teamId,
+      task_id: taskId,
+      ts: Number(entry.timestamp.slice(0, entry.timestamp.indexOf("-"))),
+      public_message: demoCheckerMessage(entry.status),
+      private_message: "Demo: check completed",
+      command: `python demo/checker.py check ${teams.find((team) => {
+        return team.id === teamId
+      })?.ip ?? "10.10.14.8"}`,
+    }
+  });
 }
 
 function getDemoAdminLogId(entry: TeamTaskStateRaw): string {
@@ -523,7 +561,7 @@ function getDemoAdminLogId(entry: TeamTaskStateRaw): string {
     return existingId;
   }
 
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   demoAdminLogIds.set(key, id);
   return id;
 }
@@ -554,14 +592,57 @@ function handleClientRequest(
   if (!teamHistoryMatch) {
     return;
   }
-
   const teamId = teamHistoryMatch[1]!.toLowerCase();
-  return makeResponse(
-    config,
-    teamTaskHistory.filter((entry) => {
-      return entry.team_id === teamId
-    }),
-  );
+
+  const params = config.params as
+    | {
+      task_id?: string;
+      through_round?: number;
+    }
+    | undefined;
+  const taskIdValue = params?.task_id;
+  if (taskIdValue !== undefined && !UUID_PATTERN.test(taskIdValue)) {
+    fail(config, 400, "Invalid team history task ID");
+  }
+  const taskId = taskIdValue?.toLowerCase();
+  const throughRound = params?.through_round;
+  if (
+    throughRound !== undefined &&
+    (
+      !Number.isInteger(throughRound) ||
+      throughRound <= 0 ||
+      throughRound > 2_147_483_647
+    )
+  ) {
+    fail(config, 400, "Invalid team history round");
+  }
+
+  const history: TeamTaskStateRaw[] = [];
+  const latestPublishedRound = Math.min(throughRound ?? round, round);
+  let includedRounds = 0;
+  let previousRound: number | undefined;
+  for (const entry of teamTaskHistory) {
+    if (entry.round <= 0 || entry.round > latestPublishedRound) {
+      continue;
+    }
+    const matchesTeam = entry.team_id === teamId;
+    const matchesScope = matchesTeam &&
+      (taskId === undefined || entry.task_id === taskId);
+    if (taskId !== undefined && !matchesScope) {
+      continue;
+    }
+    if (entry.round !== previousRound) {
+      if (includedRounds >= TEAM_HISTORY_PAGE_SIZE) {
+        break;
+      }
+      previousRound = entry.round;
+      includedRounds += 1;
+    }
+    if (matchesScope) {
+      history.push(withDemoCheckerMessage(entry));
+    }
+  }
+  return makeResponse(config, history);
 }
 
 function handleAdminSessionRequest(
@@ -807,6 +888,7 @@ function handleGameActionRequest(
     generation += 1;
     phase = "running";
     roundStart = Math.floor(Date.now() / 1000) - demoGameSettings.round_time;
+    recordSnapshot();
   } else if (gameAction === "finish" && practice) {
     const originalStart = scheduledStart;
     prepareDemoGame();
@@ -871,7 +953,7 @@ function handleAdminEntityRequest(
     fail(config, 404, "Record not found");
   }
 
-  const nextId = existingRecord?.id ?? crypto.randomUUID();
+  const nextId = existingRecord?.id ?? randomUuid();
   let savedRecord: Team | Task;
 
   if (isTeamCollection) {
@@ -882,11 +964,7 @@ function handleAdminEntityRequest(
       id: nextId,
     } as Team;
     if (method === "POST") {
-      savedTeam.token = [...crypto.getRandomValues(new Uint8Array(8))]
-        .map((byte) => {
-          return byte.toString(16).padStart(2, "0")
-        })
-        .join("");
+      savedTeam.token = randomHex(8);
     }
     const validationError = validateTeam(savedTeam, method === "POST");
     if (validationError) {
@@ -950,7 +1028,7 @@ function demoCheckerStats(config: InternalAxiosRequestConfig): DemoResponse {
       reported: 0,
       failed: 0,
       no_result: 0,
-    }
+    };
   };
   if (active) {
     for (const task of tasks) {
@@ -1085,9 +1163,7 @@ export function installDemoData() {
   } catch {
     isLoggedIn = false;
   }
-  demoCsrfToken = isLoggedIn
-    ? crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "")
-    : "";
+  demoCsrfToken = isLoggedIn ? randomHex(32) : "";
   api.defaults.adapter = demoAdapter;
   http.defaults.adapter = demoAdapter;
   resetDemoData();

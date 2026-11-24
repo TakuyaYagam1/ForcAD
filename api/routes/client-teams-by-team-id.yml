@@ -3,9 +3,24 @@ get:
   tags:
   - client
   summary: Get participant-visible task history for a team.
+  description: >-
+    With task_id, returns up to 50 latest published rounds containing that
+    team/service, newest first. through_round is an inclusive upper bound.
+    With neither query parameter, the endpoint retains the latest 50 team
+    snapshots.
   security: []
   parameters:
   - "$ref": "../components/parameters.yml#/TeamId"
+  - name: task_id
+    in: query
+    schema:
+      "$ref": "../components/schemas.yml#/Uuid"
+  - name: through_round
+    in: query
+    schema:
+      type: integer
+      format: int32
+      minimum: 1
   responses:
     '200':
       description: Team task history with private fields removed.

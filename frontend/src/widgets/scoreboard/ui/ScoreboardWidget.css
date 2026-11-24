@@ -289,7 +289,7 @@
   .scoreboard-page--compact .team-column {
     left: var(--scoreboard-place-width);
     min-width: 18rem;
-    width: 15%;
+    width: 20%;
   }
 
   .scoreboard-page--compact .scoreboard-table th.team-column {
@@ -500,7 +500,7 @@
   }
 
   .scoreboard-page--compact.scoreboard-page--dense .service-metrics {
-    grid-template-columns: 2.75rem minmax(0, 1fr) max-content;
+    grid-template-columns: minmax(0, 1fr) repeat(2, minmax(max-content, 1fr));
     gap: 3px;
   }
 
@@ -579,8 +579,6 @@
 }
 
 .header-progress .round-head {
-  top: 4px;
-  left: -5px;
   width: 10px;
   height: 10px;
   border-width: 2px;

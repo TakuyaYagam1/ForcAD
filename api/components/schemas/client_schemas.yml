@@ -143,6 +143,10 @@ schemas:
     - status
     - stolen
     - lost
+    - round_flags_lost
+    - round_flags_captured
+    - round_opponent_fp
+    - round_fp_gained
     - score
     - checks
     - checks_passed
@@ -165,6 +169,24 @@ schemas:
       lost:
         type: integer
         format: int32
+      round_flags_lost:
+        type:
+        - integer
+        - 'null'
+        format: int64
+      round_flags_captured:
+        type:
+        - integer
+        - 'null'
+        format: int64
+      round_opponent_fp:
+        type:
+        - number
+        - 'null'
+      round_fp_gained:
+        type:
+        - number
+        - 'null'
       score:
         type: number
       checks:

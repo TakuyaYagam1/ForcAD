@@ -11,5 +11,10 @@ type ScoreRepository interface {
 	Board(ctx context.Context) (domain.BoardData, error)
 	Cells(ctx context.Context) ([]domain.Cell, error)
 	History(ctx context.Context, teamID uuid.UUID, taskID *uuid.UUID) ([]domain.Cell, error)
-	PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error)
+	PublicHistory(
+		ctx context.Context,
+		teamID uuid.UUID,
+		taskID *uuid.UUID,
+		throughRound *int32,
+	) ([]domain.PublicCell, error)
 }

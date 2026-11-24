@@ -7,18 +7,40 @@ import (
 
 func PublicHistory(c domain.PublicCell) api.ParticipantTeamTaskHistory {
 	return api.ParticipantTeamTaskHistory{
-		TeamID:       api.UUID(c.TeamID),
-		TaskID:       api.UUID(c.TaskID),
-		Round:        c.Round,
-		Status:       c.Status,
-		Stolen:       c.Stolen,
-		Lost:         c.Lost,
-		Score:        c.Score,
-		Checks:       c.Checks,
-		ChecksPassed: c.ChecksPassed,
-		Timestamp:    c.Timestamp,
-		Message:      api.NewNilString(c.Message),
+		TeamID:             api.UUID(c.TeamID),
+		TaskID:             api.UUID(c.TaskID),
+		Round:              c.Round,
+		Status:             c.Status,
+		Stolen:             c.Stolen,
+		Lost:               c.Lost,
+		RoundFlagsLost:     nullableInt64(c.RoundFlagsLost),
+		RoundFlagsCaptured: nullableInt64(c.RoundFlagsCaptured),
+		RoundOpponentFp:    nullableFloat64(c.RoundOpponentFP),
+		RoundFpGained:      nullableFloat64(c.RoundFPGained),
+		Score:              c.Score,
+		Checks:             c.Checks,
+		ChecksPassed:       c.ChecksPassed,
+		Timestamp:          c.Timestamp,
+		Message:            api.NewNilString(c.Message),
 	}
+}
+
+func nullableInt64(value *int64) api.NilInt64 {
+	if value == nil {
+		return api.NilInt64{
+			Null: true,
+		}
+	}
+	return api.NewNilInt64(*value)
+}
+
+func nullableFloat64(value *float64) api.NilFloat64 {
+	if value == nil {
+		return api.NilFloat64{
+			Null: true,
+		}
+	}
+	return api.NewNilFloat64(*value)
 }
 
 func AdminHistory(c domain.Cell) api.AdminTeamTaskLogEntry {

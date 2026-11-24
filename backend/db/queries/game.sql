@@ -76,14 +76,193 @@ VALUES
      sqlc.arg(public_message));
 
 -- name: ReadPublicGameHistory :many
-SELECT snapshots.round, snapshots.round_start, cell::JSONB AS cell
-FROM (
-    SELECT round, round_start, snapshot FROM GameRoundSnapshots
-    ORDER BY round DESC LIMIT 50
-) snapshots
-CROSS JOIN LATERAL jsonb_array_elements(snapshots.snapshot->'team_tasks') AS cell
-WHERE (cell->>'team_id')::UUID = sqlc.arg(team_id)::UUID
-ORDER BY snapshots.round DESC, (cell->>'task_id')::UUID;
+WITH lifecycle AS (
+    SELECT COALESCE(game.game_running, FALSE) AS game_running,
+           COALESCE(game.real_round, 0)::INTEGER AS real_round,
+           session.reset_pending, session.snapshot_round, session.snapshot
+    FROM GameConfig AS game
+    JOIN GameSession AS session ON session.id = game.id
+    WHERE game.id = 1
+), snapshots AS (
+    SELECT snapshot.round, snapshot.round_start, snapshot.snapshot
+    FROM GameRoundSnapshots AS snapshot
+    WHERE snapshot.round > 0
+      AND (
+          sqlc.narg(through_round)::INTEGER IS NULL
+          OR snapshot.round <= sqlc.narg(through_round)::INTEGER
+      )
+      AND (
+          (
+              sqlc.narg(task_id)::UUID IS NULL
+              AND sqlc.narg(through_round)::INTEGER IS NULL
+          )
+          OR EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements(snapshot.snapshot->'team_tasks') AS candidate(cell)
+              WHERE (candidate.cell->>'team_id')::UUID = sqlc.arg(team_id)::UUID
+                AND (
+                    sqlc.narg(task_id)::UUID IS NULL
+                    OR (candidate.cell->>'task_id')::UUID = sqlc.narg(task_id)::UUID
+                )
+          )
+      )
+    ORDER BY snapshot.round DESC
+    LIMIT 50
+), round_windows AS (
+    SELECT snapshots.round, snapshots.round_start, snapshots.snapshot,
+           current_run.round_start AS receive_start,
+           next_run.round_start AS receive_end,
+           CASE
+               WHEN next_run.round_start IS NULL
+                 AND NOT lifecycle.game_running
+                 AND NOT lifecycle.reset_pending
+                 AND lifecycle.real_round = snapshots.round
+                 AND lifecycle.snapshot_round = snapshots.round
+                 AND lifecycle.snapshot->>'round' = snapshots.round::TEXT
+               THEN TRUE
+               ELSE FALSE
+           END AS final_round
+    FROM snapshots
+    CROSS JOIN lifecycle
+    LEFT JOIN LATERAL (
+        SELECT dispatch.round_start
+        FROM DispatchRuns AS dispatch
+        WHERE dispatch.is_round
+          AND dispatch.round = snapshots.round
+          AND dispatch.round_start >= snapshots.round_start
+          AND dispatch.round_start < snapshots.round_start + 1
+        ORDER BY dispatch.round_start
+        LIMIT 1
+    ) AS current_run ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT dispatch.round_start
+        FROM DispatchRuns AS dispatch
+        WHERE dispatch.is_round
+          AND dispatch.round = snapshots.round + 1
+          AND dispatch.round_start > current_run.round_start
+        ORDER BY dispatch.round_start
+        LIMIT 1
+    ) AS next_run ON current_run.round_start IS NOT NULL
+), history AS (
+    SELECT round_windows.round, round_windows.round_start,
+           round_windows.receive_start, round_windows.receive_end,
+           (
+               round_windows.receive_start IS NOT NULL
+               AND (
+                   round_windows.receive_end IS NOT NULL
+                   OR round_windows.final_round
+               )
+           ) AS receive_window_known,
+           cell::JSONB AS cell,
+           (cell->>'team_id')::UUID AS team_id,
+           (cell->>'task_id')::UUID AS task_id
+    FROM round_windows
+    CROSS JOIN LATERAL jsonb_array_elements(round_windows.snapshot->'team_tasks') AS cell
+    WHERE (cell->>'team_id')::UUID = sqlc.arg(team_id)::UUID
+      AND (
+          sqlc.narg(task_id)::UUID IS NULL
+          OR (cell->>'task_id')::UUID = sqlc.narg(task_id)::UUID
+      )
+), team_rounds AS (
+    SELECT DISTINCT round
+    FROM history
+), round_events AS (
+    SELECT round_windows.round, flag.task_id,
+           COUNT(*) FILTER (
+               WHERE flag.team_id = sqlc.arg(team_id)::UUID
+           ) AS round_flags_lost,
+           CASE
+               WHEN COUNT(*) FILTER (
+                        WHERE flag.team_id = sqlc.arg(team_id)::UUID
+                          AND stolen.attacker_delta IS NULL
+                    ) > 0
+                   THEN NULL::DOUBLE PRECISION
+               ELSE COALESCE(
+                   SUM(stolen.attacker_delta) FILTER (
+                       WHERE flag.team_id = sqlc.arg(team_id)::UUID
+                   ),
+                   0::DOUBLE PRECISION
+               )
+           END AS round_opponent_fp,
+           COUNT(*) FILTER (
+               WHERE stolen.attacker_id = sqlc.arg(team_id)::UUID
+                 AND owner.kind IS DISTINCT FROM 'npc'
+           ) AS round_flags_captured,
+           CASE
+               WHEN COUNT(*) FILTER (
+                        WHERE stolen.attacker_id = sqlc.arg(team_id)::UUID
+                          AND owner.kind IS DISTINCT FROM 'npc'
+                          AND stolen.attacker_delta IS NULL
+                    ) > 0
+                   THEN NULL::DOUBLE PRECISION
+               ELSE COALESCE(
+                   SUM(stolen.attacker_delta) FILTER (
+                       WHERE stolen.attacker_id = sqlc.arg(team_id)::UUID
+                         AND owner.kind IS DISTINCT FROM 'npc'
+                   ),
+                   0::DOUBLE PRECISION
+               )
+           END AS round_fp_gained
+    FROM round_windows
+    JOIN team_rounds ON team_rounds.round = round_windows.round
+    JOIN StolenFlags AS stolen
+      ON stolen.submit_time >= to_timestamp(round_windows.receive_start)
+     AND stolen.submit_time < COALESCE(
+             to_timestamp(round_windows.receive_end),
+             'infinity'::TIMESTAMPTZ
+         )
+    JOIN Flags AS flag ON flag.id = stolen.flag_id
+    JOIN Teams AS owner ON owner.id = flag.team_id
+    WHERE (
+          flag.team_id = sqlc.arg(team_id)::UUID
+          OR (
+              stolen.attacker_id = sqlc.arg(team_id)::UUID
+              AND owner.kind IS DISTINCT FROM 'npc'
+          )
+      )
+      AND (
+          sqlc.narg(task_id)::UUID IS NULL
+          OR flag.task_id = sqlc.narg(task_id)::UUID
+      )
+      AND round_windows.receive_start IS NOT NULL
+      AND (
+          round_windows.receive_end IS NOT NULL
+          OR round_windows.final_round
+      )
+    GROUP BY round_windows.round, flag.task_id
+)
+SELECT history.round, history.round_start,
+       (
+           history.cell || jsonb_build_object(
+               'round_flags_lost',
+               CASE
+                   WHEN history.receive_window_known THEN COALESCE(round_events.round_flags_lost, 0::BIGINT)
+                   ELSE NULL::BIGINT
+               END,
+               'round_flags_captured',
+               CASE
+                   WHEN history.receive_window_known THEN COALESCE(round_events.round_flags_captured, 0::BIGINT)
+                   ELSE NULL::BIGINT
+               END,
+               'round_opponent_fp',
+               CASE
+                   WHEN NOT history.receive_window_known THEN NULL::DOUBLE PRECISION
+                   WHEN round_events.round_flags_lost IS NULL THEN 0::DOUBLE PRECISION
+                   ELSE round_events.round_opponent_fp
+               END,
+               'round_fp_gained',
+               CASE
+                   WHEN NOT history.receive_window_known THEN NULL::DOUBLE PRECISION
+                   WHEN round_events.round_flags_captured IS NULL THEN 0::DOUBLE PRECISION
+                   ELSE round_events.round_fp_gained
+               END
+           )
+       )::JSONB AS cell
+FROM history
+LEFT JOIN round_events
+  ON round_events.round = history.round
+ AND round_events.task_id = history.task_id
+ORDER BY history.round DESC, history.task_id;
 
 -- name: InsertGameTeam :one
 INSERT INTO Teams(name,ip,token,highlighted,active,logo_path,kind)

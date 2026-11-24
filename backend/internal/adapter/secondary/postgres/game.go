@@ -229,9 +229,18 @@ func (g *GameStore) History(ctx context.Context, teamID uuid.UUID, taskID *uuid.
 
 // Public history contains completed round snapshots, never partial checker
 // results or private diagnostic commands from the organizer's event log.
-func (g *GameStore) PublicHistory(ctx context.Context, teamID uuid.UUID) ([]domain.PublicCell, error) {
+func (g *GameStore) PublicHistory(
+	ctx context.Context,
+	teamID uuid.UUID,
+	taskID *uuid.UUID,
+	throughRound *int32,
+) ([]domain.PublicCell, error) {
 	const location = "postgres.GameStore.PublicHistory"
-	rows, err := g.queries.ReadPublicGameHistory(ctx, teamID)
+	rows, err := g.queries.ReadPublicGameHistory(ctx, sqlc.ReadPublicGameHistoryParams{
+		TeamID:       teamID,
+		TaskID:       taskID,
+		ThroughRound: throughRound,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%s - read public game history: %w", location, err)
 	}

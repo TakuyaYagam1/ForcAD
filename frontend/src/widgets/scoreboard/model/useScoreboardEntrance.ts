@@ -140,34 +140,16 @@ export function useScoreboardEntrance(
       },
       ),
       step(
-        ".round-track",
-        "round-track",
+        ".scoreboard-toolbar",
+        "controls",
         {
-          transform: "scaleX(0)",
-          transformOrigin: "left center"
+          opacity: 0
         },
         {
-          transform: "scaleX(1)",
-          transformOrigin: "left center"
+          opacity: 1
         },
-        700,
-        160,
-      ),
-      ...[".round-label", ".round-timer", ".scoreboard-toolbar"].map(
-        (selector, index) => {
-          return step(
-            selector,
-            `controls-${index}`,
-            {
-              opacity: 0
-            },
-            {
-              opacity: 1
-            },
-            350,
-            180 + index * 50,
-          )
-        },
+        350,
+        280,
       ),
       ...[".recent-events", ".table-hint"].map((selector, index) => {
         return step(

@@ -1,4 +1,5 @@
 import type { PublicEventOutput } from "../../../shared/api/generated/schemas/publicEvent.zod.ts";
+import { randomUuid } from "../../../shared/lib/random.ts";
 
 export interface FlagLiveEvent {
   id: string;
@@ -79,7 +80,7 @@ export function notificationToLiveEvent(
 ): FlagLiveEvent {
   const ts = payload.created_at ? Date.parse(payload.created_at) : now;
   return {
-    id: payload.event_id ?? crypto.randomUUID(),
+    id: payload.event_id ?? randomUuid(),
     ts: Number.isFinite(ts) ? ts : now,
     kind: "flag_stolen",
     attackerId: payload.attacker_id,

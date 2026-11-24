@@ -1,6 +1,49 @@
 import { expect, test } from "@playwright/test";
 import { createE2EContext, loginAsAdmin, observePublicStream, readAdminCredentials } from "./support";
 
+test("dense scoreboard spaces SLA, FP and FLAGS evenly across a service cell", async ({ page }) => {
+  await page.setViewportSize({
+    width: 1920,
+    height: 1080
+  });
+  await page.goto("/?demo=1");
+  const cell = page.locator(".scoreboard-reveal .service-cell").first();
+  const gaps = await cell.evaluate((element) => {
+    const [sla, fp, flags] = [...element.querySelectorAll(".service-metric > span")].map((label) => {
+      return label.getBoundingClientRect().left
+    });
+    const { width } = element.getBoundingClientRect();
+    return [(fp - sla) / width, (flags - fp) / width];
+  });
+  for (const gap of gaps) {
+    expect(gap).toBeGreaterThan(0.25);
+    expect(gap).toBeLessThan(0.42);
+  }
+});
+
+test("a long team name fits beside score and five services on the public board", async ({ page }) => {
+  await page.setViewportSize({
+    width: 1568,
+    height: 889,
+  });
+  await page.goto("/?demo=1");
+  const row = page.locator(".scoreboard-reveal tbody tr").filter({
+    hasText: "Signal Works Security Research Group",
+  });
+  await expect(row.locator(".service-column")).toHaveCount(5);
+  const name = row.locator(".team-name");
+  await expect.poll(() => {
+    return name.evaluate((label) => {
+      return label.scrollWidth - label.clientWidth
+    })
+  }).toBeLessThanOrEqual(1);
+  const team = await name.boundingBox();
+  const score = await row.locator(".total-column").boundingBox();
+  const lastService = await row.locator(".service-column").last().boundingBox();
+  expect(score!.x).toBeGreaterThanOrEqual(Math.floor(team!.x + team!.width));
+  expect(lastService!.x + lastService!.width).toBeLessThanOrEqual(1568);
+});
+
 test("scoreboard shows ten and twenty teams before internal scrolling", async ({ browser }) => {
   const context = await createE2EContext(browser);
   const page = await context.newPage();

@@ -8538,6 +8538,52 @@ func (s *NilInt32) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes int64 as json.
+func (o NilInt64) Encode(e *jx.Encoder) {
+	if o.Null {
+		e.Null()
+		return
+	}
+	e.Int64(int64(o.Value))
+}
+
+// Decode decodes int64 from json.
+func (o *NilInt64) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode NilInt64 to nil")
+	}
+	if d.Next() == jx.Null {
+		if err := d.Null(); err != nil {
+			return err
+		}
+
+		var v int64
+		o.Value = v
+		o.Null = true
+		return nil
+	}
+	o.Null = false
+	v, err := d.Int64()
+	if err != nil {
+		return err
+	}
+	o.Value = int64(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s NilInt64) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *NilInt64) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes string as json.
 func (o NilString) Encode(e *jx.Encoder) {
 	if o.Null {
@@ -9201,6 +9247,22 @@ func (s *ParticipantTeamTaskHistory) encodeFields(e *jx.Encoder) {
 		e.Int32(s.Lost)
 	}
 	{
+		e.FieldStart("round_flags_lost")
+		s.RoundFlagsLost.Encode(e)
+	}
+	{
+		e.FieldStart("round_flags_captured")
+		s.RoundFlagsCaptured.Encode(e)
+	}
+	{
+		e.FieldStart("round_opponent_fp")
+		s.RoundOpponentFp.Encode(e)
+	}
+	{
+		e.FieldStart("round_fp_gained")
+		s.RoundFpGained.Encode(e)
+	}
+	{
 		e.FieldStart("score")
 		e.Float64(s.Score)
 	}
@@ -9229,18 +9291,22 @@ func (s *ParticipantTeamTaskHistory) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfParticipantTeamTaskHistory = [11]string{
+var jsonFieldsNameOfParticipantTeamTaskHistory = [15]string{
 	0:  "team_id",
 	1:  "task_id",
 	2:  "round",
 	3:  "status",
 	4:  "stolen",
 	5:  "lost",
-	6:  "score",
-	7:  "checks",
-	8:  "checks_passed",
-	9:  "timestamp",
-	10: "message",
+	6:  "round_flags_lost",
+	7:  "round_flags_captured",
+	8:  "round_opponent_fp",
+	9:  "round_fp_gained",
+	10: "score",
+	11: "checks",
+	12: "checks_passed",
+	13: "timestamp",
+	14: "message",
 }
 
 // Decode decodes ParticipantTeamTaskHistory from json.
@@ -9321,8 +9387,48 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"lost\"")
 			}
-		case "score":
+		case "round_flags_lost":
 			requiredBitSet[0] |= 1 << 6
+			if err := func() error {
+				if err := s.RoundFlagsLost.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"round_flags_lost\"")
+			}
+		case "round_flags_captured":
+			requiredBitSet[0] |= 1 << 7
+			if err := func() error {
+				if err := s.RoundFlagsCaptured.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"round_flags_captured\"")
+			}
+		case "round_opponent_fp":
+			requiredBitSet[1] |= 1 << 0
+			if err := func() error {
+				if err := s.RoundOpponentFp.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"round_opponent_fp\"")
+			}
+		case "round_fp_gained":
+			requiredBitSet[1] |= 1 << 1
+			if err := func() error {
+				if err := s.RoundFpGained.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"round_fp_gained\"")
+			}
+		case "score":
+			requiredBitSet[1] |= 1 << 2
 			if err := func() error {
 				v, err := d.Float64()
 				s.Score = float64(v)
@@ -9334,7 +9440,7 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"score\"")
 			}
 		case "checks":
-			requiredBitSet[0] |= 1 << 7
+			requiredBitSet[1] |= 1 << 3
 			if err := func() error {
 				v, err := d.Int32()
 				s.Checks = int32(v)
@@ -9346,7 +9452,7 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"checks\"")
 			}
 		case "checks_passed":
-			requiredBitSet[1] |= 1 << 0
+			requiredBitSet[1] |= 1 << 4
 			if err := func() error {
 				v, err := d.Int32()
 				s.ChecksPassed = int32(v)
@@ -9358,7 +9464,7 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"checks_passed\"")
 			}
 		case "timestamp":
-			requiredBitSet[1] |= 1 << 1
+			requiredBitSet[1] |= 1 << 5
 			if err := func() error {
 				v, err := d.Str()
 				s.Timestamp = string(v)
@@ -9370,7 +9476,7 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 				return errors.Wrap(err, "decode field \"timestamp\"")
 			}
 		case "message":
-			requiredBitSet[1] |= 1 << 2
+			requiredBitSet[1] |= 1 << 6
 			if err := func() error {
 				if err := s.Message.Decode(d); err != nil {
 					return err
@@ -9401,7 +9507,7 @@ func (s *ParticipantTeamTaskHistory) Decode(d *jx.Decoder) error {
 	var failures []validate.FieldError
 	for i, mask := range [2]uint8{
 		0b11111111,
-		0b00000111,
+		0b01111111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

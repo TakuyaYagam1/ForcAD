@@ -90,6 +90,81 @@ test("language switching preserves the team list, survives reload and translates
   }
 });
 
+test("demo checker messages stay fixed while labels and timestamps change language", async ({ page }) => {
+  await page.goto("/?demo=1");
+  const round = page.locator(".header-round");
+  const initialRound = Number((await round.innerText()).match(/\d+/u)?.[0]);
+  const currentRound = initialRound + 1;
+  await page.getByRole("button", {
+    name: "Новое событие",
+  }).click();
+  await expect(round).toHaveText(`Раунд ${currentRound}`);
+  await page.locator(".team-identity").filter({
+    hasText: "Null Route",
+  }).click();
+
+  const eventTime = page.locator(".team-content-aside time").first();
+  await expect(eventTime).toBeVisible();
+  const russianTime = await eventTime.innerText();
+  const eventTimestamp = await eventTime.getAttribute("datetime");
+  expect(eventTimestamp).not.toBeNull();
+  const service = page.locator(".services-grid").getByRole("button", {
+    name: /^Market:/,
+  });
+  const dialog = page.getByRole("dialog");
+  await service.click();
+  const historyTable = dialog.getByRole("table");
+  await expect(historyTable.getByRole("columnheader", {
+    name: "Ответ чекера",
+    exact: true,
+  })).toBeVisible();
+  const errorRow = historyTable.getByRole("row").filter({
+    hasText: "Service unavailable: connection refused",
+  }).first();
+  const okRow = historyTable.getByRole("row").filter({
+    hasText: "OK",
+  }).first();
+  await expect(errorRow.getByRole("cell", {
+    name: "Service unavailable: connection refused",
+    exact: true,
+  })).toBeVisible();
+  await expect(okRow.getByRole("cell", {
+    name: "OK",
+    exact: true,
+  })).toBeVisible();
+  await expect(historyTable).not.toContainText("Сервис недоступен");
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", {
+    name: "English",
+    exact: true,
+  }).click();
+  await expect(round).toHaveText(`Round ${currentRound}`);
+  await expect(eventTime).not.toHaveText(russianTime);
+  await expect(eventTime).toHaveAttribute("datetime", eventTimestamp ?? "");
+  await service.click();
+  const englishHistoryTable = dialog.getByRole("table");
+  await expect(englishHistoryTable.getByRole("columnheader", {
+    name: "Checker response",
+    exact: true,
+  })).toBeVisible();
+  const englishErrorRow = englishHistoryTable.getByRole("row").filter({
+    hasText: "Service unavailable: connection refused",
+  }).first();
+  const englishOkRow = englishHistoryTable.getByRole("row").filter({
+    hasText: "OK",
+  }).first();
+  await expect(englishErrorRow.getByRole("cell", {
+    name: "Service unavailable: connection refused",
+    exact: true,
+  })).toBeVisible();
+  await expect(englishOkRow.getByRole("cell", {
+    name: "OK",
+    exact: true,
+  })).toBeVisible();
+  await expect(englishHistoryTable).not.toContainText("Сервис недоступен");
+});
+
 test("unsupported saved language falls back to Russian", async ({ browser }) => {
   const context = await createE2EContext(browser);
   await context.addInitScript(() => {

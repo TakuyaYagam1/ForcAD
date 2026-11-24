@@ -6,7 +6,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { STATUS_META_BY_CODE, STATUS_OK } from "@/shared/config/statuses";
+import { STATUS_META_BY_CODE } from "@/shared/config/statuses";
+import { ServiceCheckerSummary } from "./ServiceCheckerSummary";
 import { formatScore } from "@/shared/lib/formatScore";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
@@ -18,16 +19,21 @@ interface ServiceValue {
   sla: number;
   stolen: number;
   lost: number;
-  message: string;
 }
 export function ServiceCell({
   value,
   name,
   onClick,
+  teamId,
+  taskId,
+  snapshotRound,
 }: {
   value?: ServiceValue;
   name: string;
   onClick?: () => void;
+  teamId?: string;
+  taskId?: string;
+  snapshotRound?: number;
 }) {
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
@@ -39,10 +45,6 @@ export function ServiceCell({
     (value?.score ?? 0) >= 10000 ||
     (value?.stolen ?? 0) >= 1000 ||
     (value?.lost ?? 0) >= 1000;
-  const checkerResponse =
-    value?.message ||
-    (value?.status === STATUS_OK ? "OK" : meta?.label) ||
-    t("service.noCheckerMessage");
   const trigger = (
     <button
       type="button"
@@ -103,17 +105,13 @@ export function ServiceCell({
             <strong>-{formatScore(value?.lost ?? 0)}</strong>
           </div>
         </div>
-        <div className="checker-message">
-          <span className="eyebrow">{t("service.checkerResponse")}</span>
-          <pre
-            className={meta ? "checker-result--status" : undefined}
-            style={meta ? {
-              backgroundColor: meta.color
-            } : undefined}
-          >
-            {checkerResponse}
-          </pre>
-        </div>
+        {open && (
+          <ServiceCheckerSummary
+            teamId={teamId}
+            taskId={taskId}
+            snapshotRound={snapshotRound}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

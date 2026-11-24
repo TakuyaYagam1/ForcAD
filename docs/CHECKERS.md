@@ -59,6 +59,12 @@ Rewrites preserve the method, body, and query string.
 
 In classic mode, CHECK runs first. If it succeeds, PUT and GET branches can run concurrently. PUTs can run concurrently; GETs run sequentially and stop at the first failed GET. Blitz mode schedules PUT-only and CHECK/GET workflows separately. Actions cannot rely on shared process or in-memory state. A selected GET round with no flags skips retrieval.
 
+Open a service cell on the public scoreboard to browse all published verdicts for that team and service, newest first. Up to ten rounds are visible at once; scroll down to load older ones. Phones show each round as a card, with no sideways scrolling. Opening a cell in a past round starts there.
+
+Each round shows the final status code and public checker message in its original language. If the message is empty, `101 UP` shows `OK`; other statuses show `—`.
+
+For each submission round, `+FP` and `+FLAGS` show what the team earned and captured on that service. `-FP` and `-FLAG` show what opponents earned and captured from it. With inflation, opponents can earn more FP than the team loses. Captures count in the round they were accepted, not the round the flag was planted. `0` is a known zero; `—` means the historical value is unavailable.
+
 The admin scoreboard shows CHECK, PUT, and GET outcomes separately for the selected team's service and current round. For example, `PUT 5/5` means five recorded results out of five scheduled PUTs for that service, regardless of team count. Before round 1, the panel shows configuration limits rather than completed work.
 
 The default worker allows eight concurrent checker processes, 1 MiB combined output per action, and a 1024 MiB address-space limit per process on Linux. The per-action timeout and total workflow deadline are separate. On Linux, timed-out processes receive termination followed by a forced process-group kill if needed. These limits do not make a checker a security sandbox.

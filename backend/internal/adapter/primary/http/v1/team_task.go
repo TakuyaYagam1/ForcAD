@@ -26,7 +26,16 @@ func (h *teamTasksHandler) GetAdminTeamTaskHistory(ctx context.Context, params a
 
 func (h *teamTasksHandler) GetClientTeamHistory(ctx context.Context, params api.GetClientTeamHistoryParams) ([]api.ParticipantTeamTaskHistory, error) {
 	const location = "httpv1.teamTasksHandler.GetClientTeamHistory"
-	rows, err := h.game.PublicHistory(ctx, params.TeamID)
+	var taskID *uuid.UUID
+	if value, ok := params.TaskID.Get(); ok {
+		id := uuid.UUID(value)
+		taskID = &id
+	}
+	var throughRound *int32
+	if value, ok := params.ThroughRound.Get(); ok {
+		throughRound = &value
+	}
+	rows, err := h.game.PublicHistory(ctx, params.TeamID, taskID, throughRound)
 	if err != nil {
 		return nil, fmt.Errorf("%s - load public team history: %w", location, err)
 	}

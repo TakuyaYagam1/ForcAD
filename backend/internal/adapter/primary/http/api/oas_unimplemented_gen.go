@@ -334,7 +334,9 @@ func (UnimplementedHandler) GetClientTasks(ctx context.Context) (r []Participant
 
 // GetClientTeamHistory implements getClientTeamHistory operation.
 //
-// Get participant-visible task history for a team.
+// With task_id, returns up to 50 latest published rounds containing that team/service, newest first.
+// through_round is an inclusive upper bound. With neither query parameter, the endpoint retains the
+// latest 50 team snapshots.
 //
 // GET /api/v1/client/teams/{team_id}/
 func (UnimplementedHandler) GetClientTeamHistory(ctx context.Context, params GetClientTeamHistoryParams) (r []ParticipantTeamTaskHistory, _ error) {

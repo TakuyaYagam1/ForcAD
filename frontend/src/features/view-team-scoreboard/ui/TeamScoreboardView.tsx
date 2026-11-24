@@ -1,6 +1,7 @@
 import { useScoreboardStore } from "@/entities/scoreboard/model/store";
 import type { Task } from "@/entities/task/model/types";
-import { fetchTeamStates } from "@/entities/team-scoreboard/api";
+import { teamHistoryQueryOptions } from "@/entities/team-scoreboard/api";
+import { normalizeTeamTaskHistory } from "@/entities/team-scoreboard/model/normalizeHistory";
 import { groupHistoryByRound } from "@/entities/team-scoreboard/model/history";
 import { formatScore } from "@/shared/lib/formatScore";
 import { getCombinedSlaPercent } from "@/shared/lib/sla";
@@ -39,6 +40,12 @@ export function TeamScoreboardView() {
   const current = useScoreboardStore((state) => {
     return state.teamTasks
   }) ?? [];
+  const publishedRound = useScoreboardStore((state) => {
+    return state.round
+  });
+  const generation = useScoreboardStore((state) => {
+    return state.generation
+  });
 
   const team = teams?.find((item) => {
     return item.id === teamId
@@ -62,18 +69,20 @@ export function TeamScoreboardView() {
   }, 0);
 
   const historyQuery = useQuery({
-    queryKey: ["team-history", teamId],
-    queryFn: ({ signal }) => {
-      return fetchTeamStates(teamId ?? "", signal)
-    },
-    enabled: !invalid,
+    ...teamHistoryQueryOptions(teamId, publishedRound, generation),
     refetchInterval: 10000,
   });
+  const normalizedHistory = useMemo(
+    () => {
+      return normalizeTeamTaskHistory(historyQuery.data ?? [])
+    },
+    [historyQuery.data],
+  );
 
   const history = useMemo(
     () => {
       return groupHistoryByRound(
-        historyQuery.data ?? [],
+        normalizedHistory,
         tasks.map((task) => {
           return task.id
         }).filter((id): id is string => {
@@ -81,7 +90,7 @@ export function TeamScoreboardView() {
         }),
       )
     },
-    [historyQuery.data, tasks],
+    [normalizedHistory, tasks],
   );
 
   if (invalid) {
@@ -204,7 +213,12 @@ export function TeamScoreboardView() {
                         <span>{task.name}</span>
                       </div>
 
-                      <ServiceCell name={task.name} value={value} />
+                      <ServiceCell
+                        name={task.name}
+                        value={value}
+                        teamId={teamId ?? undefined}
+                        taskId={task.id ?? undefined}
+                      />
                     </div>
                   </div>
                 );
@@ -344,6 +358,9 @@ export function TeamScoreboardView() {
                                         return value.taskId === task.id
                                       },
                                     )}
+                                    teamId={teamId ?? undefined}
+                                    taskId={task.id ?? undefined}
+                                    snapshotRound={row.round}
                                   />
                                 </td>
                               )

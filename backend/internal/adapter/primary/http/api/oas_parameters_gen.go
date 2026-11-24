@@ -1377,7 +1377,9 @@ func decodeGetClientEventsParams(args [0]string, argsEscaped bool, r *http.Reque
 
 // GetClientTeamHistoryParams is parameters of getClientTeamHistory operation.
 type GetClientTeamHistoryParams struct {
-	TeamID uuid.UUID
+	TeamID       uuid.UUID
+	TaskID       OptUUID  `json:",omitempty,omitzero"`
+	ThroughRound OptInt32 `json:",omitempty,omitzero"`
 }
 
 func unpackGetClientTeamHistoryParams(packed middleware.Parameters) (params GetClientTeamHistoryParams) {
@@ -1388,10 +1390,29 @@ func unpackGetClientTeamHistoryParams(packed middleware.Parameters) (params GetC
 		}
 		params.TeamID = packed[key].(uuid.UUID)
 	}
+	{
+		key := middleware.ParameterKey{
+			Name: "task_id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.TaskID = v.(OptUUID)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "through_round",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ThroughRound = v.(OptInt32)
+		}
+	}
 	return params
 }
 
 func decodeGetClientTeamHistoryParams(args [1]string, argsEscaped bool, r *http.Request) (params GetClientTeamHistoryParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
 	// Decode path: team_id.
 	if err := func() error {
 		param := args[0]
@@ -1434,6 +1455,120 @@ func decodeGetClientTeamHistoryParams(args [1]string, argsEscaped bool, r *http.
 		return params, &ogenerrors.DecodeParamError{
 			Name: "team_id",
 			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode query: task_id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "task_id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotTaskIDVal UUID
+				if err := func() error {
+					var paramsDotTaskIDValVal uuid.UUID
+					if err := func() error {
+						val, err := d.DecodeValue()
+						if err != nil {
+							return err
+						}
+
+						c, err := uuid.Parse(val)
+						if err != nil {
+							return err
+						}
+
+						paramsDotTaskIDValVal = c
+						return nil
+					}(); err != nil {
+						return err
+					}
+					paramsDotTaskIDVal = UUID(paramsDotTaskIDValVal)
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.TaskID.SetTo(paramsDotTaskIDVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "task_id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: through_round.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "through_round",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotThroughRoundVal int32
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt32(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotThroughRoundVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.ThroughRound.SetTo(paramsDotThroughRoundVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.ThroughRound.Get(); ok {
+					if err := func() error {
+						if err := (validate.Int{
+							MinSet:        true,
+							Min:           1,
+							MaxSet:        false,
+							Max:           0,
+							MinExclusive:  false,
+							MaxExclusive:  false,
+							MultipleOfSet: false,
+							MultipleOf:    0,
+							Pattern:       nil,
+						}).Validate(int64(value)); err != nil {
+							return errors.Wrap(err, "int")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "through_round",
+			In:   "query",
 			Err:  err,
 		}
 	}
