@@ -113,6 +113,10 @@ export function AppShell({ children, headerActions, headerProgress, headerNaviga
         )}
         {children}
       </main>
+      <footer className="site-footer">
+        Powered by <strong>o1d_bu7_go1d</strong>
+      </footer>
+
 
     </div>
   );

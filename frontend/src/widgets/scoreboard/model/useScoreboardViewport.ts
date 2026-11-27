@@ -45,6 +45,7 @@ export function useScoreboardViewport(
     const main = page?.closest<HTMLElement>(".site-main");
     const shell = main?.closest<HTMLElement>(".brand-app");
     const header = shell?.querySelector<HTMLElement>(".site-header");
+    const footer = shell?.querySelector<HTMLElement>(".site-footer");
     if (!page || !main || !shell || !header) {
       return;
     }
@@ -98,6 +99,7 @@ export function useScoreboardViewport(
         window.innerHeight -
         (page.getBoundingClientRect().top + window.scrollY) -
         bottomChrome(shell) -
+        (footer ? outerHeight(footer) : 0) -
         bottomChrome(main) -
         verticalChrome(page) -
         fixedHeight -
@@ -150,6 +152,7 @@ export function useScoreboardViewport(
         page,
         main,
         header,
+        ...(footer ? [footer] : []),
         ...page.children,
         ...page.querySelectorAll(
           ".table-frame, .table-scroll, thead, tbody tr",

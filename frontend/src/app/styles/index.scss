@@ -93,6 +93,8 @@
 }
 .brand-app {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   position: relative;
   background: #07111b;
   isolation: isolate;
@@ -248,10 +250,23 @@
   background: #d7867c;
 }
 .site-main {
+  width: 100%;
   max-width: 1540px;
-  margin: auto;
+  margin: 0 auto;
   padding: 0 36px 36px;
-  min-height: calc(100vh - 88px);
+  flex: 1 0 auto;
+}
+.site-footer {
+  flex-shrink: 0;
+  padding: 12px 24px 18px;
+  color: #687b8e;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.site-footer strong {
+  color: var(--brand-primary);
+  font-weight: 600;
 }
 .skip-link {
   position: fixed;
